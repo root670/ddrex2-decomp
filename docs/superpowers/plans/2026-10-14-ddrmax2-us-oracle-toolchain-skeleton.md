@@ -623,7 +623,7 @@ def test_required_tools_are_present_and_usable():
 
 ```
 brew install mips-linux-gnu-binutils
-python3 -m pip install --user splat64 pytest
+python3 -m pip install --user 'splat64[mips]' pytest
 # objdiff: fetch the darwin/arm64 asset from https://github.com/encounter/objdiff/releases
 #          (verify `objdiff-cli --version`), else `cargo install objdiff-cli`
 ```
@@ -724,6 +724,10 @@ segments:
 
 ```python
 ninja.rule("as", command="cpp -Iinclude $in -o - | mips-linux-gnu-as -EL -march=5900 -mabi=eabi -o $out")
+# NOTE (measured in Task 7): register naming is ABI-dependent. With -mabi=eabi, $t0..$t3 are r12..r15 and
+# $t4..$t7 are unknown, so a split written with o32 names would encode the wrong registers. Assemble one
+# split and require its bytes to equal the retail bytes for that function; if they differ, fix the ABI flag
+# or the disassembler's register naming — never hand-edit a split.
 ninja.rule("cc", command="python3 tools/toolchain/compile.py $in $out $flags")
 ninja.rule("ld", command="mips-linux-gnu-ld -EL -T config/usam2/undefined_syms_auto.txt "
                          "-T config/usam2/undefined_funcs_auto.txt -Map $mapfile -T $in -o $out")
