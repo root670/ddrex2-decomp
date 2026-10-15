@@ -989,6 +989,12 @@ Expected: FAIL — `src/sys/sys_scf.c` missing.
 
 - [ ] **Step 3: Write the source from the oracle's evidence**
 
+> **Linker constraint (measured, plan ruling R23):** mainline GNU binutils cannot read `mwccps2` objects
+> (`objcopy`: "Unable to recognise the architecture"; `ld`: "relocations in generic ELF"). The C-side link
+> therefore uses `mwldps2 -m <entry>` or the `decompals/binutils-mips-ps2-decompals` fork; if MWLD drops
+> `.debug`/`.line`, splice the object's sections under the pinned layout applying `.rel.debug`/`.rel.line`.
+> The skeleton (Tasks 8–9) is unaffected: its inputs are GNU-assembled splits plus data blobs.
+
 ```c
 /* src/sys/sys_scf.c — reconstructed from DWARF 1: lines 1-42 of the original file */
 #include "sys/sys_scf.h"          /* generated: _tag_SYS_SCF_WORK, pscf, prototypes */

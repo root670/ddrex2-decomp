@@ -141,7 +141,7 @@ is kept as an optional fidelity check rather than a dependency.
 | compiler | `mwccps2` from the decomp.me compiler archives (`mwcps2-2.4-001213.tar.gz` and siblings), fetched, never vendored; the build is chosen **empirically** by byte-matching a known function across candidates (`2.4-001213`, `3.0-011126`, `3.0.1-*`, `3.0.3-020716`) |
 | runner | `wibo-macos` + Rosetta 2 (proven on this machine: `wibo 1.2.0-1-g09b973a`, x86_64, Rosetta active); the patched wibo built in `~/ac-decomp` is the fallback |
 | assembler | GNU `mips-linux-gnu-as -march=5900` for splits; MW's own `asm_r5900_elf.exe` and the decompals binutils (with `--align-section`, `-mbranch-relocs`) are the alternatives |
-| linker | GNU `ld` with the splat-generated layout; `objcopy -O binary` finalises the file |
+| linker | GNU `ld` with the splat-generated layout for the all-asm skeleton (its inputs are GNU-assembled splits plus data blobs); **compiled Metrowerks objects are unreadable to mainline binutils**, so the C-side link must be `mwldps2 -m <entry>` or the decompals binutils fork, with the object's `.debug`/`.line` spliced under the pinned layout if MWLD drops them (see the plan's R23) |
 | SDK objects | pinned bytes until identified (§5.5); SDK generation fixed by the `IOPRP254` fingerprint |
 
 Flags are inferred per TU from codegen evidence, since the original flag set is unknown; `mvc2-ps2-decomp`
