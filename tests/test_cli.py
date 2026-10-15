@@ -11,8 +11,15 @@ Everything else here is cheap and hermetic: the per-TU verdict Task 12 asserts, 
 pieces of the ``g2`` mapping the CLI's message is made of, the dependency-remedy report, the
 ``objdiff-cli`` wiring (against a stub on ``PATH``), and the ISO verb against a small
 synthetic image instead of the 1.24 GB retail one (tests/iso owns the real G3 evidence).
+
+Two of them cover the finding that a gate can pass by comparing the *wrong pair*: ``verify``
+must check ``orig/SLUS_207.11`` against its record in ``checksums.txt`` before G1 compares it
+with the build, and the ISO gate must check its reference image against that manifest's
+record before comparing the rebuild with it.  Both are pinned here as digests, because a
+gate whose expectation is "whatever it was handed" is no gate at all.
 """
 
+import hashlib
 import os
 import pathlib
 import subprocess
@@ -24,10 +31,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
 
 from iso import reinsert  # noqa: E402  (path set up above, as the brief specifies)
-from verify import g2  # noqa: E402
+from verify import g1, g2  # noqa: E402
 
 RETAIL = ROOT / "orig/SLUS_207.11"
 BUILT = ROOT / "out/SLUS_207.11"
+# The manifest's two records, as the plan and the spec pin them.
+PINNED_ELF = "a7596e8ab3da823236ed8e5f3f2804db3daee47265ae73e22f3311a5218aa8cc"
+PINNED_IMAGE = "b8519c9106b43cc83bc57948cbc02a83851d3182fcbd4e7d341c573758bb3ec8"
 # The retail geometry: the one loadable section starts at file offset 0x80, VA 0x100000,
 # so `sysInitScf` (VA 0x21C420, size 0x30) is at file 0x11C4A0 and its third word -- the one
 # the brief flips -- at 0x11C4A4.
@@ -49,16 +59,17 @@ def corrupted_copy(path, offset, out):
     return out
 
 
-def synthetic_image(tmp_path, elf):
+def synthetic_image(tmp_path, elf, name="synthetic.iso"):
     """A stand-in disc image: a pattern, with ``elf`` spliced in at the real offset.
 
     G3 is a ``write`` into a copy plus a hash, so a 3 MB pattern tests the same code path
-    as the 1.24 GB image -- without reading, writing or hashing the retail disc.
+    as the 1.24 GB image -- without reading, writing or hashing the retail disc.  ``name``
+    matters when the pin is what is under test: the manifest resolves a pin by file name.
     """
     size = reinsert.ELF_OFFSET + len(elf) + 0x1000
     data = bytearray((index * 7 + 11) & 0xFF for index in range(size))
     data[reinsert.ELF_OFFSET:reinsert.ELF_OFFSET + len(elf)] = elf
-    image = tmp_path / "synthetic.iso"
+    image = tmp_path / name
     image.write_bytes(bytes(data))
     return image
 
@@ -103,6 +114,51 @@ def test_the_per_tu_verdict_fails_on_a_flipped_text_byte(tmp_path):
         assert "sysInitScf" in p.stdout  # the failing byte's own function, from g2
     finally:
         BUILT.write_bytes(saved)
+
+
+def test_the_checksums_file_pins_both_binaries():
+    """One manifest, two records: the built image (first) and the retail disc image."""
+    assert g1.pinned_hash() == PINNED_ELF
+    assert g1.pinned_hash_for(IMAGE.name) == PINNED_IMAGE
+    assert g1.pinned_hash_for("no-such-image.iso") is None
+
+
+def test_verify_refuses_a_retail_binary_that_is_not_the_pinned_one(tmp_path):
+    """A self-consistent pair is not a green G1: the pin is checked before the comparison.
+
+    The reviewer's counterexample, in effect: a 100-byte-short retail binary with
+    ``out/SLUS_207.11`` built from it compares "ok" against each other, and G1's own CLI
+    still fails it on the pin.  ``--retail`` keeps the irreplaceable ``orig/`` out of the
+    test; only the rebuildable, gitignored ``out/`` is mutated, and restored in ``finally``.
+    """
+    saved = BUILT.read_bytes()
+    try:
+        short = saved[:-100]
+        impostor = tmp_path / "SLUS_207.11"
+        impostor.write_bytes(short)
+        BUILT.write_bytes(short)  # the pair agrees with itself...
+        p = run("verify", "--retail", str(impostor))
+        assert p.returncode != 0
+        assert "G1 ok" not in p.stdout
+        assert PINNED_ELF in p.stdout and hashlib.sha256(short).hexdigest() in p.stdout
+    finally:
+        BUILT.write_bytes(saved)
+
+
+def test_verify_still_compares_against_a_retail_binary_it_was_given():
+    """``--retail`` is the same gate on another file: this one *is* the pinned binary."""
+    p = run("verify", "--retail", str(RETAIL))
+    assert p.returncode == 0 and "G1 ok" in p.stdout
+
+
+def test_iso_refuses_a_reference_image_that_is_not_the_pinned_one(tmp_path):
+    """The disc image is pinned too, by name: a stub wearing its name is not the disc."""
+    image = synthetic_image(tmp_path, BUILT.read_bytes(), name=IMAGE.name)
+    out = tmp_path / "rebuilt.iso"
+    p = run("iso", "--iso", str(image), "--out", str(out))
+    assert p.returncode == 1
+    assert PINNED_IMAGE in p.stdout and reinsert.sha256(image) in p.stdout
+    assert not out.exists()  # the reference is checked before anything is written
 
 
 def test_verify_rejects_an_unknown_tu_name():

@@ -56,6 +56,7 @@ CONFIG = "usam2"
 CONFIG_DIR = REPO_ROOT / "config" / CONFIG
 RETAIL = REPO_ROOT / "orig" / "SLUS_207.11"
 GHIDRA = CONFIG_DIR / "ghidra_functions.json"
+CHECKSUMS = CONFIG_DIR / "checksums.txt"
 CUS = CONFIG_DIR / "cus.json"
 CHUNKS = CONFIG_DIR / "debug_chunks.json"
 SYMBOLS = CONFIG_DIR / "symbol_addrs.txt"
@@ -83,6 +84,20 @@ def _require(*keys: str) -> None:
         check_deps.require()
     for key in keys:
         check_deps.version(check_deps.TOOLS_BY_KEY[key])
+
+
+def _pin_mismatch(path, actual: str, pinned: str, what: str) -> str:
+    """The loud line a gate prints when a pinned input is not the file it should be.
+
+    Both digests in full, and the size: this is the failure -- a missing, truncated or
+    wrong-version binary -- whose whole question is "what file is this really", and a gate
+    that answered it with "the two inputs agree with each other" would be green over a
+    corrupted tree.
+    """
+    size = pathlib.Path(path).stat().st_size
+    return (f"{_display(path)} has sha256 {actual} ({size} bytes), but "
+            f"{_display(CHECKSUMS)} pins {pinned}: the {what} is missing, truncated or a "
+            f"different version")
 
 
 # ---------------------------------------------------------------------------
@@ -155,11 +170,15 @@ def _add_g3_arguments(parser, always: bool) -> None:
 
 
 def _g3(args) -> int:
-    """G3: splice ``--elf`` into a copy of ``--iso`` and compare the copy's hash.
+    """G3: splice ``--elf`` into a copy of ``--iso`` and compare the copy's digest.
 
-    The expected digest is the reference image's own: G3's claim is that reinsertion gives
-    the image back, so the image *is* the expectation (R30: the copy is written to the
-    gitignored ``out/``, never to a temporary directory, and hashed streaming).
+    The *reference* is checked against its record in ``checksums.txt`` first: an image a pin
+    names must be the pinned file before it is allowed to be the expectation, so pointing
+    the gate at a corrupted copy of the disc fails loudly instead of comparing the rebuild
+    with the corruption.  An image no pin names -- a stamp build, a test fixture -- has only
+    itself to compare against, and the reference's own digest is then the expectation (R30:
+    the copy is written to the gitignored ``out/``, never to a temporary directory, and
+    hashed streaming).
     """
     if args.iso is None:
         return 0
@@ -175,13 +194,18 @@ def _g3(args) -> int:
     if not elf.is_file():
         print(f"ddr: {_display(elf)}: no such file (run ./ddr build)", file=sys.stderr)
         return 2
+    reference = reinsert.sha256(image)
+    pinned = g1.pinned_hash_for(image.name)
+    if pinned is not None and reference != pinned:
+        print(f"G3 FAIL: {_pin_mismatch(image, reference, pinned, 'reference image')}")
+        return 1
     print(f"G3: splicing {_display(elf)} into {_display(image)} -> {_display(out)}")
     try:
         reinsert.build(image, elf, out)
     except ValueError as exc:
         print(f"ddr: {exc}", file=sys.stderr)
         return 2
-    expected, actual = reinsert.sha256(image), reinsert.sha256(out)
+    expected, actual = (pinned or reference), reinsert.sha256(out)
     if actual == expected:
         print(f"G3 ok: {_display(out)} is {actual} ({image.stat().st_size} bytes, "
               f"matches {_display(image)})")
@@ -203,11 +227,12 @@ def _tu_report(built, retail, name) -> int:
 
 
 def cmd_verify(args) -> int:
+    retail = pathlib.Path(args.retail)
     if not BUILT.is_file():
         print(f"ddr: {_display(BUILT)}: no such file (run ./ddr build)", file=sys.stderr)
         return 2
-    if not RETAIL.is_file():
-        print(f"ddr: {_display(RETAIL)}: no such file: G1 needs the retail binary",
+    if not retail.is_file():
+        print(f"ddr: {_display(retail)}: no such file: G1 needs the retail binary",
               file=sys.stderr)
         return 2
     if args.tu is not None:
@@ -218,12 +243,21 @@ def cmd_verify(args) -> int:
         except g2.UnknownUnit as exc:
             print(f"ddr: {exc}", file=sys.stderr)
             return 2
+    # The pin first, and on its own: G1 compares two files, so a truncated, substituted or
+    # wrong-version retail binary that happens to agree with the build would compare "ok".
+    # The absolute criterion of the design -- and of g1.py's own CLI -- is the pinned digest,
+    # not the agreement of the pair.
+    pinned = g1.pinned_hash()
+    actual = g1.sha256(retail)
+    if pinned is not None and actual != pinned:
+        print(f"G1 FAIL: {_pin_mismatch(retail, actual, pinned, 'retail binary')}")
+        return 1
     status = 0
-    message = g1.compare(BUILT, RETAIL)
+    message = g1.compare(BUILT, retail)
     if message == "ok":
         print(f"G1 ok: {_display(BUILT)} is {g1.sha256(BUILT)}")
     else:
-        located = g2.localise(BUILT, RETAIL)
+        located = g2.localise(BUILT, retail)
         print(f"G1 FAIL: {g2.describe(located) or message}")
         if located is not None:
             print(f"         {message}")
@@ -231,7 +265,7 @@ def cmd_verify(args) -> int:
     if args.tu is not None:
         # The verdict is printed even when G1 is red: a promoted translation unit is
         # iterated with it, and "which chunk" is the question at that point.
-        status = max(status, _tu_report(BUILT, RETAIL, args.tu))
+        status = max(status, _tu_report(BUILT, retail, args.tu))
     return max(status, _g3(args))
 
 
@@ -329,6 +363,9 @@ def parse_args(argv):
     verify = verbs.add_parser("verify", help="G1, plus the TU verdict and/or G3")
     verify.add_argument("--tu", default=None,
                         help="report one translation unit (name, file or repo path)")
+    verify.add_argument("--retail", default=str(RETAIL),
+                        help="the retail binary to pin-check and compare against "
+                             "(default: orig/SLUS_207.11)")
     _add_g3_arguments(verify, always=False)
     verify.set_defaults(func=cmd_verify)
 

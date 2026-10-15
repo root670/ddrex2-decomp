@@ -15,11 +15,13 @@ Usage::
     python3 tools/verify/g1.py out/SLUS_207.11 [--retail orig/SLUS_207.11]
                                                [--expected SHA256] [--checksums PATH]
 
-``--expected`` defaults to ``config/usam2/checksums.txt``, the pinned digest of the built
-image; when it is known the *retail* file's digest is checked against it first, so a
-missing, truncated or different retail binary is reported as such instead of being
-compared with.  Exit codes: 0 identical, 1 they differ (or the retail binary is wrong),
-2 a file is missing or unusable.
+``--expected`` defaults to ``config/usam2/checksums.txt``, whose *first* record is the pinned
+digest of the built image; when it is known the *retail* file's digest is checked against it
+first, so a missing, truncated or different retail binary is reported as such instead of
+being compared with.  A second record pins the retail disc image; the ISO gate resolves it
+by file name through :func:`pinned_hash_for`, and this module's own gate never needs it.
+Exit codes: 0 identical, 1 they differ (or the retail binary is wrong), 2 a file is missing
+or unusable.
 """
 
 from __future__ import annotations
@@ -56,16 +58,47 @@ def sha256(path) -> str:
     return digest.hexdigest()
 
 
-def pinned_hash(path=CHECKSUMS):
-    """The digest recorded in ``checksums.txt`` (``<sha256>  <target>``), or None."""
+def _pins(path=CHECKSUMS) -> list:
+    """``(digest, target)`` per record of ``checksums.txt``, in file order.
+
+    A record is a ``sha256sum``-style line: a 64-character digest, then the target it pins.
+    Everything else in the file is ignored, so a comment costs nothing.
+    """
     try:
         text = pathlib.Path(path).read_text()
     except OSError:
-        return None
+        return []
+    pins = []
     for line in text.splitlines():
-        fields = line.split()
+        fields = line.split(None, 1)
         if fields and len(fields[0]) == 64:
-            return fields[0]
+            pins.append((fields[0], fields[1].strip() if len(fields) > 1 else ""))
+    return pins
+
+
+def pinned_hash(path=CHECKSUMS):
+    """The digest recorded in ``checksums.txt`` (``<sha256>  <target>``), or None.
+
+    The first record wins: the manifest's first line pins the built image, which is what
+    every caller of *this* function means by "the pinned hash".
+    """
+    pins = _pins(path)
+    return pins[0][0] if pins else None
+
+
+def pinned_hash_for(target, path=CHECKSUMS):
+    """The digest pinned for ``target``'s file name, or None when no record names it.
+
+    Matched by file name rather than by path: the retail disc image is mounted wherever the
+    developer keeps it (``disc/`` by this repo's own convention), so a path in the manifest
+    would be true on one machine only, while a name identifies the image everywhere.
+    """
+    name = pathlib.PurePath(str(target)).name
+    if not name:
+        return None
+    for digest, pinned_target in _pins(path):
+        if pathlib.PurePath(pinned_target).name == name:
+            return digest
     return None
 
 
