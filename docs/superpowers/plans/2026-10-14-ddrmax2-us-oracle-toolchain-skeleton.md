@@ -137,15 +137,13 @@ DUMP = ROOT / "orig/usam2.elf.txt"
 def test_dump_and_reader_agree_on_functions():
     if not DUMP.exists():
         pytest.skip("vendor dump not staged")
-    got = set()
-    for line in DUMP.read_text(encoding="latin1").splitlines():
-        if "TAG_global_subroutine" in line or "TAG_subroutine" in line:
-            cur = True
+    text = DUMP.read_text(encoding="latin1")
+    dump_low_pcs = set(re.findall(r"AT_low_pc\(([0-9a-f]{8})\)", text))
     reader = subprocess.run([sys.executable, str(ROOT / "tools/oracle/dwarf1.py"),
                              "cus", str(ROOT / "orig/SLUS_207.11")],
                             capture_output=True, text=True, check=True).stdout
-    assert re.search(r"\b423\b", reader)
-    assert len(re.findall(r"TAG_(global_)?subroutine", DUMP.read_text(encoding="latin1"))) >= 423
+    assert len(reader.splitlines()) >= 423          # one line per compile unit
+    assert len(dump_low_pcs) >= 423                 # the vendor's own parse agrees
 ```
 
 - [ ] **Step 7: Commit**
@@ -912,7 +910,9 @@ def test_verify_names_the_offending_tu(tmp_path):
     bad = ROOT / "out/SLUS_207.11"
     saved = bad.read_bytes()
     try:
-        b = bytearray(saved); b[0x21C424] ^= 0xFF; bad.write_bytes(bytes(b))
+        # VA 0x21C424 is inside .text, which starts at file offset 0x80 for VA 0x100000
+        off = 0x80 + (0x21C424 - 0x100000)
+        b = bytearray(saved); b[off] ^= 0xFF; bad.write_bytes(bytes(b))
         p = run("verify")
         assert p.returncode != 0
         assert "sys_scf.c" in p.stdout and "sysInitScf" in p.stdout
