@@ -1,0 +1,22 @@
+# Retail binaries and disc images are never committed: the user supplies them.
+orig/
+disc/
+
+# Generated build output (reproducible from orig/ + config/).
+build/
+out/
+asm/
+objdiff.json
+
+# Proprietary toolchains are fetched into place, never vendored.
+toolchain/
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
