@@ -78,8 +78,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 CLI = ROOT / "tools/oracle/dwarf1.py"
 ELF = ROOT / "orig/SLUS_207.11"
 
-def run(*args):
-    return subprocess.run([sys.executable, str(CLI), *args, str(ELF)],
+def run(cmd, *args):
+    return subprocess.run([sys.executable, str(CLI), cmd, str(ELF), *args],
                           capture_output=True, text=True, check=True).stdout
 
 def test_dwarf_counts_match_retail():
