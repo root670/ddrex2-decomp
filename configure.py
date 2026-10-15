@@ -73,8 +73,16 @@ NINJA_HEADER = """\
 # against the including file, and the generated macros must not land in a tracked dir.
 # --no-pad-sections keeps a split's .text exactly as long as the function: gas otherwise
 # pads every section out to its 16-byte alignment, which would inflate the linked image.
-AS_RULE = ("cpp -Iinclude $in -o - | mips-linux-gnu-as -Iasm/include --no-pad-sections "
-           "-EL -march=5900 -mabi=eabi -o $out")
+# The `.align` lines are dropped for the same reason, from the *stream*, never from a
+# split: splat emits them for alignment that is true in absolute VA terms, so in an
+# object that starts at the function's own address (VA 0x26CC4C, say) they insert four
+# zero bytes that the retail bytes already carry explicitly -- the splits' `.word` /
+# `.short` / `.byte` stream is a byte-exact 1,713,792-byte partition on its own, and
+# 19 splits (one per VA that is 4 mod 8) assemble 4 bytes too long while they survive.
+ALIGN_FILTER = r"""sed -E '/^[[:space:]]*\.align[[:space:]]/d'"""
+AS_RULE = ("cpp -Iinclude $in -o - | " + ALIGN_FILTER
+           + " | mips-linux-gnu-as -Iasm/include --no-pad-sections "
+             "-EL -march=5900 -mabi=eabi -o $out")
 
 
 class ConfigError(Exception):
@@ -177,7 +185,7 @@ def splat_yaml(chunks) -> str:
     lines.append("  ld_rom_start: 0\n")
     lines.append('  section_order: [".text", ".rodata", ".data", ".bss"]\n')
     lines.append('  auto_link_sections: [".rodata", ".data", ".bss"]\n')
-    lines.append("  subalign: 8\n")
+    lines.append("  subalign: 1\n")
     lines.append("  create_c_files: true\n")
     # Dropped trailing nops would still have to come from somewhere: the splits are the
     # link input, so every byte of every function stays in its split.

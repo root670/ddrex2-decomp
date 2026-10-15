@@ -18,7 +18,7 @@ options:
   ld_rom_start: 0
   section_order: [".text", ".rodata", ".data", ".bss"]
   auto_link_sections: [".rodata", ".data", ".bss"]
-  subalign: 8
+  subalign: 1
   create_c_files: true
   detect_redundant_function_end: false
   named_regs_for_c_funcs: false
