@@ -4,7 +4,7 @@
 
 **Goal:** Make `ninja` produce a byte-identical `out/SLUS_207.11` and a byte-identical rebuilt disc image with **zero C written**, then promote the first translation unit (`src/sys/sys_scf.c`, two functions) and prove its code and debug bytes match.
 
-**Architecture:** Pin-and-match. A vendored CodeWarrior DWARF 1 reader turns the retail ELF into a symbol file, per-CU debug-chunk map and per-TU headers; splat splits the single loadable region into per-function and per-object pieces; every section's load address equals its retail file offset, so assembling and linking the splits and running the result through `objcopy -O binary` reproduces the retail file byte for byte. C compiled by `mwccps2` (under wibo) then replaces those splits one translation unit at a time.
+**Architecture:** Pin-and-match. A vendored CodeWarrior DWARF 1 reader turns the retail ELF into a symbol file, per-CU debug-chunk map and per-TU headers; splat splits the single loadable region into per-function and per-object pieces; every section's load address equals its retail file offset, so assembling and linking the splits, extracting the loadable half with `objcopy -O binary`, and appending the non-loadable tail from databin segments reproduces the retail file byte for byte (R29). C compiled by `mwccps2` (under wibo) then replaces those splits one translation unit at a time.
 
 **Tech Stack:** Python 3 (stdlib only in the oracle, pytest for tests), splat + spimdisasm, Ninja, `mips-linux-gnu` binutils (Homebrew), `mwccps2`/`mwldps2` from the decomp.me compiler archives run through wibo + Rosetta 2, `objdiff-cli`, GNU `ld` + `objcopy`.
 
@@ -731,7 +731,7 @@ ninja.rule("as", command="cpp -Iinclude $in -o - | mips-linux-gnu-as -EL -march=
 ninja.rule("cc", command="python3 tools/toolchain/compile.py $in $out $flags")
 ninja.rule("ld", command="mips-linux-gnu-ld -EL -T config/usam2/undefined_syms_auto.txt "
                          "-T config/usam2/undefined_funcs_auto.txt -Map $mapfile -T $in -o $out")
-ninja.rule("bin", command="mips-linux-gnu-objcopy $in $out -O binary")
+ninja.rule("bin", command="mips-linux-gnu-objcopy $in $out -O binary")   # loadable half only; the tail is appended (R29)
 ninja.rule("g1", command="python3 tools/verify/g1.py $in")
 ```
 

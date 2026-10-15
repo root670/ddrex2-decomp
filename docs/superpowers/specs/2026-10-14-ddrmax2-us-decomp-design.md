@@ -129,7 +129,9 @@ splat (MIT) with `platform: ps2`, `compiler: EEGCC`, `section_order`, `auto_link
 271 file-only databins apart), `create_undefined_{funcs,syms}_auto`, driven in-process by `configure.py` as sly1 does
 (CC0). One loadable region becomes per-function and per-data-object splits; the ELF header is carried as
 `[0, databin, elf_header]`; every section's LMA equals its retail file offset (`ld_rom_start = 0`,
-`AT(__romPos)`), so GNU `ld` plus `objcopy -O binary` reproduces the file, headers included. Functions
+`AT(__romPos)`), so GNU `ld` links the loadable half, `objcopy -O binary` extracts it, and the non-loadable tail
+(`.shstrtab`, `.debug`, `.line`, `.comment`, `.reginfo`, section header table) is appended from databin segments — the
+file is assembled rather than emitted whole by any single tool. Functions
 not yet in C are emitted as `INCLUDE_ASM`, exactly as the PS2 matching projects do.
 
 Because MWLD writes its own symbol table and debug info, **the linker is GNU `ld`**, and `mwldps2 -lcf`
