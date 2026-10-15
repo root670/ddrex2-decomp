@@ -7,6 +7,14 @@ build/
 out/
 asm/
 objdiff.json
+build.ninja
+.ninja_log
+.ninja_deps
+
+# Configure output derived from the oracle's manifests and the yaml next to it.
+config/usam2/splat_symbol_addrs.txt
+config/usam2/undefined_funcs_auto.txt
+config/usam2/undefined_syms_auto.txt
 
 # Proprietary toolchains are fetched into place, never vendored.
 # Anchored: tools/toolchain/ and tests/toolchain/ are tracked source.
