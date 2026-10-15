@@ -20,3 +20,25 @@ def test_corrupt_archive_is_rejected(tmp_path):
     bad.write_bytes(b"not a tarball")
     with pytest.raises(fetch.HashMismatch):
         fetch.compiler("2.4-001213", root=tmp_path, override_url=f"file://{bad}")
+
+def _wibo_seed():
+    """A real wibo binary to tamper with, or None when this machine has none (no network)."""
+    installed = ROOT / "toolchain/wibo"
+    if installed.is_file():
+        return installed
+    built = sorted((pathlib.Path.home() / "ac-decomp/.cache/wibo").glob("*/wibo"))
+    return built[-1] if built else None
+
+def test_tampered_wibo_is_rejected(tmp_path):
+    tampered = tmp_path / "wibo-macos"
+    seed = _wibo_seed()
+    if seed is None:
+        tampered.write_bytes(b"not wibo")
+    else:
+        blob = bytearray(seed.read_bytes())
+        blob[-1] ^= 0xFF
+        tampered.write_bytes(bytes(blob))
+    root = tmp_path / "tc"
+    with pytest.raises(fetch.HashMismatch):
+        fetch.wibo(root=root, override_url=f"file://{tampered}")
+    assert not (root / "wibo").exists()

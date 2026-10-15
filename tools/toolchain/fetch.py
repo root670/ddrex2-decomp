@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fetch and hash-verify the CodeWarrior PS2 compilers and wibo into ``toolchain/``.
 
-Nothing is ever extracted, installed or cached before it has been checked against
-``PINNED`` (spec Review Focus 3: verify *before* use).  A corrupt or partial
-download is rejected with :class:`HashMismatch` while the bytes are still a
-``.part`` file in ``toolchain/.downloads/``, so a half-verified compiler can never
-be mistaken for a working one.
+Nothing is ever extracted, installed, cached or *executed* before it has been checked
+against ``PINNED`` / ``WIBO_PINNED`` (spec Review Focus 3: verify *before* use).  A
+corrupt or partial download is rejected with :class:`HashMismatch` while the bytes are
+still a ``.part`` file in ``toolchain/.downloads/``, so a half-verified compiler — or an
+altered runner — can never be mistaken for a working one.
 
 The archives are proprietary and are never vendored (``.gitignore`` ignores
 ``toolchain/``): they are fetched from the decomp.me compiler releases and
@@ -67,6 +67,15 @@ ALREADY_INSTALLED = "already installed"
 IN_PLACE = "in place (origin not recorded)"
 TIMEOUT = 120
 DESCRIPTION = "Fetch and hash-verify the CodeWarrior PS2 compilers and wibo into toolchain/."
+
+# wibo is published under ``releases/latest``, so its URL cannot be pinned: the digest of the
+# binary we accept is pinned here instead and is checked *before* wibo is executed (R15).
+# Both the release asset and the patched fallback build are pinned; an installed wibo that
+# matches neither is refused rather than run.
+WIBO_PINNED = {
+    "wibo-macos": "2b3000ef6a7a490c24ccd71967735ae0005e218922e51806cca1b8d77fd3cf7c",  # 1.2.0
+}
+WIBO_FALLBACK_PINNED = "d94d832136c74fec3960047e55a30382e74bb06848bba5386b15abd17380b314"  # 1.2.0-1-g09b973a
 
 # ---------------------------------------------------------------------------
 # Pinned digests: the gate every artifact must pass before it is used.
@@ -155,8 +164,7 @@ def _now() -> str:
 
 def wibo_url(asset: str | None = None) -> str:
     """Release asset URL for wibo on this host (``wibo-macos`` on Darwin)."""
-    name = asset or WIBO_ASSETS.get(platform.system().lower(), "wibo-x86_64")
-    return f"{WIBO_BASE}/{name}"
+    return f"{WIBO_BASE}/{asset or wibo_asset()}"
 
 
 def _download(url: str, dest: pathlib.Path) -> None:
@@ -318,22 +326,57 @@ def _wibo_version(binary: pathlib.Path) -> str | None:
 
 
 def wibo_local_fallback() -> pathlib.Path | None:
-    """Newest runnable wibo already built on this machine (the patched ~/ac-decomp build)."""
+    """The pinned patched wibo already built on this machine, or None.
+
+    The digest is checked here (before the binary is ever executed or installed),
+    so a rebuilt-but-unpinned local wibo is not silently substituted.
+    """
     candidates = sorted(WIBO_LOCAL_FALLBACK.glob("*/wibo"), key=lambda p: p.stat().st_mtime)
     for candidate in reversed(candidates):
-        if os.access(candidate, os.X_OK) and _wibo_version(candidate):
+        if candidate.is_file() and sha256_file(candidate) == WIBO_FALLBACK_PINNED:
             return candidate
     return None
+
+
+def wibo_asset() -> str:
+    """wibo release asset name for this host (``wibo-macos`` on Darwin)."""
+    return WIBO_ASSETS.get(platform.system().lower(), "wibo-x86_64")
+
+
+def wibo_pin(asset: str | None = None) -> str:
+    """Pinned digest of the wibo asset this host accepts; refuses to run an unpinned one."""
+    asset = asset or wibo_asset()
+    digest = WIBO_PINNED.get(asset)
+    if digest is None:
+        raise UnpinnedArtifact(
+            f"no pinned digest for wibo asset {asset!r}; add it to WIBO_PINNED before use"
+        )
+    return digest
+
+
+def _verify_wibo_digest(path: pathlib.Path, expected: str, what: str) -> None:
+    """Digest gate for wibo, applied before the binary is executed or installed."""
+    actual = sha256_file(path)
+    if actual != expected:
+        raise HashMismatch(f"{what}: sha256 {actual} != pinned {expected}")
 
 
 def _install_wibo(
     root: pathlib.Path, override_url: str | None = None, in_place_source: str | None = None
 ) -> tuple[pathlib.Path, str]:
-    """Install wibo and report where the chosen binary came from."""
+    """Install a digest-pinned wibo and report where the chosen binary came from."""
     root.mkdir(parents=True, exist_ok=True)
     dest = root / WIBO_NAME
-    if dest.is_file() and os.access(dest, os.X_OK) and _wibo_version(dest):
-        return dest, in_place_source or IN_PLACE
+    expected = wibo_pin()
+    if dest.is_file() and os.access(dest, os.X_OK):
+        digest = sha256_file(dest)
+        if digest not in (expected, WIBO_FALLBACK_PINNED):
+            raise HashMismatch(
+                f"{dest}: sha256 {digest} matches neither the pinned {wibo_asset()} asset "
+                f"({expected}) nor the pinned local fallback ({WIBO_FALLBACK_PINNED})"
+            )
+        if _wibo_version(dest):
+            return dest, in_place_source or IN_PLACE
     url = override_url or wibo_url()
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=CACHE_DIR, prefix=".wibo-") as scratch:
@@ -341,27 +384,34 @@ def _install_wibo(
         source = url
         try:
             _download(url, staged)
+            _verify_wibo_digest(staged, expected, url)  # before it is executed
             os.chmod(staged, 0o755)
             if not _wibo_version(staged):
                 raise DownloadFailed(f"{url}: downloaded wibo does not run on this host")
-        except FetchError:
+        except DownloadFailed:
+            # Transport or execution failure only: a digest mismatch must surface.
             fallback = wibo_local_fallback()
             if fallback is None:
                 raise
+            _verify_wibo_digest(fallback, WIBO_FALLBACK_PINNED, str(fallback))
             source = str(fallback)
             shutil.copy2(fallback, staged)
             os.chmod(staged, 0o755)
+            if not _wibo_version(staged):
+                raise DownloadFailed(f"{source}: pinned fallback wibo does not run on this host")
         shutil.copy2(staged, dest)
     return dest, source
 
 
 def wibo(root: pathlib.Path | str | None = None, override_url: str | None = None) -> pathlib.Path:
-    """Fetch wibo, prove it runs, and return its path; fall back to the local patched build.
+    """Fetch wibo, verify it against the pinned digest, prove it runs, and return its path.
 
-    wibo is a moving target (``releases/latest``), so it is verified by executing
-    it rather than by digest.  When the download is unavailable, or the downloaded
-    binary does not run under Rosetta, the already-built patched binary in
-    ``~/ac-decomp/.cache/wibo`` is installed instead.
+    wibo is published under ``releases/latest``, so the URL cannot be pinned; instead
+    the digest of the accepted binary (:data:`WIBO_PINNED`) is checked before wibo is
+    executed, and an installed wibo matching neither that pin nor the pinned patched
+    fallback (:data:`WIBO_FALLBACK_PINNED`) is refused with :class:`HashMismatch`.
+    When the download is unreachable, or the downloaded binary does not run under
+    Rosetta, the pinned patched binary in ``~/ac-decomp/.cache/wibo`` is installed.
     """
     root = pathlib.Path(root) if root is not None else TOOLCHAIN_ROOT
     return _install_wibo(root, override_url)[0]
@@ -399,6 +449,7 @@ _PROVENANCE_KEYS = (
     "archive_sha256",
     "installed",
     "installed_sha256",
+    "pinned_sha256",
     "reason",
 )
 
@@ -466,6 +517,8 @@ def _compiler_entry(version: str, dest: pathlib.Path, source: str, required: boo
 
 
 def _wibo_entry(source: str, installed: pathlib.Path, required: bool) -> dict:
+    digest = sha256_file(installed)
+    pinned = WIBO_FALLBACK_PINNED if digest == WIBO_FALLBACK_PINNED else wibo_pin()
     return {
         "kind": "runner",
         "status": "verified",
@@ -475,7 +528,8 @@ def _wibo_entry(source: str, installed: pathlib.Path, required: bool) -> dict:
         "source": source,
         "version": _wibo_version(installed),
         "installed": _relative(installed),
-        "installed_sha256": sha256_file(installed),
+        "installed_sha256": digest,
+        "pinned_sha256": pinned,
     }
 
 
