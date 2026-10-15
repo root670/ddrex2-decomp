@@ -125,7 +125,8 @@ signature, frame, saved registers, locals, globals and line boundaries. Types ar
 ### 5.2 Splitting and the pinned link
 
 splat (MIT) with `platform: ps2`, `compiler: EEGCC`, `section_order`, `auto_link_sections`,
-`subalign: 8`, `create_undefined_{funcs,syms}_auto`, driven in-process by `configure.py` as sly1 does
+`subalign: 1` (decided by measurement: 8 cannot place the 22 function starts at VA ≡ 4 mod 8 and pads
+271 file-only databins apart), `create_undefined_{funcs,syms}_auto`, driven in-process by `configure.py` as sly1 does
 (CC0). One loadable region becomes per-function and per-data-object splits; the ELF header is carried as
 `[0, databin, elf_header]`; every section's LMA equals its retail file offset (`ld_rom_start = 0`,
 `AT(__romPos)`), so GNU `ld` plus `objcopy -O binary` reproduces the file, headers included. Functions

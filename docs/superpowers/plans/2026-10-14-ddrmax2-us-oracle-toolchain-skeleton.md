@@ -699,7 +699,7 @@ options:
   ld_rom_start: 0
   section_order: [".text", ".rodata", ".data", ".bss"]
   auto_link_sections: [".rodata", ".data", ".bss"]
-  subalign: 8
+  subalign: 1                     # measured: 8 cannot place the 22 starts at VA % 8 == 4 (R26)
   create_undefined_funcs_auto: true
   undefined_funcs_auto_path: config/usam2/undefined_funcs_auto.txt
   create_undefined_syms_auto: true
