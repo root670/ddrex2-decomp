@@ -37,6 +37,7 @@ manifest, a host tool or a name the object needs is not something this build can
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import pathlib
 import re
@@ -431,7 +432,13 @@ def staged_path(tu: Tu) -> pathlib.Path:
             f"{basename!r} under {STAGING_ROOT}; this unit's DWARF name cannot be "
             f"reproduced")
     stem = re.sub(r"\W", "_", basename)
-    return STAGING_ROOT / (stem + "_" * pad)[:pad] / basename
+    # The directory must stay exactly `pad` long, so a per-unit digest is mixed in: two
+    # units that share a basename and a retail-name length (`src/sys/foo.c` and
+    # `src/mov/foo.c`) would otherwise stage over each other, and ninja runs `cc` edges in
+    # parallel -- one unit would compile the other's copy.
+    tag = hashlib.sha1(tu.file.encode()).hexdigest()
+    directory = tag[:pad] if pad <= len(tag) else (stem + "_" * pad)[:pad - len(tag)] + tag
+    return STAGING_ROOT / directory / basename
 
 
 def recorded_name(staged: pathlib.Path) -> bytes:

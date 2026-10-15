@@ -509,7 +509,19 @@ class Promotion:
 
 
 def promotions(manifests=None) -> list:
-    """Every promoted unit, in address order, with the layout the oracle pinned for it."""
+    """Every promoted unit, in address order, with the layout the oracle pinned for it.
+
+    ``cc`` reports an unusable manifest or an unplaceable unit as :class:`cc.Unusable`; a
+    configuration failure the CLI names and exits 2 on, so it is translated here rather
+    than escaping as a traceback.
+    """
+    try:
+        return _promotions(manifests)
+    except cc.Unusable as exc:
+        raise ConfigError(str(exc)) from exc
+
+
+def _promotions(manifests=None) -> list:
     manifests = manifests or cc.Manifests()
     present = {file for file in manifests.tu_files() if (REPO_ROOT / file).is_file()}
     if present - set(TU_BUILDS):
