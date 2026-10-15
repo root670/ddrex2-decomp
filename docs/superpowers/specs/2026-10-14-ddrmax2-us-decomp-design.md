@@ -17,7 +17,7 @@ Three machine-checkable gates, in order of strength:
 | gate | check |
 |---|---|
 | G1 binary | `out/SLUS_207.11` sha256 == retail `SLUS_207.11` sha256 (**whole file**, `.debug`/`.line`/`.comment`/headers included) |
-| G2 per-TU | for every translation unit promoted to C: the compiler's contribution to `.debug`/`.line` reproduces that TU's retail chunk byte for byte, **and** its `.text` bytes match |
+| G2 per-TU | the diagnostic that localises a G1 failure: for a promoted TU, compare its `.text` and its `.debug`/`.line` chunk against retail and name the first divergence. A green G1 implies a green G2 for every TU |
 | G3 disc | writing the built ELF into the retail image at byte offset `0x92000` reproduces the image byte for byte |
 
 Human-readable reconstruction is part of the goal, not a nicety: names, types, file names and line
