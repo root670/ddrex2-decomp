@@ -12,7 +12,8 @@ those to call, in which order, and what to print.
     ./ddr oracle            regenerate the symbol/CU/chunk/header artifacts from the retail
                             ELF (deterministic: a fresh run reproduces what is committed)
     ./ddr build             configure (manifests -> splat inputs -> build.ninja) then ninja
-    ./ddr verify            G1: out/SLUS_207.11 must equal orig/SLUS_207.11
+    ./ddr verify            G1: orig/SLUS_207.11 must be the pinned retail binary, and
+                            out/SLUS_207.11 must equal it
     ./ddr verify --tu NAME  ... plus the per-TU verdict: its .text span, its .debug chunk
                             and its .line chunks against retail (the promotion rule)
     ./ddr verify --iso IMG  ... plus G3: the built ELF spliced back into a copy of IMG must
