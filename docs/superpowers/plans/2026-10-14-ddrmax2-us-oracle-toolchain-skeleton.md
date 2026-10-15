@@ -553,7 +553,9 @@ def test_compiler_produces_metrowerks_object(tmp_path):
     probe.compile(ROOT / "tests/toolchain/probe.c", obj, d, fetch.wibo(),
                   ["-c", "-lang", "c", "-O2", "-g"])
     info = probe.inspect(obj)
-    assert info["comment"] == b"MW MIPS C Compiler (2.4.1.01)\x00PlayStation2\x00"
+    # A compile-only object carries the compiler string; `PlayStation2` is added by MWLD at link
+    # time, so the retail 43-byte string is a post-link artifact (spec §2).
+    assert info["comment"] == b"MW MIPS C Compiler (2.4.1.01)\x00"
     assert ".debug" in info["sections"] and ".line" in info["sections"]
     assert info["sections"][".debug"][0] == 0x70000005      # SHT_MIPS_DEBUG
     assert "sysInitScf" in info["text_symbols"]
