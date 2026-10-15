@@ -820,7 +820,10 @@ Expected: `out/SLUS_207.11` is produced, and its sha256 equals `a7596e8a…5218a
 - [ ] **Step 5: Write the checksum file from the verified run**
 
 ```bash
+# the manifest holds two records; Task 11 appends the retail image's pin (do not overwrite)
 printf '%s  out/SLUS_207.11\n' "$(shasum -a 256 out/SLUS_207.11 | cut -d' ' -f1)" > config/usam2/checksums.txt
+printf '%s  disc/DDRMAX2 Dance Dance Revolution (USA).iso\n' \
+  b8519c9106b43cc83bc57948cbc02a83851d3182fcbd4e7d341c573758bb3ec8 >> config/usam2/checksums.txt
 ```
 
 - [ ] **Step 6: Commit**
