@@ -193,3 +193,75 @@ def test_include_asm_expands_to_a_split_that_exists():
     missing = [f"{folder}/{name}.s" for folder, name in calls
                if not (ROOT / f"{folder}/{name}.s").is_file()]
     assert not missing, f"{len(missing)} INCLUDE_ASM targets do not exist: {missing[:3]}"
+
+
+SHA = "a7596e8ab3da823236ed8e5f3f2804db3daee47265ae73e22f3311a5218aa8cc"
+ELF_SIZE = 0x265854
+LOADABLE_END = 0x1A2700
+
+
+def test_the_pinned_link_reproduces_the_retail_file():
+    """M1's gate as a test: bare `ninja` must produce the retail image byte for byte."""
+    import hashlib
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    subprocess.run(["ninja"], cwd=ROOT, check=True)
+    built = ROOT / "out/SLUS_207.11"
+    assert built.stat().st_size == ELF_SIZE, f"{built} is {built.stat().st_size} bytes"
+    digest = hashlib.sha256(built.read_bytes()).hexdigest()
+    assert digest == SHA, f"built {digest}"
+    assert SHA in (ROOT / "config/usam2/checksums.txt").read_text()
+
+
+def test_the_file_assembly_covers_every_byte_the_elf_does_not_load():
+    """The loadable image comes from ld + objcopy; the file's tail is databin content.
+
+    The tail edge's inputs must be the databin assets *in manifest order* -- a glob
+    would sort `.debug_000` after `shstrtab` and produce a plausible wrong image -- and
+    together with the loadable image they must tile the file exactly.
+    """
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    edge = next(line for line in (ROOT / "build.ninja").read_text().splitlines()
+                if line.startswith("build build/SLUS_207.11.tail: cat "))
+    tail = edge.split(": cat ", 1)[1].split()
+    total = sum((ROOT / name).stat().st_size for name in tail)
+    assert total == ELF_SIZE - LOADABLE_END, f"the tail covers {total} bytes"
+    assert tail[0].endswith("shstrtab.databin.bin"), tail[0]
+    assert tail[-1].endswith("section_headers.databin.bin"), tail[-1]
+    script = (ROOT / "build/SLUS_207.11.ld").read_text()
+    assert ".elf_header 0x0 : AT(0x0)" in script
+    assert ".main 0x100000 : AT(0x80)" in script
+    assert ".bss 0x2A2680 (NOLOAD)" in script
+    # The sizes are asserted by the linker itself, so a padded split cannot slip through.
+    assert "SIZEOF(.main) == 0x1A2680" in script
+    assert "SIZEOF(.bss) == 0x414500" in script
+
+
+def test_the_pinned_link_lists_the_code_splits_in_address_order():
+    """The link places the i-th split at the i-th address, so the order *is* the layout."""
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    script = (ROOT / "build/SLUS_207.11.ld").read_text()
+    listed = [f"{name.removeprefix('build/')}.s" for name in
+              re.findall(r"^\s+(\S+)\.s\.o\(\.text\)$", script, re.M)]
+    splits = {s.relative_to(ROOT).as_posix() for s in (ROOT / "asm/nonmatchings").rglob("*.s")}
+    assert len(listed) == len(splits) == 3603, f"{len(listed)} of {len(splits)}"
+    expected = sorted(splits, key=lambda rel: split_span((ROOT / rel).read_text())[0])
+    assert listed == expected, "the script must list the splits in address order"
+
+
+def test_configure_is_deterministic():
+    """Every generated artefact is a function of the manifests, not of a previous run."""
+    generated = ("build.ninja", "build/SLUS_207.11.ld", "config/usam2/splat.yaml")
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    first = {name: (ROOT / name).read_bytes() for name in generated}
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    for name, content in first.items():
+        assert (ROOT / name).read_bytes() == content, f"{name} changed between runs"
+
+
+def test_objects_only_configuration_keeps_the_link_out_of_the_graph():
+    """The objdiff CI job assembles splits without ever linking the image."""
+    subprocess.run(CONFIGURE + ["--objects"], cwd=ROOT, check=True)
+    ninja = (ROOT / "build.ninja").read_text()
+    assert "default objects" in ninja
+    assert "build out/SLUS_207.11.elf:" not in ninja and "build g1:" not in ninja
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)  # leave the full graph behind
