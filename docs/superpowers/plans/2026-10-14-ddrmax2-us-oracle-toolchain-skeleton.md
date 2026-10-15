@@ -272,7 +272,7 @@ grep -c "provenance:ghidra" config/usam2/symbol_addrs.txt
 grep "sysInitScf" config/usam2/symbol_addrs.txt
 ```
 
-Expected: 1,062 DWARF symbols, ~2,100 Ghidra placeholders, and `sysInitScf = 0x0021C420; // type:func size:0x30 provenance:dwarf`.
+Expected: 1,062 DWARF records (423 functions + 639 globals/statics) and 2,738 `provenance:ghidra` placeholders — the Ghidra function list is 3,161 and only the 423 DWARF *functions* overlap it, so every other Ghidra entry gets a placeholder — plus `sysInitScf = 0x0021C420; // type:func size:0x30 provenance:dwarf`. Object records with no address (27 unplaced statics) are written to `config/usam2/unplaced_symbols.txt` instead, so no symbol ever sits at address `0x0` and nothing is dropped.
 
 - [ ] **Step 6: Run the tests and commit**
 
