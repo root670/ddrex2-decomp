@@ -1,0 +1,75 @@
+# The objdiff object graph: every split assembled, nothing linked, no image.
+#
+# This is the job that produces objdiff's sides.  `configure.py --objects` writes a graph
+# whose default target is `objects` (no `ld`, no `cat`, no gate), and `objdiff.json` -- which
+# configure.py writes from the same manifests -- lists one unit per code object the link
+# would place, with a `null` base for every function that has no source yet.
+#
+# The retail ELF is required (splat splits it) and is never in this repository: it arrives
+# from a secret and G1's pin check is what makes that source trustworthy (AGENTS.md rule 5).
+name: objects
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  objdiff:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host tools
+        run: brew install mips-linux-gnu-binutils ninja
+
+      - name: Python tools
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install 'splat64[mips]'
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: objdiff-cli
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/objdiff-cli" \
+            https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64
+          chmod +x "$HOME/.local/bin/objdiff-cli"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain
+        run: python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
+
+      # The compiler runs through wibo, a Mach-O x86_64 binary (PROVENANCE.txt records the
+      # version and digest): on an arm64 runner that needs Rosetta 2, which the image does
+      # not always ship.
+      - name: Rosetta 2
+        run: |
+          if [ -e /Library/Apple/usr/libexec/oah/libRosettaRuntime ]; then
+            echo "Rosetta 2 is present"
+          else
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+
+      - name: Retail ELF (supplied out of band)
+        env:
+          RETAIL_ELF_URL: ${{ secrets.RETAIL_ELF_URL }}
+        run: |
+          if [ -z "$RETAIL_ELF_URL" ]; then
+            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset; splat needs orig/SLUS_207.11"
+            exit 1
+          fi
+          mkdir -p orig
+          curl -fsSL -o orig/SLUS_207.11 "$RETAIL_ELF_URL"
+
+      - name: Object graph
+        run: python3 configure.py --objects && ninja objects
+
+      # ~28 MB and a couple of minutes: the host assembler over 4,092 splits.  This job never
+      # links and never runs a gate, so it is the cheap place to see objdiff's raw material.
+      - name: Upload the objdiff artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_207.11_objects
+          path: |
+            objdiff.json
+            build/asm/**
+          if-no-files-found: error

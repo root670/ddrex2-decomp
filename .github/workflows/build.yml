@@ -1,0 +1,74 @@
+# G1: the pinned build, and the promotion verdicts for what is already in C.
+#
+# The retail ELF is never in this repository (AGENTS.md rule 5).  CI fetches it from wherever
+# the maintainer keeps it and G1 then checks it against the digest pinned in
+# config/usam2/checksums.txt, so a truncated or wrong-version copy fails loudly instead of
+# being compared with the build.  The disc image, which G3 needs, is 1.24 GB: the runner has
+# no mount, so `--iso` prints "G3 skipped" and exits 0 rather than pretending to have run it.
+name: build
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  skeleton:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host tools
+        run: brew install mips-linux-gnu-binutils ninja
+
+      # Homebrew's python3 is externally managed (PEP 668), so the Python tools go into a
+      # venv that is then first on PATH: `python3 -m splat` has to import for splat to run.
+      - name: Python tools
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install 'splat64[mips]' pytest
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: objdiff-cli
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/objdiff-cli" \
+            https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64
+          chmod +x "$HOME/.local/bin/objdiff-cli"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Proprietary, fetched and hash-verified into the gitignored toolchain/.  2.4-001213 is
+      # the required build; 3.0-011126 is the one the promoted unit was measured against.
+      - name: Toolchain
+        run: python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
+
+      # The compiler runs through wibo, a Mach-O x86_64 binary (PROVENANCE.txt records the
+      # version and digest): on an arm64 runner that needs Rosetta 2, which the image does
+      # not always ship.
+      - name: Rosetta 2
+        run: |
+          if [ -e /Library/Apple/usr/libexec/oah/libRosettaRuntime ]; then
+            echo "Rosetta 2 is present"
+          else
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+
+      - name: Retail ELF (supplied out of band)
+        env:
+          RETAIL_ELF_URL: ${{ secrets.RETAIL_ELF_URL }}
+        run: |
+          if [ -z "$RETAIL_ELF_URL" ]; then
+            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset; the build needs orig/SLUS_207.11 (AGENTS.md rule 5)"
+            exit 1
+          fi
+          mkdir -p orig
+          curl -fsSL -o orig/SLUS_207.11 "$RETAIL_ELF_URL"
+
+      - name: Build (configure, ninja, G1)
+        run: ./ddr build
+
+      - name: Verify (promotion rule; G3 when the retail image is available)
+        run: ./ddr verify --tu sys_scf --iso
+
+      # ~9 minutes, and the slowest step by design: the suite runs the real tools -- splat,
+      # mips-linux-gnu-as, ld, objcopy and mwccps2 under wibo -- against the retail files.
+      - name: Test suite
+        run: python3 -m pytest -q

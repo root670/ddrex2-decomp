@@ -1,0 +1,84 @@
+# The progress report decomp.dev reads.
+#
+# decomp.dev (https://decomp.wiki/en/tools/decomp-dev) takes the report from a GitHub Actions
+# artifact named `<version>_report` on the *default branch* -- it downloads the artifact and
+# parses objdiff's Report schema; there is no upload key and no endpoint to call.  The
+# project is registered once, by a maintainer, at https://decomp.dev/manage/new.
+#
+# The numbers are objdiff's byte-level view of the objects, not the gates' verdict: a
+# translation unit whose linked bytes are retail's (G1, `./ddr verify --tu`) does not read as
+# 100% here, because `compile.py` writes the object with its relocations already resolved
+# while the target split leaves them symbolic -- see the caveat at the end of
+# docs/milestones/m2-sys-scf.md.  Data is not in this graph: it stays pinned retail bytes by
+# design, so the report measures the C that has been written, which is the point.
+name: progress
+
+on:
+  push:
+    branches: [master]      # the default branch: decomp.dev only picks reports up from it
+  workflow_dispatch:         # ... and it can be run by hand while the work is on a branch
+
+jobs:
+  report:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host tools
+        run: brew install mips-linux-gnu-binutils ninja
+
+      - name: Python tools
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install 'splat64[mips]'
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: objdiff-cli
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/objdiff-cli" \
+            https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64
+          chmod +x "$HOME/.local/bin/objdiff-cli"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain
+        run: python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
+
+      # The compiler runs through wibo, a Mach-O x86_64 binary (PROVENANCE.txt records the
+      # version and digest): on an arm64 runner that needs Rosetta 2, which the image does
+      # not always ship.
+      - name: Rosetta 2
+        run: |
+          if [ -e /Library/Apple/usr/libexec/oah/libRosettaRuntime ]; then
+            echo "Rosetta 2 is present"
+          else
+            sudo softwareupdate --install-rosetta --agree-to-license
+          fi
+
+      - name: Retail ELF (supplied out of band)
+        env:
+          RETAIL_ELF_URL: ${{ secrets.RETAIL_ELF_URL }}
+        run: |
+          if [ -z "$RETAIL_ELF_URL" ]; then
+            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset (AGENTS.md rule 5)"
+            exit 1
+          fi
+          mkdir -p orig
+          curl -fsSL -o orig/SLUS_207.11 "$RETAIL_ELF_URL"
+
+      # The report needs both sides of every unit: the split objects (target) and the C
+      # objects (base).
+      - name: Build (objects and image; G1)
+        run: ./ddr build
+
+      - name: Report
+        run: objdiff-cli report generate -o build/report.json
+
+      # The artifact name matters: decomp.dev looks for `SLUS_207.11_report`.
+      - name: Upload the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_207.11_report
+          path: build/report.json
+          if-no-files-found: error
