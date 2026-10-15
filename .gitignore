@@ -9,7 +9,8 @@ asm/
 objdiff.json
 
 # Proprietary toolchains are fetched into place, never vendored.
-toolchain/
+# Anchored: tools/toolchain/ and tests/toolchain/ are tracked source.
+/toolchain/
 .cache/
 
 # Python
