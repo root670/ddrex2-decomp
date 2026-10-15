@@ -1,27 +1,31 @@
+# Every generated path below is anchored to the repository root (`/name`): an unanchored
+# `build/` also matches `tools/build/`, and an unanchored `toolchain/` once swallowed
+# `tools/toolchain/` -- a generated path that is never committed should not be able to
+# hide a tracked one (R36).
+
 # Retail binaries and disc images are never committed: the user supplies them.
-orig/
-disc/
+/orig/
+/disc/
 
 # Generated build output (reproducible from orig/ + config/).
-build/
-out/
-asm/
-objdiff.json
-build.ninja
-.ninja_log
-.ninja_deps
+/build/
+/out/
+/asm/
+/objdiff.json
+/build.ninja
+/.ninja_log
+/.ninja_deps
 
 # Configure output derived from the oracle's manifests and the yaml next to it.
-config/usam2/splat_symbol_addrs.txt
-config/usam2/undefined_funcs_auto.txt
-config/usam2/undefined_syms_auto.txt
+/config/usam2/splat_symbol_addrs.txt
+/config/usam2/undefined_funcs_auto.txt
+/config/usam2/undefined_syms_auto.txt
 
 # Proprietary toolchains are fetched into place, never vendored.
-# Anchored: tools/toolchain/ and tests/toolchain/ are tracked source.
 /toolchain/
-.cache/
+/.cache/
 
-# Python
+# Python: unanchored on purpose -- these are caches wherever they appear.
 __pycache__/
 *.pyc
 
