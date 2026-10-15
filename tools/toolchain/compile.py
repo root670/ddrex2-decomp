@@ -6,6 +6,10 @@ This is the program behind the ninja ``cc`` rule::
     build <out.o>: cc <src>     # flags = --compiler 3.0-011126 -c -lang c -O3 -g
       command = python3 tools/toolchain/compile.py $in $out $flags
 
+``$in`` is the source alone: ``configure.py`` also declares this file -- and itself -- as the
+edge's *implicit* inputs (``| ...``, R35a), so editing the driver invalidates the object it
+produced without changing the command line.
+
 It runs ``mwccps2`` (under wibo, through :mod:`toolchain.probe`) over a C source and turns
 the Metrowerks object it writes into the one object the pinned build needs:
 

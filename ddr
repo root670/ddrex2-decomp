@@ -297,7 +297,9 @@ def _promoted_object(tu: str):
 
     The build graph is read instead of a path convention being assumed: ``configure.py``
     owns where an object lands (Task 12 makes a promoted TU a ``cc`` edge), and this is the
-    one place the CLI lets the graph speak for itself.
+    one place the CLI lets the graph speak for itself.  A generated edge also declares the
+    files that produce it as *implicit* inputs (``|``, R35a), which ninja keeps out of
+    ``$in``: only the explicit inputs are the source the command is handed.
     """
     graph = REPO_ROOT / "build.ninja"
     if not graph.is_file():
@@ -306,7 +308,8 @@ def _promoted_object(tu: str):
         if ": cc " not in line:
             continue
         output, _, inputs = line.strip().removeprefix("build ").partition(": cc ")
-        if inputs.strip() == tu:
+        source = inputs.split("|", 1)[0].strip()
+        if source == tu:
             return REPO_ROOT / output.strip()
     return None
 

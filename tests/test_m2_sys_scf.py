@@ -17,20 +17,27 @@ def test_sys_scf_debug_chunk_matches_retail():
                        cwd=ROOT, capture_output=True, text=True)
     assert p.returncode == 0 and "debug chunk ok" in p.stdout
 
-def test_sys_scf_debug_bytes_come_from_the_compiler():
-    """The debug chunk is the compiler's, not retail's databin wearing the same name.
+def test_sys_scf_debug_and_line_bytes_come_from_the_compiler():
+    """Both payloads are the compiler's, not retail's databin wearing the same name.
 
     A byte-equality verdict cannot tell the two apart: retail's own databin *is* retail.
-    So the graph itself is asserted -- the `cc` object, its `objsec` debug payload, and that
-    payload in place of the chunk's databin on the tail edge.
+    So the graph itself is asserted -- the `cc` object, one `objsec` payload per section, and
+    that payload in place of the chunk's databin on the tail edge.  `.debug` alone would be
+    half the rule: the `.line` payload is what pins the statement numbers, so the same anchor
+    is asserted for it (R35b) -- a promotion that quietly fell back to retail's `.line`
+    databin would still print "line chunk ok".
     """
     graph = (ROOT / "build.ninja").read_text()
-    assert ("build build/src/sys/sys_scf.c.o.debug: objsec build/src/sys/sys_scf.c.o"
-            in graph)
     edge = next(line for line in graph.splitlines()
                 if line.startswith("build build/SLUS_207.11.tail: cat "))
-    assert "build/src/sys/sys_scf.c.o.debug" in edge.split()
-    assert "build/assets/.debug_000.databin.bin" not in edge.split()
+    # The edge also declares the code that generates it (`|`, R35a): the tail is the
+    # explicit part, which is what the `cat` command is handed.
+    tail = edge.split(": cat ", 1)[1].split("|", 1)[0].split()
+    for section, databin in ((".debug", ".debug_000"), (".line", ".line_000")):
+        payload = f"build/src/sys/sys_scf.c.o{section}"
+        assert f"build {payload}: objsec build/src/sys/sys_scf.c.o" in graph
+        assert payload in tail
+        assert f"build/assets/{databin}.databin.bin" not in tail
 
 
 def test_staging_paths_are_unique_per_unit():

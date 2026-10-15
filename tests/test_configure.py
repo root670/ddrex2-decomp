@@ -6,6 +6,7 @@ manifests, so a geometry or manifest mistake surfaces here rather than in the li
 """
 
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -226,7 +227,9 @@ def test_the_file_assembly_covers_every_byte_the_elf_does_not_load():
     subprocess.run(["ninja"], cwd=ROOT, check=True)
     edge = next(line for line in (ROOT / "build.ninja").read_text().splitlines()
                 if line.startswith("build build/SLUS_207.11.tail: cat "))
-    tail = edge.split(": cat ", 1)[1].split()
+    # The edge also declares the code that generates it as an implicit input (`|`, R35a);
+    # the tail is the explicit part, which is exactly what the `cat` command is given.
+    tail = edge.split(": cat ", 1)[1].split("|", 1)[0].split()
     total = sum((ROOT / name).stat().st_size for name in tail)
     assert total == ELF_SIZE - LOADABLE_END, f"the tail covers {total} bytes"
     assert tail[0].endswith("shstrtab.databin.bin"), tail[0]
@@ -287,3 +290,80 @@ def test_objects_only_configuration_keeps_the_link_out_of_the_graph():
     assert "default objects" in ninja
     assert "build out/SLUS_207.11.elf:" not in ninja and "build g1:" not in ninja
     subprocess.run(CONFIGURE, cwd=ROOT, check=True)  # leave the full graph behind
+
+
+#: The three edges whose content the compiler driver computes: the promoted object and the
+#: two payloads dumped out of it.
+COMPILE_EDGES = ("cc src/sys/sys_scf.c",
+                 "objsec .debug build/src/sys/sys_scf.c.o.debug",
+                 "objsec .line build/src/sys/sys_scf.c.o.line")
+
+
+def _dirty_edges(targets):
+    """The edges ninja would run for ``targets``: its ``-n`` output, as descriptions."""
+    p = subprocess.run(["ninja", "-n", *targets], cwd=ROOT, capture_output=True, text=True)
+    assert p.returncode == 0, p.stdout + p.stderr
+    return {match.group(1) for match in
+            (re.match(r"^\[\d+/\d+\] (.*)$", line) for line in p.stdout.splitlines())
+            if match}
+
+
+def test_editing_the_compiler_driver_invalidates_the_compile_edges():
+    """R35a: the graph depends on the code that generates it, not just on its inputs.
+
+    ``compile.py`` decides the *bytes* of a promoted object (it stages the source at a path
+    whose length is baked into the DWARF), but ninja does not hash command lines and the
+    object's only declared input was the C source -- so editing it left the object, and the
+    payloads dumped from it, in place.  Every gate stays green over a stale object, which is
+    the failure this asserts away: touch the driver and the three compile edges go dirty.
+    """
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    built = ["build/src/sys/sys_scf.c.o", "build/src/sys/sys_scf.c.o.debug",
+             "build/src/sys/sys_scf.c.o.line"]
+    subprocess.run(["ninja"] + built, cwd=ROOT, check=True)
+    stale = _dirty_edges(built) & set(COMPILE_EDGES)
+    assert not stale, f"already stale before the touch: {sorted(stale)}"
+
+    driver = ROOT / "tools/toolchain/compile.py"
+    stat = driver.stat()
+    try:
+        # Two seconds past the object the driver produced, so the comparison cannot tie
+        # (and cannot lose to a rebuild this test itself just triggered).
+        os.utime(driver, ns=(stat.st_atime_ns,
+                             os.stat(ROOT / built[0]).st_mtime_ns + 2_000_000_000))
+        dirty = _dirty_edges(built)
+    finally:
+        os.utime(driver, (stat.st_atime, stat.st_mtime))
+    missing = set(COMPILE_EDGES) - dirty
+    assert not missing, f"touching {driver.name} did not invalidate: {sorted(missing)}"
+
+
+def test_objdiff_project_covers_every_linked_code_object():
+    """The progress report's project: every function the link places, one unit each.
+
+    The unit set is the *linked* set, not the set that already has a source: a project that
+    listed only what is written in C would report a skeleton with zero C as matched, which is
+    the opposite of what a progress report is for.  A function with no source yet therefore
+    has a ``null`` base (objdiff counts it as un-matched), and the promoted unit's functions
+    compare retail's split object against the C object the build links in its place.
+    """
+    import configure
+
+    subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    project = json.loads((ROOT / "objdiff.json").read_text())
+    assert project["min_version"] and project["custom_make"] == "ninja"
+    units = {unit["name"]: unit for unit in project["units"]}
+    code = {f"{configure.CODE_SEGMENT}/{pathlib.Path(name).stem}"
+            for _, name in configure.code_splits(configure.split_sources())}
+    assert set(units) == code, "every code split the link places is a unit"
+
+    promoted = {f"{configure.CODE_SEGMENT}/{pathlib.Path(split).stem}": promotion.object
+                for promotion in configure.promotions() for split in promotion.splits}
+    assert promoted, "the promotion table is what makes a base non-null"
+    for name, unit in units.items():
+        assert (ROOT / unit["target_path"]).is_file(), f"{name}: no such target object"
+        assert unit["target_path"].endswith(".s.o")
+        assert unit["base_path"] == promoted.get(name), name
+        if unit["base_path"] is not None:
+            assert (ROOT / unit["base_path"]).is_file(), f"{name}: no such base object"
+            assert unit["base_path"] != unit["target_path"], "a self-comparison measures nothing"

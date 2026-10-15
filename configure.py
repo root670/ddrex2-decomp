@@ -46,6 +46,8 @@ if str(REPO_ROOT / "tools") not in sys.path:  # run as `python3 configure.py` to
 from toolchain import compile as cc  # the one derivation of a unit's pinned placement
 
 SPLAT = [sys.executable, "-m", "splat", "split"]
+# objdiff's config schema, named so an editor can check the emitted project.
+OBJDIFF_SCHEMA = ("https://raw.githubusercontent.com/encounter/objdiff/main/config.schema.json")
 
 # ---------------------------------------------------------------------------
 # Measured geometry of orig/SLUS_207.11 (2,512,980 bytes)
@@ -117,6 +119,21 @@ ALIGN_FILTER = r"""sed -E '/^[[:space:]]*\.align[[:space:]]/d'"""
 AS_RULE = ("cpp -Iinclude $in -o - | " + ALIGN_FILTER
            + " | mips-linux-gnu-as -Iasm/include --no-pad-sections "
              "-EL -march=5900 -mabi=eabi -o $out")
+
+# The graph has to depend on the code that generates it (R35a).  Every command line below
+# is text from this file, and the `cc` rule's *program* is `tools/toolchain/compile.py` --
+# whose own bytes decide the object's bytes, because the staged source path's length is
+# baked into the DWARF.  Ninja does not hash command lines, so without these inputs editing
+# either file leaves the objects it produced in place, silently: the machinery runs once,
+# proves itself, and then never again.  They are declared as *implicit* inputs (`|`), which
+# ninja keeps out of `$in` (verified on the pinned ninja 1.13.2), so no rule command changes
+# and an edge is dirtied exactly when one of these files is touched.
+GENERATOR = "configure.py"
+COMPILER_DRIVER = "tools/toolchain/compile.py"
+#: What every generated edge must declare: the file whose text spells it out.
+GENERATED_BY = (GENERATOR,)
+#: ... and what the compile edges add: the program that computes the object's content.
+COMPILE_EDGE_INPUTS = (COMPILER_DRIVER, GENERATOR)
 
 
 class ConfigError(Exception):
@@ -645,6 +662,38 @@ def object_path(split: pathlib.Path) -> pathlib.Path:
         split.name + ".o")
 
 
+def generated_by(*inputs) -> str:
+    """The ninja ``|`` clause declaring the files whose text or bytes produce an edge."""
+    return " | " + " ".join(inputs)
+
+
+def objdiff_json(code, promotions) -> str:
+    """The objdiff project: one unit per linked code object, target against the C that exists.
+
+    objdiff compares a unit's ``base_path`` with its ``target_path``.  The target side here
+    is the function's split object -- retail's own bytes, which G1 proves -- and the base side
+    is the object the link actually places for it: the promoted unit's C object where the
+    function has been rewritten, and ``null`` where it has not, which objdiff counts as
+    un-matched.  One unit per *linked* object, because that is the set the image is built
+    from: a project that listed only what is already in C would report a skeleton with zero C
+    written as matched, which is the opposite of what a progress report is for.  Data is not
+    part of this graph -- it stays pinned retail bytes by design -- so neither are the data
+    databins.
+    """
+    base_of = {split: promotion.object
+               for promotion in promotions for split in promotion.splits}
+    units = [{"name": f"{CODE_SEGMENT}/{pathlib.Path(name).stem}",
+              "target_path": object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix(),
+              "base_path": base_of.get(name),
+              "scratch": {},
+              "metadata": {}}
+             for _, name in code]
+    units.sort(key=lambda unit: unit["name"])
+    return json.dumps({"$schema": OBJDIFF_SCHEMA, "custom_make": "ninja",
+                       "build_target": True, "build_base": True,
+                       "min_version": "2.0.0", "units": units}, indent=2) + "\n"
+
+
 def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
     lines = [NINJA_HEADER, "\n"]
     lines += [
@@ -663,8 +712,14 @@ def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
         "\n",
         # One section out of the object the compiler produced: the promoted unit's own
         # `.debug`/`.line` bytes, which the tail edge substitutes for retail's databins.
+        # `-p` matters: objcopy treats a lone input file as an *in-place* edit, so without
+        # it the object is rewritten (byte for byte the same, but with a fresh mtime) after
+        # the dump was written, leaving the payload permanently ~200us older than its own
+        # input -- the edge is then dirty on every build and the whole gate chain behind it
+        # re-runs.  Measured on the pinned binutils: with `-p` the object keeps its dates
+        # (and its bytes) and the dump lands at `now`, so the edge is incremental.
         "rule objsec\n",
-        "  command = mips-linux-gnu-objcopy --dump-section $section=$out $in\n",
+        "  command = mips-linux-gnu-objcopy -p --dump-section $section=$out $in\n",
         "  description = objsec $section $out\n",
         "\n",
         "rule ld\n",
@@ -692,14 +747,16 @@ def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
     for split in splits:
         rel = split.relative_to(REPO_ROOT).as_posix()
         obj = object_path(split).relative_to(REPO_ROOT).as_posix()
-        lines.append(f"build {obj}: as {rel}\n")
+        lines.append(f"build {obj}: as {rel}{generated_by(*GENERATED_BY)}\n")
         objects.append(obj)
     for promotion in promotions:
-        lines.append(f"build {promotion.object}: cc {promotion.file}\n")
+        lines.append(f"build {promotion.object}: cc {promotion.file}"
+                     f"{generated_by(*COMPILE_EDGE_INPUTS)}\n")
         lines.append(f"  flags = {promotion.flags}\n")
         for section, payload in ((".debug", promotion.debug_payload),
                                  (".line", promotion.line_payload)):
-            lines.append(f"build {payload}: objsec {promotion.object}\n")
+            lines.append(f"build {payload}: objsec {promotion.object}"
+                         f"{generated_by(*COMPILE_EDGE_INPUTS)}\n")
             lines.append(f"  section = {section}\n")
         objects.append(promotion.object)
     lines.append("\n")
@@ -714,11 +771,14 @@ def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
     # tail is every databin after it, in file order -- with a promoted unit's own
     # `.debug`/`.line` payload in place of the databins of the chunks it owns.
     tail = tail_inputs(databins, promotions)
-    lines.append("build out/SLUS_207.11.elf: ld build/SLUS_207.11.ld || objects\n")
-    lines.append("build build/SLUS_207.11.loadable: bin out/SLUS_207.11.elf\n")
-    lines.append("build build/SLUS_207.11.tail: cat " + " ".join(tail) + "\n")
+    lines.append(f"build out/SLUS_207.11.elf: ld build/SLUS_207.11.ld"
+                 f"{generated_by(*GENERATED_BY)} || objects\n")
+    lines.append("build build/SLUS_207.11.loadable: bin out/SLUS_207.11.elf"
+                 f"{generated_by(*GENERATED_BY)}\n")
+    lines.append("build build/SLUS_207.11.tail: cat " + " ".join(tail)
+                 + f"{generated_by(*GENERATED_BY)}\n")
     lines.append("build out/SLUS_207.11: cat build/SLUS_207.11.loadable "
-                 "build/SLUS_207.11.tail\n")
+                 "build/SLUS_207.11.tail" + generated_by(*GENERATED_BY) + "\n")
     lines.append("\n")
     # The gate is an edge of its own with no output file, so ninja runs it on every
     # build: `ninja` proves the image, `ninja objects` still stops at the objects.
@@ -786,6 +846,7 @@ def configure(config: str, cus_path: pathlib.Path, chunks_path: pathlib.Path,
 
     ninja = ninja_text(splits, databins, objects_only, promoted)
     write_if_different(REPO_ROOT / "build.ninja", ninja)
+    write_if_different(REPO_ROOT / "objdiff.json", objdiff_json(code, promoted))
     print(f"configure: {len(splits)} splits, {len(code)} code splits at 0x{code[0][0]:X}, "
           f"{len(tail)} tail databins, {len(aliases)} link aliases, build.ninja written"
           + (" (objects only)" if objects_only else ""))
