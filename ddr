@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+"""ddr -- the project's command surface: the oracle, the build, both gates, the diff.
+
+Every routine step of the matching loop is one verb here, so a contributor (or an agent)
+never has to remember which script, which config path or which order.  The verbs are thin
+wrappers by design: ``configure.py`` owns the build graph, ``tools/verify/g1.py`` the
+whole-file gate, ``tools/verify/g2.py`` the localisation, ``tools/iso/reinsert.py`` the disc
+image, ``tools/oracle/*`` the artifacts, and ``tools/toolchain/check_deps.py`` the host
+tools.  Nothing is re-implemented in this file; the one decision it makes is *which* of
+those to call, in which order, and what to print.
+
+    ./ddr oracle            regenerate the symbol/CU/chunk/header artifacts from the retail
+                            ELF (deterministic: a fresh run reproduces what is committed)
+    ./ddr build             configure (manifests -> splat inputs -> build.ninja) then ninja
+    ./ddr verify            G1: out/SLUS_207.11 must equal orig/SLUS_207.11
+    ./ddr verify --tu NAME  ... plus the per-TU verdict: its .text span, its .debug chunk
+                            and its .line chunks against retail (the promotion rule)
+    ./ddr verify --iso IMG  ... plus G3: the built ELF spliced back into a copy of IMG must
+                            give IMG back, hash for hash
+    ./ddr diff SYM TU       objdiff-cli between SYM's object and its retail target object
+    ./ddr iso --iso IMG     G3 on its own
+
+On a G1 failure the offset is localised through the oracle's manifests -- ``.debug``/``.line``
+by G1's own chunk walk, a code byte by the DWARF function compile unit that covers it -- and
+printed as one line naming the translation unit, the function and the compile unit (R32:
+G2 consumes G1's localisation instead of deriving a second one).
+
+Exit codes: 0 the verb's work succeeded and every gate it ran was green; 1 a gate or a TU
+verdict failed, or a host tool is missing (``check_deps`` prints the remedy, never a
+traceback); 2 a usage or configuration problem -- a missing input, a name that matches no
+translation unit, an image the ELF does not fit into.
+"""
+
+from __future__ import annotations
+
+import argparse
+import pathlib
+import subprocess
+import sys
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent
+TOOLS = REPO_ROOT / "tools"
+# `tools/oracle` is a flat module set (its own modules import each other by bare name), and
+# `tools`/the repo root carry the namespace and `configure` respectively.
+for extra in (str(TOOLS / "oracle"), str(TOOLS), str(REPO_ROOT)):
+    if extra not in sys.path:
+        sys.path.insert(0, extra)
+
+import configure  # noqa: E402
+import emit_chunks, emit_cus, emit_headers, emit_symbols  # noqa: E402
+from iso import reinsert  # noqa: E402
+from toolchain import check_deps  # noqa: E402
+from verify import g1, g2  # noqa: E402
+
+CONFIG = "usam2"
+CONFIG_DIR = REPO_ROOT / "config" / CONFIG
+RETAIL = REPO_ROOT / "orig" / "SLUS_207.11"
+GHIDRA = CONFIG_DIR / "ghidra_functions.json"
+CUS = CONFIG_DIR / "cus.json"
+CHUNKS = CONFIG_DIR / "debug_chunks.json"
+SYMBOLS = CONFIG_DIR / "symbol_addrs.txt"
+UNPLACED = CONFIG_DIR / "unplaced_symbols.txt"
+INCLUDE = REPO_ROOT / "include"
+BUILT = REPO_ROOT / "out" / "SLUS_207.11"
+
+
+def _display(path) -> str:
+    """A path as a reader types it: repo-relative when it is inside the repo."""
+    path = pathlib.Path(path)
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _require(*keys: str) -> None:
+    """Probe the host tools by name, raising :class:`check_deps.MissingDependency`.
+
+    With no keys this is the full set the build invokes (``check_deps.require``); with keys
+    it is exactly those, so ``diff`` does not fail because a compiler is missing.
+    """
+    if not keys:
+        check_deps.require()
+    for key in keys:
+        check_deps.version(check_deps.TOOLS_BY_KEY[key])
+
+
+# ---------------------------------------------------------------------------
+# oracle
+# ---------------------------------------------------------------------------
+
+
+def cmd_oracle(args) -> int:
+    """Regenerate the four artifact families from the retail ELF, deterministically."""
+    if not RETAIL.is_file():
+        print(f"ddr: {_display(RETAIL)}: no such file: the oracle reads the retail ELF",
+              file=sys.stderr)
+        return 2
+    cus = emit_cus.build(RETAIL)
+    emit_cus.write(CUS, cus)
+    print(f"oracle: {len(cus)} compile units -> {_display(CUS)}")
+
+    chunks = emit_chunks.build(CUS)
+    emit_chunks.write(CHUNKS, chunks)
+    counts = {section: sum(1 for c in chunks if c["section"] == section)
+              for section in (".debug", ".line")}
+    print(f"oracle: {counts['.debug']} .debug + {counts['.line']} .line chunks "
+          f"-> {_display(CHUNKS)}")
+
+    placed, unplaced = emit_symbols.final(emit_symbols.build(RETAIL, GHIDRA))
+    emit_symbols.write(SYMBOLS, placed)
+    emit_symbols.write_unplaced(UNPLACED, unplaced)
+    print(f"oracle: {len(placed)} placed + {len(unplaced)} unplaced symbols "
+          f"-> {_display(SYMBOLS)}")
+
+    headers = emit_headers.write_all(RETAIL, INCLUDE)
+    print(f"oracle: {len(headers)} translation-unit headers -> {_display(INCLUDE)}")
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# build
+# ---------------------------------------------------------------------------
+
+
+def cmd_build(args) -> int:
+    """Configure, then build: exactly what a green ``verify`` needs to be possible."""
+    _require()
+    if not RETAIL.is_file():
+        print(f"ddr: {_display(RETAIL)}: no such file: the build needs the retail ELF",
+              file=sys.stderr)
+        return 2
+    status = configure.main(["--config", CONFIG])
+    if status != 0:
+        return status
+    ninja = check_deps.resolve(check_deps.TOOLS_BY_KEY["ninja"])
+    return subprocess.run([ninja], cwd=REPO_ROOT).returncode
+
+
+# ---------------------------------------------------------------------------
+# verify / iso
+# ---------------------------------------------------------------------------
+
+
+def _add_g3_arguments(parser, always: bool) -> None:
+    """G3's three inputs: the image, the ELF spliced into it, and the copy it lands in."""
+    parser.add_argument(
+        "--iso", nargs="?", const="", default="" if always else None,
+        help="the disc image to splice into; bare --iso means the mounted retail image, "
+             "which is skipped (exit 0) rather than failed when it is absent")
+    parser.add_argument("--elf", type=pathlib.Path, default=reinsert.BUILT_ELF,
+                        help="the ELF to splice (default: out/SLUS_207.11)")
+    parser.add_argument("--out", type=pathlib.Path, default=reinsert.REBUILT_IMAGE,
+                        help="where the rebuilt image goes (default: out/rebuilt.iso)")
+
+
+def _g3(args) -> int:
+    """G3: splice ``--elf`` into a copy of ``--iso`` and compare the copy's hash.
+
+    The expected digest is the reference image's own: G3's claim is that reinsertion gives
+    the image back, so the image *is* the expectation (R30: the copy is written to the
+    gitignored ``out/``, never to a temporary directory, and hashed streaming).
+    """
+    if args.iso is None:
+        return 0
+    optional = args.iso == ""
+    image = reinsert.RETAIL_IMAGE if optional else pathlib.Path(args.iso)
+    if not image.is_file():
+        if optional:
+            print(f"G3 skipped: {_display(image)} is not mounted")
+            return 0
+        print(f"ddr: {_display(image)}: no such file", file=sys.stderr)
+        return 2
+    elf, out = pathlib.Path(args.elf), pathlib.Path(args.out)
+    if not elf.is_file():
+        print(f"ddr: {_display(elf)}: no such file (run ./ddr build)", file=sys.stderr)
+        return 2
+    print(f"G3: splicing {_display(elf)} into {_display(image)} -> {_display(out)}")
+    try:
+        reinsert.build(image, elf, out)
+    except ValueError as exc:
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 2
+    expected, actual = reinsert.sha256(image), reinsert.sha256(out)
+    if actual == expected:
+        print(f"G3 ok: {_display(out)} is {actual} ({image.stat().st_size} bytes, "
+              f"matches {_display(image)})")
+        return 0
+    print(f"G3 FAIL: {reinsert.verify(out, expected, reference=image)}")
+    return 1
+
+
+def _tu_report(built, retail, name) -> int:
+    """``verify --tu``: the per-TU verdict, one line per thing the promotion rule needs."""
+    try:
+        tu, report = g2.verdicts(built, retail, name)
+    except g2.UnknownUnit as exc:
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 2
+    for verdict in report:
+        print(f"{tu}: {verdict.what} {'ok' if verdict.ok else 'FAIL'} ({verdict.detail})")
+    return 0 if all(verdict.ok for verdict in report) else 1
+
+
+def cmd_verify(args) -> int:
+    if not BUILT.is_file():
+        print(f"ddr: {_display(BUILT)}: no such file (run ./ddr build)", file=sys.stderr)
+        return 2
+    if not RETAIL.is_file():
+        print(f"ddr: {_display(RETAIL)}: no such file: G1 needs the retail binary",
+              file=sys.stderr)
+        return 2
+    if args.tu is not None:
+        # A name that matches no translation unit is a usage error, and it is answered
+        # before G1 runs: a half-printed gate next to a bad argument helps nobody.
+        try:
+            g2.Manifests().tu_named(args.tu)
+        except g2.UnknownUnit as exc:
+            print(f"ddr: {exc}", file=sys.stderr)
+            return 2
+    status = 0
+    message = g1.compare(BUILT, RETAIL)
+    if message == "ok":
+        print(f"G1 ok: {_display(BUILT)} is {g1.sha256(BUILT)}")
+    else:
+        located = g2.localise(BUILT, RETAIL)
+        print(f"G1 FAIL: {g2.describe(located) or message}")
+        if located is not None:
+            print(f"         {message}")
+        status = 1
+    if args.tu is not None:
+        # The verdict is printed even when G1 is red: a promoted translation unit is
+        # iterated with it, and "which chunk" is the question at that point.
+        status = max(status, _tu_report(BUILT, RETAIL, args.tu))
+    return max(status, _g3(args))
+
+
+def cmd_iso(args) -> int:
+    """G3 alone -- ``verify --iso`` without re-running G1 over the same image."""
+    return _g3(args)
+
+
+# ---------------------------------------------------------------------------
+# diff
+# ---------------------------------------------------------------------------
+
+
+def _split_object(symbol: str):
+    """The retail target object for ``symbol``: the split object splat's graph builds.
+
+    Every function is still assembled from its split, and the object's path mirrors splat's
+    own naming (``configure.object_path``), so the target side of the objdiff run is the
+    retail bytes for that function -- the one object in the tree that is guaranteed to *be*
+    the target, because G1 checks the linked image those objects produce.
+    """
+    split = REPO_ROOT / "asm" / "nonmatchings" / configure.CODE_SEGMENT / f"{symbol}.s"
+    return configure.object_path(split)
+
+
+def _promoted_object(tu: str):
+    """The object ninja compiles ``tu``'s C source to, once configure.py writes that edge.
+
+    The build graph is read instead of a path convention being assumed: ``configure.py``
+    owns where an object lands (Task 12 makes a promoted TU a ``cc`` edge), and this is the
+    one place the CLI lets the graph speak for itself.
+    """
+    graph = REPO_ROOT / "build.ninja"
+    if not graph.is_file():
+        return None
+    for line in graph.read_text().splitlines():
+        if ": cc " not in line:
+            continue
+        output, _, inputs = line.strip().removeprefix("build ").partition(": cc ")
+        if inputs.strip() == tu:
+            return REPO_ROOT / output.strip()
+    return None
+
+
+def cmd_diff(args) -> int:
+    """objdiff-cli for one symbol: the retail object is the target, the TU's object the base."""
+    manifests = g2.Manifests()
+    try:
+        tu = manifests.tu_named(args.tu)
+    except g2.UnknownUnit as exc:
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 2
+    address = next((addr for addr, name in g1._symbol_table(SYMBOLS).items()
+                    if name == args.symbol), None)
+    if address is None:
+        print(f"ddr: no symbol named {args.symbol!r} in {_display(SYMBOLS)}", file=sys.stderr)
+        return 2
+    owner = manifests.record_at_pc(address)
+    if owner is None or owner.get("file") != tu:
+        where = f"{owner['file']}:{manifests.symbol_at(owner['low_pc'])}" if owner else "?"
+        print(f"ddr: {args.symbol} is at 0x{address:08X} in {where}, not {tu}",
+              file=sys.stderr)
+        return 2
+    target = _split_object(args.symbol)
+    base = pathlib.Path(args.base) if args.base else (_promoted_object(tu) or target)
+    for path in (target, base):
+        if not path.is_file():
+            print(f"ddr: {_display(path)}: no such object (run ./ddr build)",
+                  file=sys.stderr)
+            return 2
+    _require("objdiff")
+    objdiff = check_deps.resolve(check_deps.TOOLS_BY_KEY["objdiff"])
+    # stdout stays pure objdiff JSON so it can be redirected or uploaded; what was compared
+    # goes to stderr, where a human reads it and a pipeline ignores it.
+    print(f"diff: {args.symbol} ({tu}) at VA 0x{address:08X}\n"
+          f"      target {_display(target)}\n      base   {_display(base)}", file=sys.stderr)
+    argv = [objdiff, "diff", args.symbol, "-1", str(target), "-2", str(base), "-o", "-"]
+    return subprocess.run(argv, cwd=REPO_ROOT).returncode
+
+
+# ---------------------------------------------------------------------------
+# entry point
+# ---------------------------------------------------------------------------
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(prog="ddr", description=__doc__.splitlines()[0])
+    verbs = parser.add_subparsers(dest="verb", required=True)
+
+    verbs.add_parser("oracle", help="regenerate the symbol/CU/chunk/header artifacts"
+                     ).set_defaults(func=cmd_oracle)
+    verbs.add_parser("build", help="configure and build out/SLUS_207.11"
+                     ).set_defaults(func=cmd_build)
+
+    verify = verbs.add_parser("verify", help="G1, plus the TU verdict and/or G3")
+    verify.add_argument("--tu", default=None,
+                        help="report one translation unit (name, file or repo path)")
+    _add_g3_arguments(verify, always=False)
+    verify.set_defaults(func=cmd_verify)
+
+    diff = verbs.add_parser("diff", help="objdiff-cli for one symbol in one translation unit")
+    diff.add_argument("symbol", help="the function to diff (a name from symbol_addrs.txt)")
+    diff.add_argument("tu", help="the translation unit that must own it (sys_scf or sys_scf.c)")
+    diff.add_argument("--base", type=pathlib.Path, default=None,
+                      help="the object to diff against (default: the TU's C object when "
+                           "the build graph has one, else the retail split object)")
+    diff.set_defaults(func=cmd_diff)
+
+    iso = verbs.add_parser("iso", help="G3: splice the built ELF back into the image")
+    _add_g3_arguments(iso, always=True)
+    iso.set_defaults(func=cmd_iso)
+    return parser.parse_args(argv)
+
+
+def main(argv=None) -> int:
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    try:
+        return args.func(args)
+    except check_deps.MissingDependency as exc:
+        # Never a traceback: the message already names what is missing and the command
+        # that provides it.
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 1
+    except configure.ConfigError as exc:
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
