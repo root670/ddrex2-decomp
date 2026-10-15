@@ -74,19 +74,23 @@ def test_build_refuses_an_elf_that_runs_past_the_end(tmp_path):
     elf = tmp_path / "SLUS_207.11"
     elf.write_bytes(b"\x7fELF" * 128)   # 512 bytes, spliced at 0x100 -> 0x300 > 0x200
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="does not fit"):
         reinsert.build(image, elf, tmp_path / "rebuilt.iso", offset=0x100)
 
 
 def test_build_refuses_to_overwrite_the_image(tmp_path):
-    """The retail image is the only copy of the disc: in-place splicing is not offered."""
+    """The retail image is the only copy of the disc: in-place splicing is not offered.
+
+    The splice has to fit (``0x100`` + 4 bytes in 512), or the bounds check would be the
+    guard under test and deleting this one would keep the suite green.
+    """
     image = tmp_path / "image.iso"
     image.write_bytes(b"\x3D" * 512)
     elf = tmp_path / "SLUS_207.11"
     elf.write_bytes(b"\x7fELF")
 
-    with pytest.raises(ValueError):
-        reinsert.build(image, elf, image)
+    with pytest.raises(ValueError, match="refusing to splice the image into itself"):
+        reinsert.build(image, elf, image, offset=0x100)
 
 
 def test_verify_names_both_hashes_and_the_first_offset(tmp_path):
@@ -104,15 +108,30 @@ def test_verify_names_both_hashes_and_the_first_offset(tmp_path):
     assert "0x180" in message, message
 
 
-def test_verify_without_a_reference_still_names_the_two_hashes(tmp_path):
-    """The hash is the gate; the offset is the diagnosis, and a missing reference only
+def test_verify_diagnoses_against_the_retail_image_by_default():
+    """The two-argument form is the gate's: the default reference is the retail image."""
+    if not IMAGE.exists():
+        pytest.skip("retail image not available")
+    assert reinsert.RETAIL_IMAGE == IMAGE
+
+    message = reinsert.verify(BUILT, SHA)   # the ELF is not the image: 0x0 already differs
+
+    assert reinsert.sha256(BUILT) in message and SHA in message, message
+    assert f"first difference against {IMAGE} at 0x0" in message, message
+
+
+def test_verify_without_a_reference_to_compare_against_still_names_the_two_hashes(
+        tmp_path, monkeypatch):
+    """The hash is the gate; the offset is the diagnosis, and an unmounted image only
     costs the diagnosis."""
     bad = tmp_path / "rebuilt.iso"
     bad.write_bytes(b"not an image")
+    monkeypatch.setattr(reinsert, "RETAIL_IMAGE", tmp_path / "absent.iso")
 
-    message = reinsert.verify(bad, SHA, reference=tmp_path / "absent.iso")
+    message = reinsert.verify(bad, SHA)     # the default reference, which is not mounted
 
     assert reinsert.sha256(bad) in message and SHA in message, message
+    assert "no reference image" in message, message
 
 
 def test_verify_reports_ok_for_a_matching_hash(tmp_path):
