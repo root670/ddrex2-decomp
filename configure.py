@@ -40,6 +40,11 @@ import subprocess
 import sys
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent
+if str(REPO_ROOT / "tools") not in sys.path:  # run as `python3 configure.py` too
+    sys.path.insert(0, str(REPO_ROOT / "tools"))
+
+from toolchain import compile as cc  # the one derivation of a unit's pinned placement
+
 SPLAT = [sys.executable, "-m", "splat", "split"]
 
 # ---------------------------------------------------------------------------
@@ -462,6 +467,97 @@ def link_aliases(sources, symbols_path, auto_paths):
     return sorted(aliases.items(), key=lambda item: (item[1], item[0]))
 
 
+# ---------------------------------------------------------------------------
+# promoted translation units
+# ---------------------------------------------------------------------------
+
+#: How a promoted unit is built.  The key is the unit's source file exactly as ``cus.json``
+#: spells it (the retail tree's own path); the value is the compiler build and the flag
+#: string ``tools/toolchain/select_build.py`` measured as reproducing its retail ``.text``,
+#: ``.debug`` and ``.line`` bytes, recorded in ``docs/milestones/m2-sys-scf.md``.  ``src/``
+#: and a listing here must agree: a source nobody has measured, or a listing whose source
+#: is gone, is a configuration error rather than a silently unchanged image.
+TU_BUILDS = {
+    "src/sys/sys_scf.c": ("3.0-011126", "-c -lang c -O3 -g"),
+}
+
+
+class Promotion:
+    """A unit built from C: its object, its payloads, and what it replaces in the image.
+
+    ``.text`` comes from the object (the pinned ``ld`` script places it where the unit's
+    splits used to be), while ``.debug``/``.line`` are dumped out of the same object by the
+    ``objsec`` edges and substituted for the retail databins of the chunks the unit owns.
+    The split objects stay in the graph: they are objdiff's target side (M1's own bytes),
+    and ``ddr diff`` still needs them.
+    """
+
+    __slots__ = ("file", "address", "flags", "object", "debug_payload", "line_payload",
+                 "debug_databin", "line_databins", "splits")
+
+    def __init__(self, file, address, flags, object_path, debug_payload, line_payload,
+                 debug_databin, line_databins, splits):
+        self.file = file                  # "src/sys/sys_scf.c"
+        self.address = address            # the unit's first function's retail address
+        self.flags = flags                # the cc rule's `flags` variable
+        self.object = object_path         # repo-relative path of the cc edge's output
+        self.debug_payload = debug_payload
+        self.line_payload = line_payload
+        self.debug_databin = debug_databin        # the databin it replaces
+        self.line_databins = line_databins        # the run of databins it replaces
+        self.splits = splits              # the split paths the ld script must not list
+
+
+def promotions(manifests=None) -> list:
+    """Every promoted unit, in address order, with the layout the oracle pinned for it."""
+    manifests = manifests or cc.Manifests()
+    present = {file for file in manifests.tu_files() if (REPO_ROOT / file).is_file()}
+    if present - set(TU_BUILDS):
+        raise ConfigError(
+            "these translation units have a source under src/ but no measured build in "
+            "TU_BUILDS: " + ", ".join(sorted(present - set(TU_BUILDS)))
+            + "; run python3 tools/toolchain/select_build.py --tu <file> and record the pair")
+    if set(TU_BUILDS) - present:
+        raise ConfigError(
+            "TU_BUILDS lists units with no source under src/: "
+            + ", ".join(sorted(set(TU_BUILDS) - present)))
+    out = []
+    for file, (version, flags) in sorted(TU_BUILDS.items()):
+        tu = manifests.tu_named(file)
+        out.append(Promotion(
+            file, tu.address, f"--compiler {version} {flags}",
+            f"build/{file}.o", f"build/{file}.o.debug", f"build/{file}.o.line",
+            f".debug_{manifests.debug_chunk_index(tu):03d}",
+            [f".line_{index:03d}" for index in manifests.line_chunk_indices(tu)],
+            {f"asm/nonmatchings/{CODE_SEGMENT}/{function.name}.s"
+             for function in tu.functions}))
+    return sorted(out, key=lambda promotion: promotion.address)
+
+
+def tail_inputs(databins, promotions) -> list:
+    """The file's tail in file order: splat's databins, with a promoted unit's own
+    ``.debug``/``.line`` payload substituted for the databins of the chunks it owns.
+
+    Substitution is by *name*, so the tail's length in bytes is whatever the compiler
+    wrote: a payload that is not the pinned size shifts every later byte and G1 localises
+    it -- which is the honest failure, not a silently padded chunk.
+    """
+    runs = {}
+    for promotion in promotions:
+        for payload, names in ((promotion.debug_payload, [promotion.debug_databin]),
+                               (promotion.line_payload, promotion.line_databins)):
+            for name in names:
+                runs[name] = (names[0], payload)
+    out = []
+    for name, _, _ in databins[1:]:
+        first, payload = runs.get(name, (None, None))
+        if first is None:
+            out.append(f"build/assets/{name}.databin.bin")
+        elif name == first:
+            out.append(payload)
+    return out
+
+
 LD_HEADER = """\
 /* Generated by configure.py --config usam2 -- do not edit by hand.
  *
@@ -484,8 +580,13 @@ LD_HEADER = """\
 """
 
 
-def pinned_ld_script(code, aliases) -> str:
-    """The linker script that pins the loadable image to the retail file's addresses."""
+def pinned_ld_script(code, aliases, promotions=()) -> str:
+    """The linker script that pins the loadable image to the retail file's addresses.
+
+    A promoted unit contributes one object where its splits used to be, at the address its
+    first function sits at; every other split is listed exactly as before, so the object
+    order still *is* the layout.
+    """
     lines = [LD_HEADER]
     if aliases:
         lines.append("/* Names some splits reference and no split defines; each one's\n"
@@ -500,9 +601,15 @@ def pinned_ld_script(code, aliases) -> str:
     lines.append(f"  ASSERT(SIZEOF(.elf_header) == 0x{LOADABLE_ROM:X}, "
                  f"\"elf_header is not the retail ELF header\")\n\n")
     lines.append(f"  .main 0x{LOADABLE_VRAM:X} : AT(0x{LOADABLE_ROM:X}) SUBALIGN(1)\n  {{\n")
-    for address, name in code:
-        lines.append(f"    {object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix()}"
-                     f"(.text)\n")
+    promoted = {name for promotion in promotions for name in promotion.splits}
+    listed = [(address, object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix())
+              for address, name in code if name not in promoted]
+    listed += [(promotion.address, promotion.object) for promotion in promotions]
+    listed.sort()
+    if len({address for address, _ in listed}) != len(listed):
+        raise ConfigError("two inputs claim the same address; the link order is ambiguous")
+    for _, name in listed:
+        lines.append(f"    {name}(.text)\n")
     lines.append("  }\n")
     lines.append(f"  ASSERT(SIZEOF(.main) == 0x{CODE_SIZE:X}, "
                  f"\"the code splits are not the retail {CODE_SIZE:,} bytes\")\n\n")
@@ -526,7 +633,7 @@ def object_path(split: pathlib.Path) -> pathlib.Path:
         split.name + ".o")
 
 
-def ninja_text(splits, databins, objects_only: bool) -> str:
+def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
     lines = [NINJA_HEADER, "\n"]
     lines += [
         # ninja rule blocks accept only its own keywords, so the variables the specified
@@ -541,6 +648,12 @@ def ninja_text(splits, databins, objects_only: bool) -> str:
         "rule cc\n",
         "  command = python3 tools/toolchain/compile.py $in $out $flags\n",
         "  description = cc $in\n",
+        "\n",
+        # One section out of the object the compiler produced: the promoted unit's own
+        # `.debug`/`.line` bytes, which the tail edge substitutes for retail's databins.
+        "rule objsec\n",
+        "  command = mips-linux-gnu-objcopy --dump-section $section=$out $in\n",
+        "  description = objsec $section $out\n",
         "\n",
         "rule ld\n",
         "  command = mips-linux-gnu-ld -EL -T config/usam2/undefined_syms_auto.txt "
@@ -569,6 +682,14 @@ def ninja_text(splits, databins, objects_only: bool) -> str:
         obj = object_path(split).relative_to(REPO_ROOT).as_posix()
         lines.append(f"build {obj}: as {rel}\n")
         objects.append(obj)
+    for promotion in promotions:
+        lines.append(f"build {promotion.object}: cc {promotion.file}\n")
+        lines.append(f"  flags = {promotion.flags}\n")
+        for section, payload in ((".debug", promotion.debug_payload),
+                                 (".line", promotion.line_payload)):
+            lines.append(f"build {payload}: objsec {promotion.object}\n")
+            lines.append(f"  section = {section}\n")
+        objects.append(promotion.object)
     lines.append("\n")
     lines.append("build splits: phony "
                  + " ".join(s.relative_to(REPO_ROOT).as_posix() for s in splits) + "\n")
@@ -578,8 +699,9 @@ def ninja_text(splits, databins, objects_only: bool) -> str:
         lines.append("default objects\n")
         return "".join(lines)
     # elf_header is part of the loadable image (it is the file's first 0x80 bytes), so the
-    # tail is every databin after it, in file order.
-    tail = [f"build/assets/{name}.databin.bin" for name, _, _ in databins[1:]]
+    # tail is every databin after it, in file order -- with a promoted unit's own
+    # `.debug`/`.line` payload in place of the databins of the chunks it owns.
+    tail = tail_inputs(databins, promotions)
     lines.append("build out/SLUS_207.11.elf: ld build/SLUS_207.11.ld || objects\n")
     lines.append("build build/SLUS_207.11.loadable: bin out/SLUS_207.11.elf\n")
     lines.append("build build/SLUS_207.11.tail: cat " + " ".join(tail) + "\n")
@@ -643,17 +765,21 @@ def configure(config: str, cus_path: pathlib.Path, chunks_path: pathlib.Path,
 
     sources = split_sources()
     code = code_splits(sources)
+    promoted = promotions()
     aliases = link_aliases(
         sources, config_dir / "splat_symbol_addrs.txt",
         [config_dir / "undefined_syms_auto.txt", config_dir / "undefined_funcs_auto.txt"])
     write_if_different(REPO_ROOT / "build/SLUS_207.11.ld",
-                       pinned_ld_script(code, aliases))
+                       pinned_ld_script(code, aliases, promoted))
 
-    ninja = ninja_text(splits, databins, objects_only)
+    ninja = ninja_text(splits, databins, objects_only, promoted)
     write_if_different(REPO_ROOT / "build.ninja", ninja)
     print(f"configure: {len(splits)} splits, {len(code)} code splits at 0x{code[0][0]:X}, "
           f"{len(tail)} tail databins, {len(aliases)} link aliases, build.ninja written"
           + (" (objects only)" if objects_only else ""))
+    if promoted:
+        print("configure: built from C: "
+              + ", ".join(f"{p.file} at 0x{p.address:08X} [{p.flags}]" for p in promoted))
 
 
 def parse_args(argv):

@@ -216,10 +216,14 @@ def test_the_file_assembly_covers_every_byte_the_elf_does_not_load():
     """The loadable image comes from ld + objcopy; the file's tail is databin content.
 
     The tail edge's inputs must be the databin assets *in manifest order* -- a glob
-    would sort `.debug_000` after `shstrtab` and produce a plausible wrong image -- and
-    together with the loadable image they must tile the file exactly.
+    would sort `.debug_000` after `shstrtab` and produce a plausible wrong image -- with a
+    promoted unit's own `.debug`/`.line` payload in place of the databins of the chunks it
+    owns (M2).  Together with the loadable image they must tile the file exactly, which is
+    also what makes a payload of the wrong size a file-length failure rather than a silent
+    reflow -- so the payloads, which the compiler writes, have to be built first.
     """
     subprocess.run(CONFIGURE, cwd=ROOT, check=True)
+    subprocess.run(["ninja"], cwd=ROOT, check=True)
     edge = next(line for line in (ROOT / "build.ninja").read_text().splitlines()
                 if line.startswith("build build/SLUS_207.11.tail: cat "))
     tail = edge.split(": cat ", 1)[1].split()
@@ -236,16 +240,34 @@ def test_the_file_assembly_covers_every_byte_the_elf_does_not_load():
     assert "SIZEOF(.bss) == 0x414500" in script
 
 
-def test_the_pinned_link_lists_the_code_splits_in_address_order():
-    """The link places the i-th split at the i-th address, so the order *is* the layout."""
+def test_the_pinned_link_lists_its_inputs_in_address_order():
+    """The link places the i-th input at the i-th address, so the order *is* the layout.
+
+    A promoted unit breaks the one-input-per-split rule on purpose: the C object is linked
+    where the unit's splits used to be, and those splits are *gone* from the script, because
+    linking both would define their functions twice.  Every other split is listed, so the
+    i-th input's address is still the layout, and the set of addresses is still complete.
+    """
+    import configure  # the promotion table the build itself reads
+
     subprocess.run(CONFIGURE, cwd=ROOT, check=True)
     script = (ROOT / "build/SLUS_207.11.ld").read_text()
-    listed = [f"{name.removeprefix('build/')}.s" for name in
-              re.findall(r"^\s+(\S+)\.s\.o\(\.text\)$", script, re.M)]
+    listed = re.findall(r"^\s+(\S+)\(\.text\)$", script, re.M)
     splits = {s.relative_to(ROOT).as_posix() for s in (ROOT / "asm/nonmatchings").rglob("*.s")}
-    assert len(listed) == len(splits) == 3603, f"{len(listed)} of {len(splits)}"
-    expected = sorted(splits, key=lambda rel: split_span((ROOT / rel).read_text())[0])
-    assert listed == expected, "the script must list the splits in address order"
+    promoted = {p.object: p.address for p in configure.promotions()}
+    replaced = {path for p in configure.promotions() for path in p.splits}
+    assert promoted and set(promoted) <= set(listed), "the promoted object must be linked"
+    assert not replaced & set(listed), "a replaced split must not be linked"
+    def repo_path(obj: str) -> str:
+        """The repo-relative input a script line names: a split's ``.s``, or the object."""
+        obj = obj.removeprefix("build/")
+        return obj[:-2] if obj.endswith(".s.o") else obj
+
+    assert {repo_path(name) for name in listed if name.endswith(".s.o")} == splits - replaced
+    assert len(listed) == len(splits) - len(replaced) + len(promoted)
+    rows = [(promoted.get(name) or split_span((ROOT / repo_path(name)).read_text())[0], name)
+            for name in listed]
+    assert rows == sorted(rows), "the script must list its inputs in address order"
 
 
 def test_configure_is_deterministic():

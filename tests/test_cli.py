@@ -215,8 +215,10 @@ def test_diff_reaches_objdiff_cli(tmp_path):
     assert p.returncode == 0, p.stdout + p.stderr
     argv = (stubdir / "objdiff-cli.argv").read_text().splitlines()
     assert "diff" in argv and "sysInitScf" in argv
+    # Target = the split object (retail's own bytes, M1's shape); base = the promoted unit's
+    # C object, which is what the image is built from once `src/sys/sys_scf.c` exists (M2).
     assert argv[argv.index("-1") + 1].endswith("sysInitScf.s.o")
-    assert argv[argv.index("-2") + 1].endswith("sysInitScf.s.o")  # still assembled from asm
+    assert argv[argv.index("-2") + 1].endswith("src/sys/sys_scf.c.o")
     assert "sys_scf.c" in p.stderr  # the TU it validated the symbol against
 
 
