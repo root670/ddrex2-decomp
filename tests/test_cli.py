@@ -16,10 +16,15 @@ Two of them cover the finding that a gate can pass by comparing the *wrong pair*
 must check ``orig/SLUS_207.11`` against its record in ``checksums.txt`` before G1 compares it
 with the build, and the ISO gate must check its reference image against that manifest's
 record before comparing the rebuild with it.  Both are pinned here as digests, because a
-gate whose expectation is "whatever it was handed" is no gate at all.
+gate whose expectation is "whatever it was handed" is no gate at all -- and a reference *no*
+record names is refused outright (exit 2): the synthetic fixtures opt in with
+``--allow-unpinned-reference``, which makes the reference file itself the criterion and says
+so on the success line.
 """
 
 import hashlib
+import importlib.machinery
+import importlib.util
 import os
 import pathlib
 import subprocess
@@ -49,6 +54,21 @@ IMAGE = pathlib.Path(
 
 def run(*args):
     return subprocess.run([str(ROOT / "ddr"), *args], cwd=ROOT, capture_output=True, text=True)
+
+
+def load_ddr():
+    """The ``ddr`` script as a module, for the two cases the process boundary cannot reach.
+
+    ``ddr`` has no ``.py`` suffix, so it is loaded by path; executing it imports what the CLI
+    imports and defines ``cmd_iso``/``parse_args`` without running them (``main`` is guarded).
+    Needed where the test must *replace* an input the CLI reads (a mount, a pin) rather than
+    arrange one on disk.
+    """
+    loader = importlib.machinery.SourceFileLoader("ddr_cli_under_test", str(ROOT / "ddr"))
+    module = importlib.util.module_from_spec(
+        importlib.util.spec_from_loader(loader.name, loader))
+    loader.exec_module(module)
+    return module
 
 
 def corrupted_copy(path, offset, out):
@@ -161,6 +181,46 @@ def test_iso_refuses_a_reference_image_that_is_not_the_pinned_one(tmp_path):
     assert not out.exists()  # the reference is checked before anything is written
 
 
+def test_iso_refuses_a_reference_no_record_names(tmp_path):
+    """No pin, no criterion: comparing the rebuild with the reference is comparing the copy
+    with itself, so an image no record names is a hard failure (exit 2), not a green gate.
+
+    Even a *self-consistent* unpinned image -- one that already holds the built ELF, so the
+    splice would change nothing and the hashes would agree -- is refused: that agreement is
+    exactly the shape that would let a renamed or tampered image pass.
+    """
+    # The image already holds the built ELF, so the splice would change nothing and the two
+    # hashes would agree -- the self-comparison that must never count as a green gate.
+    image = synthetic_image(tmp_path, BUILT.read_bytes())
+    out = tmp_path / "rebuilt.iso"
+    p = run("iso", "--iso", str(image), "--out", str(out))
+    assert p.returncode == 2
+    assert "G3 ok" not in p.stdout
+    assert "no record" in p.stderr and "--allow-unpinned-reference" in p.stderr
+    assert not out.exists()
+
+
+def test_an_unpinned_and_corrupted_image_never_passes(tmp_path):
+    """The reviewer's counterexample: an image no pin names, whose bytes are not the disc's.
+
+    ``--allow-unpinned-reference`` makes the file itself the criterion; the file's own ELF
+    region is corrupted, so splicing the built ELF into it changes it and the hash fails.
+    Without the opt-out it never reaches the hash: exit 2, and no ``G3 ok`` either way.
+    """
+    image = synthetic_image(tmp_path, BUILT.read_bytes())
+    corrupt = corrupted_copy(image, reinsert.ELF_OFFSET + 0x40,
+                             tmp_path / "renamed-corrupt.iso")
+    out = tmp_path / "rebuilt.iso"
+    refused = run("iso", "--iso", str(corrupt), "--out", str(out))
+    assert refused.returncode == 2 and "G3 ok" not in refused.stdout
+    assert "--allow-unpinned-reference" in refused.stderr and not out.exists()
+    measured = run("iso", "--iso", str(corrupt), "--out", str(out),
+                   "--allow-unpinned-reference")
+    assert measured.returncode == 1
+    assert "G3 ok" not in measured.stdout and "G3 FAIL" in measured.stdout
+    assert reinsert.sha256(corrupt) in measured.stdout  # the criterion it measured against
+
+
 def test_verify_rejects_an_unknown_tu_name():
     """A usage error is exit 2, answered before G1 runs, and never a traceback."""
     p = run("verify", "--tu", "nosuch_tu")
@@ -228,13 +288,59 @@ def test_diff_rejects_a_symbol_that_is_not_in_the_named_tu():
     assert "sysInitScf" in p.stderr and SYS_SCF in p.stderr
 
 
+def test_diff_refuses_a_unit_with_no_c_source():
+    """A unit with no C source has nothing to measure (finding 10).
+
+    objdiff would otherwise be handed the retail split as *both* sides, take the split's own
+    ``.NON_MATCHING`` name as the base counterpart and print a score it never computed --
+    which reads as "the split does not match retail" when the split *is* retail's bytes.
+    """
+    p = run("diff", "draw_cur", "les_sel_lv")
+    assert p.returncode == 2
+    assert p.stdout == ""                       # objdiff was never run
+    assert "no C source" in p.stderr and "--base" in p.stderr
+    assert "Traceback" not in p.stderr
+
+
+def test_bare_iso_with_no_mounted_image_says_nothing_was_compared(monkeypatch, capsys,
+                                                                  tmp_path):
+    """Bare ``--iso`` is the mounted retail image: absent, the gate skips (exit 0) -- and the
+    line has to make it unmistakable that no comparison happened."""
+    ddr = load_ddr()
+    monkeypatch.setattr(ddr.reinsert, "RETAIL_IMAGE", tmp_path / "absent.iso")
+    assert ddr.cmd_iso(ddr.parse_args(["iso"])) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("G3 skipped") and "nothing was compared" in out
+
+
+def test_the_success_line_names_the_pinned_digest_when_the_reference_is_pinned(
+        monkeypatch, capsys, tmp_path):
+    """The two success lines are distinguishable: a pinned reference reports the *pin*."""
+    ddr = load_ddr()
+    image = synthetic_image(tmp_path, BUILT.read_bytes(), name="pinned-by-this-test.iso")
+    monkeypatch.setattr(ddr.g1, "pinned_hash_for", lambda name: reinsert.sha256(image))
+    args = ddr.parse_args(["iso", "--iso", str(image), "--out", str(tmp_path / "out.iso")])
+    assert ddr.cmd_iso(args) == 0, capsys.readouterr()
+    out = capsys.readouterr().out
+    assert "G3 ok" in out and f"equals the pinned digest of {image.name}" in out
+    assert "(UNPINNED)" not in out
+
+
 def test_iso_reproduces_the_image_it_is_given(tmp_path):
-    """G3 through ``verify --iso``: the rebuilt copy is the image, hash for hash."""
+    """G3 through ``verify --iso``: the rebuilt copy is the image, hash for hash.
+
+    The synthetic image is not the disc, so the gate needs the explicit opt-out -- and the
+    success line has to say so: the criterion is the reference *it was spliced into*, not a
+    pinned digest, and a reader must be able to tell those two apart.
+    """
     image = synthetic_image(tmp_path, BUILT.read_bytes())
     out = tmp_path / "rebuilt.iso"
-    p = run("verify", "--iso", str(image), "--out", str(out))
+    p = run("verify", "--iso", str(image), "--out", str(out),
+            "--allow-unpinned-reference")
     assert p.returncode == 0, p.stdout + p.stderr
     assert "G1 ok" in p.stdout and "G3 ok" in p.stdout
+    assert "equals the reference image it was spliced into" in p.stdout
+    assert "(UNPINNED)" in p.stdout
     assert out.read_bytes() == image.read_bytes()
 
 
@@ -243,7 +349,7 @@ def test_iso_names_the_first_byte_that_diverges(tmp_path):
     image = synthetic_image(tmp_path, elf)
     stamp = corrupted_copy(BUILT, 0, tmp_path / "stamp.elf")
     p = run("iso", "--iso", str(image), "--elf", str(stamp),
-            "--out", str(tmp_path / "rebuilt.iso"))
+            "--out", str(tmp_path / "rebuilt.iso"), "--allow-unpinned-reference")
     assert p.returncode != 0
     assert "G3 FAIL" in p.stdout and "0x92000" in p.stdout
 

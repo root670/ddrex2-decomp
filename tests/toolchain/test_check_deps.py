@@ -62,6 +62,35 @@ def test_a_missing_splat_names_the_pip_command(monkeypatch):
     assert "python3 -m pip install --user 'splat64[mips]'" in str(excinfo.value)
 
 
+def test_a_probe_that_hangs_is_a_missing_dependency_not_a_traceback(monkeypatch):
+    """A tool that never answers `--version` is as absent as one that is not installed.
+
+    `version` runs each probe under a 60-second timeout; a `TimeoutExpired` allowed to
+    propagate would escape `ddr`'s `except MissingDependency` and print a traceback instead of
+    the remedy (review finding 5, the shape `fetch._wibo_version` already uses).
+    """
+    def hang(argv, *args, **kwargs):
+        raise subprocess.TimeoutExpired(argv, check_deps.TIMEOUT)
+
+    monkeypatch.setattr(check_deps.subprocess, "run", hang)
+    with pytest.raises(check_deps.MissingDependency) as excinfo:
+        check_deps.version(check_deps.TOOLS_BY_KEY["ninja"])
+    assert "ninja" in str(excinfo.value)
+    assert "brew install ninja" in str(excinfo.value)
+
+
+def test_the_r5900_probe_reports_a_hung_assembler_instead_of_raising(tmp_path, monkeypatch,
+                                                                    capsys):
+    """The same guard on the assembler probe: a hang is a failed check, not an exception."""
+    def hang(argv, *args, **kwargs):
+        raise subprocess.TimeoutExpired(argv, check_deps.TIMEOUT)
+
+    monkeypatch.setattr(check_deps, "which", lambda name: "/usr/bin/true")
+    monkeypatch.setattr(check_deps.subprocess, "run", hang)
+    assert check_deps.assembles_r5900(tmp_path) is False
+    assert "could not run the R5900 probe" in capsys.readouterr().err
+
+
 def test_require_only_runs_the_tools_themselves(monkeypatch):
     """require() probes; it never installs (a spy over every command it runs)."""
     calls = []

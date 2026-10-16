@@ -5,12 +5,19 @@
 # parses objdiff's Report schema; there is no upload key and no endpoint to call.  The
 # project is registered once, by a maintainer, at https://decomp.dev/manage/new.
 #
-# The numbers are objdiff's byte-level view of the objects, not the gates' verdict: a
-# translation unit whose linked bytes are retail's (G1, `./ddr verify --tu`) does not read as
-# 100% here, because `compile.py` writes the object with its relocations already resolved
-# while the target split leaves them symbolic -- see the caveat at the end of
-# docs/milestones/m2-sys-scf.md.  Data is not in this graph: it stays pinned retail bytes by
-# design, so the report measures the C that has been written, which is the point.
+# The numbers are objdiff's byte-level view of the objects, not the gates' verdict, and two of
+# them read as the opposite of the truth on this tree:
+#
+#   * `matched_data_percent` is 100.0 because the data denominator is empty -- nothing here
+#     reconstructs data (it stays pinned retail bytes by design, see AGENTS.md rule 9), so
+#     objdiff is doing arithmetic on splat's target object and calling the result 100%.
+#   * `matched_code` reads 0.0007% (12 of 1,694,728 bytes) for a build whose *linked* sys_scf
+#     bytes are retail's: `compile.py` writes the object with its relocations already resolved
+#     while the target split leaves them symbolic -- see the caveat at the end of
+#     docs/milestones/m2-sys-scf.md.
+#
+# G1 and `./ddr verify --tu` are the arbiters; the report measures the C that has been written,
+# which is the point of feeding decomp.dev.
 name: progress
 
 on:

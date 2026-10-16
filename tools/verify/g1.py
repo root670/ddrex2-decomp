@@ -35,16 +35,25 @@ import re
 import sys
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+# `configure.py` owns the file's geometry (R7: the numbers are measured from the retail
+# ELF), and the chunked sections' bases and sizes are read from it rather than copied: g2
+# uses `SECTIONS` as the base of the per-TU verdict windows, so a second copy here would be
+# a second source of truth for a load-bearing number.
+if str(REPO_ROOT) not in sys.path:  # run as `python3 tools/verify/g1.py` from ninja
+    sys.path.insert(0, str(REPO_ROOT))
+import configure  # noqa: E402
+
 RETAIL = REPO_ROOT / "orig" / "SLUS_207.11"
 CHECKSUMS = REPO_ROOT / "config" / "usam2" / "checksums.txt"
 SYMBOLS = REPO_ROOT / "config" / "usam2" / "symbol_addrs.txt"
 CUS = REPO_ROOT / "config" / "usam2" / "cus.json"
 CHUNKS = REPO_ROOT / "config" / "usam2" / "debug_chunks.json"
 
-# Retail file offsets and sizes of the two chunked sections, measured from the binary
-# (configure.py's segment list pins the same numbers).  The chunk manifests' offsets are
-# relative to these, so this is the one place the two views are joined.
-SECTIONS = ((".debug", 0x1A2740, 0xA0997), (".line", 0x2430E0, 0x225A0))
+# The retail file offsets and sizes of the two chunked sections, taken from configure.py's
+# trailing-section list (the chunk manifests' offsets are relative to these, so this is the
+# one place the two views are joined).
+_TRAILING = {name: (offset, size) for name, offset, size in configure.TRAILING}
+SECTIONS = ((".debug", *_TRAILING["debug"]), (".line", *_TRAILING["line"]))
 
 SYMBOL_LINE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 

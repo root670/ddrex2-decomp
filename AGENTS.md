@@ -20,7 +20,7 @@ still wrong.  Read it before your first edit.
 ./ddr verify --tu sys_scf            # ... plus the promotion rule for one unit
 ./ddr verify --iso                    # ... plus G3 on the mounted retail image (skipped if absent)
 ./ddr diff sysInitScf sys_scf         # objdiff-cli: retail's bytes vs the C object, one symbol
-python3 -m pytest -q                  # the suite (107 tests; ~9 minutes)
+python3 -m pytest -q                  # the suite (114 tests; ~9 minutes)
 ```
 
 `./ddr` is the project's whole command surface: `oracle`, `build`, `verify [--tu NAME] [--iso IMG]
@@ -89,6 +89,18 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 8. **`python3 -m pytest -q` is part of the loop, not a formality.**  A green suite is what makes the
    next change safe: the tests run the real tools (splat, the assembler, the linker, the compiler
    under wibo), not stubs.  The suite takes roughly nine minutes.
+
+9. **A promoted unit contributes code and debug bytes — and nothing else.**  `compile.py` links
+   only the object's `.text`; its `.debug`/`.line` payloads replace the retail databins of the
+   chunks the unit owns, and the object's data sections are not linked at all.  So a unit's
+   *globals* contribute no bytes: `pscf` in `src/sys/sys_scf.c` is the standing example — the
+   image's `pscf` lives in the `.bss` split at `0x002A2A78` (NOLOAD: it has no file byte at all)
+   because retail put it there, and the definition in the C source is simply not linked.
+   Reconstructing a unit's *data* therefore needs a mechanism this build does not have yet; do
+   not "fix" a mismatching datum by editing its definition, because nothing is reading it.
+   The relocations `compile.py` applies are exactly `R_MIPS_32`, `R_MIPS_26` and
+   `R_MIPS_GPREL16`; any other kind (a `R_MIPS_HI16`/`R_MIPS_LO16`-addressed access, say) raises
+   `Unusable` and stops the build rather than being placed by guesswork.
 
 ## Where things live
 

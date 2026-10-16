@@ -19,8 +19,11 @@ def test_unknown_offset_raises():
     with pytest.raises(emit_cus.NoCompileUnit):
         emit_cus.owner_of(cus, 657815 + 5)
 
-def test_owner_of_resolves_every_byte_of_debug():
+def test_owner_of_samples_the_debug_range():
     cus = emit_cus.build(ROOT / "orig/SLUS_207.11")
+    # Four offsets -- the CU map's first byte, a byte inside the first record, its last byte,
+    # and the section's last byte -- not every byte: the tiling itself is the sibling test's
+    # (`test_cu_map_is_complete_and_contiguous`).
     for off in (0, 234, 235, 657814):
         c = emit_cus.owner_of(cus, off)
         assert c["offset"] <= off < c["offset"] + c["size"], off

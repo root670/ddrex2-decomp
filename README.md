@@ -26,7 +26,9 @@ and the working contract — the rules, the loop, and why each rule exists — i
 
 Every claim about this repository is one of three machine-checkable digests.  Each gate checks its
 *reference* against the digest pinned in `config/usam2/checksums.txt` **before** comparing, so a
-corrupted or wrong-version input fails loudly instead of being compared with a build.
+corrupted or wrong-version input fails loudly instead of being compared with a build — and a
+reference *no* record names is refused outright (exit 2) rather than compared with itself, unless
+`--allow-unpinned-reference` says so in so many words on the success line.
 
 | gate | command | what it proves |
 |---|---|---|
@@ -108,7 +110,11 @@ asm/**, src/**    ──► ninja ─────────► build/** object
   debug sections — R23).
 * `.github/workflows/` — `build` (toolchain, configure, ninja, G1), `objects` (the objdiff object
   graph) and `progress` (the objdiff report); all three run on macOS runners and fetch the retail ELF
-  from a URL kept in a repository secret, because the repository never contains it.
+  from a URL kept in a repository secret, because the repository never contains it.  The progress
+  report is objdiff's own object-level arithmetic, **not** the gates' verdict: its
+  `matched_data_percent: 100.0` is a percentage over splat's target object (this build reconstructs
+  no data at all), and its `matched_code` reads 0.0007% for a tree whose linked `sys_scf` bytes *are*
+  retail's — `./ddr verify --tu` is what proves a unit (`AGENTS.md` rules 6 and 9).
 
 ## Licence and provenance
 

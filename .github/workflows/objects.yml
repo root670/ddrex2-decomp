@@ -63,8 +63,11 @@ jobs:
       - name: Object graph
         run: python3 configure.py --objects && ninja objects
 
-      # ~28 MB and a couple of minutes: the host assembler over 4,092 splits.  This job never
-      # links and never runs a gate, so it is the cheap place to see objdiff's raw material.
+      # ~8 MB and a couple of minutes: objdiff.json (657 KB) plus the ~7.5 MB of objects under
+      # build/asm/ that the host assembler writes for 4,092 splits.  (The ~29 MB `du` reports
+      # for build/ is block usage around 4,092 small files, not the uploaded set.)  This job
+      # never links and never runs a gate, so it is the cheap place to see objdiff's raw
+      # material.
       - name: Upload the objdiff artefacts
         uses: actions/upload-artifact@v4
         with:

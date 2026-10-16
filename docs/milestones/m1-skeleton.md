@@ -29,7 +29,7 @@ src/sys/sys_scf.c: text ok (VA 0x0021C410-0x0021C450, 64 bytes)
 src/sys/sys_scf.c: debug chunk ok (1 chunk(s), 646 bytes)
 src/sys/sys_scf.c: line chunk ok (2 chunk(s), 96 bytes)
 G3: splicing out/SLUS_207.11 into /Volumes/My Passport/PS2 Games/DDRMAX2 Dance Dance Revolution (USA).iso -> out/rebuilt.iso
-G3 ok: out/rebuilt.iso is b8519c9106b43cc83bc57948cbc02a83851d3182fcbd4e7d341c573758bb3ec8 (1244823552 bytes, matches /Volumes/My Passport/PS2 Games/DDRMAX2 Dance Dance Revolution (USA).iso)
+G3 ok: out/rebuilt.iso is b8519c9106b43cc83bc57948cbc02a83851d3182fcbd4e7d341c573758bb3ec8 (1244823552 bytes, equals the pinned digest of DDRMAX2 Dance Dance Revolution (USA).iso)
 ```
 
 | artifact | size | sha256 |
@@ -38,9 +38,13 @@ G3 ok: out/rebuilt.iso is b8519c9106b43cc83bc57948cbc02a83851d3182fcbd4e7d341c57
 | `out/rebuilt.iso` (the image with that ELF written at `0x92000`) | 1,244,823,552 B | `b8519c9106b43cc83bc57948cbc02a83851d3182fcbd4e7d341c573758bb3ec8` |
 
 Both records are in `config/usam2/checksums.txt`, and both gates check their *reference* against
-its record before comparing (`./ddr verify` refuses a retail binary that is not the pinned file;
-`--iso` refuses an image whose name matches a pin and whose digest does not) — the pin is the
-criterion, not the agreement of the pair.
+its record before comparing: `./ddr verify` refuses a retail binary that is not the pinned file,
+and `--iso` refuses an image whose name matches a pin and whose digest does not.  A reference *no*
+record names has no criterion at all — `--iso` refuses it too (exit 2), instead of comparing the
+rebuild with the reference and so with itself, which would let a renamed or tampered image pass;
+`--allow-unpinned-reference` is the explicit opt-out for a fixture, and the success line then says
+`(UNPINNED) equals the reference image it was spliced into` rather than naming a pin.  The pin is
+the criterion, not the agreement of the pair.
 
 ## What the build actually did
 
@@ -57,10 +61,12 @@ configure: 4092 splits, 3603 code splits at 0x100000, 487 tail databins, 15 link
   splits under `asm/data/` are linked as well — `elf_header` (the file's first `0x80` bytes)
   and the bss marker — and the other 487 are splat's databin splits, assembled for the
   `objects` target only: the tail's bytes are not linked at all.
-* the file's non-loadable tail — 799,188 bytes of `.debug`, `.line`, `.comment`, section
-  headers and padding — is concatenated from splat's own `build/assets/*.databin.bin`
+* the file's non-loadable tail — 799,060 bytes of `.debug`, `.line`, `.comment`, section
+  headers and padding (`ELF_SIZE - LOADABLE_END`, the geometry `tests/test_configure.py`
+  asserts) — is concatenated from splat's own `build/assets/*.databin.bin`
   (487 of them, in manifest order), because `ld`/`objcopy` write only the sections a program
-  header loads.
+  header loads.  The 128-byte `elf_header` is *linked*, not concatenated, and is no part of
+  that total.
 * `g1` is an edge with no output, so the gate runs on **every** build, not only when a file
   changed: `ninja` proves the image, `ninja objects` stops at the objects.
 
@@ -116,8 +122,9 @@ when someone last ran the tool.
 ## What M1 did not do
 
 * **No C.** `src/` did not exist at `952541e`; M2 is the first promoted unit.
-* **No library work.** The ~2,670 functions outside the DWARF-described range stay split
-  assembly; identifying them is M4's problem, and it costs source, never byte-identity.
+* **No library work.** The 3,180 functions outside the DWARF-described range stay split
+  assembly (3,603 code splits − 423 DWARF function records in `config/usam2/cus.json`);
+  identifying them is M4's problem, and it costs source, never byte-identity.
 * **No behavioural gate.** G1/G3 are byte gates; booting the rebuilt image in PCSX2 is a smoke
   test, not evidence, and nothing in this repository claims otherwise.
 * **No CI yet.** The three workflows under `.github/workflows/` landed with the operating

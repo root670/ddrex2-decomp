@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Verify the host tools the build and the matching loop invoke by name.
 
-The build calls ``mips-linux-gnu-as``/``-ld``/``-objcopy``, ``ninja``,
-``python3 -m splat`` and ``objdiff-cli``; each is installed by the developer with the host
-package manager, never vendored (``.gitignore`` ignores ``toolchain/``).  This module is
-the single place that says what "installed" means:
+The build calls ``mips-linux-gnu-as``/``-ld``/``-objcopy``, ``ninja`` and ``python3 -m splat``;
+``objdiff-cli`` is the matching loop's own tool (``ddr diff``, the CI report), so it is
+probed by the verb that runs it and never by the build.  Each tool is installed by the
+developer with the host package manager, never vendored (``.gitignore`` ignores
+``toolchain/``).  This module is the single place that says what "installed" means:
 
 * :func:`require` probes every tool, returns its version, and raises
   :class:`MissingDependency` naming the *exact* command that provides the tool when one is
@@ -138,6 +139,11 @@ TOOLS = (
 )
 TOOLS_BY_KEY = {tool.key: tool for tool in TOOLS}
 
+# The tools the *build* actually invokes: `configure.py` runs `python3 -m splat`, the ninja
+# graph runs `as`/`ld`/`objcopy`, and `ninja` drives it.  `objdiff-cli` -- the `diff` verb and
+# the CI report -- is not one of them, so `ddr build` requires exactly this set and no more.
+BUILD_KEYS = ("as", "ld", "objcopy", "ninja", "splat")
+
 
 def _now() -> str:
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -172,7 +178,10 @@ def version(tool: Tool) -> str:
     argv = tool.argv(resolved)
     try:
         proc = subprocess.run(argv, capture_output=True, text=True, timeout=TIMEOUT)
-    except OSError as exc:
+    except (OSError, subprocess.SubprocessError) as exc:
+        # A tool that cannot run *or* that hangs past the probe's timeout is just as absent
+        # as a missing one: the remedy must reach the reader, never a TimeoutExpired
+        # traceback out of the CLI.
         raise MissingDependency(f"{tool.key} (`{' '.join(argv)}` could not run: {exc})", tool.remedy) from exc
     first = (proc.stdout or "").strip().splitlines()
     if proc.returncode != 0 or not first:
@@ -185,7 +194,11 @@ def version(tool: Tool) -> str:
 
 
 def require() -> dict[str, str]:
-    """Return ``{key: version}`` for every tool the build calls, raising for the first absence."""
+    """Return ``{key: version}`` for every tool this module knows, raising for the first absence.
+
+    The build's own subset is :data:`BUILD_KEYS`; this is the whole table, which is what
+    ``check_deps``' own CLI (and the provenance record) reports.
+    """
     return {tool.key: version(tool) for tool in TOOLS}
 
 
@@ -216,12 +229,18 @@ def _assemble(workdir: pathlib.Path) -> bool:
     source.write_text(R5900_SOURCE)
     if obj.exists():
         obj.unlink()
-    proc = subprocess.run(
-        [assembler, *R5900_AS_FLAGS, "-o", str(obj), str(source)],
-        capture_output=True,
-        text=True,
-        timeout=TIMEOUT,
-    )
+    try:
+        proc = subprocess.run(
+            [assembler, *R5900_AS_FLAGS, "-o", str(obj), str(source)],
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        # The same defect as `version`'s probe: a hung or unrunnable assembler is a *failed
+        # check*, reported as such, never a traceback out of check_deps' own CLI.
+        print(f"mips-linux-gnu-as could not run the R5900 probe: {exc}", file=sys.stderr)
+        return False
     if proc.returncode != 0 or not obj.is_file() or obj.stat().st_size == 0:
         print(
             f"mips-linux-gnu-as {' '.join(R5900_AS_FLAGS)} failed (exit {proc.returncode}): "

@@ -6,6 +6,7 @@ a truncated image, and a single corrupted byte -- which must be reported with it
 offset *and* the translation unit that owns it, read out of the oracle's manifests.
 """
 
+import bisect
 import json
 import pathlib
 import sys
@@ -61,30 +62,53 @@ def test_a_truncated_image_is_reported_at_its_end(tmp_path):
     assert g1.sha256(bad) in msg and SHA in msg, msg
 
 
+def record_covering(cus, offset):
+    """The record covering ``.debug+offset``, from the CU map's byte tiling alone.
+
+    Deliberately *not* the rule the implementation uses (``chunk["tunits"][0]`` -> index):
+    this walks the offsets the chunk boundaries are derived from, so a chunk manifest whose
+    boundary does not line up with a translation unit's run of records is caught here instead
+    of being confirmed by the same rule twice (review finding 9).
+    """
+    index = bisect.bisect_right([c["offset"] for c in cus], offset) - 1
+    assert index >= 0 and offset < cus[index]["offset"] + cus[index]["size"], offset
+    return cus[index]
+
+
 def test_a_debug_byte_names_its_translation_unit(tmp_path):
-    """The localisation that makes G2 a diagnostic: the offset decides the TU."""
+    """The localisation that makes G2 a diagnostic: the offset decides the TU.
+
+    The expectation is derived from the CU map: the byte's *owning record* -- found by
+    bisecting the record offsets -- must be the compile unit the message names, and its
+    `file` the translation unit.
+    """
     cus = load("cus.json")
     chunk = next(c for c in load("debug_chunks.json") if c["section"] == ".debug")
-    tu = cus[chunk["tunits"][0]]
+    owner = record_covering(cus, chunk["offset"])
     offset = DEBUG + chunk["offset"]
     msg = g1.compare(corrupted(tmp_path, offset), RETAIL)
     assert f"0x{offset:X}" in msg, msg
-    assert tu["file"] in msg, msg
+    assert owner["file"] in msg, msg
+    assert f"compile unit {owner['index']} (" in msg, msg
     assert ".debug" in msg, msg
 
 
 def test_a_line_byte_names_its_translation_unit(tmp_path):
+    """The `.line` half: the statement list's own function CU names the TU.
+
+    Expectation derived from `cus.json` alone -- the function CU whose `stmt_list` *is* the
+    chunk's offset, and that record's own `file` -- never from the chunk manifest's
+    `tunits`/`tu_of` chain the implementation walks.
+    """
     cus = load("cus.json")
-    chunks = load("debug_chunks.json")
-    chunk = next(c for c in chunks if c["section"] == ".line")
-    record = cus[chunk["tunits"][0]]
-    owner = next(c for c in chunks if c["section"] == ".debug"
-                 and record["index"] in c["tunits"])
-    tu = cus[owner["tunits"][0]]
+    chunk = next(c for c in load("debug_chunks.json") if c["section"] == ".line")
+    owner = next(c for c in cus
+                 if c["kind"] == "function" and c["stmt_list"] == chunk["offset"])
     offset = LINE + chunk["offset"]
     msg = g1.compare(corrupted(tmp_path, offset), RETAIL)
     assert f"0x{offset:X}" in msg and ".line" in msg, msg
-    assert tu["file"] in msg, msg
+    assert f"compile unit {owner['index']} (" in msg, msg
+    assert owner["file"] in msg, msg
 
 
 def test_a_loadable_byte_is_reported_without_a_translation_unit(tmp_path):
