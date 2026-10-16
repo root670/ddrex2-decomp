@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT))  # `config.targets`
 
 from config import targets  # noqa: E402
 from iso import reinsert  # noqa: E402
+from verify import g1  # noqa: E402
 
 #: The fixture's own layout: the splice offset these tests exercise.  The offset a *target* uses
 #: is a measurement of its disc image (`reinsert.elf_offset(<target>)`), not a constant here.
@@ -119,3 +120,82 @@ def test_the_targets_offset_is_a_measurement_not_a_constant(monkeypatch):
     monkeypatch.setattr(reinsert, "TARGET", unmeasured)
     with pytest.raises(targets.NotMeasured):
         reinsert.build(__file__, __file__, "/tmp/unused.iso")
+
+
+# ---------------------------------------------------------------------------
+# G3 on the registered target's own disc: the measurement, and the pin
+#
+# The splice itself is the *gate's* run -- `./ddr iso` writes the 1.84 GB copy to the
+# gitignored out/rebuilt.iso and hashes it -- and the suite deliberately does not repeat it:
+# a write into any generated tree fails tests/conftest.py's backstop (`out/` is where a build
+# happens), and R30 says the copy is never a temporary directory either.  What is the suite's
+# to pin, read-only, is the measurement that splice depends on: a wrong offset or a wrong pin
+# would make that 1.84 GB comparison compare the wrong pair, and both are one read away from
+# being checked.  The previous target's suite carried the same three checks, and these skip --
+# never fail -- when the disc is not mounted, because the gate's evidence comes from the run
+# where it is.
+# ---------------------------------------------------------------------------
+
+TARGET = targets.get()
+
+
+def _mounted_or_skip():
+    """The target's image, or a skip: the disc is mounted wherever its owner keeps it.
+
+    The retail ELF is checked too -- it is gitignored, like the image, so a machine can lack
+    either -- and both are *read* here, never written.
+    """
+    if not TARGET.image.is_file():
+        pytest.skip(f"{TARGET.name}: its disc image is not mounted ({TARGET.image.name})")
+    if not TARGET.elf.is_file():
+        pytest.skip(f"{TARGET.name}: {TARGET.elf.name} is not present (orig/ is gitignored)")
+    return TARGET.image
+
+
+def test_the_boot_elf_is_where_the_descriptors_geometry_puts_it():
+    """The bytes at the measured offset are the retail ELF itself: the offset is the image's.
+
+    Splice *anywhere* else and the copy would carry the build's bytes where some other file's
+    are, which no digest would report as anything but "the rebuild differs from the disc".
+    """
+    image = _mounted_or_skip()
+    offset = reinsert.elf_offset(TARGET)
+    retail = TARGET.elf.read_bytes()
+    assert offset % 2048 == 0, "a plain 2048-byte ISO puts the boot ELF on a sector boundary"
+    assert reinsert.read(image, offset, len(retail)) == retail
+
+
+def test_the_extent_after_the_elf_is_zero_padding_and_then_the_image_goes_on():
+    """The ELF ends 20 bytes inside its last sector; past that the image carries other data.
+
+    So the copy's ELF region is the ELF's own 7,725,036 bytes -- the premise of G3 being one
+    hash: ``build`` truncates the copy at the image's length and writes exactly the ELF (the
+    synthetic test above asserts both sides of the region on a fixture image).
+    """
+    image = _mounted_or_skip()
+    end = reinsert.elf_offset(TARGET) + TARGET.elf.stat().st_size
+    assert end < image.stat().st_size
+    assert reinsert.read(image, end, 20) == b"\x00" * 20, "zero padding to the sector's end"
+    assert reinsert.read(image, end + 20, 4096) != b"\x00" * 4096, (
+        "past the padding the image carries the next file's data: the extent is the ELF's")
+
+
+def test_g3s_criterion_is_the_digest_the_targets_manifest_records_for_the_image():
+    """The pin is resolved the way the gate resolves it: by file name in ``checksums.txt``."""
+    pinned = g1.pinned_hash_for(TARGET.image.name, TARGET.checksums)
+    assert pinned == TARGET.image_sha256
+    assert pinned != TARGET.elf_sha256, "the two pins are different files: they cannot coincide"
+    assert g1.pinned_hash_for("no-such-image.iso", TARGET.checksums) is None
+
+
+def test_verify_diagnoses_against_the_targets_image_by_default():
+    """The two-argument form is the gate's: the default reference is the target's image.
+
+    A file that is not the image -- the ELF, 7.7 MB against 1.84 GB -- already differs at 0x0,
+    and naming that offset is the whole of the diagnosis an unmounted reference costs.
+    """
+    image = _mounted_or_skip()
+    assert reinsert.retail_image(TARGET) == reinsert.RETAIL_IMAGE == image
+    message = reinsert.verify(TARGET.elf, TARGET.image_sha256)
+    assert reinsert.sha256(TARGET.elf) in message and TARGET.image_sha256 in message
+    assert f"first difference against {image} at 0x0" in message, message

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """G3 -- reinsert the built ELF into a copy of the retail image, and verify the copy.
 
-The disc's boot ELF lives at a fixed byte offset in the image (LBA 292 = ``0x92000`` for the
-DDRMAX2 image, and each target's own offset is measured in its descriptor), and nothing else
-in the image depends on its bytes: so reinsertion is one ``write`` into a copy, and the gate
-is the copy's sha256 against the retail image's -- a file of over a gigabyte that is therefore
-read in 1 MiB blocks here, never slurped whole (R30).  Assets (``DATA/FILEDATA.BIN``,
+The disc's boot ELF lives at a fixed byte offset in the image -- LBA 894146 = ``0x6D261000``
+for the prototype image this tree is built for, and each target's own offset is a measurement
+of its own image, carried in its descriptor -- and nothing else in the image depends on its
+bytes: so reinsertion is one ``write`` into a copy, and the gate is the copy's sha256 against
+the retail image's -- a file of over a gigabyte that is therefore read in 1 MiB blocks here,
+never slurped whole (R30).  Assets (``DATA/FILEDATA.BIN``,
 ``SOUND``, ``IRX/``) are never touched: they are not rebuildable, and matching does not
 require it.
 
@@ -13,10 +14,11 @@ The image, its pin and the offset are the target's, so this module takes the tar
 than naming a game: ``retail_image(target)`` and ``elf_offset(target)`` are what `ddr iso`
 resolves a bare ``--iso`` through, and the module-level names are the default target's.
 
-Geometry: each target's image is a plain ISO9660 image with 2048-byte sectors (the two
-current targets both are), so an "offset" is an image byte offset and a sector is 2048 bytes
-(the ELF's own offset lands 0x92000 = 292 * 2048, mid-sector only because the ELF is not
-sector-aligned inside its extent).  R31: the two other layouts the sibling-build ladder needs
+Geometry: each target's image is a plain ISO9660 image with 2048-byte sectors (the prototype
+image is), so an "offset" is an image byte offset and a sector is 2048 bytes (the ELF's own
+offset lands 0x6D261000 = 894146 * 2048, on a sector boundary, and its 7,725,036 bytes leave
+the last 20 bytes of that extent untouched -- the splice writes the ELF and nothing else).
+R31: the two other layouts the sibling-build ladder needs
 are documented, not half-supported, here -- MODE2/2352 (DDRMAX JP; each 2352-byte sector
 carries user data at byte 24, so a user-data offset maps as ``24 + 2048 * n + k``) and
 MODE2/2448 with a 96-byte subchannel appended (Party Collection).  Neither changes this
@@ -45,7 +47,7 @@ TARGET = targets.get(targets.DEFAULT)
 RETAIL_IMAGE = TARGET.image
 
 # The build under gate, and the image the gate writes: out/ is gitignored, and the copy is
-# 1.24 GB, so it must never land in a temporary directory (R30).
+# 1.84 GB, so it must never land in a temporary directory (R30).
 BUILT_ELF = TARGET.built
 REBUILT_IMAGE = REPO_ROOT / "out" / "rebuilt.iso"
 
