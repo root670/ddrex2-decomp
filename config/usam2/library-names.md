@@ -233,18 +233,18 @@ address differently (it did not win).
 | `0x0010C498` | `sceSifRebootIop` | `oni2` | `0x110` | whole body, masked-equal, 2 relocated word(s) | iopreset.c | sly1 | - |
 | `0x0010C5A8` | `SetTLBHandler` | `sdk152` `tlbfunc.o` | `0x60` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
 | `0x0010C608` | `SetDebugHandler` | `oni2` | `0x84` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0010C6A0` | `kCopy` | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010C6A0` | `kCopy` | `oni2` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
 | `0x0010C6F8` | `InitTLBFunctions` | `oni2` | `0xC4` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
 | `0x0010C7F0` | `SetTLBEntry` | `sdk152` `tlbfunc.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
 | `0x0010C880` | `InitTLB` | `sdk152` `tlbfunc.o` | `0x40` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
 | `0x0010C8C0` | `InitTLB32MB` | `sdk152` `tlbfunc.o` | `0x1F4` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
 | `0x0010CE20` | `DIntr` | `oni2` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
 | `0x0010CE80` | `supplement_crt0` | `oni2` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x0010CED8` | `kCopy_1` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010CED8` | `kCopy_1` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
 | `0x0010CF10` | `kFindAddress` | `oni2` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
 | `0x0010CF60` | `GetSystemCallEntry` | `sdk152` `initsys.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
 | `0x0010CF98` | `InitSystemCallTableAddress` | `oni2` | `0xFC` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x0010D108` | `kCopy_2` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D108` | `kCopy_2` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
 | `0x0010D150` | `PatchIsNeeded` | `oni2` | `0x68` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
 | `0x0010D1B8` | `InitExecPS2` | `oni2` | `0xAC` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
 | `0x0010D278` | `kCopy_3` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
@@ -252,7 +252,7 @@ address differently (it did not win).
 | `0x0010D3D8` | `ExecPS2` | `sdk152` `exit.o` | `0x70` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
 | `0x0010D448` | `LoadExecPS2` | `sdk152` `exit.o` | `0x48` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
 | `0x0010D4B8` | `ExecOSD` | `sdk152` `exit.o` | `0x4C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x0010D528` | `kCopy_4` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D528` | `kCopy_4` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
 | `0x0010D570` | `InitAlarm` | `oni2` | `0xD4` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
 | `0x0010D648` | `_send_to_iop` | `oni2` | `0x114` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
 | `0x0010D760` | `scePadInit` | `oni2` | `0x140` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |

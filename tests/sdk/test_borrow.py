@@ -270,6 +270,20 @@ def test_byte_proposals_are_size_exact_and_masked():
     assert proposals[0]["evidence"]["exact"] is False
 
 
+def test_byte_proposals_credit_the_whole_body_when_several_candidates_share_a_name():
+    """Two members with one name still give whole-body evidence for the row's name."""
+    ours = [{"symbol": "func_00100288", "address": 0x100288, "size": 0x30}]
+    theirs = [{"name": "kCopy", "address": 0x4A0000, "size": 0x30},
+              {"name": "kCopy", "address": 0x4B0000, "size": 0x30}]
+    blob = words(*([0x27BDFFF0] * 12))
+    proposals, refused = borrow.byte_proposals(
+        ours, theirs, {0x100288: blob}, {0x4A0000: blob, 0x4B0000: blob}, source="sdk152")
+    assert refused == []
+    assert proposals[0]["name"] == "kCopy"
+    assert proposals[0]["evidence"]["candidates"] == 2
+    assert proposals[0]["evidence"]["whole_function"] is True
+
+
 def test_byte_proposals_reject_a_different_size():
     ours = [{"symbol": "func_00100288", "address": 0x100288, "size": 0x30}]
     theirs = [{"name": "sceGsResetGraph", "address": 0x4A0000, "size": 0x2C}]

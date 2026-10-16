@@ -588,8 +588,11 @@ def byte_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict, their_
                             "reason": "names disagree", "names": names})
             continue
         candidate, result = matches[0]
-        full = match.compare(their_bytes[corpus_key(candidate)], blob) \
-            if len(matches) == 1 else None
+        # The whole body of the candidate this row takes its name from.  Several candidates can
+        # share a name (the same routine is linked into several members) and the window is what
+        # they all matched, so the full-body check belongs to the one that named the row -- not
+        # to "there was only one candidate", which under-claimed the evidence for those rows.
+        full = match.compare(their_bytes[corpus_key(candidate)], blob)
         proposals.append({
             "address": mine["address"], "symbol": mine["symbol"], "size": mine["size"],
             "name": candidate["name"], "tier": "bytes", "source": source,
