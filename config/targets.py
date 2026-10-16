@@ -401,8 +401,13 @@ def _display(path) -> str:
 #: ``.line``): four 3.0 builds -- ``3.0-011126``, ``3.0.1-020123``, ``3.0.3-020716`` and
 #: ``3.0b38-030307`` -- reproduce all three under ``-c -lang c -O3 -g`` (and ``-O4 -g``), and
 #: ``2.4-001213`` is ruled out because its frame instructions differ whatever the flags
-#: (``sq``/``lq`` where retail has ``sd``/``ld``).  The tie is recorded rather than resolved:
-#: the first match is what the build needs, and the wider sample that can break it is Task 1's.
+#: (``sq``/``lq`` where retail has ``sd``/``ld``).  ``.comment`` then cuts the tie to three:
+#: retail carries ``MW MIPS C Compiler (2.4.1.01)``, ``3.0b38-030307`` writes ``(3.0.0)``, and
+#: the other three write the retail string -- though that string is *not* a version stamp,
+#: since ``2.4-001213`` writes it too and still emits different code.  The remaining three-way
+#: tie is recorded rather than resolved: any of them reproduces the unit, and only ``.text``
+#: can separate them (``.debug``'s producer string is version-less), so only a wider sample
+#: can break it -- which is Task 1's job as promotions accumulate.
 #: A pair measured against one retail binary says nothing about another, so this table starts
 #: empty on a new target and ``configure.py`` refuses to promote a source nobody has measured.
 #: A guessed *geometry* would be a split of one game at another game's addresses;
@@ -452,7 +457,8 @@ DDREX2P = Target(
     ),
     # (source, compiler build, flags): measured, never inherited -- see the note above.
     # `select_build.py --tu sys_scf.c` (2026-10-16, all five installed builds, every flag
-    # set) is the evidence for this line; four builds tie, and this is the first of them.
+    # set) is the evidence for this line; four builds reproduce the unit and `.comment` cuts
+    # the tie to three, of which this is the first.
     tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),),
 )
 
