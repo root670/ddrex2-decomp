@@ -395,12 +395,19 @@ def _display(path) -> str:
 #:
 #: Its ``geometry`` is a measurement of that binary -- read out of its headers with
 #: ``tools/oracle/elf.py`` and confirmed byte-for-byte against the image it is booted from
-#: (every number below is annotated with where it comes from).  ``tu_builds`` is still empty
-#: on purpose: a promoted unit's compiler/flag pair is measured from bytes only a build can
-#: produce, and ``configure.py`` refuses to promote a source nobody has measured for this
-#: target until it is filled in.  A guessed *geometry* would be a split of one game at another
-#: game's addresses; ``geometry_required()`` is what refuses to guess, and
-#: `tests/test_targets.py` pins both halves of that behaviour.
+#: (every number below is annotated with where it comes from).  ``tu_builds`` holds one pair so
+#: far, measured with ``tools/toolchain/select_build.py`` on the first promoted unit
+#: (``sys_scf.c``, whose three parts are 0x40 bytes of ``.text``, 652 of ``.debug`` and 116 of
+#: ``.line``): four 3.0 builds -- ``3.0-011126``, ``3.0.1-020123``, ``3.0.3-020716`` and
+#: ``3.0b38-030307`` -- reproduce all three under ``-c -lang c -O3 -g`` (and ``-O4 -g``), and
+#: ``2.4-001213`` is ruled out because its frame instructions differ whatever the flags
+#: (``sq``/``lq`` where retail has ``sd``/``ld``).  The tie is recorded rather than resolved:
+#: the first match is what the build needs, and the wider sample that can break it is Task 1's.
+#: A pair measured against one retail binary says nothing about another, so this table starts
+#: empty on a new target and ``configure.py`` refuses to promote a source nobody has measured.
+#: A guessed *geometry* would be a split of one game at another game's addresses;
+#: ``geometry_required()`` is what refuses to guess, and `tests/test_targets.py` pins both
+#: halves of that behaviour.
 DDREX2P = Target(
     name="ddrex2p",
     config_dir=REPO_ROOT / "config" / "ddrex2p",
@@ -443,6 +450,10 @@ DDREX2P = Target(
         line_size=0xEE546,          # .line (976,198 B)
         image_elf_offset=0x6D261000,  # LBA 894146 in the pinned image
     ),
+    # (source, compiler build, flags): measured, never inherited -- see the note above.
+    # `select_build.py --tu sys_scf.c` (2026-10-16, all five installed builds, every flag
+    # set) is the evidence for this line; four builds tie, and this is the first of them.
+    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

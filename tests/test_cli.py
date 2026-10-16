@@ -280,11 +280,18 @@ def test_diff_refuses_a_unit_with_no_c_source(ledger):
     reads as "the split does not match retail" when the split *is* retail's bytes.
     """
     ddr = load_ddr()
-    args = ddr.parse_args(["diff", ledger["name"], ledger["tu"]])
     if not ddr.GRAPH.is_file():
         pytest.skip("no build graph: the base object is read out of it (Task 5)")
-    assert ddr._promoted_object(ddr.g2.Manifests(TARGET.cus, TARGET.chunks,
-                                                TARGET.symbols).tu_named(ledger["tu"])) is None
+    manifests = ddr.g2.Manifests(TARGET.cus, TARGET.chunks, TARGET.symbols)
+    # The unit is read out of this target's own manifests rather than from `ledger`: promoted
+    # units *do* have an object to measure (that is the point of a promotion), so the refusal
+    # needs a unit with no source under `src/`.
+    file, function = next(
+        (record["file"], record) for record in manifests.records
+        if record.get("kind") == "function" and record.get("low_pc") is not None
+        and not (ROOT / record["file"]).is_file())
+    args = ddr.parse_args(["diff", manifests.symbol_at(function["low_pc"]), file])
+    assert ddr._promoted_object(file) is None
     assert ddr.cmd_diff(args) == 2, "a unit with no C object must be refused"
 
 

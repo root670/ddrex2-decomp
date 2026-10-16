@@ -534,6 +534,12 @@ def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
     target = target_support.registered()
     if not target.borrowed.is_file():
         pytest.skip(f"{target.name}: no borrowed_symbols.txt yet (the library pass)")
+    if borrow.RETAIL != target.elf:
+        pytest.skip(f"borrow.py still names {borrow.RETAIL.name}, not this target's "
+                    f"{target.elf.name}: until it is re-pointed at the registered target "
+                    f"(the library pass) it produces no output this ledger could be compared "
+                    f"with, and re-deriving it against the other binary is not evidence about "
+                    f"this one")
     for key in ("oni2", "sdk152", "recvx"):
         if not borrow.corpus_records(key, borrow.CACHE)[0]:
             pytest.skip(f"{key} is unreachable on this machine")

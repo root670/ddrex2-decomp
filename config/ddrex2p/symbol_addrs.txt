@@ -1,3 +1,4 @@
+sceScfGetDateNotation = 0x001B3840; // type:func size:0x0 provenance:devkit152
 sysGetDateNotation = 0x001B3D30; // type:func size:0xC provenance:dwarf
 sysInitScf = 0x001B3D40; // type:func size:0x30 provenance:dwarf
 sysDemoSetMainLoopBreakRequest = 0x001B3D70; // type:func size:0xC provenance:dwarf

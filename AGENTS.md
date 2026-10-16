@@ -76,7 +76,7 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    the symbol table, in the headers, and in every objdiff verdict that follows.
 
 4. **Statements keep their retail line numbers.**  The `.line` section is part of the artifact
-   (`docs/milestones/m2-sys-scf.md`), so a statement belongs on the line the evidence says it is on.
+   (`docs/milestones/ddrex2p-m2.md`), so a statement belongs on the line the evidence says it is on.
    Reflowing code to read better, or "tidying" a blank line, moves every statement number after it
    and shows up as a `.line` chunk that no longer matches — that is the build telling you the
    source's shape is part of the target, not a style preference.

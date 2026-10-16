@@ -27,6 +27,7 @@ unit being edited.
 | milestone | what it closed on | document |
 |---|---|---|
 | M1–M2 (removed target) | the skeleton and the first promoted unit of the previous target: oracle, splat config, pinned link, ISO layer, and one unit matching on `.text` + `.debug` + `.line` | records were removed with that target |
+| M2 (this target) | the first promoted unit on `ddrex2p`: `sys_scf.c` matching on `.text` + `.debug` + `.line`, and the compiler pair it was measured with | [`docs/milestones/ddrex2p-m2.md`](docs/milestones/ddrex2p-m2.md) |
 | library sourcing (this target) | which SDK archive revision reproduces each library, byte-wise, names only | [`docs/milestones/m3-library-sourcing.md`](docs/milestones/m3-library-sourcing.md) |
 
 The retarget is specified in [`docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md`](docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md)
@@ -106,7 +107,7 @@ verb: `./ddr --target ddrex2p verify` is the same gate on the same files as `./d
 `./ddr build` takes about a minute from scratch (4,102 ninja edges, 4,092 of them splits) and less
 when only the unit you edited changed.  `./ddr diff <symbol> <tu>` shows objdiff's instruction-level
 view of one function; G1 and the per-TU verdicts are the arbiters (see the caveat at the end of
-`docs/milestones/m2-sys-scf.md`).
+`docs/milestones/ddrex2p-m2.md`).
 
 ## How it works
 

@@ -1,0 +1,19 @@
+// Borrowed library names -- merged into symbol_addrs.txt by tools/oracle/emit_symbols.py.
+//
+// Every line is a name a corpus published for one of this image's library functions and
+// passed the validation tools/sdk/borrow.py describes: the corpus's size is our function's
+// own split bounds (which is why `size:` here is the validated number and not 0), and the
+// corpus's bytes match ours after the relocation masking tools/sdk/match.py defines.
+// `size:` here is that validated number; what reaches splat is `size:0x0`-less, because
+// splat uses the attribute to lay the split out, and the split keeps detecting the bounds
+// itself -- the same bounds this ledger checked.
+//
+// One name so far, and it is here because a promoted unit needs it: src/sys/sys_scf.c's
+// sysInitScf calls 0x001B3840, whose only name in this tree was splat's address-derived
+// func_001B3840.  tools/sdk/revisions.py placed this image's libscf at 0x001B34C0-0x001B3CE8
+// (stamp PsIIlibscf3000, devkit152) and `sdk.revisions.archive_functions` +
+// `sdk.revisions.classify` reproduce the 0x64 bytes at 0x001B3840 instruction for
+// instruction from that archive's libscf.o (5 words masked, 0 differing).  The library
+// record in config/ddrex2p/library-revisions.md is the same measurement at library scope;
+// the remaining libscf names belong to the naming task.
+sceScfGetDateNotation = 0x001B3840; // type:func size:0x64 provenance:devkit152 tier:bytes
