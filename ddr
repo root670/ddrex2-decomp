@@ -26,9 +26,14 @@ the target the tree is configured for).  ``--target`` is accepted before or afte
                             and its .line chunks against retail (the promotion rule)
     ./ddr verify --iso IMG  ... plus G3: the built ELF spliced back into a copy of IMG must
                             give IMG back, hash for hash
-    ./ddr diff SYM TU       objdiff-cli between SYM's retail split and the C object the graph
-                            compiles TU's source to (a unit with no C source is refused: it
-                            has nothing to measure)
+    ./ddr diff SYM TU       objdiff-cli between the target's *retail bytes* for SYM and the
+                            object under edit: the C object the graph compiles TU's source
+                            to, or -- a unit no C source exists for -- our own bytes for SYM
+                            out of its split.  The target side is built from the retail image
+                            (``tools/diff/basis.py``) rather than from the split, whose
+                            unresolved call targets depress the score of a legitimately
+                            identical function; both sides are printed with what they are, so a
+                            retail-bytes diff is never taken for a split one
     ./ddr iso --iso IMG     G3 on its own
 
 On a G1 failure the offset is localised through the oracle's manifests -- ``.debug``/``.line``
@@ -41,12 +46,14 @@ verdict failed, or a host tool is missing (``check_deps`` prints the remedy, nev
 traceback); 2 a usage or configuration problem -- an unknown target, a target whose geometry
 nobody has measured yet, a missing input, a name that matches no translation unit, an image
 the ELF does not fit into, an image no record in the target's ``checksums.txt`` names
-(``--allow-unpinned-reference`` is the opt-out), a unit with no C source to measure.
+(``--allow-unpinned-reference`` is the opt-out), a symbol objdiff-cli compared nothing for
+(there is no score to print for it).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import subprocess
 import sys
@@ -62,6 +69,7 @@ for extra in (str(TOOLS / "oracle"), str(TOOLS), str(REPO_ROOT)):
 import configure  # noqa: E402
 import emit_chunks, emit_cus, emit_headers, emit_symbols  # noqa: E402
 from config import targets  # noqa: E402  the descriptor every verb reads
+from diff import basis as diff_basis  # noqa: E402  the object `diff` measures against
 from iso import reinsert  # noqa: E402
 from toolchain import check_deps  # noqa: E402
 from verify import g1, g2  # noqa: E402
@@ -372,13 +380,12 @@ def cmd_iso(args) -> int:
 
 
 def _split_object(symbol: str, target):
-    """The retail target object for ``symbol``: the split object splat's graph builds.
+    """The split object splat's graph builds for ``symbol``: our bytes for it, as assembly.
 
-    Every function is still assembled from its split, and the object's path mirrors splat's
-    own naming (``configure.object_path``), so the target side of the objdiff run is the
-    retail bytes for that function -- the one object in the tree that is guaranteed to *be*
-    the target, because G1 checks the linked image those objects produce.  The split lives
-    under the target's own code segment (``asm/nonmatchings/<segment>/``).
+    The path mirrors splat's own naming (``configure.object_path``) under the target's code
+    segment.  It is not a diff side any more -- objdiff scores no split as-is, because the
+    ``.NON_MATCHING`` alias splat writes into it makes every symbol of that name ignored --
+    but it is where the *base* of an unpromoted unit's diff comes from (``basis.split``).
     """
     split = (REPO_ROOT / "asm" / "nonmatchings" / target.geometry_required().code_segment
              / f"{symbol}.s")
@@ -406,8 +413,38 @@ def _promoted_object(tu: str):
     return None
 
 
+def _diff_base(args, symbol: str, tu: str, target):
+    """``(path, what)`` -- the base side of the diff and the words that name it, or None.
+
+    The base is the object under edit: the one ``--base`` names, else the object the graph
+    compiles ``tu``'s source to, else -- a unit with no C -- the split's own bytes for
+    ``symbol``, emitted under the plain name (``basis.split``) because a split object as it
+    stands is one objdiff refuses to score at all.  ``what`` is printed with the diff so no
+    reader can take a retail-bytes target for the split, or the split for a C object.
+    """
+    if args.base is not None:
+        return pathlib.Path(args.base), "the object you named"
+    if not GRAPH.is_file():
+        print(f"ddr: {_display(GRAPH)}: no such file (run ./ddr build)", file=sys.stderr)
+        return None
+    promoted = _promoted_object(tu)
+    if promoted is not None:
+        return promoted, f"the C object the graph compiles {tu} to"
+    split = _split_object(symbol, target)
+    if not split.is_file():
+        print(f"ddr: {_display(split)}: no such object (run ./ddr build)", file=sys.stderr)
+        return None
+    try:
+        return (diff_basis.split(symbol, split),
+                f"our build's own bytes for {symbol} out of {_display(split)}: {tu} has no "
+                f"object in the build graph, and a split object is not scorable as it stands")
+    except diff_basis.Unusable as exc:
+        print(f"ddr: {exc}", file=sys.stderr)
+        return None
+
+
 def cmd_diff(args) -> int:
-    """objdiff-cli for one symbol: the retail object is the target, the TU's object the base."""
+    """objdiff-cli for one symbol: the retail bytes for it against the object under edit."""
     target = _target(args)
     manifests = g2.Manifests(target.cus, target.chunks, target.symbols)
     try:
@@ -427,39 +464,60 @@ def cmd_diff(args) -> int:
         print(f"ddr: {args.symbol} is at 0x{address:08X} in {where}, not {tu}",
               file=sys.stderr)
         return 2
-    retail_object = _split_object(args.symbol, target)
-    if args.base is not None:
-        base = pathlib.Path(args.base)
-    elif not GRAPH.is_file():
-        print(f"ddr: {_display(GRAPH)}: no such file (run ./ddr build)", file=sys.stderr)
+    size = owner["high_pc"] - owner["low_pc"]
+    if not target.elf.is_file():
+        print(f"ddr: {_display(target.elf)}: no such file: the target side of the diff is "
+              f"the retail bytes of {args.symbol}", file=sys.stderr)
         return 2
-    else:
-        base = _promoted_object(tu)
-        if base is None:
-            # Nothing to measure: objdiff would be handed the split as *both* sides, take
-            # the split's own `.NON_MATCHING` name as the base counterpart and print a score
-            # it never computed -- which reads as "the split does not match retail" when the
-            # split *is* retail's bytes.  Refuse, loudly, instead of measuring nothing.
-            print(f"ddr: {tu} has no C source in the build graph, so there is no object to "
-                  f"measure against retail ({_display(retail_object)} is the split itself and "
-                  f"objdiff would diff it with itself).  Pass --base PATH to diff an object "
-                  f"you built.", file=sys.stderr)
-            return 2
-    for path in (retail_object, base):
-        if not path.is_file():
-            print(f"ddr: {_display(path)}: no such object (run ./ddr build)",
-                  file=sys.stderr)
-            return 2
+    # The base first: a refusal here must not leave an emitted object behind.
+    resolved = _diff_base(args, args.symbol, tu, target)
+    if resolved is None:
+        return 2
+    base, what = resolved
+    if not base.is_file():
+        hint = "" if args.base is not None else " (run ./ddr build)"
+        print(f"ddr: {_display(base)}: no such object{hint}", file=sys.stderr)
+        return 2
     _require("objdiff")
     objdiff = check_deps.resolve(check_deps.TOOLS_BY_KEY["objdiff"])
+    try:
+        # The target side is retail's own bytes for this function, emitted under its name --
+        # *not* the split, whose unresolved call targets would depress the score of a
+        # legitimately identical function by an artefact of how it spells a relocation.
+        retail_object = diff_basis.retail(args.symbol, address, size, target.elf)
+    except (diff_basis.Unusable, KeyError, ValueError) as exc:
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 2
     # stdout stays pure objdiff JSON so it can be redirected or uploaded; what was compared
     # goes to stderr, where a human reads it and a pipeline ignores it.
     print(f"diff: {args.symbol} ({tu}) at VA 0x{address:08X} [{target.name}]\n"
-          f"      target {_display(retail_object)}\n      base   {_display(base)}",
-          file=sys.stderr)
+          f"      target {_display(retail_object)} (the retail bytes of {args.symbol}, "
+          f"{size} bytes read from {_display(target.elf)})\n"
+          f"      base   {_display(base)} ({what})", file=sys.stderr)
     argv = [objdiff, "diff", args.symbol, "-1", str(retail_object), "-2", str(base),
             "-o", "-"]
-    return subprocess.run(argv, cwd=REPO_ROOT).returncode
+    done = subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True)
+    if done.stderr:
+        sys.stderr.write(done.stderr)                 # objdiff's own warnings, kept visible
+    if done.returncode != 0:
+        sys.stdout.write(done.stdout)
+        return done.returncode
+    # A percentage is printed only for a comparison objdiff actually made: a report that
+    # pairs the symbol with nothing (the base object does not define it, say) carries the
+    # symbols but no `match_percent`, and its section-level arithmetic is not a score for
+    # this function.
+    try:
+        report = json.loads(done.stdout)
+    except json.JSONDecodeError:
+        report = None
+    if report is None or not diff_basis.scored(report, args.symbol):
+        print(f"ddr: objdiff-cli compared nothing for {args.symbol}: {_display(base)} holds no "
+              f"symbol of that name with a percentage to report, so there is no score to "
+              f"print.  Pass --base PATH with the object you built for it.",
+              file=sys.stderr)
+        return 2
+    sys.stdout.write(done.stdout)
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -514,8 +572,9 @@ def parse_args(argv):
     diff.add_argument("tu", help="the translation unit that must own it (sys_scf or sys_scf.c)")
     diff.add_argument("--base", type=pathlib.Path, default=None,
                       help="the object to diff against (default: the TU's own C object from "
-                           "the build graph; a unit with no C source is refused instead of "
-                           "being diffed with itself)")
+                           "the build graph, else our own bytes for the symbol out of its "
+                           "split -- and objdiff-cli is only believed when it reports a "
+                           "percentage for the symbol on both sides)")
     diff.set_defaults(func=cmd_diff)
 
     iso = _verb(verbs, "iso", "G3: splice the built ELF back into the image")

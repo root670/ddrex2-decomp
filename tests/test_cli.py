@@ -8,12 +8,14 @@ process-spawning entry point, plus a session backstop that fails if the reposito
 with -- so a verb invoked here either stops before it could build or is caught by the guard.  What is pinned here is the
 selection (`--target`, both spellings, default), the loud stops (an unknown name, a target with
 no binary, a target with no measured geometry), the remedy line for a missing host tool, and the
-`diff` verb's contract -- including the case that matters most, a unit with no C source.
+`diff` verb's contract -- including the two cases that matter most, a unit with no C source and a
+report that compared nothing.
 """
 
 import dataclasses
 import importlib.machinery
 import importlib.util
+import json
 import os
 import pathlib
 import subprocess
@@ -272,43 +274,18 @@ def test_diff_refuses_a_symbol_no_ledger_names(ledger):
     assert "Traceback" not in p.stderr
 
 
-def test_diff_refuses_a_unit_with_no_c_source(ledger):
-    """A unit with no C source has nothing to measure (finding 10).
-
-    objdiff would otherwise be handed the retail split as *both* sides, take the split's own
-    ``.NON_MATCHING`` name as the base counterpart and print a score it never computed -- which
-    reads as "the split does not match retail" when the split *is* retail's bytes.
-    """
-    ddr = load_ddr()
-    if not ddr.GRAPH.is_file():
-        pytest.skip("no build graph: the base object is read out of it (Task 5)")
-    manifests = ddr.g2.Manifests(TARGET.cus, TARGET.chunks, TARGET.symbols)
-    # The unit is read out of this target's own manifests rather than from `ledger`: promoted
-    # units *do* have an object to measure (that is the point of a promotion), so the refusal
-    # needs a unit with no source under `src/`.
-    file, function = next(
-        (record["file"], record) for record in manifests.records
-        if record.get("kind") == "function" and record.get("low_pc") is not None
-        and not (ROOT / record["file"]).is_file())
-    args = ddr.parse_args(["diff", manifests.symbol_at(function["low_pc"]), file])
-    assert ddr._promoted_object(file) is None
-    assert ddr.cmd_diff(args) == 2, "a unit with no C object must be refused"
+def _objdiff_report(symbol, percent=100.0):
+    """A minimal ``objdiff-cli`` report: the symbol on both sides, scored or not."""
+    def entry():
+        found = {"name": symbol, "kind": "SYMBOL_FUNCTION"}
+        if percent is not None:
+            found["match_percent"] = percent
+        return found
+    return {"left": {"symbols": [entry()]}, "right": {"symbols": [entry()]}}
 
 
-def test_diff_hands_objdiff_the_two_objects_it_was_given(ledger, tmp_path, monkeypatch, capsys):
-    """``diff`` is a thin wrapper: the argv it hands ``objdiff-cli`` is the contract.
-
-    Both object paths are replaced (the split object belongs to the build, and the base object to
-    the unit's C source), so what is under test is the wiring: the symbol, the two sides, and the
-    report of what was compared.
-    """
-    ddr = load_ddr()
-    target_object, base_object = tmp_path / "split.s.o", tmp_path / "unit.o"
-    for path in (target_object, base_object):
-        path.write_bytes(b"\x7fELF")
-    monkeypatch.setattr(ddr, "_split_object", lambda symbol, target: target_object)
-    recorded = {}
-
+def _objdiff_stub(monkeypatch, ddr, report, recorded):
+    """``ddr``'s one call to ``objdiff-cli``: the argv is recorded, the report is canned."""
     class Stub:
         TOOLS_BY_KEY = {"objdiff": type("T", (), {"key": "objdiff"})()}
 
@@ -320,12 +297,104 @@ def test_diff_hands_objdiff_the_two_objects_it_was_given(ledger, tmp_path, monke
         def version(tool):
             return "stub"
 
-    def fake_run(argv, cwd=None):
+    def fake_run(argv, cwd=None, capture_output=True, text=True):
         recorded["argv"] = argv
-        return type("P", (), {"returncode": 0})()
+        return type("P", (), {"returncode": 0, "stdout": json.dumps(report),
+                              "stderr": ""})()
 
     monkeypatch.setattr(ddr, "check_deps", Stub)
     monkeypatch.setattr(ddr.subprocess, "run", fake_run)
+
+
+def test_diff_measures_an_unpromoted_unit_instead_of_refusing_it(tmp_path, monkeypatch,
+                                                                 capsys):
+    """A unit with no C object is measured against our own bytes for the symbol (finding 10).
+
+    The target side is retail's bytes for the symbol; the base side is the same bytes out of
+    the split, emitted without splat's ``.NON_MATCHING`` alias -- an object objdiff refuses to
+    score keeps the verb from printing a percentage it never computed, so the stand-in is what
+    makes an unpromoted unit measurable at all.
+    """
+    ddr = load_ddr()
+    if not ddr.GRAPH.is_file():
+        pytest.skip("no build graph: the base object is read out of it (Task 5)")
+    manifests = ddr.g2.Manifests(TARGET.cus, TARGET.chunks, TARGET.symbols)
+    # Read out of this target's own manifests rather than from `ledger`: promoted units *do*
+    # have an object to measure (that is the point of a promotion), so this needs a unit with
+    # no source under `src/` -- and a split object the build has already assembled.
+    file, function = next(
+        (record["file"], record) for record in manifests.records
+        if record.get("kind") == "function" and record.get("low_pc") is not None
+        and not (ROOT / record["file"]).is_file()
+        and ddr._split_object(manifests.symbol_at(record["low_pc"]), TARGET).is_file())
+    symbol = manifests.symbol_at(function["low_pc"])
+    assert ddr._promoted_object(file) is None
+    target_object, stand_in = tmp_path / "retail.o", tmp_path / "split.o"
+    for path in (target_object, stand_in):
+        path.write_bytes(b"\x7fELF")
+    calls = []
+
+    def fake_retail(name, address, size, elf, directory=None):
+        calls.append(("retail", name, address, size, pathlib.Path(elf)))
+        return target_object
+
+    def fake_split(name, split_object, directory=None):
+        calls.append(("split", name, pathlib.Path(split_object)))
+        return stand_in
+
+    monkeypatch.setattr(ddr.diff_basis, "retail", fake_retail)
+    monkeypatch.setattr(ddr.diff_basis, "split", fake_split)
+    recorded = {}
+    _objdiff_stub(monkeypatch, ddr, _objdiff_report(symbol), recorded)
+    args = ddr.parse_args(["diff", symbol, file])
+    assert ddr.cmd_diff(args) == 0
+    # The base is resolved first on purpose: a refusal there must not leave an emitted object.
+    assert calls == [("split", symbol, ddr._split_object(symbol, TARGET)),
+                     ("retail", symbol, function["low_pc"],
+                      function["high_pc"] - function["low_pc"], TARGET.elf)]
+    argv = recorded["argv"]
+    assert argv[argv.index("-1") + 1] == str(target_object)
+    assert argv[argv.index("-2") + 1] == str(stand_in)
+    err = capsys.readouterr().err
+    assert "the retail bytes of " + symbol in err and TARGET.elf.name in err
+    assert "no object in the build graph" in err and str(stand_in) in err
+
+
+def test_diff_refuses_to_print_a_score_objdiff_never_computed(ledger, tmp_path, monkeypatch,
+                                                              capsys):
+    """A base object holding no such symbol is a refusal: no comparison, no percentage.
+
+    objdiff still lists the symbols it read and still scores the *sections*, so a report
+    without a ``match_percent`` for the symbol is exactly the shape that reads as a score while
+    measuring nothing.  Nothing goes to stdout, and the remedy is named.
+    """
+    ddr = load_ddr()
+    target_object, base_object = tmp_path / "retail.o", tmp_path / "unit.o"
+    for path in (target_object, base_object):
+        path.write_bytes(b"\x7fELF")
+    monkeypatch.setattr(ddr.diff_basis, "retail", lambda *a, **k: target_object)
+    _objdiff_stub(monkeypatch, ddr, _objdiff_report(ledger["name"], percent=None), {})
+    args = ddr.parse_args(["diff", ledger["name"], ledger["tu"], "--base", str(base_object)])
+    assert ddr.cmd_diff(args) == 2
+    out = capsys.readouterr()
+    assert out.out == "", "a report that compared nothing must not reach stdout"
+    assert "compared nothing" in out.err and ledger["name"] in out.err
+
+
+def test_diff_hands_objdiff_the_two_objects_it_was_given(ledger, tmp_path, monkeypatch, capsys):
+    """``diff`` is a thin wrapper: the argv it hands ``objdiff-cli`` is the contract.
+
+    Both object paths are replaced (the retail object is emitted from the image, the base
+    object belongs to the unit's C source), so what is under test is the wiring: the symbol,
+    the two sides, and the report of what each side is.
+    """
+    ddr = load_ddr()
+    target_object, base_object = tmp_path / "retail.o", tmp_path / "unit.o"
+    for path in (target_object, base_object):
+        path.write_bytes(b"\x7fELF")
+    monkeypatch.setattr(ddr.diff_basis, "retail", lambda *a, **k: target_object)
+    recorded = {}
+    _objdiff_stub(monkeypatch, ddr, _objdiff_report(ledger["name"]), recorded)
     args = ddr.parse_args(["diff", ledger["name"], ledger["tu"], "--base", str(base_object)])
     assert ddr.cmd_diff(args) == 0
     argv = recorded["argv"]
@@ -334,3 +403,4 @@ def test_diff_hands_objdiff_the_two_objects_it_was_given(ledger, tmp_path, monke
     assert argv[argv.index("-2") + 1] == str(base_object)
     err = capsys.readouterr().err
     assert ledger["tu"] in err and ledger["name"] in err
+    assert "the retail bytes" in err and "the object you named" in err

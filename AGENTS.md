@@ -31,8 +31,8 @@ still wrong.  Read it before your first edit.
 ./ddr verify                          # G1: out/<elf> == the pinned retail ELF
 ./ddr verify --tu sys_scf            # ... plus the promotion rule for one unit
 ./ddr verify --iso                    # ... plus G3 on the mounted retail image (skipped if absent)
-./ddr diff sysInitScf sys_scf         # objdiff-cli: retail's bytes vs the C object, one symbol
-python3 -m pytest -q                  # the suite (149 tests; ~16 s today)
+./ddr diff sysInitScf sys_scf         # objdiff-cli: retail's bytes for one symbol vs our object
+python3 -m pytest -q                  # the suite (251 tests; ~94 s today)
 ```
 
 `--target <name>` (default: the registered target) goes on any of them — before the verb
@@ -151,6 +151,7 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 | `tools/oracle/**` | the vendored DWARF 1 reader and the emitters that produce the manifests and headers |
 | `tools/toolchain/**` | fetch/probe/verify the toolchain, and `compile.py`, the `cc` rule's program |
 | `tools/verify/**`, `tools/iso/**` | G1/G2 and the disc-image splice, each read through its target |
+| `tools/diff/**` | the two objects `ddr diff` compares: the retail bytes of the symbol under work, emitted under its own name into `build/diff/`, and the stand-in an unpromoted unit's split needs |
 | `config/<target>/**` | the oracle's artifacts and `ghidra_functions.json`, plus the pinned digests (the registered target's config arrives in Tasks 4–6) |
 | `include/types/**`, `include/types.h` | one named type each, defined once — generated |
 | `include/src/**` | one header per translation unit, generated |

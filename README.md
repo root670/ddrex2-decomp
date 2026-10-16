@@ -106,8 +106,12 @@ verb: `./ddr --target ddrex2p verify` is the same gate on the same files as `./d
 
 `./ddr build` takes about a minute from scratch (4,102 ninja edges, 4,092 of them splits) and less
 when only the unit you edited changed.  `./ddr diff <symbol> <tu>` shows objdiff's instruction-level
-view of one function; G1 and the per-TU verdicts are the arbiters (see the caveat at the end of
-`docs/milestones/ddrex2p-m2.md`).
+view of one function: the target side is the *retail bytes* of that symbol (emitted into
+`build/diff/`, which no link edge reads), the base side is the object under edit -- the unit's C
+object, or for a unit with no C the split's own bytes without splat's `.NON_MATCHING` alias, which
+objdiff would otherwise refuse to score.  Both sides are printed with what they are, and a
+percentage is printed only when objdiff really compared the symbol; G1 and the per-TU verdicts are
+the arbiters (see the caveat at the end of `docs/milestones/ddrex2p-m2.md`).
 
 ## How it works
 
