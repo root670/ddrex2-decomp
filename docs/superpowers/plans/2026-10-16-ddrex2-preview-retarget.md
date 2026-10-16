@@ -31,6 +31,9 @@
 - Never hand-edit `asm/**` or generated config (`splat.yaml`, `cus.json`, `debug_chunks.json`, `objdiff.json`, generated headers); regenerate with `./ddr oracle`.
 - Retail binaries, disc images and toolchains are never committed. Tool code is Python 3 standard library only. `python3 -m pytest` for tests (the full suite is minutes; run focused tests while iterating).
 - Concurrent-agent rule: each task owns its files; when two tasks would touch one file (e.g. `configure.py`), they serialize. **And only one agent runs a build at a time.** `./ddr build`, `./ddr oracle` and the full suite all rewrite `asm/**`, `build/**` and the generated config, so two agents running them in this checkout corrupt each other — observed three times today: a link failure with an undefined `D_00293A58` from a concurrently regenerated split, `symbol_addrs.txt` reverted twice mid-task, and `ddr`'s hunks nearly lost to a `git checkout -- ddr`. Serialize builds, and hand-edited names go in `borrowed_symbols.txt` (which the oracle merges), never in the generated file.
+- **A shrinking name set needs a clean rebuild.** Removing borrowed names left `asm/**` splits referring to symbols nothing defined and the link failed until `rm -rf asm build out`; the generated tree is not pruned when the ledger shrinks. Fixing the generator to prune the split files it owns is a task, not a workaround to remember.
+- **Staging is shared too.** In one checkout `git commit --amend` picks up whatever another agent has staged — an amend today swept in another task's `revisions.py`, its tests and `config/ddrex2p/*`. Always commit with an explicit path list, and never `--amend` here.
+- **Yields are relative to the ledger.** A borrowed name is a function start, so the ledger's own contents move the split's bounds; any alignment yield or chance control is relative to the current ledger, not an absolute property of the binary.
 
 ## Review Focus
 
