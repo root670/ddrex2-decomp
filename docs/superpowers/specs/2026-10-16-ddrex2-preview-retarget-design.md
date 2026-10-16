@@ -85,14 +85,26 @@ per TU: DWARF facts (fn/lines) → C on the retail line numbers → ddr diff →
 - **M3 (the loop at scale):** C-mode centralised headers (the existing Task 1, now four times more
   valuable), a `ddr diff` basis for the unit under edit (Task 2), a wider compiler/flag sample (Task 3),
   then a calibrated batch of promotions (Task 4).
-- **M4 (library and overlays):** the SDK subset named/pinned as already measured for the previous target,
-  then, as its own milestone, the ten `DATA*.BIN` overlays with their runtime load addresses.
+- **M4 (library identification, no C):** name the SDK subset with provenance (measured already: 9 of the 11
+  stamps this build needs, 1,163 functions matched byte-wise), pin the members that are byte-identical and
+  leave the rest as split assembly. Library code is never reversed to C. The overlay blobs and the
+  DWARF-less engine follow as their own milestones, behind the game TUs.
 
 ## Scope boundaries
 
-- **In:** the template binary, the disc image rebuild, the loop, promoted TUs.
+- **In — the game code:** the DWARF-backed translation units, reversed to C and promoted (2,676 functions
+  across 249 TUs, 1,816 of them inside the template), together with the build, the gates and the loop that
+  verify them. This is where the effort goes.
+- **In — identification only, no C:** the SDK/runtime library subset. It is **named** from the archives and
+  corpora with recorded provenance, and then either pinned as the compiled object or left as split
+  assembly. **No matching C is written for library functions** (user decision, 2026-10-16): the objects
+  exist, so hand-written C would be more work for a worse result, and matching C is the right tool only
+  where the object is unavailable.
 - **Out (own milestone):** `DATA00–09.BIN` overlays (860 functions), `FILEDATA.BIN` and `SD.BIN` assets,
   the IOP side.
+- **Deferred behind the game TUs:** the DWARF-less engine code. No archive names it and no debug info
+  describes it, so it neither blocks nor precedes the game TUs; it stays as split assembly until someone
+  chooses to reverse it.
 - **Out (unchanged):** generating `.comment` from the compiler object, MODE2/2352 and MODE2/2448
   geometries (this target is a plain 2048-byte image).
 
