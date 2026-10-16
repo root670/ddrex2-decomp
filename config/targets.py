@@ -393,12 +393,14 @@ def _display(path) -> str:
 #: (``SLUS_211.74``), whose DWARF covers 249 translation units.  ``orig/SLUS_211.74`` is
 #: gitignored like every retail binary; ``config/ddrex2p/`` holds its manifests and pins.
 #:
-#: Its ``geometry`` and ``tu_builds`` are empty *on purpose*: both are measurements of the
-#: binary, and nobody has measured it in this tree yet -- the config is generated from it and
-#: the segment list read out of it (the retarget plan's Tasks 4-6), and a promoted unit's
-#: compiler/flag pair is measured from bytes only a build can produce.  A guessed number would
-#: be a split of one game at another game's addresses; ``geometry_required()`` is what refuses
-#: to guess, and `tests/test_targets.py` pins both halves of that behaviour.
+#: Its ``geometry`` is a measurement of that binary -- read out of its headers with
+#: ``tools/oracle/elf.py`` and confirmed byte-for-byte against the image it is booted from
+#: (every number below is annotated with where it comes from).  ``tu_builds`` is still empty
+#: on purpose: a promoted unit's compiler/flag pair is measured from bytes only a build can
+#: produce, and ``configure.py`` refuses to promote a source nobody has measured for this
+#: target until it is filled in.  A guessed *geometry* would be a split of one game at another
+#: game's addresses; ``geometry_required()`` is what refuses to guess, and
+#: `tests/test_targets.py` pins both halves of that behaviour.
 DDREX2P = Target(
     name="ddrex2p",
     config_dir=REPO_ROOT / "config" / "ddrex2p",
@@ -408,6 +410,39 @@ DDREX2P = Target(
         "$HOME/Downloads/Dance Dance Revolution Extreme 2 (May 10, 2005 "
         "prototype)/PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso"),
     image_sha256="70a9056657665e978c7de9fc223cb753956902416418993176438316f6cd652b",
+    # Measured from `orig/SLUS_211.74` (sha256 ef31c90f…c02cd, 7,725,036 B) and from the
+    # pinned image it was copied out of: the ELF header, the program headers and the section
+    # header table, plus that image's own bytes (the boot ELF sits at LBA 894146, and the
+    # image's 7,725,036 bytes there are the ELF byte for byte, so a rebuilt ELF spliced back
+    # in at that offset is the whole of G3).
+    #
+    # `bss_end` is the file-backed PT_LOAD's `vaddr + memsz` (0x100000 + 0x623700): the
+    # zero-filled tail that segment claims.  It is *not* the highest address any PT_LOAD
+    # claims -- the binary also reserves eleven disjoint zero-fill regions for the overlay
+    # blobs (`0x7F0000`, `0xE4D380`, `0x1884000`, `filesz` 0, together reaching 0x1995E00) --
+    # because one bss extent spanning 0x723700..0x1995E00 would claim the unmapped gaps
+    # between those reservations as addressable, and `Geometry` has no way to express several
+    # disjoint zero-fill regions.  The overlays are out of this milestone's scope anyway (the
+    # spec defers DATA00-09.BIN), so this is recorded as *not represented* rather than
+    # guessed; see the Task 4 report.
+    geometry=Geometry(
+        elf_size=0x75DFEC,          # .reginfo ends at 0x75DCCC, then 20 * 40 B section headers
+        loadable_rom=0x200,         # PT_LOAD 0's p_offset
+        loadable_end=0x1DE380,      # 0x200 + p_filesz 0x1DE180: the whole file-backed image
+        loadable_vram=0x100000,     # PT_LOAD 0's p_vaddr
+        bss_end=0x723700,           # PT_LOAD 0's p_vaddr + p_memsz
+        trailing=(                  # the sections after the loadable image, in file order
+            ("shstrtab", 0x1DE380, 0x3A),
+            ("debug", 0x1DE3C0, 0x491376),
+            ("line", 0x66F740, 0xEE546),
+            ("comment", 0x75DC86, 0x2B),
+            ("reginfo", 0x75DCB4, 0x18),
+            ("section_headers", 0x75DCCC, 0x320),
+        ),
+        debug_size=0x491376,        # .debug (4,789,110 B, matching the spec's table)
+        line_size=0xEE546,          # .line (976,198 B)
+        image_elf_offset=0x6D261000,  # LBA 894146 in the pinned image
+    ),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

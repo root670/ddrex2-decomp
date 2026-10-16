@@ -11,9 +11,11 @@ compiler/flag pair each promoted unit was measured against.  Every tool reads th
 above); no other file spells a target name or a retail path.  Adding a target is a `Target(...)` plus
 one line in the registry there.
 
-The binary, its image and its generated config are **not in the tree yet** — placing the ELF,
-generating `config/ddrex2p/**` and measuring the segment list are the retarget plan's Tasks 4–6, so
-until they land every verb stops with the file or measurement it is missing instead of guessing.
+The binary and its disc image are **not in the tree** — retail files are never committed, so you
+supply both (below) — but the *measurement* of that binary is: `config/ddrex2p/` holds its generated
+config, its pins and its compile-unit and debug-chunk maps, and the descriptor holds the segment
+list, the chunked sections' lengths and the boot ELF's offset in the image.  Every verb that needs a
+file you have not supplied stops with the name of the file it is missing instead of guessing.
 
 "Matching" means the reconstruction is *proved*, not judged: the built ELF must be byte-identical to
 the retail one, debug sections and all, and writing it back into the retail disc image must reproduce
@@ -71,7 +73,8 @@ curl -sL -o ~/.local/bin/objdiff-cli \
 and `AGENTS.md` rule 5):
 
 * `orig/SLUS_211.74` — the retail ELF (7,725,036 bytes), copied out of your own copy of the preview
-  image.  The retarget plan's Task 4 places it.
+  image.  Its measured geometry and its generated config are committed (`config/targets.py`,
+  `config/ddrex2p/`), and `./ddr oracle` regenerates the config from the copy you place here.
 * the *DDR Extreme 2 (May 10, 2005 prototype)* image — the G3 reference.  Both paths, and the two
   sha256 digests they are pinned by, are recorded in `config/targets.py` (the image is the one the
   plan pinned: `70a90566…6cd652b`).  Mount it at the recorded path and bare `./ddr --target ddrex2p

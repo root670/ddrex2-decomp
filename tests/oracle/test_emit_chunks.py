@@ -8,6 +8,7 @@ section lengths come from the target's geometry, which the CLI resolves; with no
 the default target's, which is exactly the state a target without a measured geometry cannot be in.
 """
 
+import dataclasses
 import json
 import pathlib
 import sys
@@ -120,9 +121,12 @@ def test_a_broken_map_fails_loudly_instead_of_being_repaired(tmp_path):
         emit_chunks.build(past_end, LINE_SIZE, DEBUG_SIZE)
 
 
-def test_the_default_sizes_are_the_default_targets_measurement():
-    """With no sizes given, the manifest needs the target's own measurement -- and this tree's
-    target has none yet, so it stops there rather than inheriting another target's numbers."""
-    assert targets.get().geometry is None
+def test_the_default_sizes_are_the_default_targets_measurement(monkeypatch):
+    """With no sizes given, the manifest needs the target's own measurement -- and a target
+    nobody has measured stops there rather than inheriting another target's numbers."""
+    geometry = targets.get().geometry_required()
+    assert emit_chunks.default_sizes() == (geometry.line_size, geometry.debug_size)
+    monkeypatch.setattr(emit_chunks, "DEFAULT",
+                        dataclasses.replace(targets.get(), geometry=None))
     with pytest.raises(targets.NotMeasured):
         emit_chunks.default_sizes()

@@ -110,15 +110,48 @@ def test_every_gate_input_resolves_the_targets_own_paths():
     assert target.ld_script == ROOT / "build" / f"{target.elf.name}.ld"
 
 
-def test_the_targets_geometry_is_absent_until_someone_measures_it():
-    """The retarget is between "target registered" and "config generated": that is a stop, not
-    a guess -- another target's segment list would split this binary at the wrong addresses."""
+def test_the_targets_geometry_is_the_measurement_of_its_own_binary():
+    """The geometry is read out of the target's own ELF, and it has to add up to what is there.
+
+    The numbers below are the measurement (retarget Task 4: the ELF header, the program headers
+    and the section header table of `orig/SLUS_211.74`, plus the boot ELF's offset in the pinned
+    image), spelled as literals so a descriptor that drifts from the binary is the finding --
+    which is the same guard the two pins get above.
+    """
     target = targets.get()
+    geometry = target.geometry_required()
+    assert geometry.elf_size == 0x75DFEC == 7725036       # the file `orig/SLUS_211.74`
+    assert target.elf.name == "SLUS_211.74"
+    assert (geometry.loadable_rom, geometry.loadable_end, geometry.loadable_vram) \
+        == (0x200, 0x1DE380, 0x100000)
+    assert geometry.code_size == 0x1DE180 == 1958272     # the one file-backed PT_LOAD
+    assert geometry.bss_end == 0x723700                  # ... plus the memsz it claims
+    assert (geometry.bss_vram, geometry.bss_size) == (0x2DE180, 0x445580)
+    assert geometry.trailing == (
+        ("shstrtab", 0x1DE380, 0x3A),
+        ("debug", 0x1DE3C0, 0x491376),
+        ("line", 0x66F740, 0xEE546),
+        ("comment", 0x75DC86, 0x2B),
+        ("reginfo", 0x75DCB4, 0x18),
+        ("section_headers", 0x75DCCC, 0x320),
+    )
+    assert geometry.sections == ((".debug", 0x1DE3C0, 0x491376),
+                                 (".line", 0x66F740, 0xEE546))
+    assert geometry.image_elf_offset == 0x6D261000        # LBA 894146 of the pinned image
+    # ... and the mapping the split and the link share is that measurement, inverted:
+    assert geometry.offset_of(geometry.loadable_vram) == geometry.loadable_rom
+    assert geometry.address_of(geometry.loadable_rom) == geometry.loadable_vram
+
+
+def test_an_unmeasured_target_stops_naming_what_has_to_be_measured():
+    """A target whose geometry nobody has measured is a stop, not a guess: another target's
+    segment list would split this binary at the wrong addresses."""
+    target = probe_target()
     assert target.geometry is None
     with pytest.raises(targets.NotMeasured) as exc:
         target.geometry_required()
     message = str(exc.value)
-    assert "ddrex2p" in message and target.elf.name in message
+    assert target.name in message and target.elf.name in message
 
 
 # ---------------------------------------------------------------------------

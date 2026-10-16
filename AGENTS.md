@@ -9,8 +9,9 @@ artifacts **byte for byte** — not "looks right", not "runs the same".  The des
 `docs/superpowers/plans/2026-10-14-ddrmax2-us-oracle-toolchain-skeleton.md`.
 
 **One target is registered, in one descriptor.**  `ddrex2p` (the *DDR Extreme 2 (US)* preview,
-`SLUS_211.74`) is this tree's target; its binary, its config and its segment list land in the
-retarget plan's Tasks 4–6, and until then every verb stops naming what it is missing.  Adding
+`SLUS_211.74`) is this tree's target; its binary is yours to place (retail files are never
+committed), and its config and its measured segment list are committed (`config/ddrex2p/`,
+`config/targets.py`).  Every verb whose input is not there stops naming it.  Adding
 another target is a `Target(...)` plus one line in the registry there, and nothing else changes.
 `config/targets.py` is the only place a target's facts are written down — its retail ELF and G1 pin, its disc image and G3 pin, its config directory, its
 *measured* geometry (segment list, chunked-section lengths, disc-image offset) and the
@@ -102,9 +103,9 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    in the *target's* `tu_builds` (`config/targets.py`) — per target, because a pair measured against
    one retail binary says nothing about another.  The same holds for the geometry, which lives in the
    same descriptor: those numbers were read out of that target's retail ELF's own headers, not
-   chosen.  A target whose geometry has not been measured yet (the retarget's is Task 5's) cannot be
-   configured at all — `geometry_required()` stops the tool and names it, rather than splitting one
-   game's bytes at another game's addresses.
+   chosen.  A target whose geometry has not been measured yet cannot be configured at all —
+   `geometry_required()` stops the tool and names it, rather than splitting one game's bytes at
+   another game's addresses.
 
 8. **`python3 -m pytest -q` is part of the loop, not a formality.**  A green suite is what makes the
    next change safe: the tests run the real tools (splat, the assembler, the linker, the compiler

@@ -8,6 +8,7 @@ memory of target-specific numbers lives in the descriptor, and every generated a
 function of the target it was given, not of a constant in the tool.
 """
 
+import dataclasses
 import json
 import pathlib
 import subprocess
@@ -157,14 +158,18 @@ def test_the_ninja_graph_names_the_target_on_every_edge_that_reads_it():
 # ---------------------------------------------------------------------------
 
 
-def test_configure_refuses_a_target_whose_geometry_is_unmeasured(tmp_path, capsys):
-    """The state this tree is in: the config is generated from the binary, so neither the
+def test_configure_refuses_a_target_whose_geometry_is_unmeasured(tmp_path, capsys, monkeypatch):
+    """A target nobody has measured: the config is generated from the binary, so neither the
     segment list nor the pipeline can be guessed -- and nothing is written on the way out."""
+    unmeasured = dataclasses.replace(targets.get(), geometry=None)
+    monkeypatch.setattr(configure.targets, "get", lambda name=None: unmeasured)
+    yaml_path = unmeasured.config_dir / "splat.yaml"
+    before = yaml_path.read_bytes() if yaml_path.exists() else None
     status = configure.main(["--target", targets.DEFAULT])
     err = capsys.readouterr().err
     assert status == 2
     assert "geometry" in err and targets.DEFAULT in err and "Traceback" not in err
-    assert not (targets.get().config_dir / "splat.yaml").exists()
+    assert (yaml_path.read_bytes() if yaml_path.exists() else None) == before
 
 
 def test_an_unknown_target_is_a_configuration_error_not_a_traceback(capsys):

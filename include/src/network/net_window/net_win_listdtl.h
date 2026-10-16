@@ -1,0 +1,98 @@
+/*
+ * C:\work2\usaex2\src\network\net_window\net_win_listdtl.c
+ * MW MIPS C Compiler, overlay main; 7 functions, code 0x0025B680-0x0025BF28
+ * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
+ *
+ * C mode: a use is `struct <tag> *`, and the named types this unit needs are
+ * included from include/types/.  `@anonN` is this unit's own numbering, so it
+ * is named here (`anon_<N>_<unit>`) and nowhere else.
+ */
+#ifndef DDR_UNIT_src_network_net_window_net_win_listdtl_c_H
+#define DDR_UNIT_src_network_net_window_net_win_listdtl_c_H
+
+#include "types/_CWS_OBJ.h"
+#include "types/_CWS_OBJ_SET.h"
+#include "types/_CWS_OBJ_TEX.h"
+#include "types/_CWS_WIN_W.h"
+#include "types/_net_win_listdtl_w.h"
+#include "types/_nsv_player_list_file.h"
+
+/* anonymous types (4) */
+
+/* anon_0_142 -- @anon0, 0x8 bytes, net_win_listdtl.c (DIE 0x2608F7) */
+struct anon_0_142 {   // size 0x8
+    /* 0x000 */ short x;                              // 0x2
+    /* 0x002 */ short y;                              // 0x2
+    /* 0x004 */ short w;                              // 0x2
+    /* 0x006 */ short h;                              // 0x2
+};
+
+/* anon_1_142 -- @anon1, 0x48 bytes, net_win_listdtl.c (DIE 0x26110E) */
+struct anon_1_142 {   // size 0x48
+    /* 0x000 */ unsigned long *addr;                  // 0x4
+    /* 0x004 */ unsigned long *pict_addr;             // 0x4
+    /* 0x008 */ unsigned long *clut_addr;             // 0x4
+    /* 0x00C */ // 0x4 bytes padding
+    /* 0x010 */ unsigned long regTex0;                // 0x8
+    /* 0x018 */ unsigned long size;                   // 0x8
+    /* 0x020 */ unsigned long flg;                    // 0x8
+    /* 0x028 */ float rw;                             // 0x4
+    /* 0x02C */ float rh;                             // 0x4
+    /* 0x030 */ unsigned short pict_size;             // 0x2
+    /* 0x032 */ unsigned short clut_size;             // 0x2
+    /* 0x034 */ unsigned short w;                     // 0x2
+    /* 0x036 */ unsigned short h;                     // 0x2
+    /* 0x038 */ unsigned short tbw;                   // 0x2
+    /* 0x03A */ unsigned short tw;                    // 0x2
+    /* 0x03C */ unsigned short th;                    // 0x2
+    /* 0x03E */ unsigned short psm;                   // 0x2
+    /* 0x040 */ unsigned short cpsm;                  // 0x2
+    /* 0x042 */ unsigned short colors;                // 0x2
+    /* 0x044 */ // 0x4 bytes padding
+};
+
+/* anon_2_142 -- @anon2, 0x4 bytes, net_win_listdtl.c (DIE 0x2615CA) */
+union anon_2_142 {   // size 0x4
+    /* 0x000 */ int id;                               // 0x4
+    /* 0x000 */ float fd;                             // 0x4
+};
+
+/* anon_3_142 -- @anon3, 0x30 bytes, net_win_listdtl.c (DIE 0x2618E0) */
+struct anon_3_142 {   // size 0x30
+    /* 0x000 */ union anon_2_142 x0;                  // 0x4
+    /* 0x004 */ union anon_2_142 y0;                  // 0x4
+    /* 0x008 */ union anon_2_142 x1;                  // 0x4
+    /* 0x00C */ union anon_2_142 y1;                  // 0x4
+    /* 0x010 */ unsigned int z0;                      // 0x4
+    /* 0x014 */ unsigned int z1;                      // 0x4
+    /* 0x018 */ float w;                              // 0x4
+    /* 0x01C */ float h;                              // 0x4
+    /* 0x020 */ float u;                              // 0x4
+    /* 0x024 */ float v;                              // 0x4
+    /* 0x028 */ unsigned char r0;                     // 0x1
+    /* 0x029 */ unsigned char g0;                     // 0x1
+    /* 0x02A */ unsigned char b0;                     // 0x1
+    /* 0x02B */ unsigned char a0;                     // 0x1
+    /* 0x02C */ int flg;                              // 0x4
+};
+
+
+/* variables (7) */
+static int (*NetWin_ListdtlFunc[3])(struct _CWS_WIN_W *);        /* @0x002BFA60 size 0xC */
+static void (*NetWin_ListdtlCode[4])(struct _CWS_WIN_W *);       /* @0x002BFA70 size 0x10 */
+static struct _CWS_OBJ_TEX netwinslby_plate_back[9];             /* @0x002BFA80 size 0xB4 */
+static struct _CWS_OBJ_TEX netwinlistdtl_plate_namewaku[3];      /* @0x002BFB40 size 0x3C */
+static struct _CWS_OBJ_TEX netwinlistdtl_plate_chara[1];         /* @0x002BFB80 size 0x14 */
+static struct _CWS_OBJ_TEX netwinlistdtl_plate_status[3];        /* @0x002BFBA0 size 0x3C */
+static struct _CWS_OBJ_SET netwinlistdtl[4];                     /* @0x002BFBE0 size 0x50 */
+
+/* functions defined (7) */
+void NetWin_ListdtlSetPlayerListFile(struct _CWS_WIN_W *win, struct _nsv_player_list_file *addr); /* 0x0025B680-0x0025B688 lines 376-376 */
+void CwsWin_ListdtlNoAlpha(struct _CWS_WIN_W *win, char onoff);  /* 0x0025B690-0x0025B6D8 lines 364-369 */
+static void CwsWin_ListdtlDisp(struct _CWS_WIN_W *win, struct _CWS_OBJ *objw); /* 0x0025B6E0-0x0025BCA0 lines 253-358 */
+static int NetWin_ListdtlEnd(struct _CWS_WIN_W *win);            /* 0x0025BCA0-0x0025BCB4 lines 248-250 */
+static int NetWin_ListdtlMain(struct _CWS_WIN_W *win);           /* 0x0025BCC0-0x0025BDF8 lines 217-243 */
+static int NetWin_ListdtlInit(struct _CWS_WIN_W *win);           /* 0x0025BE00-0x0025BEBC lines 201-214 */
+int NetWin_Listdtl(struct _CWS_WIN_W *win);                      /* 0x0025BEC0-0x0025BF28 lines 190-196 */
+
+#endif /* DDR_UNIT_src_network_net_window_net_win_listdtl_c_H */

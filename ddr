@@ -93,6 +93,19 @@ def _display(path) -> str:
         return str(path)
 
 
+def _ghidra(target):
+    """The target's Ghidra function list, or None when it does not have one.
+
+    A Ghidra list is an *optional* input: it exists to name the function starts the DWARF does
+    not cover (an image whose DWARF is partial or absent), and a target whose DWARF covers its
+    functions needs none -- the DWARF's own starts are then the whole ledger.  Resolved by
+    existence, the way the borrowed-name ledger is: handing ``emit_symbols.build`` the path of
+    a file that is not there would stop the oracle on the absence of something it does not
+    need, which is what a retarget's first ``oracle`` run did.
+    """
+    return target.ghidra if target.ghidra.is_file() else None
+
+
 def _require(*keys: str) -> None:
     """Probe the host tools by name, raising :class:`check_deps.MissingDependency`.
 
@@ -145,13 +158,17 @@ def cmd_oracle(args) -> int:
     print(f"oracle: {counts['.debug']} .debug + {counts['.line']} .line chunks "
           f"-> {_display(target.chunks)}")
 
+    ghidra = _ghidra(target)  # an optional input: a target whose DWARF is complete has none
     records, borrowed = emit_symbols.apply_borrowed(
-        emit_symbols.build(retail, target.ghidra), target.borrowed)
+        emit_symbols.build(retail, ghidra), target.borrowed)
     placed, unplaced = emit_symbols.final(records)
     emit_symbols.write(target.symbols, placed)
     emit_symbols.write_unplaced(target.unplaced, unplaced)
     print(f"oracle: {len(placed)} placed + {len(unplaced)} unplaced symbols "
           f"({borrowed} borrowed library names) -> {_display(target.symbols)}")
+    if ghidra is None:
+        print(f"oracle: {_display(target.ghidra)}: no Ghidra function list for this target, "
+              f"so every symbol here is the DWARF's own")
 
     headers = emit_headers.write_all(retail, INCLUDE)
     print(f"oracle: {len(headers)} translation-unit headers -> {_display(INCLUDE)}")

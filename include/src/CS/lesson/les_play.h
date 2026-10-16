@@ -1,0 +1,433 @@
+/*
+ * C:\work2\usaex2\src\CS\lesson\les_play.c
+ * MW MIPS C Compiler, overlay les_rel4cd.prg; 10 functions, code 0x007F47D0-0x007F63F0
+ * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
+ *
+ * C mode: a use is `struct <tag> *`, and the named types this unit needs are
+ * included from include/types/.  `@anonN` is this unit's own numbering, so it
+ * is named here (`anon_<N>_<unit>`) and nowhere else.
+ */
+#ifndef DDR_UNIT_src_CS_lesson_les_play_c_H
+#define DDR_UNIT_src_CS_lesson_les_play_c_H
+
+#include "types/G_DRAW_W_.h"
+#include "types/G_SYS_W_.h"
+#include "types/_tag_cDDR8SaveData.h"
+#include "types/_tag_cLes.h"
+#include "types/_tag_cLesPlay.h"
+#include "types/g_each_w.h"
+#include "types/g_game_w.h"
+#include "types/oni_course.h"
+#include "types/play_mode.h"
+#include "types/play_w.h"
+#include "types/sequence.h"
+#include "types/sq_standard.h"
+
+/* anonymous types (33) */
+
+/* anon_0_197 -- @anon0, 0x88 bytes, les_play.c (DIE 0x37171D) */
+struct anon_0_197 {   // size 0x88
+    /* 0x000 */ unsigned int end_bc;                  // 0x4
+    /* 0x004 */ unsigned int lesson_col[3];           // 0xC
+    /* 0x010 */ int mode_chng_ct;                     // 0x4
+    /* 0x014 */ int mode_chng_deg;                    // 0x4
+    /* 0x018 */ int sect_menu_ct;                     // 0x4
+    /* 0x01C */ int lv_menu_ct[3];                    // 0xC
+    /* 0x028 */ short start_mc;                       // 0x2
+    /* 0x02A */ short finish_mc;                      // 0x2
+    /* 0x02C */ short cur_mc;                         // 0x2
+    /* 0x02E */ short end_mc;                         // 0x2
+    /* 0x030 */ short iron_deg[2];                    // 0x4
+    /* 0x034 */ short end_msg_ct;                     // 0x2
+    /* 0x036 */ short cur_note;                       // 0x2
+    /* 0x038 */ short old_bar[4];                     // 0x8
+    /* 0x040 */ short cur_clap_pos;                   // 0x2
+    /* 0x042 */ short miss_num;                       // 0x2
+    /* 0x044 */ short next_foot;                      // 0x2
+    /* 0x046 */ short next_finger;                    // 0x2
+    /* 0x048 */ short next_msg;                       // 0x2
+    /* 0x04A */ short info_ct;                        // 0x2
+    /* 0x04C */ short info_flg;                       // 0x2
+    /* 0x04E */ short first_msg_ct;                   // 0x2
+    /* 0x050 */ short obi_deg;                        // 0x2
+    /* 0x052 */ short screen_deg;                     // 0x2
+    /* 0x054 */ short disp_ct;                        // 0x2
+    /* 0x056 */ short music_wait_ct;                  // 0x2
+    /* 0x058 */ unsigned char music_num;              // 0x1
+    /* 0x059 */ unsigned char music_start;            // 0x1
+    /* 0x05A */ unsigned char music_end;              // 0x1
+    /* 0x05B */ unsigned char music_repeat;           // 0x1
+    /* 0x05C */ unsigned char music_flg;              // 0x1
+    /* 0x05D */ unsigned char music_step;             // 0x1
+    /* 0x05E */ unsigned char shade_col[4];           // 0x4
+    /* 0x062 */ unsigned char fade_col;               // 0x1
+    /* 0x063 */ unsigned char fade_step;              // 0x1
+    /* 0x064 */ unsigned char input_flg;              // 0x1
+    /* 0x065 */ unsigned char lesson_level;           // 0x1
+    /* 0x066 */ unsigned char now_section;            // 0x1
+    /* 0x067 */ unsigned char sel_info_ct;            // 0x1
+    /* 0x068 */ unsigned char speaker_ct[4];          // 0x4
+    /* 0x06C */ unsigned char iron_wait_ct;           // 0x1
+    /* 0x06D */ unsigned char result;                 // 0x1
+    /* 0x06E */ unsigned char rhythm_flg;             // 0x1
+    /* 0x06F */ unsigned char emi_anime_flg;          // 0x1
+    /* 0x070 */ unsigned char no_play_flg;            // 0x1
+    /* 0x071 */ unsigned char is_stream;              // 0x1
+    /* 0x072 */ unsigned char teach_flg;              // 0x1
+    /* 0x073 */ unsigned char teach_ct;               // 0x1
+    /* 0x074 */ unsigned char clear_flg;              // 0x1
+    /* 0x075 */ unsigned char clear_wait_ct;          // 0x1
+    /* 0x076 */ unsigned char face_type;              // 0x1
+    /* 0x077 */ unsigned char dead_ct[6];             // 0x6
+    /* 0x07D */ unsigned char clap_ct;                // 0x1
+    /* 0x07E */ unsigned char play_fade_ct;           // 0x1
+    /* 0x07F */ unsigned char now_loop_num;           // 0x1
+    /* 0x080 */ unsigned char tempo;                  // 0x1
+    /* 0x081 */ unsigned char button_ct[2];           // 0x2
+    /* 0x083 */ unsigned char wipe_mode;              // 0x1
+    /* 0x084 */ unsigned char msg_line;               // 0x1
+    /* 0x085 */ unsigned char msg_pos;                // 0x1
+    /* 0x086 */ unsigned char tmp_mem;                // 0x1
+    /* 0x087 */ // 0x1 bytes padding
+};
+
+/* anon_1_197 -- @anon1, 0x8 bytes, les_play.c (DIE 0x372465) */
+struct anon_1_197 {   // size 0x8
+    /* 0x000 */ short x;                              // 0x2
+    /* 0x002 */ short y;                              // 0x2
+    /* 0x004 */ short w;                              // 0x2
+    /* 0x006 */ short h;                              // 0x2
+};
+
+/* anon_2_197 -- @anon2, 0x4 bytes, les_play.c (DIE 0x3725B9) */
+struct anon_2_197 {   // size 0x4
+    /* 0x000 */ unsigned char old_stat;               // 0x1
+    /* 0x001 */ unsigned char cur_stat;               // 0x1
+    /* 0x002 */ unsigned char release_ct;             // 0x1
+    /* 0x003 */ unsigned char warning;                // 0x1
+};
+
+/* anon_32_197 -- @anon32, 0x10 bytes, les_play.c (DIE 0x37B466) */
+struct anon_32_197 {   // size 0x10
+    /* 0x000 */ float vx;                             // 0x4
+    /* 0x004 */ float vy;                             // 0x4
+    /* 0x008 */ float vz;                             // 0x4
+    /* 0x00C */ float vw;                             // 0x4
+};
+
+/* anon_3_197 -- @anon3, 0x40 bytes, les_play.c (DIE 0x372A42) */
+struct anon_3_197 {   // size 0x40
+    /* 0x000 */ struct anon_32_197 offset;            // 0x10
+    /* 0x010 */ struct anon_32_197 next_ofs;          // 0x10
+    /* 0x020 */ struct anon_32_197 move;              // 0x10
+    /* 0x030 */ short ang;                            // 0x2
+    /* 0x032 */ short next_ang;                       // 0x2
+    /* 0x034 */ short ang_deg;                        // 0x2
+    /* 0x036 */ short move_flg;                       // 0x2
+    /* 0x038 */ short pos;                            // 0x2
+    /* 0x03A */ short release;                        // 0x2
+    /* 0x03C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
+};
+
+/* anon_4_197 -- @anon4, 0x14 bytes, les_play.c (DIE 0x373554) */
+struct anon_4_197 {   // size 0x14
+    /* 0x000 */ int ang;                              // 0x4
+    /* 0x004 */ int pos;                              // 0x4
+    /* 0x008 */ int ofs;                              // 0x4
+    /* 0x00C */ int frame;                            // 0x4
+    /* 0x010 */ int type;                             // 0x4
+};
+
+/* anon_5_197 -- @anon5, 0x10 bytes, les_play.c (DIE 0x373909) */
+struct anon_5_197 {   // size 0x10
+    /* 0x000 */ int ang;                              // 0x4
+    /* 0x004 */ int pos;                              // 0x4
+    /* 0x008 */ int ofs;                              // 0x4
+    /* 0x00C */ int type;                             // 0x4
+};
+
+/* anon_6_197 -- @anon6, 0x4 bytes, les_play.c (DIE 0x373AA3) */
+union anon_6_197 {   // size 0x4
+    /* 0x000 */ int id;                               // 0x4
+    /* 0x000 */ float fd;                             // 0x4
+};
+
+/* anon_7_197 -- @anon7, 0x8 bytes, les_play.c (DIE 0x373B00) */
+struct anon_7_197 {   // size 0x8
+    /* 0x000 */ int frame;                            // 0x4
+    /* 0x004 */ short kind;                           // 0x2
+    /* 0x006 */ // 0x2 bytes padding
+};
+
+/* anon_8_197 -- @anon8, 0x2C bytes, les_play.c (DIE 0x373BAA) */
+struct anon_8_197 {   // size 0x2C
+    /* 0x000 */ struct anon_5_197 state[2];           // 0x20
+    /* 0x020 */ unsigned int beat_count;              // 0x4
+    /* 0x024 */ int start_mct;                        // 0x4
+    /* 0x028 */ int frame;                            // 0x4
+};
+
+/* anon_9_197 -- @anon9, 0x8 bytes, les_play.c (DIE 0x373DA3) */
+struct anon_9_197 {   // size 0x8
+    /* 0x000 */ int frame;                            // 0x4
+    /* 0x004 */ short kind;                           // 0x2
+    /* 0x006 */ unsigned char step;                   // 0x1
+    /* 0x007 */ unsigned char type;                   // 0x1
+};
+
+/* anon_10_197 -- @anon10, 0x10 bytes, les_play.c (DIE 0x374E97) */
+struct anon_10_197 {   // size 0x10
+    /* 0x000 */ union anon_6_197 x0;                  // 0x4
+    /* 0x004 */ union anon_6_197 y0;                  // 0x4
+    /* 0x008 */ unsigned int z0;                      // 0x4
+    /* 0x00C */ unsigned char r0;                     // 0x1
+    /* 0x00D */ unsigned char g0;                     // 0x1
+    /* 0x00E */ unsigned char b0;                     // 0x1
+    /* 0x00F */ unsigned char a0;                     // 0x1
+};
+
+/* anon_11_197 -- @anon11, 0x20 bytes, les_play.c (DIE 0x375266) */
+struct anon_11_197 {   // size 0x20
+    /* 0x000 */ short x;                              // 0x2
+    /* 0x002 */ short y;                              // 0x2
+    /* 0x004 */ short base_x;                         // 0x2
+    /* 0x006 */ short base_y;                         // 0x2
+    /* 0x008 */ short next_x;                         // 0x2
+    /* 0x00A */ short next_y;                         // 0x2
+    /* 0x00C */ short disp_ct;                        // 0x2
+    /* 0x00E */ short counter;                        // 0x2
+    /* 0x010 */ int pos;                              // 0x4
+    /* 0x014 */ int disp_flg;                         // 0x4
+    /* 0x018 */ int move_flg;                         // 0x4
+    /* 0x01C */ int frame;                            // 0x4
+};
+
+/* anon_12_197 -- @anon12, 0x14 bytes, les_play.c (DIE 0x375446) */
+struct anon_12_197 {   // size 0x14
+    /* 0x000 */ int frame;                            // 0x4
+    /* 0x004 */ short kind;                           // 0x2
+    /* 0x006 */ short msg_no[4];                      // 0x8
+    /* 0x00E */ short time;                           // 0x2
+    /* 0x010 */ short disp_flg;                       // 0x2
+    /* 0x012 */ short pad;                            // 0x2
+};
+
+/* anon_13_197 -- @anon13, 0x184 bytes, les_play.c (DIE 0x375948) */
+struct anon_13_197 {   // size 0x184
+    /* 0x000 */ struct anon_10_197 line_a[8];         // 0x80
+    /* 0x080 */ struct anon_10_197 line_b[8];         // 0x80
+    /* 0x100 */ struct anon_10_197 line_c[8];         // 0x80
+    /* 0x180 */ int num;                              // 0x4
+};
+
+/* anon_14_197 -- @anon14, 0xC bytes, les_play.c (DIE 0x375C26) */
+struct anon_14_197 {   // size 0xC
+    /* 0x000 */ int frame;                            // 0x4
+    /* 0x004 */ short kind;                           // 0x2
+    /* 0x006 */ char pos;                             // 0x1
+    /* 0x007 */ char ofs;                             // 0x1
+    /* 0x008 */ char time;                            // 0x1
+    /* 0x009 */ char type;                            // 0x1
+    /* 0x00A */ short rotate;                         // 0x2
+};
+
+/* anon_15_197 -- @anon15, 0x14 bytes, les_play.c (DIE 0x376062) */
+struct anon_15_197 {   // size 0x14
+    /* 0x000 */ unsigned int beat_count;              // 0x4
+    /* 0x004 */ short start_mct;                      // 0x2
+    /* 0x006 */ short disp_ct;                        // 0x2
+    /* 0x008 */ int pos;                              // 0x4
+    /* 0x00C */ int move_type;                        // 0x4
+    /* 0x010 */ int frame;                            // 0x4
+};
+
+/* anon_16_197 -- @anon16, 0xC bytes, les_play.c (DIE 0x376269) */
+struct anon_16_197 {   // size 0xC
+    /* 0x000 */ int frame;                            // 0x4
+    /* 0x004 */ short kind;                           // 0x2
+    /* 0x006 */ short time;                           // 0x2
+    /* 0x008 */ short speed;                          // 0x2
+    /* 0x00A */ char type;                            // 0x1
+    /* 0x00B */ char pos;                             // 0x1
+};
+
+/* anon_17_197 -- @anon17, 0xC bytes, les_play.c (DIE 0x376350) */
+struct anon_17_197 {   // size 0xC
+    /* 0x000 */ int date;                             // 0x4
+    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
+    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
+    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
+    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
+};
+
+/* anon_18_197 -- @anon18, 0x8 bytes, les_play.c (DIE 0x378259) */
+struct anon_18_197 {   // size 0x8
+    /* 0x000 */ short msg_num;                        // 0x2
+    /* 0x002 */ unsigned short disp_ct;               // 0x2
+    /* 0x004 */ unsigned short timer;                 // 0x2
+    /* 0x006 */ unsigned char disp_flg;               // 0x1
+    /* 0x007 */ char pad[1];                          // 0x1
+};
+
+/* anon_19_197 -- @anon19, 0x12E0 bytes, les_play.c (DIE 0x378715) */
+struct anon_19_197 {   // size 0x12E0
+    /* 0x000 */ int weight;                           // 0x4
+    /* 0x004 */ int lbs;                              // 0x4
+    /* 0x008 */ int norm_type;                        // 0x4
+    /* 0x00C */ int norm_time;                        // 0x4
+    /* 0x010 */ int norm_calorie;                     // 0x4
+    /* 0x014 */ int workout_step;                     // 0x4
+    /* 0x018 */ int simultaneous_step;                // 0x4
+    /* 0x01C */ struct anon_17_197 history[400];      // 0x12C0
+    /* 0x12DC */ int check_sum_val;                   // 0x4
+};
+
+/* anon_20_197 -- @anon20, 0xD40 bytes, les_play.c (DIE 0x3788B8) */
+struct anon_20_197 {   // size 0xD40
+    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
+    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
+    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
+    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
+};
+
+/* anon_21_197 -- @anon21, 0x10 bytes, les_play.c (DIE 0x378990) */
+struct anon_21_197 {   // size 0x10
+    /* 0x000 */ unsigned int beat_count;              // 0x4
+    /* 0x004 */ short msg_num[4];                     // 0x8
+    /* 0x00C */ short time;                           // 0x2
+    /* 0x00E */ unsigned char msg_flg;                // 0x1
+    /* 0x00F */ unsigned char pad[1];                 // 0x1
+};
+
+/* anon_22_197 -- @anon22, 0x14 bytes, les_play.c (DIE 0x378CAD) */
+struct anon_22_197 {   // size 0x14
+    /* 0x000 */ unsigned char cone_state[8];          // 0x8
+    /* 0x008 */ unsigned char state;                  // 0x1
+    /* 0x009 */ unsigned char perfect;                // 0x1
+    /* 0x00A */ unsigned short play_count;            // 0x2
+    /* 0x00C */ unsigned short play_time;             // 0x2
+    /* 0x00E */ unsigned short clear_count;           // 0x2
+    /* 0x010 */ unsigned short first_clear_count;     // 0x2
+    /* 0x012 */ unsigned short first_clear_time;      // 0x2
+};
+
+/* anon_23_197 -- @anon23, 0x14 bytes, les_play.c (DIE 0x379484) */
+struct anon_23_197 {   // size 0x14
+    /* 0x000 */ int state;                            // 0x4
+    /* 0x004 */ int music_count;                      // 0x4
+    /* 0x008 */ int dir;                              // 0x4
+    /* 0x00C */ int effect_count;                     // 0x4
+    /* 0x010 */ int id;                               // 0x4
+};
+
+/* anon_24_197 -- @anon24, 0x1300 bytes, les_play.c (DIE 0x379663) */
+struct anon_24_197 {   // size 0x1300
+    /* 0x000 */ unsigned char evboot[24];             // 0x18
+    /* 0x018 */ unsigned char is_savedata;            // 0x1
+    /* 0x019 */ signed char max_area;                 // 0x1
+    /* 0x01A */ signed char disp_type;                // 0x1
+    /* 0x01B */ char pading;                          // 0x1
+    /* 0x01C */ unsigned char dancer_use_cnt[24];     // 0x18
+    /* 0x034 */ int cur_cursor;                       // 0x4
+    /* 0x038 */ unsigned int all_clear_count;         // 0x4
+    /* 0x03C */ unsigned int all_play_time;           // 0x4
+    /* 0x040 */ int route[200];                       // 0x320
+    /* 0x360 */ struct anon_22_197 subject[200];      // 0xFA0
+};
+
+/* anon_26_197 -- @anon26, 0x4 bytes, les_play.c (DIE 0x3798F9) */
+struct anon_26_197 {   // size 0x4
+    /* 0x000 */ unsigned char d[4];                   // 0x4
+};
+
+/* anon_25_197 -- @anon25, 0x4 bytes, les_play.c (DIE 0x379866) */
+union anon_25_197 {   // size 0x4
+    /* 0x000 */ unsigned int ui;                      // 0x4
+    /* 0x000 */ struct anon_26_197 s;                 // 0x4
+};
+
+/* anon_27_197 -- @anon27, 0x2134 bytes, les_play.c (DIE 0x379D05) */
+struct anon_27_197 {   // size 0x2134
+    /* 0x000 */ unsigned int uno : 8;                 // bits 0..7
+    /* 0x000 */ unsigned int ino : 8;                 // bits 8..15
+    /* 0x000 */ unsigned int frame_no : 8;            // bits 16..23
+    /* 0x000 */ unsigned int f_passuse : 1;           // bits 24..24
+    /* 0x000 */ unsigned int f_enable : 1;            // bits 25..25
+    /* 0x000 */ unsigned int f_program_free : 1;      // bits 26..26
+    /* 0x004 */ union anon_25_197 userpass;           // 0x4
+    /* 0x008 */ struct anon_19_197 pwork;             // 0x12E0
+    /* 0x12E8 */ struct anon_20_197 workout_calorie_record;  // 0xD40
+    /* 0x2028 */ struct oni_course program_order;     // 0x10C
+};
+
+/* anon_28_197 -- @anon28, 0x4 bytes, les_play.c (DIE 0x37A26D) */
+struct anon_28_197 {   // size 0x4
+    /* 0x000 */ unsigned int p : 24;                  // bits 0..23
+    /* 0x003 */ unsigned char num : 8;                // bits 0..7
+};
+
+/* anon_29_197 -- @anon29, 0x8 bytes, les_play.c (DIE 0x37A90D) */
+struct anon_29_197 {   // size 0x8
+    /* 0x000 */ int beat_ct;                          // 0x4
+    /* 0x004 */ short music_ct;                       // 0x2
+    /* 0x006 */ // 0x2 bytes padding
+};
+
+/* anon_30_197 -- @anon30, 0x4 bytes, les_play.c (DIE 0x37A9FF) */
+struct anon_30_197 {   // size 0x4
+    /* 0x000 */ unsigned char game_over;              // 0x1
+    /* 0x001 */ unsigned char calorie_check;          // 0x1
+    /* 0x002 */ unsigned char pad[2];                 // 0x2
+};
+
+/* anon_31_197 -- @anon31, 0x28 bytes, les_play.c (DIE 0x37AAB5) */
+struct anon_31_197 {   // size 0x28
+    /* 0x000 */ unsigned long length;                 // 0x8
+    /* 0x008 */ struct anon_28_197 *org;              // 0x4
+    /* 0x00C */ // 0x4 bytes padding
+    /* 0x010 */ unsigned long offset;                 // 0x8
+    /* 0x018 */ unsigned long point;                  // 0x8
+    /* 0x020 */ struct anon_28_197 *tag;              // 0x4
+    /* 0x024 */ // 0x4 bytes padding
+};
+
+
+/* variables (24) */
+struct _tag_cLesPlay *pLesPlay;                                  /* @0x002DDE84 size 0x4 */
+static unsigned int LesTimingTable1[6];                          /* @0x007FA770 size 0x18 */
+static unsigned int LesTimingTable2[6];                          /* @0x007FA790 size 0x18 */
+static unsigned int LesTimingTable3[6];                          /* @0x007FA7B0 size 0x18 */
+unsigned char kn_l_section_num_tbl[4];                           /* not allocated size 0x4 */
+static int les_play_music[3];                                    /* @0x007FA7C8 size 0xC */
+struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
+struct anon_15_197 kn_finger_seq[50];                            /* @0x007FC0D0 size 0x3E8 */
+struct anon_8_197 kn_foot_seq[200];                              /* @0x007FC560 size 0x2260 */
+struct anon_21_197 kn_msg_seq[50];                               /* @0x007FBDB0 size 0x320 */
+struct anon_0_197 kn_lesson_main_work;                           /* @0x007FE860 size 0x88 */
+struct _tag_cLes *pLes;                                          /* @0x002DDE80 size 0x4 */
+struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
+struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 size 0x1FF50 */
+struct G_DRAW_W_ g_draw_w;                                       /* @0x005F52E0 size 0xDE8 */
+struct anon_29_197 kn_l_timing_w[80];                            /* @0x007FBB30 size 0x280 */
+struct anon_18_197 kn_msg_w;                                     /* @0x002DE618 size 0x8 */
+struct anon_11_197 kn_fin_w;                                     /* @0x007FC4C0 size 0x20 */
+struct anon_3_197 kn_touch_w[2];                                 /* @0x007FC4E0 size 0x80 */
+struct anon_4_197 kn_move_w;                                     /* @0x007FE7C0 size 0x14 */
+struct anon_3_197 kn_foot_w[2];                                  /* @0x007FE7E0 size 0x80 */
+static struct _tag_cLesPlay _pLesPlay;                           /* @0x007FE8F0 size 0x54 */
+static short font_anime_pos_y;                                   /* not allocated size 0x2 */
+static short font_anime_pos_x;                                   /* not allocated size 0x2 */
+
+/* functions defined (10) */
+static void lesson_data_setup(unsigned int l_data_address);      /* 0x007F47D0-0x007F4D40 lines 1175-1409 */
+void make_ssq_at_lesson(unsigned int ind_address, unsigned int l_data_address, unsigned int ssq_address); /* 0x007F4D40-0x007F50B4 lines 1008-1161 */
+static void disp_step(void);                                     /* 0x007F50C0-0x007F51BC lines 909-971 */
+static int play_main(void);                                      /* 0x007F51C0-0x007F5628 lines 711-868 */
+static int intro_play(void);                                     /* 0x007F5630-0x007F5750 lines 661-706 */
+static void play_init(void);                                     /* 0x007F5750-0x007F5D54 lines 416-655 */
+int Update_LesPlay(void);                                        /* 0x007F5D60-0x007F5D98 lines 401-407 */
+int View_LesPlay(void);                                          /* 0x007F5DA0-0x007F5DA8 lines 395-395 */
+int Control_LesPlay(void);                                       /* 0x007F5DB0-0x007F6044 lines 307-389 */
+int Init_LesPlay(void);                                          /* 0x007F6050-0x007F63F0 lines 157-303 */
+
+#endif /* DDR_UNIT_src_CS_lesson_les_play_c_H */

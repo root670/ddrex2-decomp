@@ -8,6 +8,7 @@ which offset the boot ELF sits -- is asserted through the descriptor, and an unm
 must raise rather than splice at a guess.
 """
 
+import dataclasses
 import pathlib
 import sys
 
@@ -106,15 +107,15 @@ def test_a_bare_iso_means_the_targets_own_image():
     assert reinsert.BUILT_ELF == target.built  # out/<the target's ELF name>
 
 
-def test_the_targets_offset_is_a_measurement_not_a_constant():
-    """The splice offset is the target's own; until it is measured, asking raises.
+def test_the_targets_offset_is_a_measurement_not_a_constant(monkeypatch):
+    """The splice offset is the target's own; a target nobody has measured raises.
 
     A default argument would have made this an *import-time* failure for every tool that reads
     this module, so `build()` resolves it when it is called.
     """
-    target = targets.get()
-    assert target.geometry is None
+    unmeasured = dataclasses.replace(targets.get(), geometry=None)
     with pytest.raises(targets.NotMeasured):
-        reinsert.elf_offset(target)
+        reinsert.elf_offset(unmeasured)
+    monkeypatch.setattr(reinsert, "TARGET", unmeasured)
     with pytest.raises(targets.NotMeasured):
         reinsert.build(__file__, __file__, "/tmp/unused.iso")

@@ -9,6 +9,7 @@ that every input comes from the target, and that an unmeasured target degrades i
 (the localisation) while still answering the verdict.
 """
 
+import dataclasses
 import json
 import pathlib
 import sys
@@ -83,11 +84,12 @@ def test_a_truncated_image_is_reported_at_its_end(tmp_path):
     assert g1.sha256(bad) in message and g1.sha256(retail) in message
 
 
-def test_a_mismatch_says_the_byte_is_not_localised_while_the_geometry_is_unmeasured(tmp_path):
+def test_a_mismatch_says_the_byte_is_not_localised_while_the_geometry_is_unmeasured(
+        tmp_path, monkeypatch):
     """The verdict never needs a measurement; the *diagnostic* does, and says so out loud."""
     retail = image(tmp_path)
     bad = corrupted(tmp_path, retail, 0x80 + 4)
-    assert targets.get().geometry is None
+    monkeypatch.setattr(g1, "TARGET", dataclasses.replace(targets.get(), geometry=None))
     message = g1.compare(bad, retail)
     assert "0x84" in message and "not localised" in message
 
@@ -136,20 +138,33 @@ def test_the_pin_comes_from_the_targets_own_checksum_manifest(tmp_path):
     assert g1.pinned_hash_for("no-such-image.iso", manifest) is None
     missing = tmp_path / "absent.txt"
     assert g1._pins(missing) == [] and g1.pinned_hash(missing) is None
-    # ... and the registered target resolves its own, which nobody has written yet.
-    assert g1.pinned_hash(targets.get().checksums) is None
+    # ... and the registered target's own manifest resolves its own two files, read by the
+    # target's own path -- the same digests the descriptor carries, so the pin the gates check
+    # and the pin the descriptor records cannot drift apart.
+    target = targets.get()
+    assert g1.pinned_hash(target.checksums) == target.elf_sha256
+    assert g1.pinned_hash_for(target.image, target.checksums) == target.image_sha256
 
 
-def test_the_cli_needs_the_targets_retail_binary(tmp_path, capsys):
-    built = image(tmp_path)
+def test_the_cli_needs_the_targets_retail_binary(tmp_path, capsys, monkeypatch):
+    """No retail binary, no verdict: G1 compares against *that file* or it says which is missing."""
+    built = image(tmp_path, "built")
+    real = targets.get()
+    absent = tmp_path / "absent.elf"
+    monkeypatch.setattr(g1.targets, "get",
+                        lambda name=None: dataclasses.replace(real, elf=absent))
     assert g1.main([str(built)]) == 2
     err = capsys.readouterr().err
-    assert targets.get().elf.name in err and "required" in err
+    assert str(absent) in err and "required" in err
 
 
 def test_the_cli_reports_a_mismatch_against_an_explicit_retail_binary(tmp_path, capsys):
     built, retail = image(tmp_path, "built"), image(tmp_path, "retail", pattern=b"\x2E")
-    status = g1.main([str(built), "--retail", str(retail)])
+    # The manifest pins the *reference*, so the pin check passes and the gate gets to compare:
+    # what is under test here is the mismatch report, not the pin.
+    manifest = tmp_path / "checksums.txt"
+    manifest.write_text(f"{g1.sha256(retail)}  retail\n")
+    status = g1.main([str(built), "--retail", str(retail), "--checksums", str(manifest)])
     out = capsys.readouterr().out
     assert status == 1
     assert "sha256 mismatch" in out and g1.sha256(retail) in out
