@@ -22,6 +22,7 @@ record names is refused outright (exit 2): the synthetic fixtures opt in with
 so on the success line.
 """
 
+import dataclasses
 import hashlib
 import importlib.machinery
 import importlib.util
@@ -34,7 +35,9 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT))  # `config.targets`, the descriptor every tool reads
 
+from config import targets  # noqa: E402
 from iso import reinsert  # noqa: E402  (path set up above, as the brief specifies)
 from verify import g1, g2  # noqa: E402
 
@@ -304,10 +307,18 @@ def test_diff_refuses_a_unit_with_no_c_source():
 
 def test_bare_iso_with_no_mounted_image_says_nothing_was_compared(monkeypatch, capsys,
                                                                   tmp_path):
-    """Bare ``--iso`` is the mounted retail image: absent, the gate skips (exit 0) -- and the
-    line has to make it unmistakable that no comparison happened."""
+    """Bare ``--iso`` is the *target's* mounted image: absent, the gate skips (exit 0) -- and
+    the line has to make it unmistakable that no comparison happened.
+
+    The target is replaced rather than a module constant, because the image a bare ``--iso``
+    means is the descriptor's (`Target.image`): pointing the gate at the old target's disc
+    would compare a rebuild of one game against another game's bytes.
+    """
     ddr = load_ddr()
-    monkeypatch.setattr(ddr.reinsert, "RETAIL_IMAGE", tmp_path / "absent.iso")
+    absent = tmp_path / "absent.iso"
+    real = ddr.targets.get
+    monkeypatch.setattr(ddr.targets, "get",
+                        lambda name=None: dataclasses.replace(real(name), image=absent))
     assert ddr.cmd_iso(ddr.parse_args(["iso"])) == 0
     out = capsys.readouterr().out
     assert out.startswith("G3 skipped") and "nothing was compared" in out
@@ -318,7 +329,8 @@ def test_the_success_line_names_the_pinned_digest_when_the_reference_is_pinned(
     """The two success lines are distinguishable: a pinned reference reports the *pin*."""
     ddr = load_ddr()
     image = synthetic_image(tmp_path, BUILT.read_bytes(), name="pinned-by-this-test.iso")
-    monkeypatch.setattr(ddr.g1, "pinned_hash_for", lambda name: reinsert.sha256(image))
+    monkeypatch.setattr(ddr.g1, "pinned_hash_for",
+                        lambda name, checksums: reinsert.sha256(image))
     args = ddr.parse_args(["iso", "--iso", str(image), "--out", str(tmp_path / "out.iso")])
     assert ddr.cmd_iso(args) == 0, capsys.readouterr()
     out = capsys.readouterr().out
@@ -370,11 +382,80 @@ def test_retail_image_hash_is_the_pinned_one():
 
 def test_oracle_regenerates_the_committed_artifacts_byte_for_byte():
     """The oracle is deterministic: a fresh run reproduces what is committed (or staged)."""
-    targets = [path for path in (ROOT / "config/usam2").glob("*.json")]
-    targets += [ROOT / "config/usam2/symbol_addrs.txt",
+    watched = [path for path in (ROOT / "config/usam2").glob("*.json")]
+    watched += [ROOT / "config/usam2/symbol_addrs.txt",
                 ROOT / "config/usam2/unplaced_symbols.txt"]
-    targets += [path for path in (ROOT / "include").rglob("*") if path.is_file()]
-    before = {path: path.read_bytes() for path in targets}
+    watched += [path for path in (ROOT / "include").rglob("*") if path.is_file()]
+    before = {path: path.read_bytes() for path in watched}
     p = run("oracle")
     assert p.returncode == 0, p.stdout + p.stderr
-    assert {path: path.read_bytes() for path in targets} == before
+    assert {path: path.read_bytes() for path in watched} == before
+
+
+# ---------------------------------------------------------------------------
+# --target: two targets, one command surface
+# ---------------------------------------------------------------------------
+
+
+def test_the_target_flag_keeps_the_default_targets_behaviour():
+    """``--target usam2`` *is* today's tree: the same gate, over the same two files.
+
+    Both spellings are the plan's: ``ddr --target usam2 verify`` (before the verb) and
+    ``ddr verify --target usam2`` (after it), and neither may print a different verdict.
+    """
+    assert run("build", "--target", "usam2").returncode == 0
+    bare = run("verify")
+    before_verb = run("--target", "usam2", "verify")
+    after_verb = run("verify", "--target", "usam2")
+    assert bare.returncode == 0 and "G1 ok" in bare.stdout
+    assert before_verb.returncode == 0
+    assert before_verb.stdout == bare.stdout == after_verb.stdout
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_a_verb_only_ever_reads_the_named_targets_files(name):
+    """A retarget that half lands shows up as a verb reading the *other* target's paths.
+
+    Each target's verb must answer about its own binary and its own config directory: for
+    ``usam2`` that is the built image and a green gate, and for a target whose binary has not
+    been placed yet (``ddrex2p``, Task 4) it is a loud stop naming *that* file -- never
+    ``out/SLUS_207.11``, and never a comparison of the old target's pair.
+    """
+    target = targets.get(name)
+    p = run("--target", name, "verify")
+    if name == targets.DEFAULT:
+        assert p.returncode == 0 and "G1 ok" in p.stdout
+        assert target.elf.name in p.stdout or target.built.name in p.stdout
+    else:
+        assert p.returncode == 2, p.stdout + p.stderr
+        assert not target.built.is_file()
+        assert str(target.built.relative_to(ROOT)) in p.stderr
+        assert "SLUS_207.11" not in p.stderr + p.stdout
+        assert "G1 ok" not in p.stdout
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_the_oracle_reads_the_named_targets_retail_elf(name):
+    """``oracle`` names the ELF it cannot find, and writes nothing for the other target."""
+    target = targets.get(name)
+    watched = [targets.get(targets.DEFAULT).cus, targets.get(targets.DEFAULT).symbols,
+               ROOT / "include" / "types.h"]
+    before = {path: path.read_bytes() for path in watched if path.is_file()}
+    p = run("--target", name, "oracle")
+    if name == targets.DEFAULT:
+        assert p.returncode == 0, p.stdout + p.stderr
+        assert str(target.elf.relative_to(ROOT)) in p.stdout
+    else:
+        assert p.returncode == 2, p.stdout + p.stderr
+        assert str(target.elf.relative_to(ROOT)) in p.stderr
+        assert "no such file" in p.stderr
+    assert {path: path.read_bytes() for path in before} == before
+
+
+def test_an_unknown_target_name_is_a_usage_error_naming_the_ones_that_exist():
+    """A typo must not configure the default target and build a plausible wrong image."""
+    p = run("--target", "ddrmax2", "verify")
+    assert p.returncode == 2
+    assert "ddrmax2" in p.stderr
+    assert "usam2" in p.stderr and "ddrex2p" in p.stderr
+    assert "Traceback" not in p.stderr and "G1 ok" not in p.stdout

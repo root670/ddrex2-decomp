@@ -12,8 +12,14 @@ import re
 import subprocess
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-CONFIGURE = [sys.executable, "configure.py", "--config", "usam2"]
+sys.path.insert(0, str(ROOT))  # `config.targets`, the descriptor this tool reads
+
+from config import targets  # noqa: E402
+
+CONFIGURE = [sys.executable, "configure.py", "--target", "usam2"]
 
 
 def test_splat_splits_every_symbol():
@@ -353,11 +359,12 @@ def test_objdiff_project_covers_every_linked_code_object():
     project = json.loads((ROOT / "objdiff.json").read_text())
     assert project["min_version"] and project["custom_make"] == "ninja"
     units = {unit["name"]: unit for unit in project["units"]}
-    code = {f"{configure.CODE_SEGMENT}/{pathlib.Path(name).stem}"
+    segment = targets.get("usam2").geometry_required().code_segment
+    code = {f"{segment}/{pathlib.Path(name).stem}"
             for _, name in configure.code_splits(configure.split_sources())}
     assert set(units) == code, "every code split the link places is a unit"
 
-    promoted = {f"{configure.CODE_SEGMENT}/{pathlib.Path(split).stem}": promotion.object
+    promoted = {f"{segment}/{pathlib.Path(split).stem}": promotion.object
                 for promotion in configure.promotions() for split in promotion.splits}
     assert promoted, "the promotion table is what makes a base non-null"
     for name, unit in units.items():
@@ -367,3 +374,44 @@ def test_objdiff_project_covers_every_linked_code_object():
         if unit["base_path"] is not None:
             assert (ROOT / unit["base_path"]).is_file(), f"{name}: no such base object"
             assert unit["base_path"] != unit["target_path"], "a self-comparison measures nothing"
+
+
+# ---------------------------------------------------------------------------
+# --target: configure writes one target's config, and refuses to guess the other's
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_configure_either_writes_the_named_targets_config_or_fails_loudly(name):
+    """One invariant per target, whatever its measurement state happens to be.
+
+    ``configure.py`` works on exactly one target: it either succeeds -- and then the yaml it
+    wrote is *this* target's (its own config dir, its own retail ELF basename) -- or it stops
+    with a message naming the target, exit 2 and no traceback.  A target whose geometry has
+    not been measured yet (``ddrex2p``'s segment list is Task 5's) takes the second path and
+    says which file has to be measured; it must never fall back to the old target's numbers,
+    which would produce a plausible image of the wrong game.
+    """
+    target = targets.get(name)
+    p = subprocess.run([sys.executable, "configure.py", "--target", name], cwd=ROOT,
+                       capture_output=True, text=True)
+    assert "Traceback" not in p.stderr, p.stderr
+    if p.returncode == 0:
+        yaml_text = (target.config_dir / "splat.yaml").read_text()
+        assert target.elf.name in yaml_text
+        assert f"config/{name}/" in yaml_text
+        assert (target.config_dir / "splat.yaml").is_file()
+    else:
+        assert p.returncode == 2, p.stdout + p.stderr
+        assert name in p.stderr
+        if target.geometry is None:
+            assert target.elf.name in p.stderr and "geometry" in p.stderr
+            assert not (target.config_dir / "splat.yaml").exists()
+
+
+def test_an_unknown_target_is_a_configuration_error_not_a_traceback():
+    p = subprocess.run([sys.executable, "configure.py", "--target", "ddrmax2"], cwd=ROOT,
+                       capture_output=True, text=True)
+    assert p.returncode == 2
+    assert "ddrmax2" in p.stderr and "usam2" in p.stderr and "ddrex2p" in p.stderr
+    assert "Traceback" not in p.stderr

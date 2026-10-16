@@ -15,7 +15,9 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT))  # `config.targets`
 
+from config import targets  # noqa: E402
 from iso import reinsert  # noqa: E402  (path set up above, as the brief specifies)
 
 IMAGE = pathlib.Path("/Volumes/My Passport/PS2 Games/DDRMAX2 Dance Dance Revolution (USA).iso")
@@ -138,3 +140,33 @@ def test_verify_reports_ok_for_a_matching_hash(tmp_path):
     good = tmp_path / "rebuilt.iso"
     good.write_bytes(b"\x3D" * 512)
     assert reinsert.verify(good, reinsert.sha256(good)) == "ok"
+
+
+# ---------------------------------------------------------------------------
+# --target: the image, its offset and its pin are the target's
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_each_targets_image_offset_and_pin_are_its_own(name):
+    """Bare ``--iso`` means the *target's* mounted image, at the *target's* offset.
+
+    The two current targets share neither the image nor the pin, and the retarget's offset
+    is deliberately not measured yet: asking for it raises rather than splicing the new
+    build into the old disc's geometry.
+    """
+    target = targets.get(name)
+    other = targets.get("ddrex2p" if name == targets.DEFAULT else targets.DEFAULT)
+    assert reinsert.retail_image(target) == target.image
+    assert reinsert.retail_image(target) != reinsert.retail_image(other)
+    if target.geometry is None:
+        with pytest.raises(targets.NotMeasured):
+            reinsert.elf_offset(target)
+    else:
+        assert reinsert.elf_offset(target) == target.geometry.image_elf_offset
+
+
+def test_the_default_targets_offset_is_the_mounted_images_boot_elf():
+    """The value the whole G3 ladder was built on, now read from the descriptor."""
+    assert reinsert.ELF_OFFSET == targets.get(targets.DEFAULT).geometry.image_elf_offset
+    assert reinsert.ELF_OFFSET == 0x92000

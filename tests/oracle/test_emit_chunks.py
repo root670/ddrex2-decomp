@@ -2,11 +2,28 @@
 import json, pathlib, pytest, sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/oracle"))
+sys.path.insert(0, str(ROOT))  # `config.targets`
 import emit_chunks
+from config import targets
 
-def test_chunks_tile_both_sections_exactly():
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    for section, size in ((".debug", 657815), (".line", 140704)):
+
+def _manifests(target):
+    """``(chunks, geometry)`` for ``target``, or a skip when Task 4 has not placed it yet.
+
+    The suites here are parameterised over every target in `config.targets`; a target whose
+    binary and config are not on disk yet is skipped *loudly*, and never silently asserted
+    against the other target's files.
+    """
+    if not target.cus.is_file() or not target.chunks.is_file():
+        pytest.skip(f"{target.name}: its config is generated in Task 4")
+    geometry = target.geometry_required()
+    return emit_chunks.build(target.cus, geometry.line_size, geometry.debug_size), geometry
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_chunks_tile_both_sections_exactly(name):
+    chunks, geometry = _manifests(targets.get(name))
+    for section, size in ((".debug", geometry.debug_size), (".line", geometry.line_size)):
         part = [c for c in chunks if c["section"] == section]
         assert part[0]["offset"] == 0
         assert sum(c["size"] for c in part) == size
@@ -83,11 +100,12 @@ def test_chunk_lookup_agrees_with_emit_cus_and_its_error_type():
         emit_chunks.chunk_for(chunks, ".comment", 0)
 
 
-def test_committed_manifest_matches_a_fresh_run(tmp_path):
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
+@pytest.mark.parametrize("name", targets.names())
+def test_committed_manifest_matches_a_fresh_run(tmp_path, name):
+    target = targets.get(name)
+    chunks, _geometry = _manifests(target)
     emit_chunks.write(tmp_path / "debug_chunks.json", chunks)
-    assert (tmp_path / "debug_chunks.json").read_bytes() == \
-        (ROOT / "config/usam2/debug_chunks.json").read_bytes()
+    assert (tmp_path / "debug_chunks.json").read_bytes() == target.chunks.read_bytes()
 
 
 def _map(cus, tmp_path, name="cus.json"):

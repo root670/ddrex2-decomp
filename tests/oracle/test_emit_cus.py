@@ -1,7 +1,9 @@
-import json, pathlib, sys
+import json, pathlib, pytest, sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/oracle"))
+sys.path.insert(0, str(ROOT))  # `config.targets`
 import emit_cus
+from config import targets
 
 def test_cu_map_is_complete_and_contiguous():
     cus = emit_cus.build(ROOT / "orig/SLUS_207.11")
@@ -28,11 +30,22 @@ def test_owner_of_samples_the_debug_range():
         c = emit_cus.owner_of(cus, off)
         assert c["offset"] <= off < c["offset"] + c["size"], off
 
-def test_committed_map_matches_a_fresh_run(tmp_path):
-    cus = emit_cus.build(ROOT / "orig/SLUS_207.11")
+@pytest.mark.parametrize("name", targets.names())
+def test_committed_map_matches_a_fresh_run(tmp_path, name):
+    """For every target: the committed CU map is what a fresh run of its own ELF produces.
+
+    Parameterised rather than duplicated, and it skips -- visibly -- for a target whose
+    binary and manifests have not been placed yet (``ddrex2p``'s arrive in Task 4), so the
+    retarget inherits this check the moment its config lands instead of needing a new test.
+    """
+    target = targets.get(name)
+    if not target.elf.is_file() or not target.cus.is_file():
+        pytest.skip(f"{name}: {target.elf.name} and its config are generated in Task 4")
+    cus = emit_cus.build(target.elf)
     emit_cus.write(tmp_path / "cus.json", cus)
-    assert (tmp_path / "cus.json").read_bytes() == \
-        (ROOT / "config/usam2/cus.json").read_bytes()
+    assert (tmp_path / "cus.json").read_bytes() == target.cus.read_bytes()
+    assert cus[-1]["offset"] + cus[-1]["size"] == \
+        target.geometry_required().debug_size, "the map must tile the measured .debug"
 
 def test_every_record_identifies_a_translation_unit():
     cus = emit_cus.build(ROOT / "orig/SLUS_207.11")

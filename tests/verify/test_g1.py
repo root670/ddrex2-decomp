@@ -11,9 +11,13 @@ import json
 import pathlib
 import sys
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
+sys.path.insert(0, str(ROOT))  # `config.targets`
 
+from config import targets  # noqa: E402
 from verify import g1  # noqa: E402  (path set up above, as the brief specifies)
 
 RETAIL = ROOT / "orig/SLUS_207.11"
@@ -150,3 +154,58 @@ def test_cli_refuses_a_wrong_retail_binary(tmp_path, capsys):
     assert g1.main([str(built), "--retail", str(truncated)]) != 0
     err = capsys.readouterr().err
     assert SHA in err and "1000 bytes" in err, err
+
+
+# ---------------------------------------------------------------------------
+# --target: one gate, two targets, and no pin inherited across them
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_the_named_targets_pin_resolves_in_its_own_manifest_and_nowhere_else(name):
+    """A target's G1 criterion comes from its own ``checksums.txt``, or from nothing.
+
+    Falling back to another target's manifest would make the pin a property of the *tool*
+    rather than of the target -- the "retarget silently keeps an old pin" failure -- so the
+    absent case is asserted as None rather than as a default.  When the manifest exists its
+    two records must be this target's digests, which makes the check stronger, not weaker,
+    as the retarget lands.
+    """
+    target = targets.get(name)
+    other = targets.get("ddrex2p" if name == targets.DEFAULT else targets.DEFAULT)
+    assert other.config_dir.is_dir()  # there *is* another manifest to inherit from
+    assert other.checksums != target.checksums
+    if target.checksums.is_file():
+        assert g1.pinned_hash(target.checksums) == target.elf_sha256
+        assert g1.pinned_hash_for(target.image.name, target.checksums) \
+            == target.image_sha256
+    else:
+        assert g1._pins(target.checksums) == []
+        assert g1.pinned_hash(target.checksums) is None
+        assert g1.pinned_hash_for(target.image.name, target.checksums) is None
+        # ... and the *other* target's pin is not what a missing manifest resolves to.
+        assert g1.pinned_hash(target.checksums) != other.elf_sha256
+
+
+@pytest.mark.parametrize("name", targets.names())
+def test_the_cli_reads_the_named_targets_retail_binary(name, tmp_path, capsys):
+    """``g1.py --target NAME`` compares against *that* target's retail ELF and pin.
+
+    A garbage image is enough to prove which file the gate read: the mismatch names the
+    target's pinned digest.  A target whose geometry has not been measured stops with exit 2
+    and says so, because the offset localisation -- and the manifest geometry behind it --
+    is not something to guess from another target.
+    """
+    target = targets.get(name)
+    built = tmp_path / target.elf.name
+    built.write_bytes(b"not the image")
+    status = g1.main([str(built), "--target", name])
+    if target.geometry is None:
+        assert status == 2
+        err = capsys.readouterr().err
+        assert target.name in err and "geometry" in err
+        return
+    assert status == 1
+    out = capsys.readouterr().out
+    assert "sha256 mismatch" in out
+    assert target.elf_sha256 in out or target.elf_sha256 in capsys.readouterr().err
