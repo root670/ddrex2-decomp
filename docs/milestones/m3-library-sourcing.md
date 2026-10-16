@@ -190,3 +190,33 @@ loader and option UI were compiled without `-g`.
    option UI, oni-mode texture loading — which is useful context for that reversing.
 4. `[INFERENCE]` Pinning (linking rather than reversing) is available only where whole bodies are
    identical: measured at 162–190 functions across archive sets under relocation masking.
+
+## DDR Extreme 2 preview build (2005): the richest sibling DWARF, and why bytes still do not transfer
+
+`/Volumes/Untitled 1/SLUS_211.74`, mounted from the user's *Dance Dance Revolution Extreme 2 (May 10,
+2005 prototype)* image: a 7.7 MB ELF whose `.debug` is **4.8 MB** and `.line` 976 KB, `.comment`
+`MW MIPS C Compiler (2.4.1.01)` + `PlayStation2`.
+
+| quantity | value |
+|---|---|
+| DWARF | 118,116 DIEs, 2,925 CUs, 249 TUs, **2,676 functions** |
+| named code | 1,221,292 B, spanning `0x1b3d30`–`0x806468` |
+| source files | 249, in `src/{cs,network,am,common,sound,eyetoy,sys,gs}` + `music_all.c`, `olmain.c` |
+| transfer to our unnamed region | **39 functions / 1,220 B (0.1 %)**, whole-body and relocation-masked |
+| 16-byte prefix hits in the region | 1,352 offsets — similar code, not identical code |
+
+Names that did land are shared-engine functions (`ps2dancerSetCameraPos`, `back_anime_set_inst_mode`,
+`net_ave_end`, `fp_win_disp_obj`, `EyeRefGetPeerBitstreamAddr`, `get_mdt_name`).
+
+**Verdict:** a richer sibling Debug build does not transfer as identity. Across all five sibling builds
+measured (DDRMAX US, DDRMAX2 JP, DDR Extreme JP, DDR Extreme E3 US, DDR Extreme 2 preview) whole-body
+transfer is **0.1–8.8 %**, while the SDK's *own* archives explain 100 % of the functions they contain
+(757 in our region, 7.5 % of it). The sibling DWARF's value is **names, signatures and type layouts** for
+the reversing work — the use M1 already made of the E3/Festival dumps — not identification.
+
+### What this means for the ~1.08 MB
+
+It is game code to be reversed through the promotion loop (plan Tasks 1–4), with the sibling and
+prototype DWARF supplying engine vocabulary (`ps2dancer*`, `back_anime_*`, `Eds*`, `SetPreRead_*`,
+`animode_load_tex_init`, `net_ave_end`, …) and type layouts. No further archive or sibling build is
+expected to change that; the SDK subset is settled.
