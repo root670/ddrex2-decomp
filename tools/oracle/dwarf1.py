@@ -12,8 +12,13 @@
     tools/dwarf1.py dump    ELF OFFSET [--depth N]           raw DIEs at a .debug offset
 
 NAME_OR_VA is a DWARF name, mangled name, `Class::method` or address.
-Overlays are main, gcmn, demo, desktop, toppage (".prg" optional); overlay
-code all sits at 0x00400800, so addresses there match once per overlay.
+An overlay's name is the one its `DW_TAG_MW_overlay` DIE gives it (".prg"
+optional), and each overlay's code loads at one base address, so an address
+in an overlay's window matches once per overlay.  Where main ends and the
+overlays begin is *measured from the ELF being read* -- a file-backed
+PT_LOAD maps the main image -- never a literal: a literal is one game's
+address space applied to another's (SLUS_202.67's main image ended at
+0x400800, this tree's at 0x723700).
 `header --cu` takes a translation unit (everything it declares) or a file
 included into one, e.g. sysmem.cpp (its functions and what they use).
 
@@ -272,6 +277,17 @@ def innermost(t):
 class Dwarf:
     def __init__(self, elf):
         self.elf = elf if isinstance(elf, Elf) else Elf(elf)
+        # The main image's address range: what the file's *file-backed* program headers map.
+        # It is a measurement of this binary, not a constant -- the boundary between main and
+        # the overlays is where the file-loaded image ends, and a zero-fill reservation
+        # (p_filesz 0, such as this target's eleven overlay reservations) maps no bytes at all.
+        self.main_spans = tuple((seg.vaddr, seg.vaddr + seg.memsz)
+                                for seg in self.elf.segments
+                                if seg.type == 1 and seg.filesz > 0)
+        if not self.main_spans:
+            raise ValueError(
+                f"{self.elf.path}: no file-backed PT_LOAD, so the main image's address range "
+                f"cannot be measured: every main/overlay decision needs it")
         sec = {s.name: s for s in self.elf.sections}
         if ".debug" not in sec:
             raise ValueError(f"{self.elf.path}: no .debug section")
@@ -435,6 +451,17 @@ class Dwarf:
 
     def overlay(self, die):
         return self.overlay_of_cu.get(die.cu.off, MAIN)
+
+    def in_main_image(self, address) -> bool:
+        """Does ``address`` lie in the main image -- the range a file-backed PT_LOAD maps?
+
+        This is what decides whether a global the DWARF reports belongs to main or to the
+        overlay whose translation unit declares it: several overlays declare the same
+        main-image global, and they are one variable, not one per overlay.  ``None`` and 0
+        are "the DWARF gave no address", which is not an address in main.
+        """
+        return (isinstance(address, int) and address != 0
+                and any(lo <= address < hi for lo, hi in self.main_spans))
 
     # ---- names ----
 
@@ -1045,7 +1072,7 @@ class Dwarf:
             if i == 4:
                 out.append(f"+0x04 this-adjust 0x{w:x}")
                 continue
-            if w < 0x400800:
+            if self.in_main_image(w):
                 cands, where = idx.get((MAIN, w), []), ""
             else:
                 ov = next((ov for ov in home if (ov, w) in idx), None)
@@ -1086,7 +1113,7 @@ class Dwarf:
                 loc = d.attrs.get(AT_location)
                 ops = loc_ops(loc) if loc else []
                 addr = ops[0][1] if ops and ops[0][0] == 3 else None
-                home = MAIN if addr is not None and 0 < addr < 0x400800 else ov
+                home = MAIN if self.in_main_image(addr) else ov
                 if overlay and home != overlay:
                     continue
                 key = (self.qualname(d), addr, home,
