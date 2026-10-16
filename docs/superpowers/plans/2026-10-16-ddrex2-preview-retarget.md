@@ -30,7 +30,7 @@
 - Statements land on the retail line numbers the DWARF reports (`tools/oracle/dwarf1.py lines <VA> --table`).
 - Never hand-edit `asm/**` or generated config (`splat.yaml`, `cus.json`, `debug_chunks.json`, `objdiff.json`, generated headers); regenerate with `./ddr oracle`.
 - Retail binaries, disc images and toolchains are never committed. Tool code is Python 3 standard library only. `python3 -m pytest` for tests (the full suite is minutes; run focused tests while iterating).
-- Concurrent-agent rule: each task owns its files; when two tasks would touch one file (e.g. `configure.py`), they serialize.
+- Concurrent-agent rule: each task owns its files; when two tasks would touch one file (e.g. `configure.py`), they serialize. **And only one agent runs a build at a time.** `./ddr build`, `./ddr oracle` and the full suite all rewrite `asm/**`, `build/**` and the generated config, so two agents running them in this checkout corrupt each other — observed three times today: a link failure with an undefined `D_00293A58` from a concurrently regenerated split, `symbol_addrs.txt` reverted twice mid-task, and `ddr`'s hunks nearly lost to a `git checkout -- ddr`. Serialize builds, and hand-edited names go in `borrowed_symbols.txt` (which the oracle merges), never in the generated file.
 
 ## Review Focus
 
@@ -54,7 +54,7 @@
 
 - [ ] **Step 1: Write the failing test** — a batch run over three named TUs of the new target returns one verdict per (TU, build) pair, including builds that fail, and never silently drops a TU.
 - [ ] **Step 2: Run to verify it fails.**
-- [ ] **Step 3: Run the sample** over the smallest and largest TUs of the new target, across all five builds present (`2.4-001213`, `3.0-011126`, `3.0.1-020123`, `3.0.3-020716`, `3.0b38-030307`) and the flag axes already in use.
+- [ ] **Step 3: Run the sample over every TU for which C exists** (it starts with `sys_scf.c` alone, and grows as promotions accumulate — the verdict is a running record, not a one-shot), across all five builds present (`2.4-001213`, `3.0-011126`, `3.0.1-020123`, `3.0.3-020716`, `3.0b38-030307`) and the flag axes already in use. A build can only be pinned against functions we can compile, so this task stays open across the milestone and closes when a sample of *unrelated* TUs agrees.
   Already measured on `sys_scf.c` (the sweep that motivated this task): with `-c -lang c -O3 -g` the object's function sizes are 12 B and 48 B, matching retail, while `-O2 -g` gives 16 B and 60 B and is therefore **ruled out**; `2.4-001213` reproduces the *old* target's `sys_scf.c` only 1/2 and is also **ruled out**; `3.0-011126`, `3.0.1-020123`, `3.0.3-020716` and `3.0b38-030307` each reproduce it 2/2, so the tie must be broken by a wider sample. Note the flags are per-TU in this project (`configure.py`'s `TU_BUILDS`), so the sample must vary them, not assume one set.
 - [ ] **Step 4: Record the verdict** in `docs/milestones/ddrex2p-compiler-sample.md`: the winning (build, flags) per TU, the ties, and the counter-evidence. If more than one build survives the whole sample, prefer the one that also reproduces the retail `.comment` bytes and say so.
 - [ ] **Step 5: Commit** — `ddrex2p: pin the compiler by measured sample, not by ident`
