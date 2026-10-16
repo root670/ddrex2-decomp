@@ -89,11 +89,11 @@
 
 **Interfaces:** `targets.get(name) -> Target`; `Target.config_dir`, `.elf`, `.elf_sha256`, `.image`, `.image_sha256`; CLI `--target <name>` on `ddr` and `configure.py` (default keeps today's behaviour).
 
-- [ ] **Step 1: Write the failing tests** — (a) `targets.get("usam2")` and `targets.get("ddrex2p")` both resolve, and their pins differ; (b) a descriptor missing a field fails loudly; (c) `ddr --target usam2 verify` still passes exactly as before.
+- [ ] **Step 1: Write the failing tests** — the descriptor resolves `ddrex2p` with its pins; a descriptor missing a required field fails loudly; the registry is generic enough that a second target is addable by configuration alone (test that property, not a second target's existence); nothing outside the descriptor hardcodes a target name or a retail path. (DDRMAX2 (US) was removed on 2026-10-16: `ddrex2p` is the only registered target and the default.)
 - [ ] **Step 2: Run to verify they fail.**
-- [ ] **Step 3: Implement the descriptor** and thread it through the ~26 touchpoints. `config/usam2/` keeps its contents; the new target gets `config/ddrex2p/`.
-- [ ] **Step 4: Verify no behaviour change for the old target** — `./ddr --target usam2 verify` green, `python3 -m pytest -q` green with the suites parameterised.
-- [ ] **Step 5: Commit** — `retarget: a single target descriptor, both targets green`
+- [ ] **Step 3: Implement the descriptor** and thread it through the ~26 touchpoints, with `ddrex2p` as the only registered target and the CLI default. No `usam2` literal or `SLUS_207.11` path survives outside the descriptor module.
+- [ ] **Step 4: Verify the plumbing without building** — `python3 -m pytest -q` green with the usam2-only tests removed (`tests/test_m2_sys_scf.py` and the usam2-pinned hash/disc-path cases). Do **not** attempt `./ddr build` or `./ddr verify` for `ddrex2p`: its config does not exist until Task 4 generates it.
+- [ ] **Step 5: Commit** — `retarget: one target descriptor, ddrex2p only`
 
 ### Task 4: Generate the new config from the new binary
 
