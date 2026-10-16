@@ -148,3 +148,45 @@ linked as-is and reproduce retail bytes — the library region stops being 3,032
 - Not yet proved: the complete per-library mapping including `libc`/`libm`/`libgcc`, and how many of the
   3,032 are covered once every archive set is in play. That is Task 6's job, with the covered/uncovered
   split reported as numbers rather than asserted.
+
+---
+
+## Correction: what the unnamed 1.16 MB actually is
+
+The framing used earlier in this file and in the plan — "3,032 unnamed functions below `0x21C410` =
+68 % of the loadable image = SDK library code" — is **wrong**, and the measurements say so.
+
+- **Byte-anchored matching** of our `0x100000`–`0x21C410` region against **273 EE-side archives from every
+  package obtained** (tlib 2.5.0 and patch drops 2.5.1–2.5.5, SCE Tool-Libs 2.4.2, PS2 Runtime Library
+  2.0, EE 1.00.03, the July-2005 devkit's 3.0.x set) — **30,862 indexed functions** — identifies
+  **757 functions / 86,944 bytes = 7.5 %**.
+- That 87 KB *is* the SDK library span: sibling builds show the same size (the Oni 2 dev build's library
+  region is `0x4a0000`–`0x4b4ddc`; recvx's committed object map gives 176,096 B). The libraries are fully
+  explained — they are simply small.
+- The remaining **~1.08 MB in 161 runs** (largest single run 114,672 B) contains: **no** CRI/ADX/Sofdec
+  strings, **no** source-file strings and no `.c:line` asserts, newlib fragments (`bug in vfprintf: bad
+  base`), Sony library banners (`libpad:`, `libdma: sync timeout`, `## internel error in libkernl.a!`) and
+  Konami/Bemani strings.
+- **Cross-build naming is weak here.** The DDRMAX2 JP build's DWARF covers only 197 functions spanning
+  `0x216a70`–`0x238ee4` — its *own game* region, in a different link order. DDRMAX (US) covers 109,
+  DDR Extreme (JP) 472, DDR Extreme E3 (US) 555. Matching all four sibling builds against our region names
+  **49 functions / 3,880 B**, with names that are plainly *game* code: `ps2dancerReChoiceChara`,
+  `ps2dancerSetCameraPos`, `ps2dancerBreakDataArea`, `Update_OptDoll`, `SetPreRead_Les`, `EdsBoxMain`,
+  `animode_load_tex_init`, `get_mdt_name`.
+- Every Konami build's `.comment` reads `MW MIPS C Compiler (2.4.1.01)` + `PlayStation2`.
+
+**Conclusion: the region is ~87 KB of Sony/GCC library objects plus ~1.07 MB of game code that retail
+shipped without DWARF.** The 3,180 functions are unnamed not because they are library code but because
+**retail DWARF covers only 423 of 3,603 units (12 %)** — the engine, character/dancer renderer, lesson
+loader and option UI were compiled without `-g`.
+
+### Consequences
+
+1. **Task 6 stays, with honest scope**: pin/name the SDK subset (757 functions from archives, plus
+   whatever the published corpora add) and stop there. No archive will explain the rest.
+2. **The bulk is ordinary decompilation**, done through the M3 promotion loop: reverse from the split
+   assembly, and where no source exists name the function descriptively with recorded provenance.
+3. The names recovered from siblings describe the code's shape — character rendering, lesson preload,
+   option UI, oni-mode texture loading — which is useful context for that reversing.
+4. `[INFERENCE]` Pinning (linking rather than reversing) is available only where whole bodies are
+   identical: measured at 162–190 functions across archive sets under relocation masking.
