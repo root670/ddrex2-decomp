@@ -8,7 +8,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md` (binding). Library survey and measurements: `docs/milestones/m3-library-sourcing.md`.
 
-**Non-negotiable scope (user decisions):** the **game code** (DWARF-backed TUs) is what gets reversed to C. The **SDK/runtime library subset is identified, never reversed** — names with provenance, then pinned or left as split assembly. Overlay blobs (`DATA00–09.BIN`, 860 functions) and the DWARF-less engine are deferred behind the game TUs. `config/usam2/` stays on disk as reference and as regression coverage.
+**Non-negotiable scope (user decisions):** the **game code** (DWARF-backed TUs) is what gets reversed to C. The **SDK/runtime library subset is identified, never reversed** — names with provenance, then pinned or left as split assembly. Overlay blobs (`DATA00–09.BIN`, 860 functions) and the DWARF-less engine are deferred behind the game TUs. **DDRMAX2 (US) is no longer a target** (user decision, 2026-10-16): its config, generated headers, promoted TU, gates and milestone records were removed, so the descriptor carries one registered target and there is no second-target regression coverage — what survives from that work is target-independent: the oracle, the build pipeline, the SDK archive corpus and the matching method in `tools/sdk/`, the corpora clones, and the SDK research recorded in `docs/milestones/m3-library-sourcing.md`.
 
 ## Target facts
 
