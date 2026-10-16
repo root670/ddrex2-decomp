@@ -95,6 +95,11 @@ def test_the_payload_in_the_image_is_the_compilers(section):
     edge = next(line for line in text.splitlines() if line.startswith(tail_name))
     tail = edge.split(": cat ", 1)[1].split("|", 1)[0].split()
     assert payload in tail
-    chunk = promotion.debug_databin if section == ".debug" else promotion.line_databins[0]
-    assert f"build/assets/{chunk}.databin.bin" not in tail, (
-        f"the tail still assembles retail's own {chunk} for {SOURCE}")
+    # Every databin the unit owns, not just the first: the unit's functions have one `.debug`
+    # chunk between them but a `.line` chunk each, so a fallback on any but the first would
+    # otherwise go unnoticed while the payload assertion above stayed green.
+    chunks = ([promotion.debug_databin] if section == ".debug" else promotion.line_databins)
+    assert chunks, f"{SOURCE}: no {section} chunk was pinned for the unit"
+    for chunk in chunks:
+        assert f"build/assets/{chunk}.databin.bin" not in tail, (
+            f"the tail still assembles retail's own {chunk} for {SOURCE}")

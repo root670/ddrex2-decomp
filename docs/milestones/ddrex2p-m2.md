@@ -62,12 +62,31 @@ What it settles, and what it does not:
   ruled it out.**  It reproduces `.debug` and `.line` at `-O3`/`-O4` and *not* `.text`: it saves
   `ra` with `sq`/`lq` (0x7F/0x7B-encoded) where retail has `sd`/`ld` (`0x0000BFFF` at 0x001B3D44
   and `0x0000BFDF` at 0x001B3D64), whatever the flags.
-* **The tie is recorded, not resolved.**  Four builds -- `3.0-011126`, `3.0.1-020123`,
-  `3.0.3-020716`, `3.0b38-030307` -- reproduce all three parts of this unit, so this unit does
-  **not** discriminate among them.  The descriptor records the first match
-  (`3.0-011126 -c -lang c -O3 -g`, the build the previous target's sample also chose), and the
-  wider sample that can break the tie is Task 1's, which stays open until a sample of
-  *unrelated* units agrees.
+* **Four builds reproduce the unit's three parts; `.comment` then cuts it to three.**  The four
+  are `3.0-011126`, `3.0.1-020123`, `3.0.3-020716` and `3.0b38-030307`, byte-identical on
+  `.text`, `.debug` and `.line` alike -- so the three-part verdict alone does **not** separate
+  them.  Task 1 Step 4's tie-breaker does: the retail image carries
+  `.comment = "MW MIPS C Compiler (2.4.1.01)\0PlayStation2\0"`, four of the builds write
+  `"MW MIPS C Compiler (2.4.1.01)\0"` into their objects, and `3.0b38-030307` writes
+  `"MW MIPS C Compiler (3.0.0)\0"` -- measured, one object per build:
+
+  ```
+  2.4-001213     .comment b'MW MIPS C Compiler (2.4.1.01)\x00'
+  3.0-011126     .comment b'MW MIPS C Compiler (2.4.1.01)\x00'
+  3.0.1-020123   .comment b'MW MIPS C Compiler (2.4.1.01)\x00'
+  3.0.3-020716   .comment b'MW MIPS C Compiler (2.4.1.01)\x00'
+  3.0b38-030307  .comment b'MW MIPS C Compiler (3.0.0)\x00'
+  retail         .comment b'MW MIPS C Compiler (2.4.1.01)\x00PlayStation2\x00'
+  ```
+
+  So `3.0b38-030307` is excluded by the plan's own rule, and three builds remain tied:
+  `3.0-011126`, `3.0.1-020123`, `3.0.3-020716`.  The descriptor records the first of them
+  (`3.0-011126 -c -lang c -O3 -g`, the build the previous target's sample also chose); the
+  wider sample that can break the remaining three-way tie is Task 1's, which stays open until a
+  sample of *unrelated* units agrees.  Two facts shape that sample: `.debug` can never separate
+  these builds (its only compiler string is the version-less `MW MIPS C Compiler`), so a wider
+  sample discriminates **only** through `.text`; and the four 3.0 builds are four *distinct*
+  `mwccps2.exe` binaries that happen to agree on this unit, so the tie is breakable.
 
 ## The drift from the previous target's source
 
@@ -111,8 +130,8 @@ G1 is unmoved by the promotion: `out/SLUS_211.74` is still `ef31c90f…c02cd`.
 
 ## What this unit does and does not change about the compiler question
 
-It eliminates `2.4-001213` for a *second* target by measurement, and it leaves four 3.0 builds
-tied.  A tie of four on a 0x3C-byte unit is the expected shape: the builds differ in ways this
-much code does not exercise.  The open question is therefore unchanged -- which 3.0 build
-produced this binary -- and the answer needs the wider sample Task 1 is holding open, not a
-choice made here.
+It eliminates `2.4-001213` for a *second* target by measurement, and it cuts four tying builds to
+three by the `.comment` rule.  A tie of three on a 0x3C-byte unit is the expected shape: the
+builds differ in ways this much code does not exercise.  The open question is therefore narrowed
+but unchanged -- which of `3.0-011126`, `3.0.1-020123` and `3.0.3-020716` produced this binary --
+and the answer needs the wider sample Task 1 is holding open, not a choice made here.
