@@ -2,8 +2,10 @@
 
 The CLI is the only entry point a contributor is meant to use for routine work, so these tests
 drive it -- but *never* into a real build: `ninja`, `splat` and `configure.py` belong to whoever
-owns the tree (`AGENTS.md`), and `tests/target_support.py` explains the rule and provides the
-probe targets these tests replace the descriptor's lookup with.  What is pinned here is the
+owns the tree (`AGENTS.md`).  That rule is enforced at runtime by `tests/conftest.py` (every
+process-spawning entry point, plus a session backstop that fails if the repository changed), and
+`tests/target_support.py` provides the probe targets these tests replace the descriptor's lookup
+with -- so a verb invoked here either stops before it could build or is caught by the guard.  What is pinned here is the
 selection (`--target`, both spellings, default), the loud stops (an unknown name, a target with
 no binary, a target with no measured geometry), the remedy line for a missing host tool, and the
 `diff` verb's contract -- including the case that matters most, a unit with no C source.
@@ -14,7 +16,6 @@ import importlib.machinery
 import importlib.util
 import os
 import pathlib
-import re
 import subprocess
 import sys
 
@@ -43,22 +44,6 @@ def load_ddr():
         importlib.util.spec_from_loader(loader.name, loader))
     loader.exec_module(module)
     return module
-
-
-def test_no_test_reaches_for_the_build_machines():
-    """The rule, checked: no test shells out to ninja, splat or configure.py.
-
-    One build at a time belongs to the agent that owns the tree; a test that ran one would race
-    that agent, every other test and its own assertions.  Verbs are driven in process against
-    probes instead (`tests/target_support.py`), and the machines are proved by the owner.
-    """
-    machines = re.compile(r'"ninja"|\bninja\b|"splat"|configure\.py')
-    offenders = {}
-    for path in sorted((ROOT / "tests").rglob("*.py")):
-        for number, line in enumerate(path.read_text().splitlines(), start=1):
-            if "subprocess" in line and machines.search(line):
-                offenders.setdefault(path.relative_to(ROOT).as_posix(), []).append(number)
-    assert not offenders, f"a test shells out to the build machines: {offenders}"
 
 
 # ---------------------------------------------------------------------------
@@ -149,13 +134,21 @@ def test_a_missing_host_tool_is_reported_with_its_remedy():
 def test_bare_iso_means_the_targets_image_and_skips_when_it_is_absent(
         monkeypatch, capsys, tmp_path):
     """Bare ``--iso`` is the *target's* mounted image: absent, the gate skips (exit 0) -- and the
-    line has to make it unmistakable that no comparison happened."""
+    line has to make it unmistakable that no comparison happened.
+
+    A skip is not a pass, so the exit code alone would not be enough: the line must say that
+    nothing was compared, no success line may appear beside it, and no copy may be left behind --
+    a rebuilt image nobody compared must not look like a comparison's artifact.
+    """
     ddr = load_ddr()
     probe = target_support.without_binary(tmp_path, monkeypatch, ddr, "probe_cli")
-    assert ddr.cmd_iso(ddr.parse_args(["iso"])) == 0
-    out = capsys.readouterr().out
-    assert out.startswith("G3 skipped") and "nothing was compared" in out
-    assert str(probe.image) in out
+    out = tmp_path / "rebuilt.iso"
+    assert ddr.cmd_iso(ddr.parse_args(["iso", "--out", str(out)])) == 0
+    printed = capsys.readouterr().out
+    assert printed.startswith("G3 skipped") and "nothing was compared" in printed
+    assert str(probe.image) in printed
+    assert "G3 ok" not in printed and "G3 FAIL" not in printed
+    assert not out.exists()
 
 
 def test_iso_refuses_a_reference_no_record_names(tmp_path, monkeypatch):

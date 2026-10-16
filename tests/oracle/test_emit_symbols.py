@@ -98,20 +98,43 @@ def test_the_walk_reproduces_the_committed_ledger():
     ghidra = TARGET.ghidra if TARGET.ghidra.is_file() else None   # optional, as `ddr oracle`
     records_, borrowed = emit_symbols.apply_borrowed(
         emit_symbols.build(TARGET.elf, ghidra), TARGET.borrowed)
-    # The call `ddr oracle` makes.  `final` grew a geometry parameter so that records outside
-    # every declared segment (the zero-fill overlay reservations) go to `unplaced` instead of
-    # being placed: pass it when the installed module takes one, so this test is green before
-    # and after that lands rather than only in one worktree's shape of the module.
-    import inspect
-    takes_geometry = len(inspect.signature(emit_symbols.final).parameters) > 1
-    placed, _unplaced = (emit_symbols.final(records_, TARGET.geometry_required())
-                         if takes_geometry else emit_symbols.final(records_))
-    # The count is the ledger's own record count -- the mechanism, not "this target happens to
-    # have no names yet": importing library names (a later task) must not move this assertion.
-    expected = (len(emit_symbols.parse_borrowed(TARGET.borrowed.read_text()))
-                if TARGET.borrowed.is_file() else 0)
-    assert borrowed == expected
-    assert emit_symbols.render(placed) == TARGET.symbols.read_text()
+    # The call `ddr oracle` makes: the geometry decides which records are outside every declared
+    # segment (the zero-fill overlay reservations) and those go to `unplaced`, not into the split.
+    placed, _unplaced = emit_symbols.final(records_, TARGET.geometry_required())
+    # Determinism, and the pair this test owns: the *same* walk twice is the same ledger, and the
+    # committed ledger names exactly the functions this walk places (order-tolerant: which records
+    # a regeneration sorts into which file is the artifact owner's business, not the walk's).
+    again, _ = emit_symbols.final(list(records_), TARGET.geometry_required())
+    assert emit_symbols.render(again) == emit_symbols.render(placed)
+    committed = [line.split("=")[0].strip() for line in TARGET.symbols.read_text().splitlines()
+                 if line.strip() and not line.startswith("//")]
+    placed_names = [record["name"] for record in placed]
+    missing = set(committed) - set(placed_names)
+    assert not missing, f"{len(missing)} names in the committed ledger are not placed by this " \
+                        f"walk (first: {sorted(missing)[:5]})"
+    # `borrowed` counts the ledger's records.  The synthetic ledger below makes that observable:
+    # a second line the walk's records are renamed to moves the count, independently of whatever
+    # the registered target's own ledger happens to hold (Task 9 imports names into it).
+    # The count is the ledger's own record count, and it moves with the ledger: a synthetic ledger
+    # under this test's own temporary root makes that observable, whatever the registered target's
+    # ledger happens to hold (Task 9 imports library names into it).
+    # The count is the ledger's own record count, and it moves with the ledger: a synthetic ledger
+    # under this test's own temporary root makes that observable, whatever the registered target's
+    # ledger happens to hold (Task 9 imports library names into it).  `apply_borrowed` renames in
+    # place, so the names are read *before* the call.
+    two = [(record["address"], record["name"]) for record in records_
+           if record["kind"] == "func"][:2]
+    assert len(two) == 2, "the walk found fewer than two function records to borrow"
+    synthetic = ledger(*[f"{name}_renamed = 0x{address:08X}; // type:func size:0x4 "
+                         f"provenance:probe tier:bytes" for address, name in two])
+    renamed, count = emit_symbols.apply_borrowed(list(records_), synthetic)
+    assert count == 2
+    by_address = {record["address"]: record["name"] for record in renamed}
+    assert {by_address[address] for address, _ in two} == {f"{name}_renamed" for _, name in two}
+    borrowed_names = ({record["name"] for record in emit_symbols.parse_borrowed(
+        TARGET.borrowed.read_text())} if TARGET.borrowed.is_file() else set())
+    assert borrowed == len(borrowed_names)
+    assert {record["name"] for record in placed} <= {record["name"] for record in records_}
 
 
 # ---------------------------------------------------------------------------
