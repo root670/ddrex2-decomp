@@ -520,12 +520,148 @@ def test_the_ledger_provenance_is_one_boolean_token():
     assert "libdma.a" not in line
 
 
+def test_the_tool_is_pointed_at_the_registered_target():
+    """Every constant this tool works from is the target's, not a memory of another game.
+
+    The descriptor supplies the binary, the config directory and the load geometry; the target's
+    own symbol ledger supplies the game/library boundary.  A tool that spelled any of them would
+    be the residual coupling the retarget exists to remove -- and a *derived* boundary is the
+    difference between borrowing names for this image and for a binary that happens to have been
+    in the tree once.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+    from tests import target_support
+
+    target = target_support.registered()
+    geometry = target.geometry_required()
+    assert borrow.TARGET is target
+    assert borrow.RETAIL == target.elf
+    assert borrow.LEDGER == target.borrowed
+    assert borrow.SYMBOLS == target.symbols
+    assert borrow.MARKDOWN == target.config_dir / "library-names.md"
+    assert borrow.SPLIT_ROOT == ROOT / "asm" / "nonmatchings" / geometry.code_segment
+    assert borrow.LOAD_VA == geometry.loadable_vram
+    assert borrow.LOAD_OFFSET == geometry.loadable_rom
+    # The boundary is read out of the target's ledger, and `tools/sdk/revisions.py` records the
+    # same measurement independently: two files that disagree would silently move the region.
+    lowest = borrow.game_start(target.symbols)
+    assert borrow.GAME_START == lowest
+    assert all(address >= borrow.GAME_START for address in borrow.taken_names().values())
+    from sdk import revisions
+    assert revisions.GAME_START == borrow.GAME_START
+
+
+def test_the_game_boundary_needs_the_targets_own_unity_of_evidence(tmp_path):
+    """A ledger with no DWARF record cannot define the library region, and says so."""
+    empty = tmp_path / "symbol_addrs.txt"
+    empty.write_text("func_00100000 = 0x00100000; // type:func size:0x10 provenance:ghidra\n")
+    with pytest.raises(ValueError, match="provenance:dwarf"):
+        borrow.game_start(empty)
+
+
+# ---------------------------------------------------------------------------
+# the SDK archives: the whole-body proposer
+# ---------------------------------------------------------------------------
+
+
+def test_archive_proposals_credit_a_whole_body_and_every_member_that_agrees():
+    """An archive member is the function's own object, so the case is body against body.
+
+    Two members of one package carrying the identical routine name our function -- the same
+    source linked twice -- are one proposal with both members counted: the name is what they
+    agree on, and the count is what says how many objects corroborate it.
+    """
+    body = words(0x27BDFFF0, 0x3C020021, 0x03E00008, 0x27BDFFF0, 0x3C020021, 0x03E00008,
+                 0x27BDFFF0, 0x3C020021, 0x03E00008, 0x27BDFFF0, 0x3C020021, 0x03E00008)
+    assert len(body) == borrow.MIN_BYTES
+    ours = [{"symbol": "func_00100000", "address": 0x100000, "size": len(body)}]
+    theirs = [{"name": "sceA", "size": len(body), "member": "a.o", "blob_key": "a"},
+              {"name": "sceA", "size": len(body), "member": "b.o", "blob_key": "b"}]
+    proposals, refused = borrow.archive_proposals(
+        ours, theirs, {0x100000: body}, {"a": body, "b": body}, "devkit152")
+    assert refused == []
+    assert proposals[0]["name"] == "sceA"
+    assert proposals[0]["tier"] == "bytes"
+    assert proposals[0]["evidence"]["whole_function"] is True
+    assert proposals[0]["evidence"]["candidates"] == 2
+    assert proposals[0]["evidence"]["source_member"] == "a.o"
+
+
+def test_archive_proposals_refuse_a_head_that_matches_and_a_body_that_does_not():
+    """Another revision keeps the head of a function and not its body: that names nothing here."""
+    ours_words = [0x27BDFFF0, 0x3C020021, 0x03E00008, 0x8FBF0000] * 4
+    theirs_words = list(ours_words)
+    theirs_words[13] = 0x00000025              # one instruction, past the 48-byte window
+    ours, theirs_body = words(*ours_words), words(*theirs_words)
+    mine = [{"symbol": "func_00100000", "address": 0x100000, "size": len(ours)}]
+    theirs = [{"name": "sceB", "size": len(ours), "member": "b.o", "blob_key": "b"}]
+    proposals, refused = borrow.archive_proposals(mine, theirs, {0x100000: ours},
+                                                 {"b": theirs_body}, "devkit152")
+    assert proposals == []
+    assert refused[0]["reason"] == "body differs"
+    assert refused[0]["names"] == ["sceB"]
+
+
+def test_archive_proposals_refuse_two_names_for_one_identical_body():
+    """Two aliased members of one package name one body differently: nothing is renamed."""
+    body = words(*([0x27BDFFF0, 0x3C020021, 0x03E00008] * 4))
+    mine = [{"symbol": "func_00100000", "address": 0x100000, "size": len(body)}]
+    theirs = [{"name": "sceOne", "size": len(body), "member": "a.o", "blob_key": "a"},
+              {"name": "sceTwo", "size": len(body), "member": "b.o", "blob_key": "b"}]
+    proposals, refused = borrow.archive_proposals(mine, theirs, {0x100000: body},
+                                                 {"a": body, "b": body}, "devkit152")
+    assert proposals == []
+    assert refused[0]["reason"] == "names disagree"
+    assert refused[0]["names"] == ["sceOne", "sceTwo"]
+
+
+def test_archive_proposals_ignore_a_body_below_the_floor():
+    """A 16-byte stub is not evidence, however identical: the kernel's stubs recur."""
+    body = words(0x03E00008, 0x00000000, 0x03E00008, 0x00000000)
+    mine = [{"symbol": "func_00100000", "address": 0x100000, "size": len(body)}]
+    theirs = [{"name": "Copy", "size": len(body), "member": "k.o", "blob_key": "k"}]
+    proposals, refused = borrow.archive_proposals(mine, theirs, {0x100000: body},
+                                                 {"k": body}, "devkit152")
+    assert proposals == [] and refused == []
+
+
+def test_archive_records_keep_every_member_apart():
+    """A relocatable member restarts at address 0: the blob key is what keeps two apart."""
+    records, blobs = borrow.archive_records([
+        {"set": "devkit152", "path": "/x/libkernl.a",
+         "functions": [{"name": "kCopy", "size": 8, "member": "a.o", "bytes": b"\x01" * 8},
+                       {"name": "kCopy", "size": 8, "member": "b.o", "bytes": b"\x02" * 8}]}])
+    keys = [borrow.corpus_key(record) for record in records]
+    assert len(set(keys)) == 2
+    assert blobs[keys[0]] != blobs[keys[1]]
+    assert {record["source"] for record in records} == {"devkit152:libkernl.a"}
+
+
+def test_the_archive_corpus_is_the_one_the_revision_record_verdicts_against():
+    """One scan, two questions: the ledger and library-revisions.json share the corpus.
+
+    Re-discovering the archives here would let the two records drift apart -- a name borrowed
+    from an archive the revision record never saw is exactly the kind of provenance nobody
+    could check.
+    """
+    from sdk import revisions
+
+    entries = borrow.archive_corpus()
+    if not entries:
+        pytest.skip("no SDK archive on this machine")
+    assert ([entry["path"] for entry in entries]
+            == [entry["path"] for entry in revisions.corpus()])
+
+
 def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
     """The ledger a target's config carries is this tool's own output.
 
-    Skipped when a corpus is not on this machine, or when the target has no ledger yet (its
-    library names are the retarget's Task 9): the committed artifact is evidence about the
-    corpora, so it can only be re-derived where the evidence is.
+    Skipped when a corpus is not on this machine (or when the SDK archives are not, which is the
+    evidence the ledger mostly rests on), when the target has no ledger yet, or when the split
+    has not been built here -- it is a build artifact, and the tool measures our functions
+    through it.  The committed artifact is evidence about the corpora, so it can only be
+    re-derived where the evidence is; the same rule as `tests/sdk/test_revisions.py`.
     """
     import sys as _sys
     _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
@@ -534,12 +670,10 @@ def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
     target = target_support.registered()
     if not target.borrowed.is_file():
         pytest.skip(f"{target.name}: no borrowed_symbols.txt yet (the library pass)")
-    if borrow.RETAIL != target.elf:
-        pytest.skip(f"borrow.py still names {borrow.RETAIL.name}, not this target's "
-                    f"{target.elf.name}: until it is re-pointed at the registered target "
-                    f"(the library pass) it produces no output this ledger could be compared "
-                    f"with, and re-deriving it against the other binary is not evidence about "
-                    f"this one")
+    if not borrow.archive_corpus():
+        pytest.skip("no SDK archive on this machine")
+    if not borrow.SPLIT_ROOT.is_dir():
+        pytest.skip(f"{borrow.SPLIT_ROOT} is a build artifact and has not been built here")
     for key in ("oni2", "sdk152", "recvx"):
         if not borrow.corpus_records(key, borrow.CACHE)[0]:
             pytest.skip(f"{key} is unreachable on this machine")
@@ -549,3 +683,6 @@ def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
     ledger, markdown = tmp_path / "borrowed_symbols.txt", tmp_path / "library-names.md"
     assert borrow.main(["--ledger", str(ledger), "--markdown", str(markdown)]) == 0
     assert ledger.read_bytes() == target.borrowed.read_bytes()
+    # The ledger is the artifact; the markdown is the same run's provenance, and it is what a
+    # reader checks a name's archive member and licence against.
+    assert markdown.read_bytes() == (target.config_dir / "library-names.md").read_bytes()

@@ -37,12 +37,17 @@ IMAGE = pathlib.Path(
     "/PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso")
 
 #: "No tool spells a target name or a retail path": every file this task threaded, minus the
-#: descriptor itself.  `tools/sdk/**` is out of scope here -- it is another task's code and
-#: still names the old target's paths; it is listed in the task report as a residual coupling.
+#: descriptor itself.  `tools/sdk/borrow.py` and `match.py` joined it with retarget Task 9, which
+#: re-pointed the borrower at `config/targets.py` (it derived `GAME_START` from the target's own
+#: symbol ledger rather than a literal); `tools/sdk/revisions.py` is still out of scope: its
+#: *record* names the template it verdicts (`SLUS_211.74` in `NOTES`, the paths in code), and a
+#: guard that scans raw text cannot tell that prose from a coupling.  That file is the one
+#: residual coupling the retarget left, and it is listed in the Task 9 report as such.
 THREADED = (ROOT / "configure.py", ROOT / "ddr") \
     + tuple(sorted((ROOT / "tools" / "oracle").glob("emit_*.py"))) \
     + tuple(sorted((ROOT / "tools" / "verify").glob("*.py"))) \
-    + (ROOT / "tools" / "iso" / "reinsert.py", ROOT / "tools" / "toolchain" / "compile.py")
+    + (ROOT / "tools" / "iso" / "reinsert.py", ROOT / "tools" / "toolchain" / "compile.py") \
+    + (ROOT / "tools" / "sdk" / "borrow.py", ROOT / "tools" / "sdk" / "match.py")
 
 #: Every binary this tree has pointed at *other than* the registered target, and the addresses
 #: its own geometry measured.  As integers, because one file spells `0x21C410` and another

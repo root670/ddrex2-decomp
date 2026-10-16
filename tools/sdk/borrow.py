@@ -1,21 +1,35 @@
-"""Borrow the public corpora's names for the library region, and validate every one.
+"""Borrow the corpora's names for the library region, and validate every one.
 
-The library region -- every function below the lowest game-code PC, ``0x0021C410`` in this
-image -- is where the other decompilation projects have already done the analysis.  This
-module is the borrow step, done once and with provenance:
+The library region -- every function below the target's lowest game-code PC (:data:`GAME_START`,
+read from the target's own symbol ledger) -- is where the SDK's archives and the other
+decompilation projects have already done the analysis.  This module is the borrow step, done once
+and with provenance:
 
 * :func:`corpora` catalogues every surveyed corpus with its licence, what it publishes and
   its fetch/extract entry point (``docs/milestones/m3-library-sourcing.md`` is the survey).
-* the *proposers* turn a corpus into name proposals for our own functions:
-  :func:`byte_proposals` (masks relocated immediates and compares instructions -- the
-  strongest evidence) and :func:`run_proposals` (a run of identical function sizes that
-  occurs exactly once on both sides -- the size evidence, the only kind a corpus that
-  publishes no bytes can give).
+* **the archives are the target's own corpus.**  :func:`archive_corpus` reads every ``ar``
+  archive under the package trees ``tools/sdk/revisions.py`` names -- the same corpus that
+  module verdicts the linked library revisions against -- and :func:`archive_proposals` names our
+  functions from a member object's *whole body* after relocation masking.  That is the strongest
+  evidence any source can give, and it is the evidence that lets the region be *linked* (the name
+  is the member's own symbol) rather than reversed.
+* the *proposers* turn a public corpus into name proposals for our own functions:
+  :func:`byte_proposals` (masks relocated immediates and compares instructions) and
+  :func:`run_proposals` (a run of identical function sizes that occurs exactly once on both
+  sides -- the size evidence, the only kind a corpus that publishes no bytes can give).
 * :func:`validate` is the gate: a size that is not our function's own bounds, or published
   bytes that do not match after relocation masking, rejects the name.
-* :func:`render_ledger` writes the committed ``config/usam2/borrowed_symbols.txt`` -- the
-  input ``tools/oracle/emit_symbols.py`` merges into ``config/usam2/symbol_addrs.txt`` --
-  and :func:`render_markdown` the committed ``config/usam2/library-names.md``.
+* :func:`render_ledger` writes the committed ``config/<target>/borrowed_symbols.txt`` -- the
+  input ``tools/oracle/emit_symbols.py`` merges into the target's ``symbol_addrs.txt`` -- and
+  :func:`render_markdown` the committed ``config/<target>/library-names.md``.
+
+Every constant below is the *target's*: ``config/targets.py`` supplies the binary, the config
+directory and the measured geometry, and the target's own symbol ledger supplies the game/library
+boundary.  Nothing here spells a target's paths or addresses of its own, so a retarget moves this
+tool with the descriptor instead of editing it.
+
+**No matching C is ever written for a library function.**  A name here is a name for a ledger and
+a label for the split; the reversal work is the game code's.
 
 Nothing is renamed silently: the ledger carries the corpus (its ``provenance:`` field), the
 size the corpus published, how the name was proposed, and the licence is recorded next to
@@ -47,24 +61,32 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))                        # `config.targets`
 sys.path.insert(0, str(ROOT / "tools" / "oracle"))
 sys.path.insert(0, str(ROOT / "tools"))
 
+from config import targets  # noqa: E402
 from sdk import match  # noqa: E402
 from elf import Elf  # noqa: E402
 
-RETAIL = ROOT / "orig" / "SLUS_207.11"
-SPLIT_ROOT = ROOT / "asm" / "nonmatchings" / "main"
-CACHE = ROOT / ".cache" / "corpora"
-LEDGER = ROOT / "config" / "usam2" / "borrowed_symbols.txt"
-MARKDOWN = ROOT / "config" / "usam2" / "library-names.md"
+#: The target every path below belongs to: the same descriptor the build and the gates read, so
+#: the binary, the config directory and the load geometry are the target's own.  A retarget is a
+#: descriptor change, not an edit to this module.
+TARGET = targets.get()
+GEOMETRY = TARGET.geometry_required()
 
-# The loadable image: VA 0x100000 is file offset 0x80.
-LOAD_VA = 0x00100000
-LOAD_OFFSET = 0x80
-# The lowest game-code PC (``sysGetDateNotation``, per orig/usam2.elf.txt): everything below
-# it belongs to the statically linked library.
-GAME_START = 0x0021C410
+CACHE = ROOT / ".cache" / "corpora"
+RETAIL = TARGET.elf
+#: The target's symbol ledger: our function starts, and the game/library boundary (below).
+SYMBOLS = TARGET.symbols
+SPLIT_ROOT = ROOT / "asm" / "nonmatchings" / GEOMETRY.code_segment
+LEDGER = TARGET.borrowed
+MARKDOWN = TARGET.config_dir / "library-names.md"
+
+# The loadable image, as the target's own geometry measured it: VA and file offset of the one
+# file-backed segment a PS2 template loads.
+LOAD_VA = GEOMETRY.loadable_vram
+LOAD_OFFSET = GEOMETRY.loadable_rom
 
 # A run of this many identical sizes, unique on both sides, is the size evidence.  Measured
 # by :func:`coincidence_rate`: at 2 the expected chance-level yield is ~3 % of the observed
@@ -90,6 +112,33 @@ SOURCE_PATH = re.compile(r"^//\s*((?:\.\./|/)?[\w./+-]*\.(?:c|s|h))\s*$")
 LEDGER_LINE = re.compile(
     r"^(?P<name>\S+) = 0x(?P<address>[0-9A-F]{8}); // type:func "
     r"size:0x(?P<size>[0-9A-F]+) provenance:(?P<source>\S+) tier:(?P<tier>\S+)")
+
+
+def game_start(path: pathlib.Path | str = SYMBOLS) -> int:
+    """The target's lowest game-code PC: the first ``provenance:dwarf`` line of its ledger.
+
+    Everything below it belongs to the statically linked library -- that is the boundary the
+    borrowers divide on, and it is the *game's own* evidence rather than this module's memory of
+    another target: the target's symbol ledger is address-sorted, and the first record carrying
+    DWARF provenance is by construction the lowest PC that debug info names.  ``sysGetDateNotation``
+    is that record on this template.  Reading it here means a retarget moves the boundary with its
+    ledger instead of needing an edit -- and a ledger with no DWARF record stops loudly, rather
+    than borrowing names for a region nobody has defined.
+    """
+    for line in pathlib.Path(path).read_text().splitlines():
+        record = SYMBOL_LINE.match(line.strip())
+        if record is None:
+            continue
+        provenance = re.search(r"\bprovenance:(\S+)", record["attrs"])
+        if provenance is not None and provenance.group(1) == "dwarf":
+            return int(record["address"], 16)
+    raise ValueError(
+        f"{path}: no record carries `provenance:dwarf`, so the game's first function -- and with "
+        f"it the boundary between the library region and the game -- cannot be read")
+
+
+#: The library region's upper bound: derived above, never spelled here.
+GAME_START = game_start()
 
 
 # ---------------------------------------------------------------------------
@@ -140,11 +189,34 @@ CORPORA = (
                 "match carries the revision caveat (member order is not the game's link order)",
     },
     {
+        "key": "archives",
+        "title": "Every PS2 EE `ar` archive on this machine -- the target's own corpus",
+        "licence": None,
+        "licence_note": "proprietary Sony SDK media: the archives stay where they were unpacked "
+                        "and are never committed.  What is recorded is a *derived* name for one of "
+                        "this image's functions -- a name the SDK's own object carries -- and the "
+                        "package it came from.",
+        "entry_point": "path: `borrow.archive_corpus()` -- every package tree "
+                       "tools/sdk/revisions.py:ARCHIVE_ROOTS names (~/sdk-downloads, "
+                       "~/sdk-extract)",
+        "publishes": "292 SDK archives, 44,425 functions: tlib 2.5.0-2.5.5, SCE Tool-Libs 2.4.2, "
+                     "PS2 Runtime Library 2.0, EE 1.00.03, the July-2005 devkit (runtime library "
+                     "3.0.3) and its Demo Disc SDK -- each member object's own bytes and symbol "
+                     "table, which is what a whole-body byte comparison needs",
+        "sizes": True, "bytes": True, "names": True, "copyable": True,
+        "fetch": "unpack the SDK packages; the archive set is the one library-revisions.md "
+                 "verdicts against, so the two records cannot disagree about what is on disk",
+        "note": "the target's own evidence, and the only source whose match is a *whole body* "
+                "rather than a prefix: a name's `provenance:` is the *package* the archive came "
+                "from (`devkit152`, `tlib_250`, ...), which is why the yield table below has one "
+                "row per package rather than one for the corpus",
+    },
+    {
         "key": "recvx",
         "title": "AshfordFamily/recvx-decomp (Resident Evil Code: Veronica X, PS2)",
         "licence": "MIT",
         "licence_note": "MIT: reuse is permitted with attribution; the attribution is in "
-                        "config/usam2/library-names.md",
+                        "config/<target>/library-names.md",
         "entry_point": "config/symbol_addrs.txt",
         "url": "https://raw.githubusercontent.com/AshfordFamily/recvx-decomp/master/config/symbol_addrs.txt",
         "sha256": "116426162377b4a35fe60c4c26b900687ebf9ea699c87bd12949a9267cc8c9e6",
@@ -606,13 +678,80 @@ def byte_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict, their_
     return proposals, refused
 
 
+def archive_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict,
+                      their_bytes: dict, source: str,
+                      min_bytes: int = MIN_BYTES) -> tuple[list[dict], list[dict]]:
+    """Name our functions from the SDK archives' own object bytes (the whole-body proposer).
+
+    An archive member *is* the function's own object, so the evidence is stronger than a prefix
+    match: a candidate must have our function's own size -- the bounds the split and the link use
+    -- and every one of its words must equal ours after relocation masking, with nothing of the
+    slot left over.  That is exactly the gate :func:`validate` applies, and it is the match that
+    justifies the strongest claim this ledger makes: the region is *linked* SDK code, not code
+    somebody would have to reverse.
+
+    One proposal per (our function, package), because a package is the unit a ``provenance:``
+    field names; ``evidence["candidates"]`` says how many of its archives agreed.
+
+    A candidate whose *head* matches ours and whose body does not is refused with its name: the
+    same function in another revision, which names nothing here.
+    """
+    by_size = collections.defaultdict(list)
+    for record in theirs:
+        by_size[record["size"]].append(record)
+    proposals, refused = [], []
+    for mine in sorted(ours, key=lambda r: r["address"]):
+        if mine["size"] < min_bytes or mine["address"] not in our_bytes:
+            continue
+        blob = our_bytes[mine["address"]]
+        whole, heads = [], []
+        for candidate in by_size.get(mine["size"], []):
+            key = corpus_key(candidate)
+            if key not in their_bytes:
+                continue
+            theirs_blob = their_bytes[key]
+            result = match.compare(theirs_blob, blob)
+            if result["identical"]:
+                whole.append((candidate, result))
+            elif match.compare(theirs_blob[:min_bytes], blob[:min_bytes])["identical"]:
+                heads.append(candidate)
+        if not whole:
+            if heads:
+                refused.append({"address": mine["address"], "symbol": mine["symbol"],
+                                "reason": "body differs",
+                                "names": sorted({candidate["name"] for candidate in heads}),
+                                "detail": f"the object's first {min_bytes} bytes match ours and "
+                                          f"its body does not: the same function in another "
+                                          f"revision, which names nothing here"})
+            continue
+        names = sorted({candidate["name"] for candidate, _ in whole})
+        if len(names) > 1:
+            refused.append({"address": mine["address"], "symbol": mine["symbol"],
+                            "reason": "names disagree", "names": names,
+                            "detail": f"{len(whole)} whole-body identical objects of this "
+                                      f"package carry {len(names)} names: two aliased members, "
+                                      f"so the name is not decided by the bytes"})
+            continue
+        candidate, result = whole[0]
+        proposals.append({
+            "address": mine["address"], "symbol": mine["symbol"], "size": mine["size"],
+            "name": names[0], "tier": "bytes", "source": source,
+            "evidence": {"source_key": corpus_key(candidate),
+                         "source_member": candidate["member"],
+                         "candidates": len(whole), "window": mine["size"],
+                         "masked_words": result["masked_words"],
+                         "exact": result["exact"],
+                         "whole_function": True}})
+    return proposals, refused
+
+
 def corpus_key(record: dict):
     """Where a corpus record's bytes live in the blob table its parser filled.
 
     An archive member restarts at address 0, so its records are keyed by ``(member, address)``;
     a linked image's records are keyed by their address.
     """
-    return record.get("blob_key", record["address"])
+    return record["blob_key"] if "blob_key" in record else record["address"]
 
 
 def _rank(proposal: dict) -> tuple:
@@ -808,18 +947,30 @@ LEDGER_HEADER = """\
 // is why `size:` here is the validated number and not 0), and the corpus publishes the bytes,
 // which matched ours after relocation masking.  Every line is therefore *byte-proven*: the run
 // tier (a run of identical sizes in another link's layout) is a proposal and stays in
-// config/usam2/library-names.md, because a symbol file line carries no tier and a layout guess
-// would be indistinguishable from a name that was proved word for word.
+// config/<target>/library-names.md, because a symbol file line carries no tier and a layout
+// guess would be indistinguishable from a name that was proved word for word.
 //
-// `match:whole` means the corpus's bytes matched ours word for word for the *entire* function;
+// `provenance:` is the SDK package or corpus the name came from, and nothing else: the archive
+// member and the archive it was read out of are per-name columns of
+// config/<target>/library-names.md.  Where several packages publish one function under one name,
+// the ledger records the first package in dictionary order and the markdown lists the others as
+// corroboration -- equal byte evidence does not need a tie-break, the name is the same.
+//
+// `match:whole` means the corpus's bytes matched ours word for word for the *entire* function
+// (every library name in this ledger: the archive corpus is compared body against body);
 // `match:window` means only the first 48 bytes did, the rest of the body being another SDK
 // revision's question.  Both are byte evidence; they are not equally strong.
 //
+// A name here is a name for a *linked* region: the bytes are the SDK's own object code, so the
+// region links -- it is not a function anybody has to reverse, and **no matching C is written for
+// a library function**, ever.  That is the whole claim: the name and the bytes it was proved
+// against.
+//
 // `size:` here is evidence only.  What reaches splat is `size:0x0`, on purpose: splat uses that
 // attribute to lay the split out, and forwarding a non-zero size re-segments the bytes around the
-// function (measured: the split stops carrying an address comment -- see
-// asm/nonmatchings/main/func_001A6AE0.s in the report -- and the link refuses it).  So the split
-// keeps detecting the bounds itself, which are the bounds this ledger checked.
+// function (measured on the previous target: the split stops carrying an address comment and the
+// link refuses it).  So the split keeps detecting the bounds itself, which are the bounds this
+// ledger checked.
 //
 // Two things to know before you use this file:
 //   * The yield is relative to the ledger that produced it.  A borrowed name is a function start
@@ -832,8 +983,8 @@ LEDGER_HEADER = """\
 //     disk mentions any more.  Adding and renaming names is clean without it.
 //
 // Comments are part of the format (tools/oracle/emit_symbols.py skips a line that is blank or
-// starts with `//`), so this header travels with the record; config/usam2/library-names.md carries
-// the licence, the evidence and the per-name provenance.
+// starts with `//`), so this header travels with the record; config/<target>/library-names.md
+// carries the licence, the evidence and the per-name provenance.
 """
 
 
@@ -857,8 +1008,8 @@ def provenance_of(record: dict) -> str:
     ``configure.py`` rewrites the comment into splat's syntax as ``provenance=KEY``, and splat
     reads that as a boolean -- ``provenance=sdk152:libdma.a`` splits into the attribute
     ``provenance=sdk152`` with the value ``libdma.a`` and the build stops with
-    "Invalid Boolean value".  So the key is the corpus alone and the archive or member it came
-    from is recorded in config/usam2/library-names.md's own ``source`` column.
+    "Invalid Boolean value".  So the key is the corpus or package alone and the archive or member
+    it came from is recorded in config/<target>/library-names.md's own ``source`` column.
     """
     return record["source"].split(":")[0]
 
@@ -875,7 +1026,7 @@ def parse_ledger(text: str) -> list[dict]:
     return out
 
 
-def taken_names(path: pathlib.Path | str = ROOT / "config" / "usam2" / "symbol_addrs.txt"
+def taken_names(path: pathlib.Path | str = SYMBOLS
                 ) -> dict[str, int]:
     """``name -> address`` for the names this tree gave *itself* (DWARF and Ghidra).
 
@@ -924,7 +1075,7 @@ def _name_row(row: dict, run: bool = False) -> str:
 
 def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: list[dict],
                     rejections: list[dict], controls: list[dict]) -> str:
-    """``config/usam2/library-names.md``: what was borrowed, from where, and how it was checked.
+    """``config/<target>/library-names.md``: what was borrowed, from where, and how it was checked.
 
     Two tables of names, because the two kinds of evidence are not interchangeable: the byte
     tier is what goes into the build artifact (`borrowed_symbols.txt` -> `./ddr oracle` ->
@@ -932,11 +1083,15 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
     here with its run length recorded.
     """
     out = [
-        "# Borrowed library names (M3 Task 5)\n",
+        "# Borrowed library names (M3 Task 5, retargeted: plan Task 9)\n",
         "Generated by `tools/sdk/borrow.py`; do not hand-edit.  Two lists: the names that went",
-        "into the build artifact (`config/usam2/borrowed_symbols.txt`, and from there via",
-        "`./ddr oracle` into `config/usam2/symbol_addrs.txt`) and the names that were *proposed*",
-        "but kept out of it, plus everything that was refused and why.\n",
+        "into the build artifact (`config/<target>/borrowed_symbols.txt`, and from there via",
+        "`./ddr oracle` into `config/<target>/symbol_addrs.txt`) and the names that were",
+        "*proposed* but kept out of it, plus everything that was refused and why.\n",
+        "**No matching C was written for any name here, and none ever will be.**  A name is a",
+        "name: it labels a region of the image whose bytes are the SDK's own object code, so the",
+        "region is *linked* rather than reversed.  What this file adds to the ledger is the",
+        "provenance and the check -- which archive, which member, which bytes.\n",
         "Two facts a reader has to know, both consequences of a borrowed name being a *function",
         "start* for the split: **the yield is relative to the ledger that produced it** (a name",
         "changes which functions the split detects, so the run yield and the chance control below",
@@ -947,9 +1102,10 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
         "In the artifact table, `whole body` is byte evidence for the *entire* function and",
         "`first 48 bytes` is byte evidence for its head only: both are bytes, they are not equally",
         "strong, and the ledger's `match:` field says which.\n",
-        "Attribution: this file is derived from the decompilation projects below.  The corpora's",
-        "bytes are never copied into this repository -- what is recorded is the *derived* name",
-        "for one of this image's functions, with the licence of the corpus it came from.\n",
+        "Attribution: this file is derived from the SDK archives and the decompilation projects",
+        "below.  Their bytes are never copied into this repository -- what is recorded is the",
+        "*derived* name for one of this image's functions, with the licence of the corpus it came",
+        "from.\n",
         "## Sources\n",
         "| key | corpus | licence | publishes | entry point | digest |",
         "|---|---|---|---|---|---|",
@@ -974,6 +1130,12 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
             "winner's `also` and `contested` columns.  A source that publishes no sizes or bytes",
             "cannot propose a mapping, so its row is its corroboration instead: how many accepted",
             "names it independently publishes as a function.\n",
+            "The `archives` corpus's rows are its *packages* (`devkit152`, `tlib_250`, ...),",
+            "because a package is one release's archives and the unit the ledger's `provenance:`",
+            "names: the yield is reported where the provenance is.  Their `proposed` counts names",
+            "whose whole body matched ours, so their rows have no `runs refused` -- an archive",
+            "member is the function's own object, which makes a size-run alignment over member",
+            "order unnecessary.\n",
             "| source | proposes | proposed | accepted | in artifact | proposed only | refused | runs refused | corroborates |",
             "|---|---|---|---|---|---|---|---|---|"]
     for row in yields:
@@ -997,7 +1159,7 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
     out += ["\n## Names in the build artifact (byte evidence)\n",
             "Every name here was accepted because the corpus publishes the function's own bytes",
             "and they matched ours after relocation masking, at our function's own size.  These",
-            "are the lines of `config/usam2/borrowed_symbols.txt`.  `evidence` says whether the",
+            "are the lines of `config/<target>/borrowed_symbols.txt`.  `evidence` says whether the",
             "whole body matched or only the first 48 bytes (beyond which a corpus from another SDK",
             "revision is a different question).  `size` is the corpus's published size, which",
             "`validate` required to equal our split bounds.  `sdk source` is sly1's attribution of",
@@ -1147,6 +1309,52 @@ def corpus_records(key: str, cache: pathlib.Path) -> tuple[list[dict], str, dict
     return parse_splat_symbols(text, game_start_of(key)), "cache", {}
 
 
+def archive_corpus() -> list[dict]:
+    """The target's own corpus: every ``ar`` archive under the package trees on this machine.
+
+    Read through ``tools/sdk/revisions.py`` rather than re-discovered here, so this ledger and
+    that module's revision verdicts always mean the same set of archives by "the corpus" --
+    one scan, two questions.  The import is at call time because that module imports this one for
+    :func:`archive_members` and :data:`ARCHIVE_JUNK`.
+    """
+    from sdk import revisions
+    return revisions.corpus()
+
+
+def archive_records(entries: list[dict]) -> tuple[list[dict], dict]:
+    """``(records, blobs)`` for one package's archives, keyed the way the proposers want them.
+
+    A record carries the archive member's symbol -- name, size, the member it lives in -- and a
+    ``blob_key`` into ``blobs``, because a relocatable member restarts at address 0 and two
+    members' functions can share an address.  ``source`` names the archive the object came from,
+    with the *package* in front: ``provenance_of`` keeps the package, and library-names.md prints
+    the archive.
+    """
+    records, blobs = [], {}
+    for entry in entries:
+        archive = f"{entry['set']}:{pathlib.Path(entry['path']).name}"
+        for index, function in enumerate(entry["functions"]):
+            key = (entry["set"], entry["path"], index)
+            records.append({"name": function["name"], "size": function["size"],
+                            "member": function["member"], "blob_key": key,
+                            "source": archive})
+            blobs[key] = function["bytes"]
+    return records, blobs
+
+
+def archive_packages(entries: list[dict]) -> list[tuple[str, list[dict]]]:
+    """The corpus grouped by package (``devkit152``, ``tlib_250``, ...), name order.
+
+    A package is the unit the ledger's ``provenance:`` names: one release's archives for one
+    library, so a record says which SDK package the name was read out of rather than "some
+    archive on disk".
+    """
+    grouped: dict[str, list[dict]] = collections.defaultdict(list)
+    for entry in entries:
+        grouped[entry["set"]].append(entry)
+    return sorted(grouped.items())
+
+
 def _display(path) -> str:
     """A path as a reader types it: repo-relative when it is inside the repo."""
     try:
@@ -1163,8 +1371,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--markdown", type=pathlib.Path, default=MARKDOWN)
     parser.add_argument("--split", type=pathlib.Path, default=SPLIT_ROOT)
     parser.add_argument("--retail", type=pathlib.Path, default=RETAIL)
-    parser.add_argument("--symbols", type=pathlib.Path,
-                        default=ROOT / "config" / "usam2" / "symbol_addrs.txt")
+    parser.add_argument("--symbols", type=pathlib.Path, default=SYMBOLS)
     parser.add_argument("--trials", type=int, default=100,
                         help="shuffles per source for the coincidence control")
     args = parser.parse_args(argv)
@@ -1182,6 +1389,30 @@ def main(argv: list[str] | None = None) -> int:
     isolates: list[dict] = []
     corpus_blobs: dict[str, dict] = {}
     our_sizes = [r["size"] for r in ours]
+
+    # The target's own corpus first: every SDK archive on this machine, one package at a time.
+    # A package is a `provenance:` key, so it is also the unit the yield is reported in, and the
+    # comparison is body against body -- an archive member is the function's own object, which is
+    # what makes the name a *link* rather than a guess.
+    entries = archive_corpus()
+    if not entries:
+        print(f"borrow: no SDK archive on this machine (the packages "
+              f"tools/sdk/revisions.py names): the target's own corpus is the only whole-body "
+              f"evidence, so a ledger without it would be a ledger of guesses; nothing was "
+              f"written", file=sys.stderr)
+        return 2
+    for package, group in archive_packages(entries):
+        records, their_blobs = archive_records(group)
+        corpus_blobs[package] = their_blobs
+        hits, refused = archive_proposals(ours, records, blobs, their_blobs, package)
+        proposals += hits
+        rejections += [dict(r, source=package) for r in refused]
+        yields.append({"key": package, "proposed": len(hits), "accepted": 0,
+                       "in_artifact": 0, "proposed_only": 0, "rejected": 0,
+                       "proposes": f"whole-body bytes, {len(group)} archive(s)"})
+        print(f"borrow: archives {package:16s} {len(group):3d} archive(s), "
+              f"{len(records):6d} objects -> {len(hits)} whole-body name(s), "
+              f"{len(refused)} refused")
 
     for key, label in (("oni2", "bytes and runs, over its library blob"),
                        ("sdk152", "bytes and runs, per archive member order"),
