@@ -5,6 +5,18 @@ into the build artifact (`config/usam2/borrowed_symbols.txt`, and from there via
 `./ddr oracle` into `config/usam2/symbol_addrs.txt`) and the names that were *proposed*
 but kept out of it, plus everything that was refused and why.
 
+Two facts a reader has to know, both consequences of a borrowed name being a *function
+start* for the split: **the yield is relative to the ledger that produced it** (a name
+changes which functions the split detects, so the run yield and the chance control below
+move with the ledger's content), and **a ledger that shrinks needs a clean generated tree**
+(`rm -rf asm build out` before the next build -- `asm/` is not a pure function of the
+ledger, and a split that referenced a name the ledger no longer defines survives as a
+link error).
+
+In the artifact table, `whole body` is byte evidence for the *entire* function and
+`first 48 bytes` is byte evidence for its head only: both are bytes, they are not equally
+strong, and the ledger's `match:` field says which.
+
 Attribution: this file is derived from the decompilation projects below.  The corpora's
 bytes are never copied into this repository -- what is recorded is the *derived* name
 for one of this image's functions, with the licence of the corpus it came from.
@@ -58,9 +70,9 @@ runs the same alignment:
 
 | source | positions named by runs | chance mean | chance max | shuffles with any hit |
 |---|---|---|---|---|
-| `oni2` | 59 | 3.22 | 10 | 66/100 |
-| `sdk152` | 209 | 2.32 | 10 | 40/100 |
-| `recvx` | 179 | 5.41 | 23 | 80/100 |
+| `oni2` | 155 | 3.65 | 12 | 74/100 |
+| `sdk152` | 424 | 3.06 | 22 | 50/100 |
+| `recvx` | 310 | 5.72 | 17 | 84/100 |
 
 **235 names are in the build artifact (every one of them
 byte-proven); 551 names were accepted in total and
@@ -81,241 +93,241 @@ address differently (it did not win).
 
 | address | name | source (member) | size | evidence | sdk source | corroborated by | contested by |
 |---|---|---|---|---|---|---|---|
-| `0x00100288` | `sceGsResetGraph` | `oni2` | `0x190` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00100428` | `sceGsResetPath` | `oni2` | `0x68` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | vu/vu.c | sly1 | - |
-| `0x00100490` | `checkModelVersion` | `oni2` | `0xA0` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x00100540` | `sceGsSetDefDispEnv` | `oni2` | `0x374` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x001008B8` | `sceGsPutDispEnv` | `sdk152` `graph004.o` | `0xBC` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00100978` | `sceGszbufaddr` | `oni2` | `0xC8` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00100A40` | `sceGsSetDefDrawEnv` | `oni2` | `0x1E4` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00100C28` | `sceGsSetDefClear` | `oni2` | `0x104` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00100D30` | `sceGsPutDrawEnv` | `sdk152` `graph008.o` | `0xE8` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00100E18` | `sceGsSyncV` | `oni2` | `0x94` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x00100EB0` | `sceGsSyncPath` | `sdk152` `graph012.o` | `0x314` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x001012D8` | `sceGsSyncVCallback` | `sdk152` `graph019.o` | `0xA0` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00101378` | `sceGsSetDefDrawEnv2` | `sdk152` `graph022.o` | `0x1E0` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00101558` | `sceGsSetDefDBuffDc` | `sdk152` `graph027.o` | `0x2E4` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x001018A0` | `WaitDma` | `oni2` | `0x70` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00101910` | `WatchDma` | `sdk152` `libdma.o` | `0x84` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x001019C0` | `memclr` | `oni2` | `0x34` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101A20` | `sceDmaReset` | `oni2` | `0xDC` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101B00` | `sceDmaPutEnv` | `oni2` | `0x1D8` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | libdma.c | godhand, sly1 | - |
-| `0x00101CD8` | `sceDmaGetEnv` | `sdk152` `libdma.o` | `0x38` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00101D28` | `sceDmaSend` | `oni2` | `0x68` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101E80` | `sceDmaRecv` | `sdk152` `libdma.o` | `0x48` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101EC8` | `sceDmaRecvN` | `sdk152` `libdma.o` | `0x7C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00101F48` | `sceDmaRecvI` | `sdk152` `libdma.o` | `0x80` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00101FC8` | `sceDmaSync` | `sdk152` `libdma.o` | `0x38` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | libdma.c | sly1 | - |
-| `0x00102000` | `sceDmaWatch` | `sdk152` `libdma.o` | `0x34` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00102038` | `sceDmaPause` | `oni2` | `0x98` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00102248` | `sceDevVu0Sync` | `sdk152` `devvu0.o` | `0x40` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x001026F8` | `sceDevVu1Sync` | `sdk152` `devvu1.o` | `0x48` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00102778` | `sceDevVu1GetCnd` | `sdk152` `devvu1.o` | `0x18C` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00102908` | `sceDevVu1PutCnd` | `sdk152` `devvu1.o` | `0x148` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00102A80` | `sceVu0MulMatrix` | `sdk152` `libvu0.o` | `0x44` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00102B10` | `sceVu0Normalize` | `sdk152` `libvu0.o` | `0x3C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00102B50` | `sceVu0TransposeMatrix` | `sdk152` `libvu0.o` | `0x44` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00102B98` | `sceVu0InversMatrix` | `sdk152` `libvu0.o` | `0x6C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00102DA0` | `_sceVu0ecossin` | `sdk152` `libvu0.o` | `0x74` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00102E18` | `sceVu0RotMatrixZ` | `sdk152` `libvu0.o` | `0xA4` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00103010` | `sceVu0RotMatrix` | `sdk152` `libvu0.o` | `0x50` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x00103088` | `sceVu0CameraMatrix` | `sdk152` `libvu0.o` | `0xB0` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00103138` | `sceVu0NormalLightMatrix` | `sdk152` `libvu0.o` | `0xC0` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x001031F8` | `sceVu0LightColorMatrix` | `sdk152` `libvu0.o` | `0x68` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00103260` | `sceVu0ViewScreenMatrix` | `sdk152` `libvu0.o` | `0x104` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00103368` | `sceVu0DropShadowMatrix` | `sdk152` `libvu0.o` | `0x190` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x001034F8` | `sceVu0RotTransPersN` | `sdk152` `libvu0.o` | `0x58` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00103550` | `sceVu0RotTransPers` | `sdk152` `libvu0.o` | `0x44` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00103600` | `sceVu0ClipScreen` | `sdk152` `libvu0.o` | `0x48` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00103648` | `sceVu0ClipScreen3` | `sdk152` `libvu0.o` | `0x60` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x001036A8` | `sceVu0ClipAll` | `sdk152` `libvu0.o` | `0x8C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00103738` | `sceVpu0Reset` | `sdk152` `libvu0.o` | `0x5C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00103868` | `sceIpuStopDMA` | `oni2` | `0xE4` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00103950` | `sceIpuRestartDMA` | `oni2` | `0x150` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00103AA0` | `sceIpuSync` | `oni2` | `0x68` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00103B70` | `sceIpuInit` | `oni2` | `0x238` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00104670` | `VSync` | `oni2` | `0x90` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x00104700` | `VSync2` | `oni2` | `0xA4` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x001047A8` | `write` | `sdk152` `glue.o` | `0x7C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x00104828` | `read` | `sdk152` `glue.o` | `0x74` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x001048E0` | `sbrk` | `sdk152` `glue.o` | `0xAC` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00104A30` | `_sceSDC` | `oni2` | `0xA4` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00104AD8` | `SyncDCache` | `oni2` | `0x7C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00104B70` | `_sceSDC_1` (the corpus's `_sceSDC`, repeated in the image) | `oni2` | `0xA4` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 0 relocated word(s) | - | godhand | _sceIDC (sdk152:libkernl.a) |
-| `0x00104C18` | `SyncDCache_1` (the corpus's `SyncDCache`, repeated in the image) | `oni2` | `0x7C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | InvalidDCache (sdk152:libkernl.a) |
-| `0x00104EE0` | `topThread` | `oni2` | `0xD8` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x00104FB8` | `InitThread` | `oni2` | `0xD4` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x00105090` | `iWakeupThread` | `oni2` | `0x94` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00105128` | `iRotateThreadReadyQueue` | `sdk152` `thread.o` | `0x7C` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x001051A8` | `iSuspendThread` | `sdk152` `thread.o` | `0x98` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00105240` | `sceDeci2Open` | `oni2` | `0x44` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x001052B0` | `sceDeci2ReqSend` | `oni2` | `0x30` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | sceDeci2GrpOpen (sdk152:libkernl.a) |
-| `0x00105378` | `sceDeci2ReqSend_1` (the corpus's `sceDeci2ReqSend`, repeated in the image) | `oni2` | `0x30` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | sceDeci2ExReqSend (recvx), sceDeci2ExReqSend (sdk152:libkernl.a) |
-| `0x00105448` | `QueuePeekWriteDone` | `oni2` | `0x3C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00105488` | `QueuePeekWriteDone_1` (the corpus's `QueuePeekWriteDone`, repeated in the image) | `oni2` | `0x3C` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | QueuePeekReadDone (recvx), QueuePeekReadDone (sdk152:libkernl.a) |
-| `0x001054C8` | `sceTtyHandler` | `oni2` | `0x194` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00105660` | `sceTtyWrite` | `oni2` | `0x150` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x001057B0` | `sceTtyRead` | `sdk152` `tty.o` | `0xD0` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00105880` | `sceTtyInit` | `oni2` | `0xBC` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | - | - |
-| `0x00105940` | `kputchar` | `oni2` | `0x38` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00105978` | `deci2Putchar` | `oni2` | `0xB0` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | godhand | - |
-| `0x00105A28` | `serialPutchar` | `oni2` | `0x34` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x00105A60` | `ftoi` | `oni2` | `0x90` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00105AF0` | `printfloat` | `oni2` | `0x168` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00105C58` | `_printf` | `oni2` | `0x5EC` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00106248` | `kprintf` | `oni2` | `0x38` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00106280` | `scePrintf` | `oni2` | `0x60` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x00106358` | `sceSifInitCmd` | `oni2` | `0x280` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x001065D8` | `sceSifExitCmd` | `oni2` | `0x34` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | - | - |
-| `0x00106698` | `_sceSifSendCmd` | `oni2` | `0x134` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x001067D0` | `sceSifSendCmd` | `oni2` | `0x3C` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00106810` | `isceSifSendCmd` | `oni2` | `0x3C` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00106850` | `_sceSifCmdIntrHdlr` | `oni2` | `0x128` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x00106A28` | `sceSifInitRpc` | `oni2` | `0x19C` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | sifrpc.c | godhand, sly1 | - |
-| `0x00106BF0` | `_sceRpcGetPacket` | `oni2` | `0xA8` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00106CB8` | `_sceRpcGetFPacket` | `oni2` | `0x30` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00106CE8` | `_sceRpcGetFPacket2` | `oni2` | `0x40` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x00106D28` | `_request_end` | `oni2` | `0xB4` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00106DE0` | `_request_rdata` | `oni2` | `0x60` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00106F98` | `_search_svdata` | `oni2` | `0x4C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00106FE8` | `_request_bind` | `oni2` | `0xB0` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00107098` | `sceSifBindRpc` | `oni2` | `0x140` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | sifrpc.c | sly1 | - |
-| `0x001071D8` | `_request_call` | `oni2` | `0x8C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | godhand | - |
-| `0x00107268` | `sceSifCallRpc` | `oni2` | `0x1EC` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | sifrpc.c | sly1 | - |
-| `0x00107458` | `sceSifCheckStatRpc` | `oni2` | `0x3C` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | sifrpc.c | godhand, sly1 | - |
-| `0x00107498` | `sceSifSetRpcQueue` | `oni2` | `0x94` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x00107530` | `sceSifRegisterRpc` | `oni2` | `0xD0` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00107600` | `sceSifRemoveRpc` | `sdk152` `sifrpc.o` | `0x94` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00107698` | `sceSifRemoveRpcQueue` | `sdk152` `sifrpc.o` | `0x90` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x00107728` | `sceSifGetNextRequest` | `oni2` | `0x58` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x00107780` | `sceSifExecRequest` | `oni2` | `0x1C4` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00107948` | `sceSifRpcLoop` | `oni2` | `0x40` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | - |
-| `0x00107988` | `_sceFsIobSemaMK` | `oni2` | `0x5C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x001079E8` | `new_iob` | `oni2` | `0x88` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | godhand | - |
-| `0x00107A70` | `get_iob` | `oni2` | `0x6C` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | godhand | - |
-| `0x00107AE0` | `_sceFs_Rcv_Intr` | `oni2` | `0x384` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | godhand | - |
-| `0x00107E68` | `_sceFsSemInit` | `oni2` | `0x4C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00107FC0` | `sceFsInit` | `oni2` | `0x204` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x00108258` | `sceFsReset` | `oni2` | `0x34` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | filestub.c | sly1 | - |
-| `0x00108290` | `sceOpen` | `oni2` | `0x284` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00108518` | `sceClose` | `oni2` | `0x17C` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | filestub.c | sly1 | - |
-| `0x00108698` | `sceLseek` | `oni2` | `0x238` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x001088D0` | `sceRead` | `oni2` | `0x260` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | filestub.c | sly1 | - |
-| `0x00108B30` | `sceWrite` | `oni2` | `0x2C0` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00109A90` | `sceDopen` | `sdk152` `filestub.o` | `0xC8` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x0010A830` | `sceLseek_1` (the corpus's `sceLseek`, repeated in the image) | `oni2` | `0x238` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 2 relocated word(s) | - | - | - |
-| `0x0010B048` | `sceSifInitIopHeap` | `oni2` | `0x88` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010B0D0` | `sceSifAllocIopHeap` | `oni2` | `0x70` | masked-equal over 48 bytes, the whole function, 7 relocated word(s) | - | godhand | - |
-| `0x0010B140` | `sceSifAllocSysMemory` | `sdk152` `iopheap.o` | `0x80` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | - | - |
-| `0x0010B1C0` | `sceSifFreeSysMemory` | `oni2` | `0x78` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | godhand | - |
-| `0x0010B258` | `sceSifLoadIopHeap` | `sdk152` `iopheap.o` | `0xF0` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0010B598` | `_lf_bind` | `oni2` | `0x100` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0010B728` | `sceSifLoadFileReset` | `oni2` | `0x38` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | eeloadfile.c | sly1 | - |
-| `0x0010BC00` | `sceSifSearchModuleByName` | `oni2` | `0xA0` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x0010BD70` | `_sceSifLoadModule` | `oni2` | `0x224` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x0010BFD8` | `_sceSifLoadElfPart` | `sdk152` `eeloadfile.o` | `0x104` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010C128` | `sceSifGetIopAddr` | `sdk152` `eeloadfile.o` | `0xEC` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010C218` | `sceSifSetIopAddr` | `sdk152` `eeloadfile.o` | `0xDC` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010C2F8` | `sceSifResetIop` | `oni2` | `0x13C` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x0010C460` | `sceSifSyncIop` | `oni2` | `0x38` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | iopreset.c | sly1 | - |
-| `0x0010C498` | `sceSifRebootIop` | `oni2` | `0x110` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | iopreset.c | sly1 | - |
-| `0x0010C5A8` | `SetTLBHandler` | `sdk152` `tlbfunc.o` | `0x60` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x0010C608` | `SetDebugHandler` | `oni2` | `0x84` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010C6A0` | `kCopy` | `oni2` | `0x38` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 0 relocated word(s) | - | - | - |
-| `0x0010C6F8` | `InitTLBFunctions` | `oni2` | `0xC4` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0010C7F0` | `SetTLBEntry` | `sdk152` `tlbfunc.o` | `0x30` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x0010C880` | `InitTLB` | `sdk152` `tlbfunc.o` | `0x40` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x0010C8C0` | `InitTLB32MB` | `sdk152` `tlbfunc.o` | `0x1F4` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x0010CE20` | `DIntr` | `oni2` | `0x48` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x0010CE80` | `supplement_crt0` | `oni2` | `0x48` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x0010CED8` | `kCopy_1` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 0 relocated word(s) | - | - | - |
-| `0x0010CF10` | `kFindAddress` | `oni2` | `0x40` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x0010CF60` | `GetSystemCallEntry` | `sdk152` `initsys.o` | `0x34` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x0010CF98` | `InitSystemCallTableAddress` | `oni2` | `0xFC` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | godhand | - |
-| `0x0010D108` | `kCopy_2` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 0 relocated word(s) | - | - | - |
-| `0x0010D150` | `PatchIsNeeded` | `oni2` | `0x68` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x0010D1B8` | `InitExecPS2` | `oni2` | `0xAC` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0010D278` | `kCopy_3` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x30` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x0010D2B8` | `SetArg` | `sdk152` `exit.o` | `0x118` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0010D3D8` | `ExecPS2` | `sdk152` `exit.o` | `0x70` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x0010D448` | `LoadExecPS2` | `sdk152` `exit.o` | `0x48` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | godhand | - |
-| `0x0010D4B8` | `ExecOSD` | `sdk152` `exit.o` | `0x4C` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | godhand | - |
-| `0x0010D528` | `kCopy_4` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 0 relocated word(s) | - | - | - |
-| `0x0010D570` | `InitAlarm` | `oni2` | `0xD4` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010D648` | `_send_to_iop` | `oni2` | `0x114` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010D760` | `scePadInit` | `oni2` | `0x140` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | libpad.c | sly1 | - |
-| `0x0010D8A0` | `scePadInit2` | `oni2` | `0x9C` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x0010D940` | `scePadEnd` | `oni2` | `0x80` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x0010D9C0` | `scePadPortOpen` | `oni2` | `0x1E4` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x0010DBA8` | `scePadPortClose` | `oni2` | `0xB8` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010DC60` | `scePadGetDmaStr` | `oni2` | `0x60` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010DCC0` | `scePadGetReqState` | `oni2` | `0x50` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 2 relocated word(s) | - | - | scePadGetFrameCount (recvx) |
-| `0x0010DD10` | `scePadRead` | `oni2` | `0x7C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010DD90` | `scePadGetState` | `oni2` | `0x78` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | libpad.c | sly1 | - |
-| `0x0010DE40` | `scePadSetReqState` | `oni2` | `0x64` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010DEA8` | `scePadGetReqState_1` (the corpus's `scePadGetReqState`, repeated in the image) | `oni2` | `0x50` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010DF30` | `scePadInfoAct` | `oni2` | `0x120` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | libpad.c | sly1 | - |
-| `0x0010E170` | `scePadInfoMode` | `oni2` | `0x138` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | libpad.c | sly1 | - |
-| `0x0010E2A8` | `scePadSetMainMode` | `oni2` | `0xB4` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x0010E360` | `scePadSetActDirect` | `oni2` | `0xC0` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | libpad.c | sly1 | - |
-| `0x0010E420` | `scePadSetActAlign` | `oni2` | `0xD8` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x0010E4F8` | `scePadGetButtonMask` | `oni2` | `0xB4` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0010E5B0` | `scePadSetButtonInfo` | `oni2` | `0xB0` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | godhand | - |
-| `0x0010E660` | `scePadInfoPressMode` | `oni2` | `0x5C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | libpad.c | sly1 | - |
-| `0x0010E770` | `scePadSetVrefParam` | `sdk152` `libpad.o` | `0xCC` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x0010E840` | `scePadGetModVersion` | `oni2` | `0x64` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | godhand | scePadGetPortMax (recvx), scePadGetPortMax (sdk152:libpad.a) |
-| `0x0010E910` | `scePadGetModVersion_1` (the corpus's `scePadGetModVersion`, repeated in the image) | `oni2` | `0x64` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | godhand | - |
-| `0x0010EA08` | `sceCdDelayThread` | `oni2` | `0x68` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0010EAD0` | `_sceCd_cd_callback` | `oni2` | `0xA0` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | godhand | - |
-| `0x0010ED08` | `_sceCd_cd_read_intr` | `oni2` | `0xA0` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | godhand | cd_read_intr (recvx) |
-| `0x0010EDA8` | `cmd_sem_init` | `oni2` | `0x94` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | godhand | - |
-| `0x0010EE40` | `cdvd_exit` | `oni2` | `0x94` | masked-equal over 48 bytes, the whole function, 7 relocated word(s) | - | godhand | - |
-| `0x0010EF50` | `_sceCd_Poff_Intr` | `oni2` | `0x3C` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | godhand | - |
-| `0x0010EF90` | `PowerOffCB` | `oni2` | `0x78` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | godhand | - |
-| `0x0010F008` | `sceCdLayerSearchFile` | `oni2` | `0x314` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | godhand | - |
-| `0x0010F4B0` | `sceCdNcmdDiskReady` | `sdk152` `cdvd000.o` | `0x98` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x0010F548` | `sceCdSync` | `oni2` | `0xA0` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0010F5E8` | `sceCdSyncS` | `oni2` | `0x6C` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | godhand | - |
-| `0x0010F7C8` | `sceCdInit` | `oni2` | `0x2E0` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0010FAA8` | `sceCdDiskReady` | `oni2` | `0x1F8` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0010FCA0` | `sceCdMmode` | `oni2` | `0xC4` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | ../eecdvd.c | sly1 | sceCdChangeThreadPriority (sdk152) |
-| `0x0010FD68` | `sceCdRead` | `oni2` | `0x1E0` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | ../eecdvd.c | godhand, sly1 | - |
-| `0x0010FF48` | `sceCdGetToc` | `sdk152` `cdvd009.o` | `0x290` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x001101D8` | `sceCdSeek` | `sdk152` `cdvd010.o` | `0xCC` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x00110358` | `sceCdStop` | `sdk152` `cdvd012.o` | `0xB0` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x001104B8` | `sceCdNcmdDiskReady_1` (the corpus's `sceCdNcmdDiskReady`, repeated in the image) | `sdk152` `cdvd000.o` | `0x98` | masked-equal over 48 bytes, the whole function, 6 relocated word(s) | - | - | sceCdGetDiskType2 (sdk152:libcdvd.a) |
-| `0x00110550` | `sceCdGetError` | `oni2` | `0x98` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x001105E8` | `sceCdStatus` | `sdk152` `cdvd017.o` | `0xB8` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x001106A0` | `sceCdBreak` | `oni2` | `0xB8` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x00110850` | `sceMcInit` | `oni2` | `0x1B4` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | libmc.c | sly1 | - |
-| `0x00110A78` | `sceMcClose` | `oni2` | `0xB8` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 2 relocated word(s) | - | - | - |
-| `0x00110B30` | `sceMcGetSlotMax` | `oni2` | `0xC4` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00110BF8` | `sceMcOpen` | `oni2` | `0x124` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00110D20` | `sceMcMkdir` | `oni2` | `0x34` | masked-equal over 48 bytes, the whole function, 3 relocated word(s) | - | - | - |
-| `0x00110D58` | `sceMcClose_1` (the corpus's `sceMcClose`, repeated in the image) | `oni2` | `0xB8` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00110E10` | `sceMcSeek` | `oni2` | `0xD8` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00110EE8` | `mceIntrReadFixAlign` | `oni2` | `0x90` | masked-equal over 48 bytes, the whole function, 0 relocated word(s) | - | - | - |
-| `0x00110F78` | `sceMcRead` | `oni2` | `0x114` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00111090` | `sceMcWrite` | `oni2` | `0x174` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00111230` | `mcDelayThread` | `oni2` | `0x44` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x00111278` | `sceMcSync` | `oni2` | `0xE0` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00111358` | `mceGetInfoApdx` | `oni2` | `0x54` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x001113B0` | `sceMcGetInfo` | `oni2` | `0x17C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x001115A0` | `sceMcGetDir` | `oni2` | `0x148` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00111980` | `sceMcDelete` | `oni2` | `0x118` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00111A98` | `sceMcClose_2` (the corpus's `sceMcClose`, repeated in the image) | `oni2` | `0xB8` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x00111D18` | `sceMcRename` | `sdk152` `libmc.o` | `0x158` | masked-equal over 48 bytes, the first instructions; the rest is a revision question, 2 relocated word(s) | - | - | - |
-| `0x0021BD90` | `IsT10K` | `sdk152` `libscf.o` | `0x40` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0021BDD0` | `sceScfGetLanguage` | `sdk152` `libscf.o` | `0x60` | masked-equal over 48 bytes, the whole function, 5 relocated word(s) | - | - | - |
-| `0x0021BE50` | `sceScfGetAspect` | `sdk152` `libscf.o` | `0x40` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0021BE90` | `sceScfGetSpdif` | `sdk152` `libscf.o` | `0x3C` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0021BED0` | `sceScfGetTimeZone` | `sdk152` `libscf.o` | `0x4C` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0021BF20` | `sceScfGetDateNotation` | `sdk152` `libscf.o` | `0x64` | masked-equal over 48 bytes, the whole function, 4 relocated word(s) | - | - | - |
-| `0x0021C178` | `adddate` | `sdk152` `libscf.o` | `0xB4` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0021C230` | `subdate` | `sdk152` `libscf.o` | `0xA4` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0021C2D8` | `addhour` | `sdk152` `libscf.o` | `0x30` | masked-equal over 48 bytes, the whole function, 1 relocated word(s) | - | - | - |
-| `0x0021C330` | `AdjustTime` | `sdk152` `libscf.o` | `0x8C` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
-| `0x0021C3C8` | `sceScfGetLocalTimefromRTC` | `sdk152` `libscf.o` | `0x48` | masked-equal over 48 bytes, the whole function, 2 relocated word(s) | - | - | - |
+| `0x00100288` | `sceGsResetGraph` | `oni2` | `0x190` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00100428` | `sceGsResetPath` | `oni2` | `0x68` | whole body, masked-equal, 0 relocated word(s) | vu/vu.c | sly1 | - |
+| `0x00100490` | `checkModelVersion` | `oni2` | `0xA0` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00100540` | `sceGsSetDefDispEnv` | `oni2` | `0x374` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x001008B8` | `sceGsPutDispEnv` | `sdk152` `graph004.o` | `0xBC` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00100978` | `sceGszbufaddr` | `oni2` | `0xC8` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00100A40` | `sceGsSetDefDrawEnv` | `oni2` | `0x1E4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00100C28` | `sceGsSetDefClear` | `oni2` | `0x104` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00100D30` | `sceGsPutDrawEnv` | `sdk152` `graph008.o` | `0xE8` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00100E18` | `sceGsSyncV` | `oni2` | `0x94` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00100EB0` | `sceGsSyncPath` | `sdk152` `graph012.o` | `0x314` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001012D8` | `sceGsSyncVCallback` | `sdk152` `graph019.o` | `0xA0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00101378` | `sceGsSetDefDrawEnv2` | `sdk152` `graph022.o` | `0x1E0` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00101558` | `sceGsSetDefDBuffDc` | `sdk152` `graph027.o` | `0x2E4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001018A0` | `WaitDma` | `oni2` | `0x70` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00101910` | `WatchDma` | `sdk152` `libdma.o` | `0x84` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001019C0` | `memclr` | `oni2` | `0x34` | whole body, masked-equal, 0 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101A20` | `sceDmaReset` | `oni2` | `0xDC` | whole body, masked-equal, 4 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101B00` | `sceDmaPutEnv` | `oni2` | `0x1D8` | whole body, masked-equal, 0 relocated word(s) | libdma.c | godhand, sly1 | - |
+| `0x00101CD8` | `sceDmaGetEnv` | `sdk152` `libdma.o` | `0x38` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00101D28` | `sceDmaSend` | `oni2` | `0x68` | whole body, masked-equal, 2 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101E80` | `sceDmaRecv` | `sdk152` `libdma.o` | `0x48` | whole body, masked-equal, 1 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101EC8` | `sceDmaRecvN` | `sdk152` `libdma.o` | `0x7C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00101F48` | `sceDmaRecvI` | `sdk152` `libdma.o` | `0x80` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00101FC8` | `sceDmaSync` | `sdk152` `libdma.o` | `0x38` | whole body, masked-equal, 1 relocated word(s) | libdma.c | sly1 | - |
+| `0x00102000` | `sceDmaWatch` | `sdk152` `libdma.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00102038` | `sceDmaPause` | `oni2` | `0x98` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00102248` | `sceDevVu0Sync` | `sdk152` `devvu0.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001026F8` | `sceDevVu1Sync` | `sdk152` `devvu1.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102778` | `sceDevVu1GetCnd` | `sdk152` `devvu1.o` | `0x18C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00102908` | `sceDevVu1PutCnd` | `sdk152` `devvu1.o` | `0x148` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00102A80` | `sceVu0MulMatrix` | `sdk152` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102B10` | `sceVu0Normalize` | `sdk152` `libvu0.o` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00102B50` | `sceVu0TransposeMatrix` | `sdk152` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00102B98` | `sceVu0InversMatrix` | `sdk152` `libvu0.o` | `0x6C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00102DA0` | `_sceVu0ecossin` | `sdk152` `libvu0.o` | `0x74` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00102E18` | `sceVu0RotMatrixZ` | `sdk152` `libvu0.o` | `0xA4` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00103010` | `sceVu0RotMatrix` | `sdk152` `libvu0.o` | `0x50` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00103088` | `sceVu0CameraMatrix` | `sdk152` `libvu0.o` | `0xB0` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00103138` | `sceVu0NormalLightMatrix` | `sdk152` `libvu0.o` | `0xC0` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x001031F8` | `sceVu0LightColorMatrix` | `sdk152` `libvu0.o` | `0x68` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00103260` | `sceVu0ViewScreenMatrix` | `sdk152` `libvu0.o` | `0x104` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103368` | `sceVu0DropShadowMatrix` | `sdk152` `libvu0.o` | `0x190` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001034F8` | `sceVu0RotTransPersN` | `sdk152` `libvu0.o` | `0x58` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103550` | `sceVu0RotTransPers` | `sdk152` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00103600` | `sceVu0ClipScreen` | `sdk152` `libvu0.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103648` | `sceVu0ClipScreen3` | `sdk152` `libvu0.o` | `0x60` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001036A8` | `sceVu0ClipAll` | `sdk152` `libvu0.o` | `0x8C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103738` | `sceVpu0Reset` | `sdk152` `libvu0.o` | `0x5C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103868` | `sceIpuStopDMA` | `oni2` | `0xE4` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00103950` | `sceIpuRestartDMA` | `oni2` | `0x150` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00103AA0` | `sceIpuSync` | `oni2` | `0x68` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103B70` | `sceIpuInit` | `oni2` | `0x238` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00104670` | `VSync` | `oni2` | `0x90` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00104700` | `VSync2` | `oni2` | `0xA4` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x001047A8` | `write` | `sdk152` `glue.o` | `0x7C` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00104828` | `read` | `sdk152` `glue.o` | `0x74` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x001048E0` | `sbrk` | `sdk152` `glue.o` | `0xAC` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00104A30` | `_sceSDC` | `oni2` | `0xA4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00104AD8` | `SyncDCache` | `oni2` | `0x7C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00104B70` | `_sceSDC_1` (the corpus's `_sceSDC`, repeated in the image) | `oni2` | `0xA4` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | godhand | _sceIDC (sdk152:libkernl.a) |
+| `0x00104C18` | `SyncDCache_1` (the corpus's `SyncDCache`, repeated in the image) | `oni2` | `0x7C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | InvalidDCache (sdk152:libkernl.a) |
+| `0x00104EE0` | `topThread` | `oni2` | `0xD8` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00104FB8` | `InitThread` | `oni2` | `0xD4` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00105090` | `iWakeupThread` | `oni2` | `0x94` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00105128` | `iRotateThreadReadyQueue` | `sdk152` `thread.o` | `0x7C` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x001051A8` | `iSuspendThread` | `sdk152` `thread.o` | `0x98` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00105240` | `sceDeci2Open` | `oni2` | `0x44` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001052B0` | `sceDeci2ReqSend` | `oni2` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | sceDeci2GrpOpen (sdk152:libkernl.a) |
+| `0x00105378` | `sceDeci2ReqSend_1` (the corpus's `sceDeci2ReqSend`, repeated in the image) | `oni2` | `0x30` | whole body, masked-equal, 2 relocated word(s) | - | - | sceDeci2ExReqSend (recvx), sceDeci2ExReqSend (sdk152:libkernl.a) |
+| `0x00105448` | `QueuePeekWriteDone` | `oni2` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00105488` | `QueuePeekWriteDone_1` (the corpus's `QueuePeekWriteDone`, repeated in the image) | `oni2` | `0x3C` | whole body, masked-equal, 3 relocated word(s) | - | - | QueuePeekReadDone (recvx), QueuePeekReadDone (sdk152:libkernl.a) |
+| `0x001054C8` | `sceTtyHandler` | `oni2` | `0x194` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00105660` | `sceTtyWrite` | `oni2` | `0x150` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001057B0` | `sceTtyRead` | `sdk152` `tty.o` | `0xD0` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00105880` | `sceTtyInit` | `oni2` | `0xBC` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00105940` | `kputchar` | `oni2` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00105978` | `deci2Putchar` | `oni2` | `0xB0` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00105A28` | `serialPutchar` | `oni2` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00105A60` | `ftoi` | `oni2` | `0x90` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00105AF0` | `printfloat` | `oni2` | `0x168` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00105C58` | `_printf` | `oni2` | `0x5EC` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00106248` | `kprintf` | `oni2` | `0x38` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00106280` | `scePrintf` | `oni2` | `0x60` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x00106358` | `sceSifInitCmd` | `oni2` | `0x280` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x001065D8` | `sceSifExitCmd` | `oni2` | `0x34` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00106698` | `_sceSifSendCmd` | `oni2` | `0x134` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x001067D0` | `sceSifSendCmd` | `oni2` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00106810` | `isceSifSendCmd` | `oni2` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00106850` | `_sceSifCmdIntrHdlr` | `oni2` | `0x128` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00106A28` | `sceSifInitRpc` | `oni2` | `0x19C` | whole body, masked-equal, 3 relocated word(s) | sifrpc.c | godhand, sly1 | - |
+| `0x00106BF0` | `_sceRpcGetPacket` | `oni2` | `0xA8` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00106CB8` | `_sceRpcGetFPacket` | `oni2` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00106CE8` | `_sceRpcGetFPacket2` | `oni2` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00106D28` | `_request_end` | `oni2` | `0xB4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106DE0` | `_request_rdata` | `oni2` | `0x60` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00106F98` | `_search_svdata` | `oni2` | `0x4C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00106FE8` | `_request_bind` | `oni2` | `0xB0` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00107098` | `sceSifBindRpc` | `oni2` | `0x140` | whole body, masked-equal, 2 relocated word(s) | sifrpc.c | sly1 | - |
+| `0x001071D8` | `_request_call` | `oni2` | `0x8C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00107268` | `sceSifCallRpc` | `oni2` | `0x1EC` | whole body, masked-equal, 1 relocated word(s) | sifrpc.c | sly1 | - |
+| `0x00107458` | `sceSifCheckStatRpc` | `oni2` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | sifrpc.c | godhand, sly1 | - |
+| `0x00107498` | `sceSifSetRpcQueue` | `oni2` | `0x94` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00107530` | `sceSifRegisterRpc` | `oni2` | `0xD0` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00107600` | `sceSifRemoveRpc` | `sdk152` `sifrpc.o` | `0x94` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00107698` | `sceSifRemoveRpcQueue` | `sdk152` `sifrpc.o` | `0x90` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00107728` | `sceSifGetNextRequest` | `oni2` | `0x58` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00107780` | `sceSifExecRequest` | `oni2` | `0x1C4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00107948` | `sceSifRpcLoop` | `oni2` | `0x40` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00107988` | `_sceFsIobSemaMK` | `oni2` | `0x5C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001079E8` | `new_iob` | `oni2` | `0x88` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x00107A70` | `get_iob` | `oni2` | `0x6C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x00107AE0` | `_sceFs_Rcv_Intr` | `oni2` | `0x384` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00107E68` | `_sceFsSemInit` | `oni2` | `0x4C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00107FC0` | `sceFsInit` | `oni2` | `0x204` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00108258` | `sceFsReset` | `oni2` | `0x34` | whole body, masked-equal, 5 relocated word(s) | filestub.c | sly1 | - |
+| `0x00108290` | `sceOpen` | `oni2` | `0x284` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00108518` | `sceClose` | `oni2` | `0x17C` | whole body, masked-equal, 4 relocated word(s) | filestub.c | sly1 | - |
+| `0x00108698` | `sceLseek` | `oni2` | `0x238` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001088D0` | `sceRead` | `oni2` | `0x260` | whole body, masked-equal, 2 relocated word(s) | filestub.c | sly1 | - |
+| `0x00108B30` | `sceWrite` | `oni2` | `0x2C0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00109A90` | `sceDopen` | `sdk152` `filestub.o` | `0xC8` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x0010A830` | `sceLseek_1` (the corpus's `sceLseek`, repeated in the image) | `oni2` | `0x238` | first 48 bytes only (the rest is a revision question), masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010B048` | `sceSifInitIopHeap` | `oni2` | `0x88` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010B0D0` | `sceSifAllocIopHeap` | `oni2` | `0x70` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x0010B140` | `sceSifAllocSysMemory` | `sdk152` `iopheap.o` | `0x80` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0010B1C0` | `sceSifFreeSysMemory` | `oni2` | `0x78` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x0010B258` | `sceSifLoadIopHeap` | `sdk152` `iopheap.o` | `0xF0` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010B598` | `_lf_bind` | `oni2` | `0x100` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010B728` | `sceSifLoadFileReset` | `oni2` | `0x38` | whole body, masked-equal, 5 relocated word(s) | eeloadfile.c | sly1 | - |
+| `0x0010BC00` | `sceSifSearchModuleByName` | `oni2` | `0xA0` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010BD70` | `_sceSifLoadModule` | `oni2` | `0x224` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010BFD8` | `_sceSifLoadElfPart` | `sdk152` `eeloadfile.o` | `0x104` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010C128` | `sceSifGetIopAddr` | `sdk152` `eeloadfile.o` | `0xEC` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010C218` | `sceSifSetIopAddr` | `sdk152` `eeloadfile.o` | `0xDC` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010C2F8` | `sceSifResetIop` | `oni2` | `0x13C` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010C460` | `sceSifSyncIop` | `oni2` | `0x38` | whole body, masked-equal, 2 relocated word(s) | iopreset.c | sly1 | - |
+| `0x0010C498` | `sceSifRebootIop` | `oni2` | `0x110` | whole body, masked-equal, 2 relocated word(s) | iopreset.c | sly1 | - |
+| `0x0010C5A8` | `SetTLBHandler` | `sdk152` `tlbfunc.o` | `0x60` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010C608` | `SetDebugHandler` | `oni2` | `0x84` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010C6A0` | `kCopy` | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010C6F8` | `InitTLBFunctions` | `oni2` | `0xC4` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010C7F0` | `SetTLBEntry` | `sdk152` `tlbfunc.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010C880` | `InitTLB` | `sdk152` `tlbfunc.o` | `0x40` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x0010C8C0` | `InitTLB32MB` | `sdk152` `tlbfunc.o` | `0x1F4` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010CE20` | `DIntr` | `oni2` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010CE80` | `supplement_crt0` | `oni2` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x0010CED8` | `kCopy_1` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010CF10` | `kFindAddress` | `oni2` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010CF60` | `GetSystemCallEntry` | `sdk152` `initsys.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010CF98` | `InitSystemCallTableAddress` | `oni2` | `0xFC` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0010D108` | `kCopy_2` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D150` | `PatchIsNeeded` | `oni2` | `0x68` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010D1B8` | `InitExecPS2` | `oni2` | `0xAC` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010D278` | `kCopy_3` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D2B8` | `SetArg` | `sdk152` `exit.o` | `0x118` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010D3D8` | `ExecPS2` | `sdk152` `exit.o` | `0x70` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x0010D448` | `LoadExecPS2` | `sdk152` `exit.o` | `0x48` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0010D4B8` | `ExecOSD` | `sdk152` `exit.o` | `0x4C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x0010D528` | `kCopy_4` (the corpus's `kCopy`, repeated in the image) | `oni2` | `0x38` | first 48 bytes only (the rest is a revision question), masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D570` | `InitAlarm` | `oni2` | `0xD4` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010D648` | `_send_to_iop` | `oni2` | `0x114` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010D760` | `scePadInit` | `oni2` | `0x140` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
+| `0x0010D8A0` | `scePadInit2` | `oni2` | `0x9C` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010D940` | `scePadEnd` | `oni2` | `0x80` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010D9C0` | `scePadPortOpen` | `oni2` | `0x1E4` | whole body, masked-equal, 0 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x0010DBA8` | `scePadPortClose` | `oni2` | `0xB8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010DC60` | `scePadGetDmaStr` | `oni2` | `0x60` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010DCC0` | `scePadGetReqState` | `oni2` | `0x50` | first 48 bytes only (the rest is a revision question), masked-equal, 2 relocated word(s) | - | - | scePadGetFrameCount (recvx) |
+| `0x0010DD10` | `scePadRead` | `oni2` | `0x7C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010DD90` | `scePadGetState` | `oni2` | `0x78` | whole body, masked-equal, 2 relocated word(s) | libpad.c | sly1 | - |
+| `0x0010DE40` | `scePadSetReqState` | `oni2` | `0x64` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010DEA8` | `scePadGetReqState_1` (the corpus's `scePadGetReqState`, repeated in the image) | `oni2` | `0x50` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010DF30` | `scePadInfoAct` | `oni2` | `0x120` | whole body, masked-equal, 2 relocated word(s) | libpad.c | sly1 | - |
+| `0x0010E170` | `scePadInfoMode` | `oni2` | `0x138` | whole body, masked-equal, 2 relocated word(s) | libpad.c | sly1 | - |
+| `0x0010E2A8` | `scePadSetMainMode` | `oni2` | `0xB4` | whole body, masked-equal, 3 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x0010E360` | `scePadSetActDirect` | `oni2` | `0xC0` | whole body, masked-equal, 1 relocated word(s) | libpad.c | sly1 | - |
+| `0x0010E420` | `scePadSetActAlign` | `oni2` | `0xD8` | whole body, masked-equal, 3 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x0010E4F8` | `scePadGetButtonMask` | `oni2` | `0xB4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010E5B0` | `scePadSetButtonInfo` | `oni2` | `0xB0` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x0010E660` | `scePadInfoPressMode` | `oni2` | `0x5C` | whole body, masked-equal, 2 relocated word(s) | libpad.c | sly1 | - |
+| `0x0010E770` | `scePadSetVrefParam` | `sdk152` `libpad.o` | `0xCC` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010E840` | `scePadGetModVersion` | `oni2` | `0x64` | whole body, masked-equal, 6 relocated word(s) | - | godhand | scePadGetPortMax (recvx), scePadGetPortMax (sdk152:libpad.a) |
+| `0x0010E910` | `scePadGetModVersion_1` (the corpus's `scePadGetModVersion`, repeated in the image) | `oni2` | `0x64` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x0010EA08` | `sceCdDelayThread` | `oni2` | `0x68` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010EAD0` | `_sceCd_cd_callback` | `oni2` | `0xA0` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x0010ED08` | `_sceCd_cd_read_intr` | `oni2` | `0xA0` | whole body, masked-equal, 2 relocated word(s) | - | godhand | cd_read_intr (recvx) |
+| `0x0010EDA8` | `cmd_sem_init` | `oni2` | `0x94` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0010EE40` | `cdvd_exit` | `oni2` | `0x94` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x0010EF50` | `_sceCd_Poff_Intr` | `oni2` | `0x3C` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x0010EF90` | `PowerOffCB` | `oni2` | `0x78` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0010F008` | `sceCdLayerSearchFile` | `oni2` | `0x314` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010F4B0` | `sceCdNcmdDiskReady` | `sdk152` `cdvd000.o` | `0x98` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010F548` | `sceCdSync` | `oni2` | `0xA0` | whole body, masked-equal, 6 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0010F5E8` | `sceCdSyncS` | `oni2` | `0x6C` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x0010F7C8` | `sceCdInit` | `oni2` | `0x2E0` | whole body, masked-equal, 0 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0010FAA8` | `sceCdDiskReady` | `oni2` | `0x1F8` | whole body, masked-equal, 2 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0010FCA0` | `sceCdMmode` | `oni2` | `0xC4` | whole body, masked-equal, 4 relocated word(s) | ../eecdvd.c | sly1 | sceCdChangeThreadPriority (sdk152) |
+| `0x0010FD68` | `sceCdRead` | `oni2` | `0x1E0` | whole body, masked-equal, 4 relocated word(s) | ../eecdvd.c | godhand, sly1 | - |
+| `0x0010FF48` | `sceCdGetToc` | `sdk152` `cdvd009.o` | `0x290` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x001101D8` | `sceCdSeek` | `sdk152` `cdvd010.o` | `0xCC` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00110358` | `sceCdStop` | `sdk152` `cdvd012.o` | `0xB0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001104B8` | `sceCdNcmdDiskReady_1` (the corpus's `sceCdNcmdDiskReady`, repeated in the image) | `sdk152` `cdvd000.o` | `0x98` | whole body, masked-equal, 6 relocated word(s) | - | - | sceCdGetDiskType2 (sdk152:libcdvd.a) |
+| `0x00110550` | `sceCdGetError` | `oni2` | `0x98` | whole body, masked-equal, 5 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x001105E8` | `sceCdStatus` | `sdk152` `cdvd017.o` | `0xB8` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001106A0` | `sceCdBreak` | `oni2` | `0xB8` | whole body, masked-equal, 4 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x00110850` | `sceMcInit` | `oni2` | `0x1B4` | whole body, masked-equal, 2 relocated word(s) | libmc.c | sly1 | - |
+| `0x00110A78` | `sceMcClose` | `oni2` | `0xB8` | first 48 bytes only (the rest is a revision question), masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00110B30` | `sceMcGetSlotMax` | `oni2` | `0xC4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00110BF8` | `sceMcOpen` | `oni2` | `0x124` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00110D20` | `sceMcMkdir` | `oni2` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00110D58` | `sceMcClose_1` (the corpus's `sceMcClose`, repeated in the image) | `oni2` | `0xB8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00110E10` | `sceMcSeek` | `oni2` | `0xD8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00110EE8` | `mceIntrReadFixAlign` | `oni2` | `0x90` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00110F78` | `sceMcRead` | `oni2` | `0x114` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00111090` | `sceMcWrite` | `oni2` | `0x174` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00111230` | `mcDelayThread` | `oni2` | `0x44` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00111278` | `sceMcSync` | `oni2` | `0xE0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00111358` | `mceGetInfoApdx` | `oni2` | `0x54` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001113B0` | `sceMcGetInfo` | `oni2` | `0x17C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001115A0` | `sceMcGetDir` | `oni2` | `0x148` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00111980` | `sceMcDelete` | `oni2` | `0x118` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00111A98` | `sceMcClose_2` (the corpus's `sceMcClose`, repeated in the image) | `oni2` | `0xB8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00111D18` | `sceMcRename` | `sdk152` `libmc.o` | `0x158` | first 48 bytes only (the rest is a revision question), masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0021BD90` | `IsT10K` | `sdk152` `libscf.o` | `0x40` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0021BDD0` | `sceScfGetLanguage` | `sdk152` `libscf.o` | `0x60` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0021BE50` | `sceScfGetAspect` | `sdk152` `libscf.o` | `0x40` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0021BE90` | `sceScfGetSpdif` | `sdk152` `libscf.o` | `0x3C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0021BED0` | `sceScfGetTimeZone` | `sdk152` `libscf.o` | `0x4C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0021BF20` | `sceScfGetDateNotation` | `sdk152` `libscf.o` | `0x64` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0021C178` | `adddate` | `sdk152` `libscf.o` | `0xB4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0021C230` | `subdate` | `sdk152` `libscf.o` | `0xA4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0021C2D8` | `addhour` | `sdk152` `libscf.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0021C330` | `AdjustTime` | `sdk152` `libscf.o` | `0x8C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0021C3C8` | `sceScfGetLocalTimefromRTC` | `sdk152` `libscf.o` | `0x48` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
 
 ## Names proposed, not in the build artifact (size-run evidence)
 

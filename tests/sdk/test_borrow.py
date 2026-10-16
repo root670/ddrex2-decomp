@@ -175,6 +175,47 @@ def test_run_proposals_name_every_function_in_the_run():
     assert proposals[0]["evidence"]["source_address"] == 0x1000
 
 
+def _split_file(text):
+    return ('.include "macro.inc"\n.align 3\n' + text)
+
+
+def test_split_functions_are_in_address_order_not_file_name_order(tmp_path):
+    """A split file is named after its symbol, and a file name is not an address."""
+    # The *file* names run backwards against the addresses, which is what a directory read
+    # would hand over.
+    (tmp_path / "zzz_low.s").write_text(_split_file(
+        "nonmatching low, 0x30\n\n/* 88 00100008 280C0070 */  padduw $1, $0, $0\n"))
+    (tmp_path / "aaa_high.s").write_text(_split_file(
+        "nonmatching high, 0x10\n\n/* 38 00100038 280C0070 */  padduw $1, $0, $0\n"))
+    functions = borrow.split_functions(tmp_path)
+    assert [(r["symbol"], r["address"], r["size"]) for r in functions] == [
+        ("low", 0x100008, 0x30), ("high", 0x100038, 0x10)]
+
+
+def test_the_yield_and_its_control_are_computed_over_one_sequence(tmp_path):
+    """The run proposer and the chance control must see the *same* order of our functions.
+
+    This is the invariant behind three bugs in this file: `run_proposals` sorts its own copy of
+    our functions while `coincidence_rate` is handed a sequence from somewhere else, so a control
+    over a differently-ordered sequence measures nothing.  The synthetic split's file names run
+    against its addresses, so the two orders differ here and the test fails if either side
+    stops agreeing.
+    """
+    (tmp_path / "zzz_low.s").write_text(_split_file(
+        "nonmatching low, 0x30\n\n/* 88 00100008 280C0070 */  padduw $1, $0, $0\n"))
+    (tmp_path / "aaa_high.s").write_text(_split_file(
+        "nonmatching high, 0x10\n\n/* 38 00100038 280C0070 */  padduw $1, $0, $0\n"))
+    ours = borrow.split_functions(tmp_path)
+    theirs = [{"name": "first", "address": 0x00, "size": 0x30},
+              {"name": "second", "address": 0x30, "size": 0x10}]
+    proposals, _ = borrow.run_proposals(ours, theirs, source="synthetic", min_run=2)
+    control = borrow.coincidence_rate([r["size"] for r in ours],
+                                      [r["size"] for r in theirs], min_run=2, trials=1)
+    assert len(proposals) == 2
+    assert control["observed"] == len(proposals), (
+        "the control and the yield disagree about the sequence they measured")
+
+
 def test_run_proposals_keep_the_corpus_order_it_is_given():
     """An archive member restarts at address 0, so member order is the evidence.
 
@@ -419,10 +460,23 @@ def test_the_ledger_round_trips_through_its_own_parser():
         ("_sceSDC", 0x00103DD0, "recvx", 0x10)]
 
 
+def test_the_ledger_says_whether_the_whole_body_matched():
+    """Both are byte evidence; only one is evidence for the whole function."""
+    text = borrow.render_ledger([
+        {"name": "sceA", "address": 0x00100288, "size": 0x190, "source": "oni2",
+         "tier": "bytes", "evidence": {"whole_function": True}},
+        {"name": "sceB", "address": 0x00100300, "size": 0x40, "source": "oni2",
+         "tier": "bytes", "evidence": {"whole_function": False}}])
+    lines = {l.split(" = ")[0]: l for l in text.splitlines() if " = " in l}
+    assert "match:whole" in lines["sceA"]
+    assert "match:window" in lines["sceB"]
+
+
 def test_the_ledger_carries_the_size_the_validation_used():
     """The size check must stay live in the build, not be dropped into a comment."""
     text = borrow.render_ledger([{"name": "sceGsResetGraph", "address": 0x00100288,
-                                  "size": 0x190, "source": "oni2", "tier": "bytes"}])
+                                  "size": 0x190, "source": "oni2", "tier": "bytes",
+                                  "evidence": {"whole_function": True}}])
     line = [l for l in text.splitlines() if l.startswith("sceGsResetGraph")][0]
     assert "size:0x190 " in line
     assert "corpus_size:" not in line
@@ -441,7 +495,8 @@ def test_a_name_row_names_the_archive_member_the_bytes_came_from(tmp_path):
 def test_the_ledger_provenance_is_one_boolean_token():
     """``configure.py`` hands the comment to splat as ``provenance=KEY``: no colons."""
     text = borrow.render_ledger([{"name": "sceDmaGetEnv", "address": 0x00101CD8,
-                                  "size": 0x40, "source": "sdk152:libdma.a", "tier": "run"}])
+                                  "size": 0x40, "source": "sdk152:libdma.a", "tier": "run",
+                                  "evidence": {"run": 3}}])
     line = [l for l in text.splitlines() if l.startswith("sceDmaGetEnv")][0]
     assert "provenance:sdk152 " in line
     assert "libdma.a" not in line

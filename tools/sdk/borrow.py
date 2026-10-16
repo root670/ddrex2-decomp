@@ -21,6 +21,17 @@ Nothing is renamed silently: the ledger carries the corpus (its ``provenance:`` 
 size the corpus published, how the name was proposed, and the licence is recorded next to
 it in ``library-names.md``.  The corpus's *bytes* are never copied into this repository --
 only the derived names, which are facts about the Sony SDK, not about the corpus's game.
+
+Two facts a user of the record has to know, and both are consequences of a borrowed name being
+a *function start* for the split:
+
+* **The yield is relative to the ledger that produced it.**  Adding or dropping a name changes
+  which functions the split detects, so the size sequences the run proposer aligns against --
+  and therefore its yield and its chance control -- move with the ledger's content.
+* **A ledger that shrinks needs a clean generated tree.**  ``asm/`` is not a pure function of
+  the ledger: a split that referenced a name the ledger no longer defines survives, and the link
+  fails on an undefined symbol that no file on disk mentions any more.  ``rm -rf asm build out``
+  before the next build is the remedy; adding and renaming names is clean without it.
 """
 
 from __future__ import annotations
@@ -248,11 +259,18 @@ def corpus(key: str) -> dict:
 
 def split_functions(split_root: pathlib.Path | str = SPLIT_ROOT,
                     game_start: int = GAME_START) -> list[dict]:
-    """Our library functions from the split: ``{symbol, address, size}``, address order.
+    """Our library functions from the split: ``{symbol, address, size}``, **address order**.
 
     The split's own bounds are the truth here -- ``nonmatching <symbol>, 0x<size>`` is what
     the linker places and what ``objdiff`` measures -- so a borrowed size is compared against
     these, never against the corpus's own game.
+
+    The order is this function's job, and it must be *address* order rather than the order the
+    split's files are read in: a split file is named after its symbol, and a file name is not an
+    address, so reading the directory gives one order while the link gives another.  Both users of
+    this sequence -- :func:`run_proposals` and its chance control
+    :func:`coincidence_rate` -- have to see the same one, and this is where that is guaranteed
+    (a control over a different sequence measures nothing).
     """
     root = pathlib.Path(split_root)
     if not root.is_dir():
@@ -272,8 +290,10 @@ def split_functions(split_root: pathlib.Path | str = SPLIT_ROOT,
                 insn = SPLIT_INSN.search(line)
                 if insn:
                     current["address"] = int(insn.group(1), 16)
-    return [r for r in out
-            if r["address"] is not None and r["address"] < game_start]
+    functions = [r for r in out
+                 if r["address"] is not None and r["address"] < game_start]
+    functions.sort(key=lambda r: r["address"])
+    return functions
 
 
 def retail_bytes(address: int, size: int, elf_path: pathlib.Path | str = RETAIL) -> bytes:
@@ -803,7 +823,9 @@ def render_ledger(records: list[dict]) -> str:
         lines.append(
             f"{record['name']} = 0x{record['address']:08X}; // type:func "
             f"size:0x{record['size']:X} provenance:{provenance_of(record)} "
-            f"tier:{record['tier']}\n")
+            f"tier:{record['tier']} "
+            f"match:{'whole' if (record.get('evidence') or {}).get('whole_function') else 'window'}"
+            f"\n")
     return "".join(lines)
 
 
@@ -861,10 +883,10 @@ def _name_row(row: dict, run: bool = False) -> str:
     if run:
         evidence = f"`{row['evidence']['run']}`"
     else:
-        evidence = (f"masked-equal over {row['evidence'].get('window')} bytes"
-                    + (", the whole function" if row["evidence"].get("whole_function")
-                       else ", the first instructions; the rest is a revision question")
-                    + f", {row['evidence'].get('masked_words')} relocated word(s)")
+        evidence = (("whole body" if row["evidence"].get("whole_function")
+                     else "first %d bytes only (the rest is a revision question)"
+                          % row["evidence"].get("window"))
+                    + f", masked-equal, {row['evidence'].get('masked_words')} relocated word(s)")
     name = f"`{row['name']}`"
     if row.get("borrowed_as"):
         name += f" (the corpus's `{row['borrowed_as']}`, repeated in the image)"
@@ -893,6 +915,16 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
         "into the build artifact (`config/usam2/borrowed_symbols.txt`, and from there via",
         "`./ddr oracle` into `config/usam2/symbol_addrs.txt`) and the names that were *proposed*",
         "but kept out of it, plus everything that was refused and why.\n",
+        "Two facts a reader has to know, both consequences of a borrowed name being a *function",
+        "start* for the split: **the yield is relative to the ledger that produced it** (a name",
+        "changes which functions the split detects, so the run yield and the chance control below",
+        "move with the ledger's content), and **a ledger that shrinks needs a clean generated tree**",
+        "(`rm -rf asm build out` before the next build -- `asm/` is not a pure function of the",
+        "ledger, and a split that referenced a name the ledger no longer defines survives as a",
+        "link error).\n",
+        "In the artifact table, `whole body` is byte evidence for the *entire* function and",
+        "`first 48 bytes` is byte evidence for its head only: both are bytes, they are not equally",
+        "strong, and the ledger's `match:` field says which.\n",
         "Attribution: this file is derived from the decompilation projects below.  The corpora's",
         "bytes are never copied into this repository -- what is recorded is the *derived* name",
         "for one of this image's functions, with the licence of the corpus it came from.\n",
