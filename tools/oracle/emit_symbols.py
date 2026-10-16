@@ -1,4 +1,11 @@
-"""DWARF names + Ghidra function starts -> a target's splat symbol_addrs.txt."""
+"""DWARF names + Ghidra function starts -> a target's splat symbol_addrs.txt.
+
+Two kinds of record cannot be placed, and both are written to the target's
+``unplaced_symbols.txt`` with the reason that kept them out of the split: an object whose
+DWARF location carries no address, and -- the one a retarget meets -- a record whose address
+lies outside every segment the target's geometry declares (this target's overlay
+reservations).  Neither is dropped; see :data:`OUTSIDE_REASON`.
+"""
 import collections, json, pathlib, re, sys
 
 import dwarf1
@@ -9,6 +16,13 @@ from config import targets
 
 DEFAULT = targets.get(targets.DEFAULT)
 UNPLACED_REASON = "no AT_location address"
+#: The second reason a record cannot be placed, and the one a *retarget* finds: an address
+#: outside every segment the yaml declares.  This target's eleven zero-fill overlay
+#: reservations (p_filesz 0, VAs 0x7F0000, 0xE4D380, 0x1884000) hold 1,009 of the DWARF's
+#: records, and `Geometry` carries one bss extent, so no subsegment claims them.  They are
+#: excluded here and reported, in the same file the no-address ones go to, rather than
+#: linked at an invented address or dropped.
+OUTSIDE_REASON = "outside every declared segment"
 
 
 def build(elf_path, ghidra_json_path=None):
@@ -18,7 +32,8 @@ def build(elf_path, ghidra_json_path=None):
     globals/statics (`size = 0`) and every Ghidra function start the DWARF
     does not already name (`func_<ADDR>`).  Objects whose DWARF location
     carries no address are kept with `address = 0`; `final` routes them to
-    the unplaced file.
+    the unplaced file, as are the records a target's segment list cannot hold (`final`,
+    which needs the geometry to know where those segments are).
     """
     dw = Dwarf(str(elf_path))
     out = []
@@ -47,9 +62,61 @@ def partition(records):
     placed, unplaced = [], []
     for r in records:
         if r["kind"] == "obj" and not r["address"]:
+            r["reason"] = UNPLACED_REASON
             unplaced.append(r)
         else:
             placed.append(r)
+    return placed, unplaced
+
+
+def declared_range(geometry):
+    """``(low, high)`` of the address space ``configure.py``'s segment list declares.
+
+    The yaml declares one file-backed ``c`` segment (VAs ``loadable_vram`` up to
+    ``address_of(loadable_end)``) and one ``bss`` segment from there to ``bss_end``; those
+    two are contiguous by construction, because ``bss_vram`` *is*
+    ``address_of(loadable_end)``.  So the declared space is one half-open range, and
+    anything the binary reserves at run time outside it -- the zero-fill overlay
+    reservations -- has no segment to be placed in.
+    """
+    return geometry.loadable_vram, geometry.bss_end
+
+
+def outside_segments(records, geometry):
+    """``(placeable, outside)``: which records the segment list can hold at all.
+
+    A record outside :func:`declared_range` cannot be placed by any subsegment, and splat
+    refuses even the records it *can* place when two symbols share an address no segment
+    claims ("Duplicate symbol detected!").  The overlays are a target layout the geometry
+    does not model yet, so this is the exclusion that keeps them out of the link -- measured
+    per record, never a hand-written list.
+    """
+    low, high = declared_range(geometry)
+    placeable, outside = [], []
+    for r in records:
+        (placeable if isinstance(r["address"], int) and low <= r["address"] < high
+         else outside).append(r)
+    return placeable, outside
+
+
+def final(records, geometry=None):
+    """``(placed, unplaced)``, each collision-resolved; placed address-sorted.
+
+    ``geometry`` is the target's measured segment list, and it defaults to the registered
+    target's -- the binary ``ddr oracle`` walks.  It is what says which addresses the split
+    can hold at all: without it (or with a target's own, from ``ddr``) a ledger would hand
+    splat records no segment claims, which is the state this target's overlays produce.
+    """
+    placed, unplaced = partition(records)
+    if geometry is None:
+        geometry = DEFAULT.geometry_required()
+    placed, outside = outside_segments(placed, geometry)
+    for r in outside:
+        r["reason"] = OUTSIDE_REASON
+    unplaced.extend(outside)
+    resolve_names(placed)
+    resolve_names(unplaced)
+    placed.sort(key=lambda r: (r["kind"], r["address"]))
     return placed, unplaced
 
 
@@ -79,15 +146,6 @@ def resolve_names(records):
             r["name"] = f"{name}_{n}"
             n += 1
     return records
-
-
-def final(records):
-    """`(placed, unplaced)`, each collision-resolved; placed address-sorted."""
-    placed, unplaced = partition(records)
-    resolve_names(placed)
-    resolve_names(unplaced)
-    placed.sort(key=lambda r: (r["kind"], r["address"]))
-    return placed, unplaced
 
 
 def duplicates(records):
@@ -204,7 +262,7 @@ def _located(r):
 def _orphan(r):
     line = (f'{r["name"]} = 0x{r["address"]:08X}; '
             f'// type:{r["kind"]} provenance:{r["provenance"]} '
-            f'reason:{UNPLACED_REASON}')
+            f'reason:{r.get("reason", UNPLACED_REASON)}')
     if r.get("dwarf_name"):
         line += f' dwarf_name:{r["dwarf_name"]}'
     return line
@@ -231,7 +289,7 @@ def write_unplaced(path, records):
 if __name__ == "__main__":
     elf = sys.argv[1]
     gh = sys.argv[2] if len(sys.argv) > 2 else None
-    placed, unplaced = final(build(elf, gh))
+    placed, unplaced = final(build(elf, gh), DEFAULT.geometry_required())
     out = pathlib.Path(sys.argv[3] if len(sys.argv) > 3 else DEFAULT.symbols)
     orphan = pathlib.Path(sys.argv[4]) if len(sys.argv) > 4 \
         else out.with_name("unplaced_symbols.txt")

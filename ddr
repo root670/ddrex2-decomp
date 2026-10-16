@@ -161,11 +161,20 @@ def cmd_oracle(args) -> int:
     ghidra = _ghidra(target)  # an optional input: a target whose DWARF is complete has none
     records, borrowed = emit_symbols.apply_borrowed(
         emit_symbols.build(retail, ghidra), target.borrowed)
-    placed, unplaced = emit_symbols.final(records)
+    placed, unplaced = emit_symbols.final(records, geometry)
     emit_symbols.write(target.symbols, placed)
     emit_symbols.write_unplaced(target.unplaced, unplaced)
+    outside = [r for r in unplaced
+               if r.get("reason") == emit_symbols.OUTSIDE_REASON]
+    breakdown = f"{len(outside)} outside every declared segment, " if outside else ""
     print(f"oracle: {len(placed)} placed + {len(unplaced)} unplaced symbols "
-          f"({borrowed} borrowed library names) -> {_display(target.symbols)}")
+          f"({breakdown}{borrowed} borrowed library names) -> {_display(target.symbols)}")
+    if outside:
+        addresses = {r["address"] for r in outside}
+        print(f"oracle: {len(outside)} records over {len(addresses)} addresses are in no "
+              f"segment this geometry declares (the zero-fill overlay reservations the yaml "
+              f"does not model), so they are excluded from the split, not linked: "
+              f"-> {_display(target.unplaced)}")
     if ghidra is None:
         print(f"oracle: {_display(target.ghidra)}: no Ghidra function list for this target, "
               f"so every symbol here is the DWARF's own")
