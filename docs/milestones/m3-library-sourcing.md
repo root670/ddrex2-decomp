@@ -53,3 +53,55 @@ borrowable in principle.
 4. **Gates are measured, not assumed.** Borrowed names enter `config/usam2/symbol_addrs.txt` and the
    generated artifacts; renaming must not move G1 (`./ddr verify`). If it does, the names stay out of
    the linked image and live in a side ledger.
+
+## Local sources (on the user's media, not published by any project)
+
+These outrank the published corpora: a single artifact carries names **and** sizes **and** bytes, so a
+match is validated rather than suggested.
+
+### Oni 2 dev build — `abc/oni2dev_ps2.iso` (Dec 2002)
+
+An unreleased game's dev build (Oni 2; the `SCPS_123.45` serial is a dev placeholder). Plain 2048-byte
+ISO9660 — `hdiutil` refuses it, `7z` reads it. Contents: `SYSTEM.CNF` (`BOOT2 = cdrom0:\SCPS_123.45;1`),
+the Sony IOP module set (`IOPRP255.IMG`, `PADMAN`, `LIBSD`, `MCMAN`, `SIO2MAN`, `USBD`, …),
+`BANKS.DAT` / `RB.DAT` / `STREAMS.DAT`, and:
+
+- **`SCPS_123.45` is an unstripped MIPS-III ELF**: `.symtab` = 15,788 symbols, **10,615 FUNCs and every
+  one carries a size**, plus a 2.5 MB `.mdebug` whose CU names are the Sony EE runtime sources
+  (`libpad.c libdma.c libmc.c libmtap.c libipu.c ../eecdvd.c graphdev.c glue.c cache.c intr.c thread.c
+  sifcmd.c sifrpc.c filestub.c eeloadfile.c iopreset.c klib.s`).
+- Version stamps: `PsIIlibpad 2500`, `PsIIlibgraph 2500`, `PsIIlibmtap 2500`, `IOPRP255` — one IOP
+  revision from our game's `IOPRP254`.
+
+Measured against our 3,032 unnamed functions below `0x21C410`:
+
+| comparison | result |
+|---|---|
+| exact 24-byte prefix | 59 (2.5 %) — a floor: any `jal`/`lui` immediate breaks it |
+| masked 12-word (relocation-bearing immediates zeroed) | **192 of 2,180 (8.8 %)**, **97 size-exact**, **153 distinct names** |
+
+Names recovered are the target class: `sceGsResetGraph`, `sceGsResetPath`, `checkModelVersion`,
+`sceGsSetDefDispEnv`, `sceGsSetDefDrawEnv`, `sceGsSetDefClear`, `sceGsSyncV`, `WaitDma`, `memclr`,
+`sceDmaReset`, `sceDmaPutEnv`, `sceDmaSend`, `sceDmaPause`, `sceIpuSync`, `sceIpuRestartDMA`,
+`sceIpuInit`, `VSync`, `_sceSDC`, `SyncDCache`, `_printf`, `kprintf`, `kputchar`, `ftoi`, `sceSifInitCmd`.
+
+Why only 8.8 %: the two builds link **different library revisions** (Dec 2002 versus our 2003 title), so
+many functions genuinely differ. Names transfer far better than bytes, and every size-exact hit is
+byte-validated.
+
+**Also measured: `orig/SLUS_207.11`'s `.symtab` is empty — 0 symbols.** The retail ELF ships DWARF but no
+symbol table, so (a) the 3,180 unnamed functions are genuinely unnamed in retail, and (b) a rename cannot
+collide with a retail name; what G1 compares is an empty symtab. Still measure after a rename batch — it is
+now expected-green rather than unknown.
+
+### Extracted SDK archives — `~/sdk-extract/devkit152/ee/lib/` (110 `.a`)
+
+Obtained by unpacking the July-2005 devkit update's Wise packages with **WiseUnpacker** (no Wine; the
+alternatives all fail: `innoextract` is broken here, `7z` refuses Wise packages, `unshield`/`cabextract`
+expect CAB). Later era than the game, so expect names and member order to transfer while bytes do not.
+
+### Consequence
+
+Borrowing now has three tiers, in order of strength: **local sibling bytes+names** (Oni 2 dev build),
+**extracted SDK archive member symbol tables** (names + sizes + member order), then the **published
+corpora** (names, sometimes sizes). Yield is recorded per source in `config/usam2/library-names.md`.
