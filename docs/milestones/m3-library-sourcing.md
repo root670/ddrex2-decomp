@@ -220,3 +220,38 @@ It is game code to be reversed through the promotion loop (plan Tasks 1–4), wi
 prototype DWARF supplying engine vocabulary (`ps2dancer*`, `back_anime_*`, `Eds*`, `SetPreRead_*`,
 `animode_load_tex_init`, `net_ave_end`, …) and type layouts. No further archive or sibling build is
 expected to change that; the SDK subset is settled.
+
+## Is there reversed SDK C to borrow as a first draft? (checked, 2026-10-16)
+
+**No — and for the SDK subset it would not help.** Verified against the repositories' own file trees
+(not sparse clones):
+
+| project | `.c` files | library-shaped sources |
+|---|---|---|
+| `LucasPicoli/god-hand-decomp` | 2,782 | none — all `src/cod/` (Capcom engine + game) |
+| `AshfordFamily/recvx-decomp` | 228 | **CRI middleware only**: `src/cri/ps2/cri_sdk.622/source/{adxt,dtx,psm,pcm_stm,ps2rna}/…` |
+| `TheOnlyZac/sly1` | 167 | none (`src/P2`) |
+| `g-guthrie/mvc2-ps2-decomp` | 6,030 | none (`src/data` = C arrays) |
+| `ps2dev/ps2sdk` | SDK-sized | C **reimplementations** of the EE libraries (AFL-2.0) — clean-room, so not byte-matching |
+
+The library-shaped C that does get published is third-party *middleware* (recvx's CRI — and this game has
+none: zero `CRI`/`ADX`/`Sofdec` strings). Matching decompilations of console SDKs exist elsewhere
+(`n64decomp/libreultra`; the PS1 PSY-Q reconstruction) but not for the PS2 EE runtime libraries.
+
+**Why it would not help anyway:** for the SDK subset we already hold the exact objects — 9 of the 11
+stamps the preview needs, and 1,163 functions matched byte-wise already. Reverse-engineering C to
+reproduce a function whose compiled object we can link is strictly more work for a strictly worse result.
+Matching C is the right tool only where the object is unavailable.
+
+**Where external C is still worth harvesting**, in order of value:
+
+1. **`ps2sdk` semantics for library functions our archives cannot match.** It states what the function
+   does, and for small leaf functions a faithful implementation compiled with our compiler and flags may
+   even reproduce the bytes. Cheap, decisive test: compile the candidate, compare, keep only exact
+   matches — the same "propose, then measure" discipline as Task 7.
+2. **Sibling game/engine C for idiom and structure** (god-hand's 2,782 files are the largest such
+   corpus). Byte transfer is 0.1–8.8 %, so treat it as vocabulary, never as a match. No Bemani/Konami PS2
+   decompilation project exists to borrow the shared engine from (checked: the search returns tooling
+   only — `ps2dec`, `ps2dis`, `PS2Recomp`).
+3. **The target's own DWARF** remains the best "draft" for its 249 TUs — signatures, types and line
+   numbers, which no external C can supply.
