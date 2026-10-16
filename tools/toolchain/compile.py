@@ -100,8 +100,16 @@ AS = ("mips-linux-gnu-as", "-Iasm/include", "--no-pad-sections", "-EL", "-march=
 #: the *real* path is the one that has to fit.
 STAGING_ROOT = pathlib.Path("/tmp").resolve()
 
-R_MIPS_NONE, R_MIPS_32, R_MIPS_26, R_MIPS_GPREL16 = 0, 2, 4, 7
+#: The oracle's own word for the one reason that still has an address to place: an object
+#: whose DWARF `AT_location` carries none, which is 0 in retail's bytes (`emit_symbols.py`
+#: writes the reason; `tests/toolchain/test_compile_relocations.py` pins this spelling to
+#: it).  The other reason, "outside every declared segment", is *not* address 0 -- those
+#: objects live in the overlay reservations this layout does not model.
+UNPLACED_NO_ADDRESS = "no AT_location address"
+
+R_MIPS_NONE, R_MIPS_32, R_MIPS_26, R_MIPS_HI16, R_MIPS_LO16, R_MIPS_GPREL16 = 0, 2, 4, 5, 6, 7
 RELOC_NAMES = {R_MIPS_32: "R_MIPS_32", R_MIPS_26: "R_MIPS_26",
+               R_MIPS_HI16: "R_MIPS_HI16", R_MIPS_LO16: "R_MIPS_LO16",
                R_MIPS_GPREL16: "R_MIPS_GPREL16"}
 
 SHT_REL = 9
@@ -185,6 +193,16 @@ class Manifests:
         self.chunks = self._json(self.dir / "debug_chunks.json")
         self.symbols = {}
         self.by_address = {}
+        # An object the oracle could not place *because retail's own DWARF gives it no
+        # address* still has a value a placement has to reproduce: 0, which is what retail's
+        # `AT_location` holds for it.  Those records are in `unplaced_symbols.txt` with that
+        # reason, and nothing else in that file may be read this way -- an object outside
+        # every declared segment (this target's overlay reservations) has a real address that
+        # this layout does not model, so substituting 0 for it would be a guess.  The name is
+        # the oracle's own word for the reason (`emit_symbols.UNPLACED_REASON`), and
+        # `tests/toolchain/test_compile_relocations.py` pins the two together.
+        for name, address, _attrs in self._unplaced_without_address():
+            self.symbols.setdefault(name, (address, {"provenance": "unplaced"}))
         for line in (self.dir / "symbol_addrs.txt").read_text().splitlines():
             match = SYMBOL_LINE.match(line.strip())
             if match is None:
@@ -198,6 +216,32 @@ class Manifests:
             if known is None or (attrs.get("provenance") == "dwarf"
                                  and self.symbols[known][1].get("provenance") != "dwarf"):
                 self.by_address[address] = match["name"]
+
+    def _unplaced_without_address(self):
+        """``[(name, address, attrs)]`` for the unplaced records retail gives no address.
+
+        The placed ledger wins over every one of them (they are read first), so this can
+        only ever *add* a name: one whose object exists in the unit's DWARF and nowhere in
+        the image.
+        """
+        path = self.dir / "unplaced_symbols.txt"
+        if not path.is_file():
+            return []
+        out = []
+        for line in path.read_text().splitlines():
+            match = SYMBOL_LINE.match(line.strip())
+            if match is None:
+                continue
+            # The reason is prose and carries spaces ("no AT_location address"), so it is the
+            # one field that cannot come out of the keyword split; `dwarf_name:` follows it
+            # when the oracle had to rename a duplicate.
+            tail = match["attrs"]
+            if "reason:" not in tail:
+                continue
+            reason = tail.split("reason:", 1)[1].split(" dwarf_name:", 1)[0].strip()
+            if reason == UNPLACED_NO_ADDRESS:
+                out.append((match["name"], int(match["address"], 16), {"reason": reason}))
+        return out
 
     @staticmethod
     def _json(path) -> object:
@@ -398,15 +442,66 @@ class MWObject:
         return None
 
 
+def _signed16(value: int) -> int:
+    """A 16-bit immediate as the instruction means it: sign-extended."""
+    value &= 0xFFFF
+    return value - 0x10000 if value & 0x8000 else value
+
+
+def _lo_addend(data, offset: int) -> int:
+    """The addend an instruction carries: what the compiler wrote in its low half."""
+    return _signed16(struct.unpack_from("<I", data, offset)[0])
+
+
+def _pairs(data, relocs, what: str):
+    """``{hi offset: (lo offset, addend)}`` for the ``lui``/``addiu`` address pairs.
+
+    A MIPS address over the small-data threshold is materialised by two instructions whose
+    *addend* is split the same way: the compiler writes the high half in the ``lui`` and the
+    low half in the ``%lo`` instruction, so the value to place is ``symbol + addend`` and the
+    two immediates are its halves.  Only one split can be read off the object without
+    guessing, and this is it: a ``lui`` whose own high half is zero (an address with no
+    constant offset, which is every reference that names an object rather than a field of
+    one) paired with the next ``%lo`` for the same symbol.  Anything else raises, because a
+    half-split address would be a *guess* at the layout rather than a read of it.
+    """
+    lo = [(offset, _lo_addend(data, offset), symbol.name)
+          for offset, rtype, symbol in relocs if rtype == R_MIPS_LO16]
+    pairs = {}
+    for offset, rtype, symbol in relocs:
+        if rtype != R_MIPS_HI16:
+            continue
+        hi = struct.unpack_from("<I", data, offset)[0] & 0xFFFF
+        if hi:
+            raise Unusable(
+                f"{what}: the address at 0x{offset:X} has 0x{hi:X} in its high half, so its "
+                f"constant offset is split across a `lui`/`%lo` pair this build cannot read; "
+                f"the two immediates cannot be recomputed from {symbol.name}")
+        partner = next((entry for entry in lo
+                        if entry[2] == symbol.name and entry[0] > offset), None)
+        if partner is None:
+            raise Unusable(
+                f"{what}: the address of {symbol.name} at 0x{offset:X} is loaded with a "
+                f"`lui` whose `%lo` half is not in this section; a lone high half is not an "
+                f"address")
+        pairs[offset] = (partner[1], partner[2])
+    return pairs
+
+
 def relocate(data: bytes, relocs, resolve, what: str, gp: int) -> bytes:
     """Apply a section's ``.rel`` entries to its bytes.
 
     The objects are ``SHT_REL``, so each entry's addend is the value already in the field:
     a whole word for ``R_MIPS_32`` (the compiler writes the record's own offset there and
-    relocates against its section symbol), the target word for ``R_MIPS_26``, and the
-    sign-extended immediate for ``R_MIPS_GPREL16``.
+    relocates against its section symbol), the target word for ``R_MIPS_26``, the
+    sign-extended immediate for ``R_MIPS_GPREL16`` and for the ``%lo`` half of an address,
+    and the *paired* ``%lo``'s immediate for that address's ``%hi`` half -- because the
+    address is ``symbol + addend`` and the compiler writes one constant's two halves into
+    the two instructions.  A pair whose constant offset is split any other way is refused
+    rather than approximated (see :func:`_pairs`).
     """
     out = bytearray(data)
+    pairs = _pairs(data, relocs, what)
     for offset, rtype, symbol in relocs:
         if rtype == R_MIPS_NONE:
             continue
@@ -418,6 +513,11 @@ def relocate(data: bytes, relocs, resolve, what: str, gp: int) -> bytes:
             target = value + ((word & 0x03FFFFFF) << 2)
             struct.pack_into("<I", out, offset,
                              (word & 0xFC000000) | ((target >> 2) & 0x03FFFFFF))
+        elif rtype in (R_MIPS_HI16, R_MIPS_LO16):
+            address = value + (pairs[offset][0] if rtype == R_MIPS_HI16
+                               else _lo_addend(data, offset))
+            half = (address + 0x8000) >> 16 if rtype == R_MIPS_HI16 else address
+            struct.pack_into("<I", out, offset, (word & 0xFFFF0000) | (half & 0xFFFF))
         elif rtype == R_MIPS_GPREL16:
             addend = word & 0xFFFF
             if addend & 0x8000:
