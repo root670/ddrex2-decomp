@@ -500,14 +500,72 @@ def test_the_ledger_carries_the_size_the_validation_used():
     assert "corpus_size:" not in line
 
 
-def test_a_name_row_names_the_archive_member_the_bytes_came_from(tmp_path):
-    """For an archive source the member is the provenance: the same archive restarts per member."""
-    row = {"name": "sceScfGetLanguage", "address": 0x0021BDD0, "size": 0x60,
+def test_a_name_row_renders_the_evidence_and_not_the_raw_record():
+    """The `evidence` cell is prose: a row must not leak the proposal's own dict into the table.
+
+    The traceability fix touched this function, and clobbering the rendered cell with
+    ``row["evidence"]`` is invisible to every assertion about the *source* cell -- the table would
+    still be a table, and a reader would get Python's dict repr in a committed record.
+    """
+    row = {"name": "sceA", "address": 0x00100288, "size": 0x190, "source": "devkit152",
+           "tier": "bytes", "evidence": {
+               "source_archives": ["~/sdk/libgraph.a"], "source_members": ["graph023.o"],
+               "candidates": 3, "masked_words": 5, "exact": False, "whole_function": True}}
+    line = [l for l in borrow.render_markdown([row], [], [], [], []).splitlines()
+            if l.startswith("| `0x00100288`")][0]
+    cells = [cell.strip() for cell in line.strip("|").split("|")]
+    assert cells[4] == "whole body, masked-equal, 5 relocated word(s)"
+    assert "source_key" not in line and "{" not in line
+    assert cells[2] == "`devkit152` `~/sdk/libgraph.a` `graph023.o`"
+
+
+def test_a_name_row_names_the_archive_and_member_the_bytes_came_from():
+    """The archive's *path* is the provenance, not the member name alone.
+
+    A package can hold several archives of one name (`toolibs242` ships four `libiberty.a` and
+    three `libgcc.a`), and a member name recurs across archives, so a row that named only the
+    member could not be traced back to the object the bytes were compared with.
+    """
+    row = {"name": "sceScfGetLanguage", "address": 0x001B34C0, "size": 0x60,
            "source": "sdk152", "tier": "bytes", "evidence": {
-               "source_member": "scf.o", "window": 48, "masked_words": 0,
-               "whole_function": True}}
+               "source_archives": ["~/sdk/lib/libscf.a"], "source_members": ["scf.o"],
+               "window": 48, "masked_words": 0, "whole_function": True}}
     text = borrow.render_markdown([row], [], [], [], [])
-    assert "`sdk152` `scf.o`" in text
+    assert "`sdk152` `~/sdk/lib/libscf.a` `scf.o`" in text
+
+
+def test_a_name_row_says_so_when_there_is_no_archive_to_trace_to():
+    """The artifact promises traceability: a row that cannot give it must not imply it.
+
+    A corpus that is a linked binary (Oni 2's ELF) or a symbol file has no archive member, and
+    the row says that rather than printing a source column that reads like one.
+    """
+    row = {"name": "sceGsSetDefClear", "address": 0x00100CB8, "size": 0x104,
+           "source": "oni2", "tier": "bytes", "evidence": {
+               "window": 0x104, "masked_words": 0, "whole_function": True}}
+    text = borrow.render_markdown([row], [], [], [], [])
+    assert "`oni2` *(no archive member)*" in text
+
+
+def test_the_ledger_takes_no_evidence_the_markdown_needs():
+    """The build artifact is five fields plus the match claim: extra evidence must not leak.
+
+    Where a name's bytes were read is provenance for a reader, not an input to the split -- and a
+    field that leaked into `borrowed_symbols.txt` would re-segment the split (a non-zero `size:`,
+    a colon in `provenance:`), so the renderer ignores everything it does not name.
+    """
+    bare = {"name": "sceA", "address": 0x00100288, "size": 0x190, "source": "devkit152",
+            "tier": "bytes", "evidence": {"whole_function": True}}
+    loaded = dict(bare, evidence={
+        "whole_function": True, "source_archives": ["~/sdk/lib/libgraph.a"],
+        "source_members": ["graph023.o"], "candidates": 3, "masked_words": 5, "exact": False})
+    assert borrow.render_ledger([loaded]) == borrow.render_ledger([bare])
+
+
+def test_no_corpus_entry_point_breaks_the_markdown_cell():
+    """The Sources table wraps ``entry_point`` in a code span: an inner backtick fragments it."""
+    for entry in borrow.corpora():
+        assert "`" not in entry["entry_point"], entry["key"]
 
 
 def test_the_ledger_provenance_is_one_boolean_token():
@@ -569,15 +627,18 @@ def test_archive_proposals_credit_a_whole_body_and_every_member_that_agrees():
     """An archive member is the function's own object, so the case is body against body.
 
     Two members of one package carrying the identical routine name our function -- the same
-    source linked twice -- are one proposal with both members counted: the name is what they
-    agree on, and the count is what says how many objects corroborate it.
+    source linked twice -- are one proposal that names *both* archives and both members: a
+    member name alone is not traceable (a package can hold several archives of one name), so the
+    row has to carry the archive's path.
     """
     body = words(0x27BDFFF0, 0x3C020021, 0x03E00008, 0x27BDFFF0, 0x3C020021, 0x03E00008,
                  0x27BDFFF0, 0x3C020021, 0x03E00008, 0x27BDFFF0, 0x3C020021, 0x03E00008)
     assert len(body) == borrow.MIN_BYTES
     ours = [{"symbol": "func_00100000", "address": 0x100000, "size": len(body)}]
-    theirs = [{"name": "sceA", "size": len(body), "member": "a.o", "blob_key": "a"},
-              {"name": "sceA", "size": len(body), "member": "b.o", "blob_key": "b"}]
+    theirs = [{"name": "sceA", "size": len(body), "member": "a.o", "blob_key": "a",
+               "archive": "/sdk/libone.a"},
+              {"name": "sceA", "size": len(body), "member": "b.o", "blob_key": "b",
+               "archive": "/sdk/libtwo.a"}]
     proposals, refused = borrow.archive_proposals(
         ours, theirs, {0x100000: body}, {"a": body, "b": body}, "devkit152")
     assert refused == []
@@ -585,7 +646,8 @@ def test_archive_proposals_credit_a_whole_body_and_every_member_that_agrees():
     assert proposals[0]["tier"] == "bytes"
     assert proposals[0]["evidence"]["whole_function"] is True
     assert proposals[0]["evidence"]["candidates"] == 2
-    assert proposals[0]["evidence"]["source_member"] == "a.o"
+    assert proposals[0]["evidence"]["source_archives"] == ["/sdk/libone.a", "/sdk/libtwo.a"]
+    assert proposals[0]["evidence"]["source_members"] == ["a.o", "b.o"]
 
 
 def test_archive_proposals_refuse_a_head_that_matches_and_a_body_that_does_not():

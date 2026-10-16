@@ -33,7 +33,7 @@ from.
 |---|---|---|---|---|---|
 | `oni2` | Oni 2 (SCPS_123.45) dev build, 2002-12-10 -- local, unstripped ELF | none declared | 15,788 .symtab symbols (10,615 FUNC with sizes) and a 2.5 MB .mdebug naming the Sony EE runtime sources; the library blob sits at the top of .text (0x4a0000-0x4b4ddc) | `path: /tmp/oni2dev/SCPS_123.45 (also /tmp/oni2/SCPS_123.45)` | `20dfb29d3fdecdf3` |
 | `sdk152` | Sony PS2 SDK 1.5.2 (devkit) -- local, extracted installers | none declared | 66 SDK archives whose *member objects* are the code itself (relocatable, so the comparison masks the relocation fields) with their symbol tables: names with sizes, in member order (the order the linker preserves) -- libkernl.a, libgraph.a, libvu0.a, libdma.a, libpad.a, libcdvd.a, libssyn.a and the rest | `path: ~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/*.a` | `-` |
-| `archives` | Every PS2 EE `ar` archive on this machine -- the target's own corpus | none declared | 292 SDK archives, 44,425 functions: tlib 2.5.0-2.5.5, SCE Tool-Libs 2.4.2, PS2 Runtime Library 2.0, EE 1.00.03, the July-2005 devkit (runtime library 3.0.3) and its Demo Disc SDK -- each member object's own bytes and symbol table, which is what a whole-body byte comparison needs | `path: `borrow.archive_corpus()` -- every package tree tools/sdk/revisions.py:ARCHIVE_ROOTS names (~/sdk-downloads, ~/sdk-extract)` | `-` |
+| `archives` | Every PS2 EE `ar` archive on this machine -- the target's own corpus | none declared | 292 SDK archives, 44,425 functions: tlib 2.5.0-2.5.5, SCE Tool-Libs 2.4.2, PS2 Runtime Library 2.0, EE 1.00.03, the July-2005 devkit (runtime library 3.0.3) and its Demo Disc SDK -- each member object's own bytes and symbol table, which is what a whole-body byte comparison needs | `path: borrow.archive_corpus() -- every package tree tools/sdk/revisions.py:ARCHIVE_ROOTS names (~/sdk-downloads, ~/sdk-extract)` | `-` |
 | `recvx` | AshfordFamily/recvx-decomp (Resident Evil Code: Veronica X, PS2) | MIT | ~921 named SDK functions with explicit sizes in its library region (0x1000C0-0x12B060), local statics included; no bytes, no objects | `config/symbol_addrs.txt` | `116426162377b4a3` |
 | `godhand` | LucasPicoli/god-hand-decomp (God Hand, PS2) | MIT | ~6,917 SDK function names, no sizes (the 40,215 `size:` entries are data symbols); a later SDK generation | `config/symbol_addrs.txt` | `efe18a9417825a9c` |
 | `sly1` | TheOnlyZac/sly1 (Sly Cooper, PS2) | CC0-1.0 | 3,938 named library functions grouped under the *original SDK source path* (`/usr/local/sce/ee/gcc/src/newlib/libm/math/wf_fmod.c`, `libdma.c`, `../eecdvd.c`, `klib.s`, `sifrpc.c`); no function sizes | `config/symbol_addrs.txt` | `4824a7b9ed267c2e` |
@@ -110,7 +110,11 @@ byte-proven); 814 names were accepted in total and
 
 Every name here was accepted because the corpus publishes the function's own bytes
 and they matched ours after relocation masking, at our function's own size.  These
-are the lines of `config/<target>/borrowed_symbols.txt`.  `evidence` says whether the
+are the lines of `config/<target>/borrowed_symbols.txt`.  `source` names the corpus,
+then the *archive* the bytes were read out of and the member(s) that carry the name: a
+package can hold several archives of one name (`toolibs242` ships four `libiberty.a`),
+so the path is what makes a row traceable, and a row whose source is not an archive set
+says `(no archive member)` rather than implying one.  `evidence` says whether the
 whole body matched or only the first 48 bytes (beyond which a corpus from another SDK
 revision is a different question).  `size` is the corpus's published size, which
 `validate` required to equal our split bounds.  `sdk source` is sly1's attribution of
@@ -118,447 +122,447 @@ the name to its original SDK source file; `corroborated by` lists the further co
 that publish the same name; `contested by` lists a weaker proposal that named this
 address differently (it did not win).
 
-| address | name | source (member) | size | evidence | sdk source | corroborated by | contested by |
+| address | name | source (archive, member) | size | evidence | sdk source | corroborated by | contested by |
 |---|---|---|---|---|---|---|---|
-| `0x00100318` | `sceGsResetGraph` | `devkit152` `graph001.o` | `0x190` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x001004B8` | `sceGsResetPath` | `devkit152` `graph002.o` | `0x68` | whole body, masked-equal, 2 relocated word(s) | vu/vu.c | sly1 | - |
-| `0x00100520` | `checkModelVersion` | `devkit152` `graph003.o` | `0xA0` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
-| `0x001005D0` | `sceGsSetDefDispEnv` | `devkit152` `graph003.o` | `0x374` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
-| `0x00100948` | `sceGsPutDispEnv` | `devkit152` `graph004.o` | `0xBC` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x00100A08` | `sceGszbufaddr` | `devkit152` `graph005.o` | `0xC8` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x00100AD0` | `sceGsSetDefDrawEnv` | `devkit152` `graph006.o` | `0x1E4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00100CB8` | `sceGsSetDefClear` | `oni2` | `0x104` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00100DC0` | `sceGsPutDrawEnv` | `devkit152` `graph008.o` | `0xE8` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00100EA8` | `sceGsSyncV` | `devkit152` `graph011.o` | `0x94` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00100F40` | `sceGsSyncPath` | `devkit152` `graph012.o` | `0x314` | whole body, masked-equal, 41 relocated word(s) | - | - | - |
-| `0x00101368` | `sceGsSyncVCallback` | `devkit152` `graph019.o` | `0xA0` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
-| `0x00101408` | `sceGsSetDefDrawEnv2` | `devkit152` `graph022.o` | `0x1E0` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x001015E8` | `sceGsSetDefDBuffDc` | `devkit152` `graph027.o` | `0x2E4` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00101930` | `WaitDma` | `devkit152` `libdma.o` | `0x70` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x001019A0` | `WatchDma` | `devkit152` `libdma.o` | `0x84` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x00101A50` | `memclr` | `devkit152` `libdma.o` | `0x34` | whole body, masked-equal, 0 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101AB0` | `sceDmaReset` | `devkit152` `libdma.o` | `0xDC` | whole body, masked-equal, 6 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101B90` | `sceDmaPutEnv` | `devkit152` `libdma.o` | `0x1D8` | whole body, masked-equal, 8 relocated word(s) | libdma.c | godhand, sly1 | - |
-| `0x00101D68` | `sceDmaGetEnv` | `devkit152` `libdma.o` | `0x38` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00101DB8` | `sceDmaSend` | `devkit152` `libdma.o` | `0x68` | whole body, masked-equal, 2 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101F10` | `sceDmaRecv` | `devkit152` `libdma.o` | `0x48` | whole body, masked-equal, 1 relocated word(s) | libdma.c | sly1 | - |
-| `0x00101F58` | `sceDmaRecvN` | `devkit152` `libdma.o` | `0x7C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00101FD8` | `sceDmaRecvI` | `devkit152` `libdma.o` | `0x80` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00102058` | `sceDmaSync` | `devkit152` `libdma.o` | `0x38` | whole body, masked-equal, 1 relocated word(s) | libdma.c | sly1 | - |
-| `0x00102090` | `sceDmaWatch` | `devkit152` `libdma.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001020C8` | `sceDmaPause` | `devkit152` `libdma.o` | `0x98` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x001022D8` | `sceDevVu0Sync` | `devkit152` `devvu0.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00102338` | `sceDevVu0GetCnd` | `devkit152` `devvu0.o` | `0x16C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001024A8` | `sceDevVu0PutCnd` | `devkit152` `devvu0.o` | `0x164` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x00102640` | `sceVu0MemWriteQ` | `devkit152` `devvu1.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00102680` | `sceVu0MemReadQ` | `devkit152` `devvu1.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00102810` | `sceDevVu1Sync` | `devkit152` `devvu1.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00102890` | `sceDevVu1GetCnd` | `devkit152` `devvu1.o` | `0x18C` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00102A20` | `sceDevVu1PutCnd` | `devkit152` `devvu1.o` | `0x148` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00102B98` | `sceVu0MulMatrix` | `devkit152` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00102C28` | `sceVu0Normalize` | `devkit152` `libvu0.o` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00102C68` | `sceVu0TransposeMatrix` | `devkit152` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00102CB0` | `sceVu0InversMatrix` | `devkit152` `libvu0.o` | `0x6C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00102EB8` | `_sceVu0ecossin` | `devkit152` `libvu0.o` | `0x74` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00102F30` | `sceVu0RotMatrixZ` | `devkit152` `libvu0.o` | `0xA4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00102FD8` | `sceVu0RotMatrixX` | `devkit152` `libvu0.o` | `0xA8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00103080` | `sceVu0RotMatrixY` | `devkit152` `libvu0.o` | `0xA8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00103128` | `sceVu0RotMatrix` | `devkit152` `libvu0.o` | `0x50` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x001031A0` | `sceVu0CameraMatrix` | `devkit152` `libvu0.o` | `0xB0` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x00103250` | `sceVu0NormalLightMatrix` | `devkit152` `libvu0.o` | `0xC0` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x00103310` | `sceVu0LightColorMatrix` | `devkit152` `libvu0.o` | `0x68` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x00103378` | `sceVu0ViewScreenMatrix` | `devkit152` `libvu0.o` | `0x104` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00103480` | `sceVu0DropShadowMatrix` | `devkit152` `libvu0.o` | `0x190` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00103610` | `sceVu0RotTransPersN` | `devkit152` `libvu0.o` | `0x58` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00103668` | `sceVu0RotTransPers` | `devkit152` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00103718` | `sceVu0ClipScreen` | `devkit152` `libvu0.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00103760` | `sceVu0ClipScreen3` | `devkit152` `libvu0.o` | `0x60` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x001037C0` | `sceVu0ClipAll` | `devkit152` `libvu0.o` | `0x8C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00103850` | `sceVpu0Reset` | `devkit152` `libvu0.o` | `0x5C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001038B0` | `_dualPrimeVector` | `devkit152` `mpc.o` | `0x184` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00103A38` | `_getAllRefs` | `devkit152` `mpc.o` | `0x704` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x00104140` | `_motionComp0` | `devkit152` `mpc.o` | `0x250` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x00104390` | `_getRef0` | `devkit152` `mpc.o` | `0x488` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x00104818` | `_doMC` | `devkit152` `mpc.o` | `0x21C` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
-| `0x00104A38` | `_sceMpegPictureData0` | `devkit152` `mpc.o` | `0x240` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00104C78` | `_slice0` | `devkit152` `mpc.o` | `0x32C` | whole body, masked-equal, 14 relocated word(s) | - | godhand | - |
-| `0x00104FA8` | `_motionVector` | `devkit152` `mpc.o` | `0x428` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
-| `0x001053D0` | `_motionVectors` | `devkit152` `mpc.o` | `0x19C` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00105570` | `_decMB0` | `devkit152` `mpc.o` | `0x558` | whole body, masked-equal, 15 relocated word(s) | - | godhand | - |
-| `0x00105AC8` | `_sceMpegMbAddressIncrement` | `devkit152` `mpc.o` | `0x178` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00105C40` | `_sceMpegWaitIpuIdle` | `devkit152` `mpc.o` | `0x168` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00105DA8` | `_sceMpegWaitIpuIdle64` | `devkit152` `mpc.o` | `0x180` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00105F28` | `_sceMpegNextBit` | `devkit152` `mpc.o` | `0xE8` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00106010` | `_sceMpegPeepBit` | `devkit152` `mpc.o` | `0x8C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001060A0` | `_sceMpegFlushBuf` | `devkit152` `mpc.o` | `0x94` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00106138` | `_waitIpuIdle` | `devkit152` `mpc.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x00106178` | `_skipMB0` | `devkit152` `mpc.o` | `0xBC` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00106238` | `_copyAddRefImage` | `devkit152` `mpc.o` | `0xEC` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001063E8` | `dmaRefImage` | `devkit152` `mpc.o` | `0x17C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x00106568` | `_rix_000` | `devkit152` `mpc.o` | `0x74` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x001065E0` | `_ri0_000` | `devkit152` `mpc.o` | `0x94` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106678` | `_rix_001` | `devkit152` `mpc.o` | `0xB4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106730` | `_ri0_001` | `devkit152` `mpc.o` | `0xCC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106800` | `_rix_010` | `devkit152` `mpc.o` | `0xAC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x001068B0` | `_ri0_010` | `devkit152` `mpc.o` | `0xB8` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106968` | `_rix_011` | `devkit152` `mpc.o` | `0xF8` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106A60` | `_ri0_011` | `devkit152` `mpc.o` | `0xFC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106B60` | `_rix_100` | `devkit152` `mpc.o` | `0x9C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106C00` | `_ri0_100` | `devkit152` `mpc.o` | `0xAC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106CB0` | `_rix_101` | `devkit152` `mpc.o` | `0xDC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106D90` | `_ri0_101` | `devkit152` `mpc.o` | `0xE4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106E78` | `_rix_110` | `devkit152` `mpc.o` | `0xD4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00106F50` | `_ri0_110` | `devkit152` `mpc.o` | `0xD0` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00107020` | `_rix_111` | `devkit152` `mpc.o` | `0x120` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00107140` | `_ri0_111` | `devkit152` `mpc.o` | `0x114` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00107258` | `receiveDataFromIPU` | `devkit152` `mpc.o` | `0xA0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001072F8` | `_sceMpegSliceA0` | `devkit152` `ext.o` | `0x1A0` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
-| `0x00107498` | `_initSeq` | `devkit152` `ext.o` | `0x314` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x001077B0` | `_sequenceHeader` | `devkit152` `ext.o` | `0x2AC` | whole body, masked-equal, 31 relocated word(s) | - | - | - |
-| `0x00107A60` | `_groupOfPicturesHeader` | `devkit152` `ext.o` | `0xA0` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
-| `0x00107B00` | `_pictureHeader` | `devkit152` `ext.o` | `0x144` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00107C48` | `_sequenceExtension` | `devkit152` `ext.o` | `0x140` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00107D88` | `_quantMatrixExtension` | `devkit152` `ext.o` | `0xE8` | whole body, masked-equal, 14 relocated word(s) | - | - | - |
-| `0x00107E90` | `_pictureCodingExtension` | `devkit152` `ext.o` | `0x1E4` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
-| `0x00108098` | `_extensionAndUserData` | `devkit152` `ext.o` | `0x1CC` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
-| `0x00108268` | `_waitIpuIdle_1` (the corpus's `_waitIpuIdle`, repeated in the image) | `devkit152` `mpc.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x001082A8` | `_sceMpegNextHeader` | `devkit152` `ext.o` | `0x154` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00108408` | `flushByteBoundary` | `devkit152` `ext.o` | `0x50` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x00108458` | `_sequenceDisplayExtension` | `devkit152` `ext.o` | `0x8C` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x001084E8` | `_copyrightExtension` | `devkit152` `ext.o` | `0x94` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00108580` | `_pictureDisplayExtension` | `devkit152` `ext.o` | `0xF4` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x00108678` | `_clearOnce` | `devkit152` `mpeg.o` | `0xCC` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00108748` | `sceMpegCreate` | `devkit152` `mpeg.o` | `0x238` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
-| `0x00108980` | `_sendDataToIPU` | `devkit152` `mpeg.o` | `0x100` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00108A80` | `_clearEach` | `devkit152` `mpeg.o` | `0xC8` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00108B48` | `_getpic` | `devkit152` `mpeg.o` | `0x1B4` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
-| `0x00108D00` | `_updateRefImage` | `devkit152` `mpeg.o` | `0x2B4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00108FB8` | `_decodeOrSkipFrame` | `devkit152` `mpeg.o` | `0x170` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x00109128` | `_decodeOrSkipField` | `devkit152` `mpeg.o` | `0x1C4` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
-| `0x001092F0` | `sceMpegInit` | `devkit152` `mpeg.o` | `0xB0` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x001093A8` | `sceMpegAddBs` | `devkit152` `mpeg.o` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001093E8` | `sceMpegGetPicture` | `devkit152` `mpeg.o` | `0x48` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x00109430` | `sceMpegGetPictureRAW8` | `devkit152` `mpeg.o` | `0x44` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x00109488` | `sceMpegReset` | `devkit152` `mpeg.o` | `0x7C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x00109560` | `sceMpegAddCallback` | `devkit152` `mpeg.o` | `0x34` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00109598` | `sceMpegSetBuffType` | `devkit152` `mpeg.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001095E0` | `_sceMpegDispatchMpegCallback` | `devkit152` `mpeg.o` | `0x78` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00109658` | `_sceMpegDispatchMpegCbNodata` | `devkit152` `mpeg.o` | `0x74` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x001096D0` | `_decodeOrSkip` | `devkit152` `mpeg.o` | `0x44` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00109718` | `sceMpegClearRefBuff` | `devkit152` `mpeg.o` | `0x54` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00109770` | `sceMpegGetPictureRAW8xy` | `devkit152` `mpeg.o` | `0x50` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x00109868` | `_decPicture` | `devkit152` `mpeg.o` | `0xCC` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00109A48` | `_cpr8` | `devkit152` `output.o` | `0x290` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x00109CD8` | `_dispRefImage` | `devkit152` `output.o` | `0x2C0` | whole body, masked-equal, 9 relocated word(s) | - | godhand | - |
-| `0x00109F98` | `_dispRefImageField` | `devkit152` `output.o` | `0x420` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x0010A3B8` | `_sceMpegFlush` | `devkit152` `output.o` | `0xC0` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x0010A508` | `_doCSC2` | `devkit152` `csc.o` | `0x1C0` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x0010A6C8` | `_sceMpegCscStoreRefImage` | `devkit152` `csc.o` | `0x4D8` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
-| `0x0010ABA0` | `_ch3dmaCSC` | `devkit152` `csc.o` | `0x148` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x0010ACE8` | `_ch4dma` | `devkit152` `csc.o` | `0xD4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010ADD0` | `_sceMpegStopIpuDma` | `devkit152` `error.o` | `0xA0` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x0010AE70` | `_sceMpegErrorBdec` | `devkit152` `error.o` | `0xC8` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x0010AF90` | `_sceMpegError1` | `devkit152` `error.o` | `0x40` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x0010B0C0` | `sceIpuStopDMA` | `devkit152` `libipu.o` | `0xE4` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x0010B1A8` | `sceIpuRestartDMA` | `devkit152` `libipu.o` | `0x150` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x0010B2F8` | `sceIpuSync` | `devkit152` `libipu.o` | `0x68` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010B3D8` | `sceIpuInit` | `devkit152` `ipuinit.o` | `0x238` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x0010BEF0` | `VSync` | `devkit152` `glue.o` | `0x90` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x0010BF80` | `VSync2` | `devkit152` `glue.o` | `0xA4` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x0010C028` | `write` | `devkit152` `glue.o` | `0x7C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x0010C0A8` | `read` | `devkit152` `glue.o` | `0x74` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x0010C160` | `sbrk` | `devkit152` `glue.o` | `0xAC` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x0010C2B0` | `_sceSDC` | `devkit152` `cache.o` | `0xA4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x0010C358` | `SyncDCache` | `oni2` | `0x7C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x0010C3F0` | `_sceIDC` | `devkit152` `cache.o` | `0xA4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | _sceSDC (oni2) |
-| `0x0010C498` | `SyncDCache_1` (the corpus's `SyncDCache`, repeated in the image) | `oni2` | `0x7C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | InvalidDCache (sdk152:libkernl.a) |
-| `0x0010C760` | `topThread` | `devkit152` `thread.o` | `0xD8` | whole body, masked-equal, 9 relocated word(s) | - | godhand | - |
-| `0x0010C838` | `InitThread` | `devkit152` `thread.o` | `0xEC` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x0010C928` | `iWakeupThread` | `devkit152` `thread.o` | `0x94` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
-| `0x0010C9C0` | `iRotateThreadReadyQueue` | `devkit152` `thread.o` | `0x7C` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x0010CA40` | `iSuspendThread` | `devkit152` `thread.o` | `0x98` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
-| `0x0010CBA0` | `StartThread` | `devkit152` `thread.o` | `0x178` | whole body, masked-equal, 7 relocated word(s) | klib.s | godhand, sly1 | - |
-| `0x0010CD40` | `sceDeci2Open` | `devkit152` `deci2.o` | `0x44` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0010CDB0` | `sceDeci2ReqSend` | `oni2` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0010CE08` | `sceDeci2GrpOpen` | `devkit152` `deci2.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | sceDeci2ReqSend (recvx) |
-| `0x0010CED0` | `sceDeci2ReqSend_1` (the corpus's `sceDeci2ReqSend`, repeated in the image) | `oni2` | `0x30` | whole body, masked-equal, 2 relocated word(s) | - | - | sceDeci2ExReqSend (recvx), sceDeci2ExReqSend (sdk152:libkernl.a) |
-| `0x0010CFA0` | `QueuePeekWriteDone` | `oni2` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010CFE0` | `QueuePeekWriteDone_1` (the corpus's `QueuePeekWriteDone`, repeated in the image) | `oni2` | `0x3C` | whole body, masked-equal, 3 relocated word(s) | - | - | QueuePeekReadDone (recvx), QueuePeekReadDone (sdk152:libkernl.a) |
-| `0x0010D020` | `sceTtyHandler` | `devkit152` `tty.o` | `0x194` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
-| `0x0010D1B8` | `sceTtyWrite` | `devkit152` `tty.o` | `0x174` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x0010D330` | `sceTtyRead` | `devkit152` `tty.o` | `0xD0` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0010D400` | `sceTtyInit` | `devkit152` `tty.o` | `0xBC` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x0010D4C0` | `kputchar` | `devkit152` `kprintf2.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010D4F8` | `deci2Putchar` | `devkit152` `kprintf2.o` | `0xB0` | whole body, masked-equal, 13 relocated word(s) | - | godhand | - |
-| `0x0010D5A8` | `serialPutchar` | `devkit152` `kprintf2.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0010D5E0` | `ftoi` | `devkit152` `kprintf2.o` | `0x90` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010D670` | `printfloat` | `devkit152` `kprintf2.o` | `0x1D8` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
-| `0x0010D848` | `_sceSnprintf` | `devkit152` `kprintf2.o` | `0xD14` | whole body, masked-equal, 15 relocated word(s) | - | godhand | - |
-| `0x0010E560` | `snprintf_char` | `devkit152` `kprintf2.o` | `0x58` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010E608` | `_sceSnprintf_pf` | `devkit152` `kprintf2.o` | `0x4C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x0010E658` | `sceVsnprintf` | `devkit152` `kprintf2.o` | `0x38` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0010E690` | `sceSnprintf` | `devkit152` `kprintf2.o` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0010E6D8` | `sceVprintf` | `devkit152` `kprintf2.o` | `0x70` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x0010E8C0` | `sceSifInitCmd` | `devkit152` `sifcmd.o` | `0x280` | whole body, masked-equal, 48 relocated word(s) | - | - | - |
-| `0x0010EB40` | `sceSifExitCmd` | `devkit152` `sifcmd.o` | `0x34` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0010EBA8` | `sceSifAddCmdHandler` | `devkit152` `sifcmd.o` | `0x78` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x0010EC20` | `sceSifRemoveCmdHandler` | `devkit152` `sifcmd.o` | `0x4C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x0010EC70` | `_sceSifSendCmd` | `devkit152` `sifcmd.o` | `0x134` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
-| `0x0010EDA8` | `sceSifSendCmd` | `devkit152` `sifcmd.o` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x0010EDE8` | `isceSifSendCmd` | `devkit152` `sifcmd.o` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x0010EE28` | `_sceSifCmdIntrHdlr` | `devkit152` `sifcmd.o` | `0x148` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x0010F020` | `sceSifInitRpc` | `devkit152` `sifrpc.o` | `0x19C` | whole body, masked-equal, 34 relocated word(s) | sifrpc.c | godhand, sly1 | - |
-| `0x0010F1E8` | `_sceRpcGetPacket` | `devkit152` `sifrpc.o` | `0xA8` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0010F2B0` | `_sceRpcGetFPacket` | `devkit152` `sifrpc.o` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010F2E0` | `_sceRpcGetFPacket2` | `devkit152` `sifrpc.o` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x0010F320` | `_request_end` | `devkit152` `sifrpc.o` | `0xCC` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x0010F3F0` | `_alarm_rdata` | `devkit152` `sifrpc.o` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0010F430` | `_request_rdata` | `devkit152` `sifrpc.o` | `0xD0` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0010F500` | `sceSifGetOtherData` | `devkit152` `sifrpc.o` | `0x164` | whole body, masked-equal, 14 relocated word(s) | - | - | - |
-| `0x0010F668` | `_search_svdata` | `devkit152` `sifrpc.o` | `0x4C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0010F6B8` | `_alarm_bind` | `devkit152` `sifrpc.o` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0010F6F8` | `_request_bind` | `devkit152` `sifrpc.o` | `0xCC` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0010F7C8` | `sceSifBindRpc` | `devkit152` `sifrpc.o` | `0x14C` | whole body, masked-equal, 14 relocated word(s) | sifrpc.c | sly1 | - |
-| `0x0010F918` | `_request_call` | `devkit152` `sifrpc.o` | `0x8C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x0010F9A8` | `sceSifCallRpc` | `devkit152` `sifrpc.o` | `0x200` | whole body, masked-equal, 16 relocated word(s) | sifrpc.c | sly1 | - |
-| `0x0010FBA8` | `sceSifCheckStatRpc` | `devkit152` `sifrpc.o` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | sifrpc.c | godhand, sly1 | - |
-| `0x0010FBE8` | `sceSifSetRpcQueue` | `devkit152` `sifrpc.o` | `0x94` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x0010FC80` | `sceSifRegisterRpc` | `devkit152` `sifrpc.o` | `0xD0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x0010FD50` | `sceSifRemoveRpc` | `devkit152` `sifrpc.o` | `0x94` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x0010FDE8` | `sceSifRemoveRpcQueue` | `devkit152` `sifrpc.o` | `0x90` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x0010FE78` | `sceSifGetNextRequest` | `devkit152` `sifrpc.o` | `0x58` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x0010FED0` | `sceSifExecRequest` | `devkit152` `sifrpc.o` | `0x1C4` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x00110098` | `sceSifRpcLoop` | `devkit152` `sifrpc.o` | `0x40` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x001100D8` | `_sceFsIobSemaMK` | `devkit152` `filestub.o` | `0x70` | whole body, masked-equal, 11 relocated word(s) | - | - | - |
-| `0x00110148` | `use_iob_cnt` | `devkit152` `filestub.o` | `0x7C` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x001101C8` | `new_iob` | `devkit152` `filestub.o` | `0x88` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
-| `0x00110250` | `sceFsSifCallRpc` | `devkit152` `filestub.o` | `0xEC` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00110340` | `get_iob` | `devkit152` `filestub.o` | `0x6C` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
-| `0x001103B0` | `_sceFs_Rcv_Intr` | `devkit152` `filestub.o` | `0x3B4` | whole body, masked-equal, 15 relocated word(s) | - | godhand | - |
-| `0x00110768` | `_sceFsSemInit` | `devkit152` `filestub.o` | `0x54` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00110800` | `scePowerOffHandler` | `devkit152` `filestub.o` | `0xA0` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x001108A0` | `_sceFs_Poff_Intr` | `devkit152` `filestub.o` | `0x44` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x001108E8` | `sceFsInit` | `devkit152` `filestub.o` | `0x208` | whole body, masked-equal, 44 relocated word(s) | - | - | - |
-| `0x00110B80` | `sceFsReset` | `devkit152` `filestub.o` | `0x34` | whole body, masked-equal, 5 relocated word(s) | filestub.c | sly1 | - |
-| `0x00110BB8` | `sceFsSetIopBuf` | `devkit152` `filestub.o` | `0x140` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
-| `0x00110CF8` | `sceFsSetIopPrio` | `devkit152` `filestub.o` | `0xF0` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
-| `0x00110DE8` | `sceOpen` | `devkit152` `filestub.o` | `0x290` | whole body, masked-equal, 40 relocated word(s) | - | - | - |
-| `0x00111078` | `sceClose` | `devkit152` `filestub.o` | `0x178` | whole body, masked-equal, 24 relocated word(s) | filestub.c | sly1 | - |
-| `0x001111F0` | `sceLseek` | `devkit152` `filestub.o` | `0x23C` | whole body, masked-equal, 42 relocated word(s) | - | - | - |
-| `0x00111430` | `sceRead` | `devkit152` `filestub.o` | `0x26C` | whole body, masked-equal, 41 relocated word(s) | filestub.c | sly1 | - |
-| `0x001116A0` | `sceWrite` | `devkit152` `filestub.o` | `0x2C0` | whole body, masked-equal, 38 relocated word(s) | - | - | - |
-| `0x00111960` | `sceIoctl` | `devkit152` `filestub.o` | `0x388` | whole body, masked-equal, 52 relocated word(s) | filestub.c | sly1 | - |
-| `0x00111CE8` | `sceIoctl2` | `devkit152` `filestub.o` | `0x1E8` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
-| `0x00111ED0` | `_sceCallCode` | `devkit152` `filestub.o` | `0x1B0` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x001120A0` | `sceMkdir` | `devkit152` `filestub.o` | `0x1B8` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x00112278` | `sceFormat` | `devkit152` `filestub.o` | `0x280` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
-| `0x001124F8` | `sceAddDrv` | `devkit152` `filestub.o` | `0x12C` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
-| `0x00112648` | `sceDopen` | `devkit152` `filestub.o` | `0xC8` | whole body, masked-equal, 17 relocated word(s) | - | godhand | - |
-| `0x00112710` | `sceDclose` | `devkit152` `filestub.o` | `0x164` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
-| `0x00112878` | `sceDread` | `devkit152` `filestub.o` | `0x154` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
-| `0x001129D0` | `sceGetstat` | `devkit152` `filestub.o` | `0x1B4` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x00112B88` | `sceChstat` | `devkit152` `filestub.o` | `0x24C` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
-| `0x00112DD8` | `sceRename` | `devkit152` `filestub.o` | `0x208` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
-| `0x00113000` | `sceSync` | `devkit152` `filestub.o` | `0x1AC` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x001131B0` | `sceMount` | `devkit152` `filestub.o` | `0x280` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
-| `0x00113450` | `sceLseek64` | `devkit152` `filestub.o` | `0x23C` | whole body, masked-equal, 42 relocated word(s) | - | - | - |
-| `0x00113690` | `sceDevctl` | `devkit152` `filestub.o` | `0x2A8` | whole body, masked-equal, 30 relocated word(s) | - | - | - |
-| `0x00113938` | `sceSymlink` | `devkit152` `filestub.o` | `0x1F8` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x00113B30` | `sceReadlink` | `devkit152` `filestub.o` | `0x1E0` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
-| `0x00113D10` | `sceSifInitIopHeap` | `devkit152` `iopheap.o` | `0x88` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x00113D98` | `sceSifAllocIopHeap` | `devkit152` `iopheap.o` | `0x70` | whole body, masked-equal, 11 relocated word(s) | - | godhand | - |
-| `0x00113E08` | `sceSifAllocSysMemory` | `devkit152` `iopheap.o` | `0x80` | whole body, masked-equal, 11 relocated word(s) | - | - | - |
-| `0x00113F20` | `sceSifLoadIopHeap` | `devkit152` `iopheap.o` | `0xF0` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
-| `0x00114260` | `_lf_bind` | `devkit152` `eeloadfile.o` | `0x100` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x001143F0` | `sceSifLoadFileReset` | `devkit152` `eeloadfile.o` | `0x38` | whole body, masked-equal, 5 relocated word(s) | eeloadfile.c | sly1 | - |
-| `0x001148C8` | `sceSifSearchModuleByName` | `devkit152` `eeloadfile.o` | `0xA0` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00114A38` | `_sceSifLoadModule` | `devkit152` `eeloadfile.o` | `0x224` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
-| `0x00114CA0` | `_sceSifLoadElfPart` | `devkit152` `eeloadfile.o` | `0x104` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
-| `0x00114DF0` | `sceSifGetIopAddr` | `devkit152` `eeloadfile.o` | `0xEC` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
-| `0x00114EE0` | `sceSifSetIopAddr` | `devkit152` `eeloadfile.o` | `0xDC` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00114FC0` | `sceSifResetIop` | `devkit152` `iopreset.o` | `0x154` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
-| `0x00115140` | `sceSifSyncIop` | `devkit152` `iopreset.o` | `0x50` | whole body, masked-equal, 4 relocated word(s) | iopreset.c | sly1 | - |
-| `0x00115190` | `sceSifRebootIop` | `devkit152` `iopreset.o` | `0x110` | whole body, masked-equal, 8 relocated word(s) | iopreset.c | sly1 | - |
-| `0x001152A0` | `SetTLBHandler` | `devkit152` `tlbfunc.o` | `0x60` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
-| `0x00115300` | `SetDebugHandler` | `devkit152` `tlbfunc.o` | `0x84` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00115398` | `kCopy` | `devkit152` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x001153F0` | `InitTLBFunctions` | `devkit152` `tlbfunc.o` | `0xC4` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
-| `0x001154E8` | `SetTLBEntry` | `devkit152` `tlbfunc.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
-| `0x00115578` | `InitTLB` | `devkit152` `tlbfunc.o` | `0x40` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x001155B8` | `InitTLB32MB` | `devkit152` `tlbfunc.o` | `0x1F4` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
-| `0x00115B20` | `DIntr` | `devkit152` `diei.o` | `0x50` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00115B88` | `supplement_crt0` | `devkit152` `initsys.o` | `0x60` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
-| `0x00115C08` | `kCopy_1` (the corpus's `kCopy`, repeated in the image) | `devkit152` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00115C40` | `kFindAddress` | `devkit152` `initsys.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00115C90` | `GetSystemCallEntry` | `devkit152` `initsys.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00115CC8` | `InitSystemCallTableAddress` | `devkit152` `initsys.o` | `0xFC` | whole body, masked-equal, 18 relocated word(s) | - | godhand | - |
-| `0x00115DD8` | `_InitSys` | `devkit152` `initsys.o` | `0x54` | whole body, masked-equal, 9 relocated word(s) | - | godhand | - |
-| `0x00115E50` | `kCopy_2` (the corpus's `kCopy`, repeated in the image) | `devkit152` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00115E98` | `PatchIsNeeded` | `devkit152` `libosd.o` | `0x68` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x00115F00` | `InitExecPS2` | `devkit152` `libosd.o` | `0xAC` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x00115FC0` | `kCopy_3` (the corpus's `kCopy`, repeated in the image) | `devkit152` `exit.o` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00116000` | `SetArg` | `devkit152` `exit.o` | `0x118` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x00116120` | `ExecPS2` | `devkit152` `exit.o` | `0x70` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x00116190` | `LoadExecPS2` | `devkit152` `exit.o` | `0x48` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x00116200` | `ExecOSD` | `devkit152` `exit.o` | `0x4C` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x00116270` | `kCopy_4` (the corpus's `kCopy`, repeated in the image) | `devkit152` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x001162B8` | `InitAlarm` | `devkit152` `alarm.o` | `0xD4` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
-| `0x00116390` | `SetT2` | `devkit152` `timer.o` | `0x70` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
-| `0x00116430` | `InitTimer` | `devkit152` `timer.o` | `0x154` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
-| `0x00116588` | `EndTimer` | `devkit152` `timer.o` | `0xB8` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
-| `0x00116670` | `StartTimerSystemTime` | `devkit152` `timer.o` | `0x90` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00116700` | `StopTimerSystemTime` | `devkit152` `timer.o` | `0x7C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x00116780` | `SetNextComp` | `devkit152` `timer.o` | `0x190` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
-| `0x00116910` | `InsertAlarm` | `devkit152` `timer.o` | `0x84` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00116998` | `UnlinkAlarm` | `devkit152` `timer.o` | `0x38` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001169D0` | `cbTimerHandler` | `devkit152` `timer.o` | `0x2A4` | whole body, masked-equal, 20 relocated word(s) | - | godhand | - |
-| `0x00116CC8` | `GetTimerSystemTime` | `devkit152` `timer.o` | `0x7C` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x00116DB8` | `AllocTimerCounter` | `devkit152` `timer.o` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00116E00` | `iFreeTimerCounter` | `devkit152` `timer.o` | `0xA0` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00116F40` | `GetTimerUsedUnusedCounters` | `devkit152` `timer.o` | `0x5C` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00116FA0` | `iStartTimerCounter` | `devkit152` `timer.o` | `0xAC` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x001170A0` | `iStopTimerCounter` | `devkit152` `timer.o` | `0xC4` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x001171B8` | `SetTimerCount` | `devkit152` `timer.o` | `0xCC` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00117320` | `iGetTimerCount` | `devkit152` `timer.o` | `0x6C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001173E0` | `iSetTimerHandler` | `devkit152` `timer.o` | `0xF4` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x001174D8` | `SetTimerHandler` | `devkit152` `timer.o` | `0x7C` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00117750` | `AlarmHandler` | `devkit152` `timeralarm.o` | `0x5C` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
-| `0x00117B18` | `sceSifSetRebootNotifyBuffer` | `devkit152` `iopnotify.o` | `0x7C` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00117B98` | `sceSifAddRebootNotifyHandler` | `devkit152` `iopnotify.o` | `0xB8` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00117C50` | `sceSifRemoveRebootNotifyHandler` | `devkit152` `iopnotify.o` | `0x54` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00117CA8` | `sceSifExecNotifyHandler` | `devkit152` `iopnotify.o` | `0xA8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00117D50` | `scePadInit` | `devkit152` `libpad.o` | `0x14C` | whole body, masked-equal, 17 relocated word(s) | libpad.c | sly1 | - |
-| `0x00117EA0` | `_pad_intr_hdr` | `devkit152` `libpad.o` | `0x48` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x00117EE8` | `scePadInit2` | `devkit152` `libpad.o` | `0xF4` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
-| `0x00117FE0` | `scePadEnd` | `devkit152` `libpad.o` | `0xAC` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x00118090` | `_send_to_iop` | `devkit152` `libpad.o` | `0x114` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x001181A8` | `scePadPortOpen` | `devkit152` `libpad.o` | `0x1E4` | whole body, masked-equal, 22 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x00118390` | `scePadPortClose` | `devkit152` `libpad.o` | `0xB8` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x00118448` | `scePadGetDmaStr` | `devkit152` `libpad.o` | `0x158` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x001185A0` | `scePadGetFrameCount` | `devkit152` `libpad.o` | `0x58` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x001185F8` | `scePadRead` | `devkit152` `libpad.o` | `0x74` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x00118670` | `scePadGetState` | `devkit152` `libpad.o` | `0x78` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
-| `0x00118720` | `scePadSetReqState` | `devkit152` `libpad.o` | `0xB4` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x001187D8` | `scePadGetReqState` | `devkit152` `libpad.o` | `0x58` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00118868` | `scePadInfoAct` | `devkit152` `libpad.o` | `0x118` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
-| `0x00118980` | `scePadInfoComb` | `devkit152` `libpad.o` | `0x114` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00118A98` | `scePadInfoMode` | `devkit152` `libpad.o` | `0x134` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
-| `0x00118BD0` | `scePadSetMainMode` | `devkit152` `libpad.o` | `0xB4` | whole body, masked-equal, 7 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x00118C88` | `scePadSetActDirect` | `devkit152` `libpad.o` | `0xC8` | whole body, masked-equal, 4 relocated word(s) | libpad.c | sly1 | - |
-| `0x00118D50` | `scePadSetActAlign` | `devkit152` `libpad.o` | `0xD8` | whole body, masked-equal, 7 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x00118E28` | `scePadGetButtonMask` | `devkit152` `libpad.o` | `0xB0` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x00118ED8` | `scePadSetButtonInfo` | `devkit152` `libpad.o` | `0xB0` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
-| `0x00118F88` | `scePadInfoPressMode` | `devkit152` `libpad.o` | `0x80` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
-| `0x00119008` | `scePadEnterPressMode` | `devkit152` `libpad.o` | `0x54` | whole body, masked-equal, 3 relocated word(s) | libpad.c | godhand, sly1 | - |
-| `0x00119060` | `scePadExitPressMode` | `devkit152` `libpad.o` | `0x54` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x001190B8` | `scePadSetVrefParam` | `devkit152` `libpad.o` | `0xCC` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
-| `0x00119188` | `scePadGetModVersion` | `oni2` | `0x64` | whole body, masked-equal, 6 relocated word(s) | - | godhand | scePadGetPortMax (recvx), scePadGetPortMax (sdk152:libpad.a) |
-| `0x001191F0` | `scePadGetSlotMax` | `rlib20` `libpad.o` | `0x68` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x00119258` | `scePadGetModVersion_1` (the corpus's `scePadGetModVersion`, repeated in the image) | `oni2` | `0x64` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
-| `0x001192C0` | `scePadGetSlotMax_1` (the corpus's `scePadGetSlotMax`, repeated in the image) | `rlib20` `libpad.o` | `0x68` | whole body, masked-equal, 8 relocated word(s) | - | - | scePadSetWarningLevel (recvx), scePadSetWarningLevel (sdk152:libpad.a) |
-| `0x00119328` | `scePadSetDmaCallback` | `devkit152` `libpad.o` | `0x124` | whole body, masked-equal, 20 relocated word(s) | - | - | - |
-| `0x00119450` | `scePadSetFlushRate` | `devkit152` `libpad.o` | `0x30` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x00119480` | `sceCdCallback` | `devkit152` `cdvd000.o` | `0x68` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
-| `0x001194E8` | `_sceCd_cd_callback` | `devkit152` `cdvd000.o` | `0xA0` | whole body, masked-equal, 22 relocated word(s) | - | godhand | - |
-| `0x00119588` | `_sceCd_cbLoop` | `devkit152` `cdvd000.o` | `0xD0` | whole body, masked-equal, 30 relocated word(s) | - | - | - |
-| `0x00119658` | `sceCdInitEeCB` | `devkit152` `cdvd000.o` | `0x9C` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x001196F8` | `_sceCd_cd_read_intr` | `devkit152` `cdvd000.o` | `0xB8` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x001197B0` | `cmd_sem_init` | `devkit152` `cdvd000.o` | `0xE4` | whole body, masked-equal, 28 relocated word(s) | - | godhand | - |
-| `0x00119898` | `cdvd_exit` | `devkit152` `cdvd000.o` | `0xA0` | whole body, masked-equal, 23 relocated word(s) | - | godhand | - |
-| `0x00119938` | `sceCdPOffCallback` | `devkit152` `cdvd000.o` | `0x80` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x001199B8` | `_sceCd_Poff_Intr` | `devkit152` `cdvd000.o` | `0x54` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
-| `0x00119A10` | `PowerOffCB` | `devkit152` `cdvd000.o` | `0x78` | whole body, masked-equal, 11 relocated word(s) | - | godhand | - |
-| `0x00119A88` | `sceCdLayerSearchFile` | `devkit152` `cdvd000.o` | `0x2FC` | whole body, masked-equal, 57 relocated word(s) | - | godhand | - |
-| `0x00119F00` | `sceCdNcmdDiskReady` | `devkit152` `cdvd000.o` | `0x98` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x00119F98` | `sceCdSync` | `devkit152` `cdvd000.o` | `0xA0` | whole body, masked-equal, 16 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0011A038` | `sceCdSyncS` | `devkit152` `cdvd000.o` | `0x6C` | whole body, masked-equal, 12 relocated word(s) | - | godhand | - |
-| `0x0011A200` | `_sceCdSC` | `devkit152` `cdvd000.o` | `0xB0` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
-| `0x0011A2B0` | `sceCdInit` | `devkit152` `cdvd000.o` | `0x2E8` | whole body, masked-equal, 63 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0011A598` | `sceCdDiskReady_old` | `devkit152` `cdvd000.o` | `0x218` | whole body, masked-equal, 45 relocated word(s) | - | godhand | - |
-| `0x0011A7B0` | `sceCdDiskReady` | `devkit152` `cdvd000.o` | `0x220` | whole body, masked-equal, 46 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0011A9D0` | `sceCdRead` | `devkit152` `cdvd005.o` | `0x1E0` | whole body, masked-equal, 41 relocated word(s) | ../eecdvd.c | godhand, sly1 | - |
-| `0x0011ABB0` | `sceCdGetToc` | `devkit152` `cdvd009.o` | `0x290` | whole body, masked-equal, 27 relocated word(s) | - | - | - |
-| `0x0011AE40` | `sceCdSeek` | `devkit152` `cdvd010.o` | `0xCC` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
-| `0x0011AFC0` | `sceCdStop` | `devkit152` `cdvd012.o` | `0xB0` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
-| `0x0011B120` | `sceCdGetError` | `oni2` | `0x98` | whole body, masked-equal, 6 relocated word(s) | ../eecdvd.c | sly1 | sceCdGetDiskType2 (sdk152:libcdvd.a) |
-| `0x0011B1E0` | `sceCdGetError_1` (the corpus's `sceCdGetError`, repeated in the image) | `oni2` | `0x98` | whole body, masked-equal, 5 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0011B278` | `sceCdStatus` | `devkit152` `cdvd017.o` | `0xB8` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
-| `0x0011B330` | `sceCdBreak` | `devkit152` `cdvd018.o` | `0xB8` | whole body, masked-equal, 16 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0011B3E8` | `sceCdPowerOff` | `devkit152` `cdvd035.o` | `0xB4` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x0011B4A0` | `sceCdMmode` | `devkit152` `cdvd036.o` | `0xD0` | whole body, masked-equal, 22 relocated word(s) | ../eecdvd.c | sly1 | - |
-| `0x0011B598` | `sceCdReadClock` | `devkit152` `cdvd039.o` | `0xBC` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
-| `0x0011B8E8` | `sceMcChangeThreadPriority` | `devkit152` `libmc.o` | `0xBC` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
-| `0x0011B9A8` | `sceMcGetSlotMax` | `devkit152` `libmc.o` | `0xC0` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
-| `0x0011BA68` | `sceMcOpen` | `devkit152` `libmc.o` | `0x128` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
-| `0x0011BB90` | `sceMcMkdir` | `devkit152` `libmc.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0011BC88` | `sceMcSeek` | `devkit152` `libmc.o` | `0xE0` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
-| `0x0011BD68` | `mceIntrReadFixAlign` | `devkit152` `libmc.o` | `0xB0` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x0011BE18` | `sceMcRead` | `devkit152` `libmc.o` | `0x114` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
-| `0x0011BF30` | `sceMcWrite` | `devkit152` `libmc.o` | `0x178` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x0011C0A8` | `sceMcSync` | `devkit152` `libmc.o` | `0xC4` | whole body, masked-equal, 14 relocated word(s) | - | - | - |
-| `0x0011C170` | `mceGetInfoApdx` | `devkit152` `libmc.o` | `0x58` | whole body, masked-equal, 11 relocated word(s) | - | - | - |
-| `0x0011C1C8` | `sceMcGetInfo` | `devkit152` `libmc.o` | `0x17C` | whole body, masked-equal, 32 relocated word(s) | - | - | - |
-| `0x0011C348` | `sceMcUdCheckNewCard` | `devkit152` `libmc.o` | `0x70` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
-| `0x0011C3B8` | `sceMcGetDir` | `devkit152` `libmc.o` | `0x14C` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
-| `0x0011C508` | `mceStorePwd` | `devkit152` `libmc.o` | `0x8C` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
-| `0x0011C598` | `sceMcChdir` | `devkit152` `libmc.o` | `0x140` | whole body, masked-equal, 23 relocated word(s) | - | - | - |
-| `0x0011C7A8` | `sceMcDelete` | `devkit152` `libmc.o` | `0x11C` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
-| `0x0011C988` | `sceMcSetFileInfo` | `devkit152` `libmc.o` | `0x1CC` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x0011CB58` | `sceMcRename` | `devkit152` `libmc.o` | `0x158` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
-| `0x0011CD80` | `sceMcGetEntSpace` | `devkit152` `libmc.o` | `0x10C` | whole body, masked-equal, 20 relocated word(s) | - | - | - |
-| `0x00128670` | `__ieee754_rem_pio2f` | `devkit152` `ef_rem_pio2.o` | `0x398` | whole body, masked-equal, 40 relocated word(s) | - | godhand | - |
-| `0x00128A08` | `__kernel_cosf` | `devkit152` `kf_cos.o` | `0x14C` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
-| `0x00128B58` | `__kernel_rem_pio2f` | `devkit152` `kf_rem_pio2.o` | `0x820` | whole body, masked-equal, 29 relocated word(s) | - | godhand | - |
-| `0x00129378` | `__kernel_sinf` | `devkit152` `kf_sin.o` | `0xF4` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
-| `0x001294A0` | `isinf` | `devkit152` `s_isinf.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x001294E8` | `isnan` | `devkit152` `s_isnan.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00129520` | `atanf` | `devkit152` `sf_atan.o` | `0x2D0` | whole body, masked-equal, 47 relocated word(s) | /usr/local/sce/ee/gcc/src/newlib/libm/math/sf_atan.c | sly1 | - |
-| `0x00129818` | `cosf` | `devkit152` `sf_cos.o` | `0xB0` | whole body, masked-equal, 5 relocated word(s) | /usr/local/sce/ee/gcc/src/newlib/libm/math/sf_cos.c | sly1 | - |
-| `0x001298E0` | `floorf` | `devkit152` `sf_floor.o` | `0xD4` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x001299B8` | `scalbnf` | `devkit152` `sf_scalbn.o` | `0xAC` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
-| `0x00129A68` | `sinf` | `devkit152` `sf_sin.o` | `0xB8` | whole body, masked-equal, 5 relocated word(s) | /usr/local/sce/ee/gcc/src/newlib/libm/math/sf_sin.c | sly1 | - |
-| `0x00129B20` | `__muldi3` | `devkit152` `_muldi3.o` | `0x4C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x00129B70` | `__floatdidf` | `devkit152` `_floatdidf.o` | `0x98` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
-| `0x00129C08` | `__floatdisf` | `devkit152` `_floatdisf.o` | `0xC8` | whole body, masked-equal, 7 relocated word(s) | libmc.c | godhand, sly1 | - |
-| `0x00129CD0` | `__fixunsdfdi` | `devkit152` `_fixunsdfdi.o` | `0x108` | whole body, masked-equal, 11 relocated word(s) | - | godhand | - |
-| `0x00129DD8` | `__fixdfdi` | `devkit152` `_fixdfdi.o` | `0x6C` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x00129E48` | `__fixunssfdi` | `devkit152` `_fixunssfdi.o` | `0x110` | whole body, masked-equal, 12 relocated word(s) | - | godhand | - |
-| `0x00129F58` | `__divdi3` | `devkit152` `_divdi3.o` | `0x128` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0012A080` | `__udivmoddi4` | `devkit152` `_divdi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0012A748` | `__moddi3` | `devkit152` `_moddi3.o` | `0x130` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0012A878` | `__udivmoddi4_1` (the corpus's `__udivmoddi4`, repeated in the image) | `devkit152` `_divdi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0012AF58` | `__udivmoddi4_2` (the corpus's `__udivmoddi4`, repeated in the image) | `devkit152` `_divdi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0012B640` | `__udivmoddi4_3` (the corpus's `__udivmoddi4`, repeated in the image) | `devkit152` `_divdi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
-| `0x0012BD08` | `__pack_f` | `devkit152` `_pack_sf.o` | `0xB4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0012BDC0` | `__unpack_f` | `devkit152` `_unpack_sf.o` | `0x54` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0012BE48` | `fptodp` | `devkit152` `_sf_to_df.o` | `0x3C` | whole body, masked-equal, 2 relocated word(s) | /usr/local/sce/ee/gcc/build/gcc/dp-bit.c | godhand, sly1 | - |
-| `0x0012BE88` | `__pack_d` | `devkit152` `_pack_df.o` | `0xD4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0012BF60` | `__unpack_d` | `devkit152` `_unpack_df.o` | `0x90` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0012BFF0` | `_fpadd_parts` | `devkit152` `_addsub_df.o` | `0x224` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x0012C270` | `dpsub` | `devkit152` `_addsub_df.o` | `0x64` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
-| `0x0012C330` | `_fpmul_parts` | `devkit152` `_mul_df.o` | `0x1F4` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
-| `0x0012C528` | `dpdiv` | `devkit152` `_div_df.o` | `0x54` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x0012C580` | `_fpdiv_parts` | `devkit152` `_div_df.o` | `0xF8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x0012C678` | `__fpcmp_parts_d` | `devkit152` `_fpcmp_parts_df.o` | `0xFC` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
-| `0x0012C778` | `dpcmp` | `devkit152` `_compare_df.o` | `0x4C` | whole body, masked-equal, 3 relocated word(s) | /usr/local/sce/ee/gcc/build/gcc/dp-bit.c | godhand, sly1 | - |
-| `0x0012C7C8` | `litodp` | `devkit152` `_si_to_df.o` | `0xB0` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0012C878` | `dptoli` | `devkit152` `_df_to_si.o` | `0x9C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x0012C948` | `dptofp` | `devkit152` `_df_to_sf.o` | `0x54` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
-| `0x0012C9A0` | `dptoul` | `devkit152` `_df_to_usi.o` | `0x9C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001B3640` | `GetRomName` | `devkit152` `libscf.o` | `0x70` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
-| `0x001B36B0` | `IsT10K` | `devkit152` `libscf.o` | `0x40` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x001B36F0` | `sceScfGetLanguage` | `devkit152` `libscf.o` | `0x60` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x001B3770` | `sceScfGetAspect` | `devkit152` `libscf.o` | `0x40` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x001B37B0` | `sceScfGetSpdif` | `devkit152` `libscf.o` | `0x3C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x001B37F0` | `sceScfGetTimeZone` | `devkit152` `libscf.o` | `0x4C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x001B3840` | `sceScfGetDateNotation` | `devkit152` `libscf.o` | `0x64` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x001B38A8` | `sceScfGetSummerTime` | `devkit152` `libscf.o` | `0x68` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x001B3910` | `sceScfGetTimeNotation` | `devkit152` `libscf.o` | `0x68` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
-| `0x001B3A98` | `adddate` | `devkit152` `libscf.o` | `0xB4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001B3B50` | `subdate` | `devkit152` `libscf.o` | `0xA4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
-| `0x001B3BF8` | `addhour` | `devkit152` `libscf.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
-| `0x001B3C50` | `AdjustTime` | `devkit152` `libscf.o` | `0x8C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
-| `0x001B3CE8` | `sceScfGetLocalTimefromRTC` | `devkit152` `libscf.o` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00100318` | `sceGsResetGraph` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph001.o` | `0x190` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x001004B8` | `sceGsResetPath` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph002.o` | `0x68` | whole body, masked-equal, 2 relocated word(s) | vu/vu.c | sly1 | - |
+| `0x00100520` | `checkModelVersion` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph003.o` | `0xA0` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x001005D0` | `sceGsSetDefDispEnv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph003.o` | `0x374` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x00100948` | `sceGsPutDispEnv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph004.o` | `0xBC` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00100A08` | `sceGszbufaddr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph005.o` | `0xC8` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00100AD0` | `sceGsSetDefDrawEnv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph006.o` | `0x1E4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00100CB8` | `sceGsSetDefClear` | `oni2` *(no archive member)* | `0x104` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00100DC0` | `sceGsPutDrawEnv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph008.o` | `0xE8` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00100EA8` | `sceGsSyncV` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph011.o` | `0x94` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00100F40` | `sceGsSyncPath` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph012.o` | `0x314` | whole body, masked-equal, 41 relocated word(s) | - | - | - |
+| `0x00101368` | `sceGsSyncVCallback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph019.o` | `0xA0` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
+| `0x00101408` | `sceGsSetDefDrawEnv2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph022.o` | `0x1E0` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x001015E8` | `sceGsSetDefDBuffDc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph027.o` | `0x2E4` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00101930` | `WaitDma` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x70` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x001019A0` | `WatchDma` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x84` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00101A50` | `memclr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x34` | whole body, masked-equal, 0 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101AB0` | `sceDmaReset` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0xDC` | whole body, masked-equal, 6 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101B90` | `sceDmaPutEnv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x1D8` | whole body, masked-equal, 8 relocated word(s) | libdma.c | godhand, sly1 | - |
+| `0x00101D68` | `sceDmaGetEnv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x38` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00101DB8` | `sceDmaSend` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x68` | whole body, masked-equal, 2 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101F10` | `sceDmaRecv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x48` | whole body, masked-equal, 1 relocated word(s) | libdma.c | sly1 | - |
+| `0x00101F58` | `sceDmaRecvN` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x7C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00101FD8` | `sceDmaRecvI` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x80` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00102058` | `sceDmaSync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x38` | whole body, masked-equal, 1 relocated word(s) | libdma.c | sly1 | - |
+| `0x00102090` | `sceDmaWatch` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001020C8` | `sceDmaPause` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x98` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x001022D8` | `sceDevVu0Sync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102338` | `sceDevVu0GetCnd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x16C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001024A8` | `sceDevVu0PutCnd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x164` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00102640` | `sceVu0MemWriteQ` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102680` | `sceVu0MemReadQ` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102810` | `sceDevVu1Sync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102890` | `sceDevVu1GetCnd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x18C` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00102A20` | `sceDevVu1PutCnd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x148` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00102B98` | `sceVu0MulMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00102C28` | `sceVu0Normalize` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00102C68` | `sceVu0TransposeMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00102CB0` | `sceVu0InversMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x6C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00102EB8` | `_sceVu0ecossin` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x74` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00102F30` | `sceVu0RotMatrixZ` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0xA4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00102FD8` | `sceVu0RotMatrixX` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0xA8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00103080` | `sceVu0RotMatrixY` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0xA8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00103128` | `sceVu0RotMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x50` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x001031A0` | `sceVu0CameraMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0xB0` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x00103250` | `sceVu0NormalLightMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0xC0` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x00103310` | `sceVu0LightColorMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x68` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00103378` | `sceVu0ViewScreenMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x104` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00103480` | `sceVu0DropShadowMatrix` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x190` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103610` | `sceVu0RotTransPersN` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x58` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103668` | `sceVu0RotTransPers` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x44` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00103718` | `sceVu0ClipScreen` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103760` | `sceVu0ClipScreen3` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x60` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001037C0` | `sceVu0ClipAll` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x8C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00103850` | `sceVpu0Reset` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x5C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001038B0` | `_dualPrimeVector` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x184` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00103A38` | `_getAllRefs` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x704` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x00104140` | `_motionComp0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x250` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x00104390` | `_getRef0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x488` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00104818` | `_doMC` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x21C` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x00104A38` | `_sceMpegPictureData0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x240` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00104C78` | `_slice0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x32C` | whole body, masked-equal, 14 relocated word(s) | - | godhand | - |
+| `0x00104FA8` | `_motionVector` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x428` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
+| `0x001053D0` | `_motionVectors` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x19C` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00105570` | `_decMB0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x558` | whole body, masked-equal, 15 relocated word(s) | - | godhand | - |
+| `0x00105AC8` | `_sceMpegMbAddressIncrement` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x178` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00105C40` | `_sceMpegWaitIpuIdle` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x168` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00105DA8` | `_sceMpegWaitIpuIdle64` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x180` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00105F28` | `_sceMpegNextBit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xE8` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00106010` | `_sceMpegPeepBit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x8C` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001060A0` | `_sceMpegFlushBuf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x94` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00106138` | `_waitIpuIdle` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` `mpc.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00106178` | `_skipMB0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xBC` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00106238` | `_copyAddRefImage` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xEC` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001063E8` | `dmaRefImage` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x17C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x00106568` | `_rix_000` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x74` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x001065E0` | `_ri0_000` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x94` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106678` | `_rix_001` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xB4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106730` | `_ri0_001` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xCC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106800` | `_rix_010` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xAC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x001068B0` | `_ri0_010` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xB8` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106968` | `_rix_011` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xF8` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106A60` | `_ri0_011` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xFC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106B60` | `_rix_100` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x9C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106C00` | `_ri0_100` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xAC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106CB0` | `_rix_101` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xDC` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106D90` | `_ri0_101` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xE4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106E78` | `_rix_110` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xD4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00106F50` | `_ri0_110` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xD0` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00107020` | `_rix_111` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x120` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00107140` | `_ri0_111` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x114` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00107258` | `receiveDataFromIPU` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0xA0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001072F8` | `_sceMpegSliceA0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x1A0` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
+| `0x00107498` | `_initSeq` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x314` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x001077B0` | `_sequenceHeader` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x2AC` | whole body, masked-equal, 31 relocated word(s) | - | - | - |
+| `0x00107A60` | `_groupOfPicturesHeader` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xA0` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
+| `0x00107B00` | `_pictureHeader` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x144` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00107C48` | `_sequenceExtension` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x140` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00107D88` | `_quantMatrixExtension` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xE8` | whole body, masked-equal, 14 relocated word(s) | - | - | - |
+| `0x00107E90` | `_pictureCodingExtension` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x1E4` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
+| `0x00108098` | `_extensionAndUserData` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x1CC` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
+| `0x00108268` | `_waitIpuIdle_1` (the corpus's `_waitIpuIdle`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` `mpc.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x001082A8` | `_sceMpegNextHeader` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x154` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00108408` | `flushByteBoundary` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x50` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x00108458` | `_sequenceDisplayExtension` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x8C` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x001084E8` | `_copyrightExtension` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x94` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00108580` | `_pictureDisplayExtension` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xF4` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00108678` | `_clearOnce` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xCC` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00108748` | `sceMpegCreate` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x238` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
+| `0x00108980` | `_sendDataToIPU` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x100` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00108A80` | `_clearEach` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC8` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00108B48` | `_getpic` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x1B4` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
+| `0x00108D00` | `_updateRefImage` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x2B4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00108FB8` | `_decodeOrSkipFrame` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x170` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00109128` | `_decodeOrSkipField` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x1C4` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
+| `0x001092F0` | `sceMpegInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xB0` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x001093A8` | `sceMpegAddBs` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001093E8` | `sceMpegGetPicture` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x48` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00109430` | `sceMpegGetPictureRAW8` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x44` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00109488` | `sceMpegReset` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x7C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00109560` | `sceMpegAddCallback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x34` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00109598` | `sceMpegSetBuffType` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x34` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001095E0` | `_sceMpegDispatchMpegCallback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x78` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00109658` | `_sceMpegDispatchMpegCbNodata` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x74` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001096D0` | `_decodeOrSkip` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x44` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00109718` | `sceMpegClearRefBuff` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x54` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00109770` | `sceMpegGetPictureRAW8xy` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x50` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x00109868` | `_decPicture` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xCC` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00109A48` | `_cpr8` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `output.o` | `0x290` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00109CD8` | `_dispRefImage` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `output.o` | `0x2C0` | whole body, masked-equal, 9 relocated word(s) | - | godhand | - |
+| `0x00109F98` | `_dispRefImageField` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `output.o` | `0x420` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x0010A3B8` | `_sceMpegFlush` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `output.o` | `0xC0` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010A508` | `_doCSC2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `csc.o` | `0x1C0` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x0010A6C8` | `_sceMpegCscStoreRefImage` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `csc.o` | `0x4D8` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
+| `0x0010ABA0` | `_ch3dmaCSC` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `csc.o` | `0x148` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x0010ACE8` | `_ch4dma` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `csc.o` | `0xD4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010ADD0` | `_sceMpegStopIpuDma` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `error.o` | `0xA0` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x0010AE70` | `_sceMpegErrorBdec` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `error.o` | `0xC8` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x0010AF90` | `_sceMpegError1` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `error.o` | `0x40` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010B0C0` | `sceIpuStopDMA` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `libipu.o` | `0xE4` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x0010B1A8` | `sceIpuRestartDMA` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `libipu.o` | `0x150` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x0010B2F8` | `sceIpuSync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `libipu.o` | `0x68` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010B3D8` | `sceIpuInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `ipuinit.o` | `0x238` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010BEF0` | `VSync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x90` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0010BF80` | `VSync2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0xA4` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x0010C028` | `write` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x7C` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x0010C0A8` | `read` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x74` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x0010C160` | `sbrk` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0xAC` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x0010C2B0` | `_sceSDC` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `cache.o` | `0xA4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x0010C358` | `SyncDCache` | `oni2` *(no archive member)* | `0x7C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x0010C3F0` | `_sceIDC` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `cache.o` | `0xA4` | whole body, masked-equal, 0 relocated word(s) | - | godhand | _sceSDC (oni2) |
+| `0x0010C498` | `SyncDCache_1` (the corpus's `SyncDCache`, repeated in the image) | `oni2` *(no archive member)* | `0x7C` | whole body, masked-equal, 0 relocated word(s) | - | godhand | InvalidDCache (sdk152:libkernl.a) |
+| `0x0010C760` | `topThread` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0xD8` | whole body, masked-equal, 9 relocated word(s) | - | godhand | - |
+| `0x0010C838` | `InitThread` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0xEC` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x0010C928` | `iWakeupThread` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0x94` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
+| `0x0010C9C0` | `iRotateThreadReadyQueue` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0x7C` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x0010CA40` | `iSuspendThread` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0x98` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
+| `0x0010CBA0` | `StartThread` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0x178` | whole body, masked-equal, 7 relocated word(s) | klib.s | godhand, sly1 | - |
+| `0x0010CD40` | `sceDeci2Open` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x44` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010CDB0` | `sceDeci2ReqSend` | `oni2` *(no archive member)* | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010CE08` | `sceDeci2GrpOpen` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | sceDeci2ReqSend (recvx) |
+| `0x0010CED0` | `sceDeci2ReqSend_1` (the corpus's `sceDeci2ReqSend`, repeated in the image) | `oni2` *(no archive member)* | `0x30` | whole body, masked-equal, 2 relocated word(s) | - | - | sceDeci2ExReqSend (recvx), sceDeci2ExReqSend (sdk152:libkernl.a) |
+| `0x0010CFA0` | `QueuePeekWriteDone` | `oni2` *(no archive member)* | `0x3C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010CFE0` | `QueuePeekWriteDone_1` (the corpus's `QueuePeekWriteDone`, repeated in the image) | `oni2` *(no archive member)* | `0x3C` | whole body, masked-equal, 3 relocated word(s) | - | - | QueuePeekReadDone (recvx), QueuePeekReadDone (sdk152:libkernl.a) |
+| `0x0010D020` | `sceTtyHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tty.o` | `0x194` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
+| `0x0010D1B8` | `sceTtyWrite` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tty.o` | `0x174` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x0010D330` | `sceTtyRead` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tty.o` | `0xD0` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0010D400` | `sceTtyInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tty.o` | `0xBC` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x0010D4C0` | `kputchar` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D4F8` | `deci2Putchar` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0xB0` | whole body, masked-equal, 13 relocated word(s) | - | godhand | - |
+| `0x0010D5A8` | `serialPutchar` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010D5E0` | `ftoi` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x90` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010D670` | `printfloat` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x1D8` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
+| `0x0010D848` | `_sceSnprintf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0xD14` | whole body, masked-equal, 15 relocated word(s) | - | godhand | - |
+| `0x0010E560` | `snprintf_char` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x58` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010E608` | `_sceSnprintf_pf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x4C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010E658` | `sceVsnprintf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x38` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010E690` | `sceSnprintf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010E6D8` | `sceVprintf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x70` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x0010E8C0` | `sceSifInitCmd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x280` | whole body, masked-equal, 48 relocated word(s) | - | - | - |
+| `0x0010EB40` | `sceSifExitCmd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x34` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0010EBA8` | `sceSifAddCmdHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x78` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010EC20` | `sceSifRemoveCmdHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x4C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010EC70` | `_sceSifSendCmd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x134` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x0010EDA8` | `sceSifSendCmd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010EDE8` | `isceSifSendCmd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x3C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010EE28` | `_sceSifCmdIntrHdlr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x148` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010F020` | `sceSifInitRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x19C` | whole body, masked-equal, 34 relocated word(s) | sifrpc.c | godhand, sly1 | - |
+| `0x0010F1E8` | `_sceRpcGetPacket` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmrpc.a` `msifrpc.o` `sifrpc.o` | `0xA8` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0010F2B0` | `_sceRpcGetFPacket` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010F2E0` | `_sceRpcGetFPacket2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010F320` | `_request_end` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0xCC` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x0010F3F0` | `_alarm_rdata` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010F430` | `_request_rdata` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0xD0` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0010F500` | `sceSifGetOtherData` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x164` | whole body, masked-equal, 14 relocated word(s) | - | - | - |
+| `0x0010F668` | `_search_svdata` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x4C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0010F6B8` | `_alarm_bind` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x40` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0010F6F8` | `_request_bind` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0xCC` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0010F7C8` | `sceSifBindRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x14C` | whole body, masked-equal, 14 relocated word(s) | sifrpc.c | sly1 | - |
+| `0x0010F918` | `_request_call` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x8C` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x0010F9A8` | `sceSifCallRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x200` | whole body, masked-equal, 16 relocated word(s) | sifrpc.c | sly1 | - |
+| `0x0010FBA8` | `sceSifCheckStatRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x3C` | whole body, masked-equal, 0 relocated word(s) | sifrpc.c | godhand, sly1 | - |
+| `0x0010FBE8` | `sceSifSetRpcQueue` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x94` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0010FC80` | `sceSifRegisterRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0xD0` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010FD50` | `sceSifRemoveRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x94` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010FDE8` | `sceSifRemoveRpcQueue` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x90` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0010FE78` | `sceSifGetNextRequest` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x58` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0010FED0` | `sceSifExecRequest` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x1C4` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x00110098` | `sceSifRpcLoop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x40` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x001100D8` | `_sceFsIobSemaMK` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x70` | whole body, masked-equal, 11 relocated word(s) | - | - | - |
+| `0x00110148` | `use_iob_cnt` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x7C` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x001101C8` | `new_iob` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x88` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
+| `0x00110250` | `sceFsSifCallRpc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0xEC` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00110340` | `get_iob` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x6C` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
+| `0x001103B0` | `_sceFs_Rcv_Intr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x3B4` | whole body, masked-equal, 15 relocated word(s) | - | godhand | - |
+| `0x00110768` | `_sceFsSemInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x54` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00110800` | `scePowerOffHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0xA0` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x001108A0` | `_sceFs_Poff_Intr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x44` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x001108E8` | `sceFsInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x208` | whole body, masked-equal, 44 relocated word(s) | - | - | - |
+| `0x00110B80` | `sceFsReset` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x34` | whole body, masked-equal, 5 relocated word(s) | filestub.c | sly1 | - |
+| `0x00110BB8` | `sceFsSetIopBuf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x140` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
+| `0x00110CF8` | `sceFsSetIopPrio` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0xF0` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
+| `0x00110DE8` | `sceOpen` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x290` | whole body, masked-equal, 40 relocated word(s) | - | - | - |
+| `0x00111078` | `sceClose` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x178` | whole body, masked-equal, 24 relocated word(s) | filestub.c | sly1 | - |
+| `0x001111F0` | `sceLseek` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x23C` | whole body, masked-equal, 42 relocated word(s) | - | - | - |
+| `0x00111430` | `sceRead` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x26C` | whole body, masked-equal, 41 relocated word(s) | filestub.c | sly1 | - |
+| `0x001116A0` | `sceWrite` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x2C0` | whole body, masked-equal, 38 relocated word(s) | - | - | - |
+| `0x00111960` | `sceIoctl` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x388` | whole body, masked-equal, 52 relocated word(s) | filestub.c | sly1 | - |
+| `0x00111CE8` | `sceIoctl2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1E8` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
+| `0x00111ED0` | `_sceCallCode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1B0` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x001120A0` | `sceMkdir` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1B8` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x00112278` | `sceFormat` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x280` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
+| `0x001124F8` | `sceAddDrv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x12C` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
+| `0x00112648` | `sceDopen` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0xC8` | whole body, masked-equal, 17 relocated word(s) | - | godhand | - |
+| `0x00112710` | `sceDclose` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x164` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
+| `0x00112878` | `sceDread` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x154` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
+| `0x001129D0` | `sceGetstat` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1B4` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x00112B88` | `sceChstat` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x24C` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
+| `0x00112DD8` | `sceRename` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x208` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
+| `0x00113000` | `sceSync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1AC` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x001131B0` | `sceMount` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x280` | whole body, masked-equal, 26 relocated word(s) | - | - | - |
+| `0x00113450` | `sceLseek64` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x23C` | whole body, masked-equal, 42 relocated word(s) | - | - | - |
+| `0x00113690` | `sceDevctl` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x2A8` | whole body, masked-equal, 30 relocated word(s) | - | - | - |
+| `0x00113938` | `sceSymlink` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1F8` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x00113B30` | `sceReadlink` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1E0` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
+| `0x00113D10` | `sceSifInitIopHeap` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x88` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x00113D98` | `sceSifAllocIopHeap` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x70` | whole body, masked-equal, 11 relocated word(s) | - | godhand | - |
+| `0x00113E08` | `sceSifAllocSysMemory` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x80` | whole body, masked-equal, 11 relocated word(s) | - | - | - |
+| `0x00113F20` | `sceSifLoadIopHeap` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0xF0` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
+| `0x00114260` | `_lf_bind` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x100` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x001143F0` | `sceSifLoadFileReset` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x38` | whole body, masked-equal, 5 relocated word(s) | eeloadfile.c | sly1 | - |
+| `0x001148C8` | `sceSifSearchModuleByName` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0xA0` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00114A38` | `_sceSifLoadModule` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x224` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
+| `0x00114CA0` | `_sceSifLoadElfPart` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x104` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
+| `0x00114DF0` | `sceSifGetIopAddr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0xEC` | whole body, masked-equal, 10 relocated word(s) | - | - | - |
+| `0x00114EE0` | `sceSifSetIopAddr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0xDC` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00114FC0` | `sceSifResetIop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopreset.o` | `0x154` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
+| `0x00115140` | `sceSifSyncIop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopreset.o` | `0x50` | whole body, masked-equal, 4 relocated word(s) | iopreset.c | sly1 | - |
+| `0x00115190` | `sceSifRebootIop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopreset.o` | `0x110` | whole body, masked-equal, 8 relocated word(s) | iopreset.c | sly1 | - |
+| `0x001152A0` | `SetTLBHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x60` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
+| `0x00115300` | `SetDebugHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x84` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00115398` | `kCopy` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` `initsys.o` `libosd.o` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001153F0` | `InitTLBFunctions` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0xC4` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
+| `0x001154E8` | `SetTLBEntry` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | godhand | - |
+| `0x00115578` | `InitTLB` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x40` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x001155B8` | `InitTLB32MB` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x1F4` | whole body, masked-equal, 25 relocated word(s) | - | - | - |
+| `0x00115B20` | `DIntr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `diei.o` | `0x50` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00115B88` | `supplement_crt0` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x60` | whole body, masked-equal, 10 relocated word(s) | - | godhand | - |
+| `0x00115C08` | `kCopy_1` (the corpus's `kCopy`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` `initsys.o` `libosd.o` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00115C40` | `kFindAddress` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x40` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00115C90` | `GetSystemCallEntry` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00115CC8` | `InitSystemCallTableAddress` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0xFC` | whole body, masked-equal, 18 relocated word(s) | - | godhand | - |
+| `0x00115DD8` | `_InitSys` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x54` | whole body, masked-equal, 9 relocated word(s) | - | godhand | - |
+| `0x00115E50` | `kCopy_2` (the corpus's `kCopy`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` `initsys.o` `libosd.o` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00115E98` | `PatchIsNeeded` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `libosd.o` | `0x68` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00115F00` | `InitExecPS2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `libosd.o` | `0xAC` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x00115FC0` | `kCopy_3` (the corpus's `kCopy`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x30` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00116000` | `SetArg` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x118` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x00116120` | `ExecPS2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x70` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x00116190` | `LoadExecPS2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x48` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x00116200` | `ExecOSD` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x4C` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x00116270` | `kCopy_4` (the corpus's `kCopy`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` `initsys.o` `libosd.o` `tlbfunc.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001162B8` | `InitAlarm` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` | `0xD4` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
+| `0x00116390` | `SetT2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x70` | whole body, masked-equal, 0 relocated word(s) | - | godhand | - |
+| `0x00116430` | `InitTimer` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x154` | whole body, masked-equal, 18 relocated word(s) | - | - | - |
+| `0x00116588` | `EndTimer` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xB8` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
+| `0x00116670` | `StartTimerSystemTime` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x90` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00116700` | `StopTimerSystemTime` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x7C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00116780` | `SetNextComp` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x190` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
+| `0x00116910` | `InsertAlarm` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x84` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00116998` | `UnlinkAlarm` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x38` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001169D0` | `cbTimerHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x2A4` | whole body, masked-equal, 20 relocated word(s) | - | godhand | - |
+| `0x00116CC8` | `GetTimerSystemTime` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x7C` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00116DB8` | `AllocTimerCounter` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00116E00` | `iFreeTimerCounter` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xA0` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00116F40` | `GetTimerUsedUnusedCounters` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x5C` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00116FA0` | `iStartTimerCounter` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xAC` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x001170A0` | `iStopTimerCounter` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xC4` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001171B8` | `SetTimerCount` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xCC` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00117320` | `iGetTimerCount` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x6C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001173E0` | `iSetTimerHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xF4` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x001174D8` | `SetTimerHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x7C` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00117750` | `AlarmHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libtimer.a` `alarm.o` `timeralarm.o` | `0x5C` | whole body, masked-equal, 3 relocated word(s) | - | godhand | - |
+| `0x00117B18` | `sceSifSetRebootNotifyBuffer` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopnotify.o` | `0x7C` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00117B98` | `sceSifAddRebootNotifyHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopnotify.o` | `0xB8` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00117C50` | `sceSifRemoveRebootNotifyHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopnotify.o` | `0x54` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00117CA8` | `sceSifExecNotifyHandler` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopnotify.o` | `0xA8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00117D50` | `scePadInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x14C` | whole body, masked-equal, 17 relocated word(s) | libpad.c | sly1 | - |
+| `0x00117EA0` | `_pad_intr_hdr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x48` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00117EE8` | `scePadInit2` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xF4` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
+| `0x00117FE0` | `scePadEnd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xAC` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x00118090` | `_send_to_iop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x114` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x001181A8` | `scePadPortOpen` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x1E4` | whole body, masked-equal, 22 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x00118390` | `scePadPortClose` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xB8` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x00118448` | `scePadGetDmaStr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x158` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001185A0` | `scePadGetFrameCount` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x58` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x001185F8` | `scePadRead` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x74` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x00118670` | `scePadGetState` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x78` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
+| `0x00118720` | `scePadSetReqState` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xB4` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x001187D8` | `scePadGetReqState` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x58` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00118868` | `scePadInfoAct` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x118` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
+| `0x00118980` | `scePadInfoComb` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x114` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00118A98` | `scePadInfoMode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x134` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
+| `0x00118BD0` | `scePadSetMainMode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xB4` | whole body, masked-equal, 7 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x00118C88` | `scePadSetActDirect` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xC8` | whole body, masked-equal, 4 relocated word(s) | libpad.c | sly1 | - |
+| `0x00118D50` | `scePadSetActAlign` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xD8` | whole body, masked-equal, 7 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x00118E28` | `scePadGetButtonMask` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xB0` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x00118ED8` | `scePadSetButtonInfo` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xB0` | whole body, masked-equal, 7 relocated word(s) | - | godhand | - |
+| `0x00118F88` | `scePadInfoPressMode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x80` | whole body, masked-equal, 3 relocated word(s) | libpad.c | sly1 | - |
+| `0x00119008` | `scePadEnterPressMode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x54` | whole body, masked-equal, 3 relocated word(s) | libpad.c | godhand, sly1 | - |
+| `0x00119060` | `scePadExitPressMode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x54` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x001190B8` | `scePadSetVrefParam` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0xCC` | whole body, masked-equal, 7 relocated word(s) | - | - | - |
+| `0x00119188` | `scePadGetModVersion` | `oni2` *(no archive member)* | `0x64` | whole body, masked-equal, 6 relocated word(s) | - | godhand | scePadGetPortMax (recvx), scePadGetPortMax (sdk152:libpad.a) |
+| `0x001191F0` | `scePadGetSlotMax` | `rlib20` `~/sdk-downloads/rlib20/sce/ee/lib/libpad.a` `libpad.o` | `0x68` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x00119258` | `scePadGetModVersion_1` (the corpus's `scePadGetModVersion`, repeated in the image) | `oni2` *(no archive member)* | `0x64` | whole body, masked-equal, 5 relocated word(s) | - | godhand | - |
+| `0x001192C0` | `scePadGetSlotMax_1` (the corpus's `scePadGetSlotMax`, repeated in the image) | `rlib20` `~/sdk-downloads/rlib20/sce/ee/lib/libpad.a` `libpad.o` | `0x68` | whole body, masked-equal, 8 relocated word(s) | - | - | scePadSetWarningLevel (recvx), scePadSetWarningLevel (sdk152:libpad.a) |
+| `0x00119328` | `scePadSetDmaCallback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x124` | whole body, masked-equal, 20 relocated word(s) | - | - | - |
+| `0x00119450` | `scePadSetFlushRate` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x30` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x00119480` | `sceCdCallback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x68` | whole body, masked-equal, 8 relocated word(s) | - | - | - |
+| `0x001194E8` | `_sceCd_cd_callback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xA0` | whole body, masked-equal, 22 relocated word(s) | - | godhand | - |
+| `0x00119588` | `_sceCd_cbLoop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xD0` | whole body, masked-equal, 30 relocated word(s) | - | - | - |
+| `0x00119658` | `sceCdInitEeCB` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x9C` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x001196F8` | `_sceCd_cd_read_intr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xB8` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x001197B0` | `cmd_sem_init` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xE4` | whole body, masked-equal, 28 relocated word(s) | - | godhand | - |
+| `0x00119898` | `cdvd_exit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xA0` | whole body, masked-equal, 23 relocated word(s) | - | godhand | - |
+| `0x00119938` | `sceCdPOffCallback` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x80` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x001199B8` | `_sceCd_Poff_Intr` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x54` | whole body, masked-equal, 8 relocated word(s) | - | godhand | - |
+| `0x00119A10` | `PowerOffCB` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x78` | whole body, masked-equal, 11 relocated word(s) | - | godhand | - |
+| `0x00119A88` | `sceCdLayerSearchFile` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x2FC` | whole body, masked-equal, 57 relocated word(s) | - | godhand | - |
+| `0x00119F00` | `sceCdNcmdDiskReady` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x98` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x00119F98` | `sceCdSync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xA0` | whole body, masked-equal, 16 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0011A038` | `sceCdSyncS` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x6C` | whole body, masked-equal, 12 relocated word(s) | - | godhand | - |
+| `0x0011A200` | `_sceCdSC` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0xB0` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
+| `0x0011A2B0` | `sceCdInit` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x2E8` | whole body, masked-equal, 63 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0011A598` | `sceCdDiskReady_old` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x218` | whole body, masked-equal, 45 relocated word(s) | - | godhand | - |
+| `0x0011A7B0` | `sceCdDiskReady` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x220` | whole body, masked-equal, 46 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0011A9D0` | `sceCdRead` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd005.o` | `0x1E0` | whole body, masked-equal, 41 relocated word(s) | ../eecdvd.c | godhand, sly1 | - |
+| `0x0011ABB0` | `sceCdGetToc` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd009.o` | `0x290` | whole body, masked-equal, 27 relocated word(s) | - | - | - |
+| `0x0011AE40` | `sceCdSeek` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd010.o` | `0xCC` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
+| `0x0011AFC0` | `sceCdStop` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd012.o` | `0xB0` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
+| `0x0011B120` | `sceCdGetError` | `oni2` *(no archive member)* | `0x98` | whole body, masked-equal, 6 relocated word(s) | ../eecdvd.c | sly1 | sceCdGetDiskType2 (sdk152:libcdvd.a) |
+| `0x0011B1E0` | `sceCdGetError_1` (the corpus's `sceCdGetError`, repeated in the image) | `oni2` *(no archive member)* | `0x98` | whole body, masked-equal, 5 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0011B278` | `sceCdStatus` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd017.o` | `0xB8` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
+| `0x0011B330` | `sceCdBreak` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd018.o` | `0xB8` | whole body, masked-equal, 16 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0011B3E8` | `sceCdPowerOff` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd035.o` | `0xB4` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x0011B4A0` | `sceCdMmode` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd036.o` | `0xD0` | whole body, masked-equal, 22 relocated word(s) | ../eecdvd.c | sly1 | - |
+| `0x0011B598` | `sceCdReadClock` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd039.o` | `0xBC` | whole body, masked-equal, 12 relocated word(s) | - | - | - |
+| `0x0011B8E8` | `sceMcChangeThreadPriority` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xBC` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
+| `0x0011B9A8` | `sceMcGetSlotMax` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xC0` | whole body, masked-equal, 15 relocated word(s) | - | - | - |
+| `0x0011BA68` | `sceMcOpen` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x128` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
+| `0x0011BB90` | `sceMcMkdir` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x34` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0011BC88` | `sceMcSeek` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xE0` | whole body, masked-equal, 17 relocated word(s) | - | - | - |
+| `0x0011BD68` | `mceIntrReadFixAlign` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xB0` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0011BE18` | `sceMcRead` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x114` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
+| `0x0011BF30` | `sceMcWrite` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x178` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x0011C0A8` | `sceMcSync` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xC4` | whole body, masked-equal, 14 relocated word(s) | - | - | - |
+| `0x0011C170` | `mceGetInfoApdx` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x58` | whole body, masked-equal, 11 relocated word(s) | - | - | - |
+| `0x0011C1C8` | `sceMcGetInfo` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x17C` | whole body, masked-equal, 32 relocated word(s) | - | - | - |
+| `0x0011C348` | `sceMcUdCheckNewCard` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x70` | whole body, masked-equal, 13 relocated word(s) | - | - | - |
+| `0x0011C3B8` | `sceMcGetDir` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x14C` | whole body, masked-equal, 21 relocated word(s) | - | - | - |
+| `0x0011C508` | `mceStorePwd` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x8C` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
+| `0x0011C598` | `sceMcChdir` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x140` | whole body, masked-equal, 23 relocated word(s) | - | - | - |
+| `0x0011C7A8` | `sceMcDelete` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x11C` | whole body, masked-equal, 19 relocated word(s) | - | - | - |
+| `0x0011C988` | `sceMcSetFileInfo` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x1CC` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x0011CB58` | `sceMcRename` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x158` | whole body, masked-equal, 24 relocated word(s) | - | - | - |
+| `0x0011CD80` | `sceMcGetEntSpace` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0x10C` | whole body, masked-equal, 20 relocated word(s) | - | - | - |
+| `0x00128670` | `__ieee754_rem_pio2f` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `ef_rem_pio2.o` | `0x398` | whole body, masked-equal, 40 relocated word(s) | - | godhand | - |
+| `0x00128A08` | `__kernel_cosf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `kf_cos.o` | `0x14C` | whole body, masked-equal, 22 relocated word(s) | - | - | - |
+| `0x00128B58` | `__kernel_rem_pio2f` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `kf_rem_pio2.o` | `0x820` | whole body, masked-equal, 29 relocated word(s) | - | godhand | - |
+| `0x00129378` | `__kernel_sinf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `kf_sin.o` | `0xF4` | whole body, masked-equal, 16 relocated word(s) | - | - | - |
+| `0x001294A0` | `isinf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libc.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libg.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `s_isinf.o` | `0x48` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x001294E8` | `isnan` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libc.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libg.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `s_isnan.o` | `0x38` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00129520` | `atanf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `sf_atan.o` | `0x2D0` | whole body, masked-equal, 47 relocated word(s) | /usr/local/sce/ee/gcc/src/newlib/libm/math/sf_atan.c | sly1 | - |
+| `0x00129818` | `cosf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `sf_cos.o` | `0xB0` | whole body, masked-equal, 5 relocated word(s) | /usr/local/sce/ee/gcc/src/newlib/libm/math/sf_cos.c | sly1 | - |
+| `0x001298E0` | `floorf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `sf_floor.o` | `0xD4` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x001299B8` | `scalbnf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libc.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libg.a`, `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `sf_scalbn.o` | `0xAC` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x00129A68` | `sinf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/ee/lib/libm.a` `sf_sin.o` | `0xB8` | whole body, masked-equal, 5 relocated word(s) | /usr/local/sce/ee/gcc/src/newlib/libm/math/sf_sin.c | sly1 | - |
+| `0x00129B20` | `__muldi3` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_muldi3.o` | `0x4C` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x00129B70` | `__floatdidf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_floatdidf.o` | `0x98` | whole body, masked-equal, 6 relocated word(s) | - | godhand | - |
+| `0x00129C08` | `__floatdisf` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_floatdisf.o` | `0xC8` | whole body, masked-equal, 7 relocated word(s) | libmc.c | godhand, sly1 | - |
+| `0x00129CD0` | `__fixunsdfdi` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_fixunsdfdi.o` | `0x108` | whole body, masked-equal, 11 relocated word(s) | - | godhand | - |
+| `0x00129DD8` | `__fixdfdi` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_fixdfdi.o` | `0x6C` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x00129E48` | `__fixunssfdi` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_fixunssfdi.o` | `0x110` | whole body, masked-equal, 12 relocated word(s) | - | godhand | - |
+| `0x00129F58` | `__divdi3` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_divdi3.o` | `0x128` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0012A080` | `__udivmoddi4` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_divdi3.o` `_moddi3.o` `_udivdi3.o` `_udivmoddi4.o` `_umoddi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0012A748` | `__moddi3` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_moddi3.o` | `0x130` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0012A878` | `__udivmoddi4_1` (the corpus's `__udivmoddi4`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_divdi3.o` `_moddi3.o` `_udivdi3.o` `_udivmoddi4.o` `_umoddi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0012AF58` | `__udivmoddi4_2` (the corpus's `__udivmoddi4`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_divdi3.o` `_moddi3.o` `_udivdi3.o` `_udivmoddi4.o` `_umoddi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0012B640` | `__udivmoddi4_3` (the corpus's `__udivmoddi4`, repeated in the image) | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_divdi3.o` `_moddi3.o` `_udivdi3.o` `_udivmoddi4.o` `_umoddi3.o` | `0x6C8` | whole body, masked-equal, 6 relocated word(s) | - | - | - |
+| `0x0012BD08` | `__pack_f` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_pack_sf.o` | `0xB4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0012BDC0` | `__unpack_f` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_unpack_sf.o` | `0x54` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0012BE48` | `fptodp` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_sf_to_df.o` | `0x3C` | whole body, masked-equal, 2 relocated word(s) | /usr/local/sce/ee/gcc/build/gcc/dp-bit.c | godhand, sly1 | - |
+| `0x0012BE88` | `__pack_d` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_pack_df.o` | `0xD4` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0012BF60` | `__unpack_d` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_unpack_df.o` | `0x90` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0012BFF0` | `_fpadd_parts` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_addsub_df.o` | `0x224` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0012C270` | `dpsub` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_addsub_df.o` | `0x64` | whole body, masked-equal, 4 relocated word(s) | - | godhand | - |
+| `0x0012C330` | `_fpmul_parts` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_mul_df.o` | `0x1F4` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
+| `0x0012C528` | `dpdiv` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_div_df.o` | `0x54` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x0012C580` | `_fpdiv_parts` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_div_df.o` | `0xF8` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x0012C678` | `__fpcmp_parts_d` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_fpcmp_parts_df.o` | `0xFC` | whole body, masked-equal, 0 relocated word(s) | - | - | - |
+| `0x0012C778` | `dpcmp` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_compare_df.o` | `0x4C` | whole body, masked-equal, 3 relocated word(s) | /usr/local/sce/ee/gcc/build/gcc/dp-bit.c | godhand, sly1 | - |
+| `0x0012C7C8` | `litodp` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_si_to_df.o` | `0xB0` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0012C878` | `dptoli` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_df_to_si.o` | `0x9C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x0012C948` | `dptofp` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_df_to_sf.o` | `0x54` | whole body, masked-equal, 2 relocated word(s) | - | godhand | - |
+| `0x0012C9A0` | `dptoul` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/gcc/lib/gcc-lib/ee/3.2-ee-040921/libgcc.a` `_df_to_usi.o` | `0x9C` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001B3640` | `GetRomName` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x70` | whole body, masked-equal, 9 relocated word(s) | - | - | - |
+| `0x001B36B0` | `IsT10K` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x40` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x001B36F0` | `sceScfGetLanguage` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x60` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001B3770` | `sceScfGetAspect` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x40` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x001B37B0` | `sceScfGetSpdif` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x3C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x001B37F0` | `sceScfGetTimeZone` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x4C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x001B3840` | `sceScfGetDateNotation` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x64` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001B38A8` | `sceScfGetSummerTime` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x68` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001B3910` | `sceScfGetTimeNotation` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x68` | whole body, masked-equal, 5 relocated word(s) | - | - | - |
+| `0x001B3A98` | `adddate` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0xB4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001B3B50` | `subdate` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0xA4` | whole body, masked-equal, 2 relocated word(s) | - | - | - |
+| `0x001B3BF8` | `addhour` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x30` | whole body, masked-equal, 1 relocated word(s) | - | - | - |
+| `0x001B3C50` | `AdjustTime` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x8C` | whole body, masked-equal, 4 relocated word(s) | - | - | - |
+| `0x001B3CE8` | `sceScfGetLocalTimefromRTC` | `devkit152` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x48` | whole body, masked-equal, 3 relocated word(s) | - | - | - |
 
 ## Names proposed, not in the build artifact (size-run evidence)
 
@@ -568,383 +572,383 @@ they are proposals with a measured chance level (see the control above), and the
 out of `symbol_addrs.txt`, whose lines carry no tier.  `run` is how many consecutive
 functions agreed, which is the strength of the claim.
 
-| address | name | source (member) | size | run | sdk source | corroborated by | contested by |
+| address | name | source (archive, member) | size | run | sdk source | corroborated by | contested by |
 |---|---|---|---|---|---|---|---|
-| `0x001004A8` | `sceGsGetGParam` | `sdk152:libgraph.a` `graph001.o` | `0xC` | `11` | - | - | - |
-| `0x001005C0` | `_GetGsDxDyOffset` | `sdk152:libgraph.a` `graph003.o` | `0x10` | `11` | - | - | - |
-| `0x001018D0` | `sceGsSwapDBuffDc` | `recvx` | `0x5C` | `3` | - | - | - |
-| `0x00101A28` | `CheckAddress` | `sdk152:libdma.a` `libdma.o` | `0x28` | `19` | - | - | - |
-| `0x00101A88` | `sceDmaGetChan` | `sdk152:libdma.a` `libdma.o` | `0x28` | `19` | libdma.c | sly1 | - |
-| `0x00101DA0` | `sceDmaPutStallAddr` | `sdk152:libdma.a` `libdma.o` | `0x14` | `19` | - | - | - |
-| `0x00101E20` | `sceDmaSendN` | `sdk152:libdma.a` `libdma.o` | `0x74` | `19` | - | - | - |
-| `0x00101E98` | `sceDmaSendI` | `sdk152:libdma.a` `libdma.o` | `0x74` | `19` | - | - | - |
-| `0x00102160` | `sceDmaRestart` | `sdk152:libdma.a` `libdma.o` | `0x14` | `19` | - | - | - |
-| `0x00102178` | `sceDevVu0CheckBusy` | `sdk152:libdev.a` `devvu0.o` | `0x14` | `28` | - | - | - |
-| `0x00102190` | `sceDevVu0Reset` | `sdk152:libdev.a` `devvu0.o` | `0x14` | `28` | - | - | - |
-| `0x001021A8` | `sceDevVu0Pause` | `sdk152:libdev.a` `devvu0.o` | `0x60` | `28` | - | - | - |
-| `0x00102208` | `sceDevVu0Continue` | `sdk152:libdev.a` `devvu0.o` | `0x50` | `28` | - | - | - |
-| `0x00102258` | `sceDevVu0PutDBit` | `sdk152:libdev.a` `devvu0.o` | `0x30` | `28` | - | - | - |
-| `0x00102288` | `sceDevVu0PutTBit` | `sdk152:libdev.a` `devvu0.o` | `0x30` | `28` | - | - | - |
-| `0x001022B8` | `sceDevVu0GetDBit` | `sdk152:libdev.a` `devvu0.o` | `0x10` | `28` | - | - | - |
-| `0x001022C8` | `sceDevVu0GetTBit` | `sdk152:libdev.a` `devvu0.o` | `0x10` | `28` | - | - | - |
-| `0x00102318` | `sceDevVu0Exec` | `sdk152:libdev.a` `devvu0.o` | `0x10` | `28` | - | - | - |
-| `0x00102328` | `sceDevVu0GetTpc` | `sdk152:libdev.a` `devvu0.o` | `0xC` | `28` | - | - | - |
-| `0x00102610` | `sceVuCheckBusy` | `sdk152:libdev.a` `devvu1.o` | `0x2C` | `28` | - | - | - |
-| `0x001026C8` | `sceDevVu1Reset` | `sdk152:libdev.a` `devvu1.o` | `0x14` | `28` | - | - | - |
-| `0x001026E0` | `sceDevVu1Pause` | `sdk152:libdev.a` `devvu1.o` | `0x60` | `28` | - | - | - |
-| `0x00102740` | `sceDevVu1Continue` | `sdk152:libdev.a` `devvu1.o` | `0x50` | `28` | - | - | - |
-| `0x00102790` | `sceDevVu1PutDBit` | `sdk152:libdev.a` `devvu1.o` | `0x30` | `28` | - | - | - |
-| `0x001027C0` | `sceDevVu1PutTBit` | `sdk152:libdev.a` `devvu1.o` | `0x30` | `28` | - | - | - |
-| `0x001027F0` | `sceDevVu1GetDBit` | `sdk152:libdev.a` `devvu1.o` | `0x10` | `28` | - | - | - |
-| `0x00102800` | `sceDevVu1GetTBit` | `sdk152:libdev.a` `devvu1.o` | `0x10` | `28` | - | - | - |
-| `0x00102858` | `sceDevVu1Exec` | `sdk152:libdev.a` `devvu1.o` | `0x10` | `28` | - | - | - |
-| `0x00102868` | `sceDevVu1GetTpc` | `sdk152:libdev.a` `devvu1.o` | `0x24` | `28` | - | - | - |
-| `0x00102B68` | `sceVu0ApplyMatrix` | `sdk152:libvu0.a` `libvu0.o` | `0x2C` | `42` | - | godhand | - |
-| `0x00102BE0` | `sceVu0OuterProduct` | `sdk152:libvu0.a` `libvu0.o` | `0x1C` | `42` | - | godhand | - |
-| `0x00102C00` | `sceVu0InnerProduct` | `sdk152:libvu0.a` `libvu0.o` | `0x24` | `42` | - | godhand | - |
-| `0x00102D20` | `sceVu0DivVector` | `sdk152:libvu0.a` `libvu0.o` | `0x20` | `42` | - | godhand | - |
-| `0x00102D40` | `sceVu0DivVectorXYZ` | `sdk152:libvu0.a` `libvu0.o` | `0x20` | `42` | - | - | - |
-| `0x00102D60` | `sceVu0InterVector` | `sdk152:libvu0.a` `libvu0.o` | `0x28` | `42` | - | - | - |
-| `0x00102D88` | `sceVu0AddVector` | `sdk152:libvu0.a` `libvu0.o` | `0x14` | `42` | - | godhand | - |
-| `0x00102DA0` | `sceVu0SubVector` | `sdk152:libvu0.a` `libvu0.o` | `0x14` | `42` | - | godhand | - |
-| `0x00102DB8` | `sceVu0MulVector` | `sdk152:libvu0.a` `libvu0.o` | `0x14` | `42` | - | godhand | - |
-| `0x00102DD0` | `sceVu0ScaleVector` | `sdk152:libvu0.a` `libvu0.o` | `0x18` | `42` | - | godhand | - |
-| `0x00102DE8` | `sceVu0TransMatrix` | `sdk152:libvu0.a` `libvu0.o` | `0x2C` | `42` | - | godhand | - |
-| `0x00102E18` | `sceVu0CopyVector` | `sdk152:libvu0.a` `libvu0.o` | `0xC` | `42` | - | - | - |
-| `0x00102E28` | `sceVu0CopyMatrix` | `sdk152:libvu0.a` `libvu0.o` | `0x24` | `42` | - | - | - |
-| `0x00102E50` | `sceVu0FTOI4Vector` | `sdk152:libvu0.a` `libvu0.o` | `0x10` | `42` | - | godhand | - |
-| `0x00102E60` | `sceVu0FTOI0Vector` | `sdk152:libvu0.a` `libvu0.o` | `0x10` | `42` | - | - | - |
-| `0x00102E70` | `sceVu0ITOF4Vector` | `sdk152:libvu0.a` `libvu0.o` | `0x10` | `42` | - | - | - |
-| `0x00102E80` | `sceVu0ITOF0Vector` | `sdk152:libvu0.a` `libvu0.o` | `0x10` | `42` | - | - | - |
-| `0x00102E90` | `sceVu0UnitMatrix` | `sdk152:libvu0.a` `libvu0.o` | `0x28` | `42` | - | godhand | - |
-| `0x00103178` | `sceVu0ClampVector` | `sdk152:libvu0.a` `libvu0.o` | `0x24` | `42` | - | - | - |
-| `0x001036B0` | `sceVu0CopyVectorXYZ` | `sdk152:libvu0.a` `libvu0.o` | `0x1C` | `42` | - | - | - |
-| `0x001036D0` | `sceVu0InterVectorXYZ` | `sdk152:libvu0.a` `libvu0.o` | `0x2C` | `42` | - | - | - |
-| `0x00103700` | `sceVu0ScaleVectorXYZ` | `sdk152:libvu0.a` `libvu0.o` | `0x18` | `42` | - | godhand | - |
-| `0x00106170` | `_flushBuf` | `sdk152:libmpeg.a` `mpc.o` | `0x8` | `20` | - | - | - |
-| `0x00107E70` | `_sequenceScalableExtension` | `sdk152:libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
-| `0x00107E80` | `_unknown_extension` | `sdk152:libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
-| `0x00108078` | `_pictureSpatialScalableExtension` | `sdk152:libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
-| `0x00108088` | `_pictureTemporalScalableExtension` | `sdk152:libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
-| `0x001082A0` | `_flushBuf_1` (the corpus's `_flushBuf`, repeated in the image) | `sdk152:libmpeg.a` `ext.o` | `0x8` | `92` | - | - | - |
-| `0x00108400` | `flushBuf32` | `sdk152:libmpeg.a` `ext.o` | `0x8` | `92` | - | - | - |
-| `0x001093A0` | `sceMpegDelete` | `sdk152:libmpeg.a` `mpeg.o` | `0x8` | `92` | - | - | - |
-| `0x00109478` | `sceMpegGetPictureAbort` | `sdk152:libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - | - |
-| `0x00109508` | `sceMpegIsEnd` | `sdk152:libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - | - |
-| `0x00109518` | `sceMpegIsRefBuffEmpty` | `sdk152:libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - | - |
-| `0x00109528` | `sceMpegSetDecodeMode` | `sdk152:libmpeg.a` `mpeg.o` | `0x14` | `92` | - | - | - |
-| `0x00109540` | `sceMpegGetDecodeMode` | `sdk152:libmpeg.a` `mpeg.o` | `0x20` | `92` | - | - | - |
-| `0x001095D0` | `sceMpegGetBuffType` | `sdk152:libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - | - |
-| `0x001097C0` | `sceMpegSetDefaultPtsGap` | `sdk152:libmpeg.a` `mpeg.o` | `0x18` | `92` | - | - | - |
-| `0x001097D8` | `sceMpegResetDefaultPtsGap` | `sdk152:libmpeg.a` `mpeg.o` | `0x14` | `92` | - | - | - |
-| `0x001097F0` | `sceMpegSetImageBuff` | `sdk152:libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - |  (sdk152:ntgui2.a), __sceErxGetStderr (sdk152:libc_export.a) |
-| `0x00109800` | `sceMpegDispWidth` | `sdk152:libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcStdlibGetErxEntries (sdk152:libc_export.a) |
-| `0x00109810` | `sceMpegDispHeight` | `sdk152:libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcStringGetErxEntries (sdk152:libc_export.a) |
-| `0x00109820` | `sceMpegDispCenterOffX` | `sdk152:libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcTimeGetErxEntries (sdk152:libc_export.a) |
-| `0x00109830` | `sceMpegDispCenterOffY` | `sdk152:libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcUnistdGetErxEntries (sdk152:libc_export.a) |
-| `0x00109840` | `_sceMpegSetBrokenLink` | `sdk152:libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - |  (sdk152:ntgui2.a), sceSetBrokenLink (recvx) |
-| `0x00109850` | `_sceMpegSetPtm` | `sdk152:libmpeg.a` `mpeg.o` | `0x18` | `92` | - | - |  (sdk152:ntgui2.a) |
-| `0x00109938` | `_sceMpegAlalcInit` | `sdk152:libmpeg.a` `alalc.o` | `0x14` | `92` | - | - | - |
-| `0x00109950` | `_sceMpegAlalcSetDynamic` | `sdk152:libmpeg.a` `alalc.o` | `0xC` | `92` | - | - | - |
-| `0x00109960` | `_sceMpegAlalcFree` | `sdk152:libmpeg.a` `alalc.o` | `0xC` | `92` | - | - | - |
-| `0x001099E0` | `_sceMpegAlalcReset` | `sdk152:libmpeg.a` `alalc.o` | `0x18` | `92` | - | - | - |
-| `0x001099F8` | `_sceMpegDefaultStopDMA` | `sdk152:libmpeg.a` `defhandler.o` | `0x24` | `92` | - | - | - |
-| `0x00109A20` | `_sceMpegDefaultRestartDMA` | `sdk152:libmpeg.a` `defhandler.o` | `0x24` | `92` | - | - | - |
-| `0x0010ADC0` | `_ErrMessage` | `sdk152:libmpeg.a` `error.o` | `0x10` | `5` | - | - | - |
-| `0x0010AFD0` | `setD3_CHCR` | `sdk152:libipu.a` `libipu.o` | `0x74` | `7` | - | godhand | - |
-| `0x0010B048` | `setD4_CHCR` | `sdk152:libipu.a` `libipu.o` | `0x74` | `7` | - | godhand | - |
-| `0x0010B360` | `setD4_CHCR_1` (the corpus's `setD4_CHCR`, repeated in the image) | `sdk152:libipu.a` `ipuinit.o` | `0x74` | `7` | - | godhand | - |
-| `0x0010B640` | `RFU000_FullReset` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | - |
-| `0x0010B650` | `ResetEE` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU000_FullReset (recvx) |
-| `0x0010B660` | `SetGsCrt` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ResetEE (recvx) |
-| `0x0010B670` | `RFU003` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | SetGsCrt (recvx) |
-| `0x0010B680` | `_Exit` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU003 (recvx) |
-| `0x0010B690` | `RFU005` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | Exit (recvx) |
-| `0x0010B6A0` | `_LoadExecPS2` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU005 (recvx) |
-| `0x0010B6B0` | `_ExecPS2` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | LoadExecPS2 (recvx) |
-| `0x0010B6C0` | `RFU008` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | ExecPS2 (recvx) |
-| `0x0010B6D0` | `RFU009` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU008 (recvx) |
-| `0x0010B6E0` | `AddSbusIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU009 (recvx) |
-| `0x0010B6F0` | `RemoveSbusIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddSbusIntcHandler (recvx) |
-| `0x0010B700` | `Interrupt2Iop` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RemoveSbusIntcHandler (recvx) |
-| `0x0010B710` | `SetVTLBRefillHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | Interrupt2Iop (recvx) |
-| `0x0010B720` | `SetVCommonHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetVTLBRefillHandler (recvx) |
-| `0x0010B730` | `SetVInterruptHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetVCommonHandler (recvx) |
-| `0x0010B740` | `AddIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetVInterruptHandler (recvx) |
-| `0x0010B750` | `AddIntcHandler2` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddIntcHandler (recvx) |
-| `0x0010B760` | `RemoveIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddIntcHandler2 (recvx) |
-| `0x0010B770` | `AddDmacHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RemoveIntcHandler (recvx) |
-| `0x0010B780` | `AddDmacHandler2` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddDmacHandler (recvx) |
-| `0x0010B790` | `RemoveDmacHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddDmacHandler2 (recvx) |
-| `0x0010B7A0` | `_EnableIntc` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RemoveDmacHandler (recvx) |
-| `0x0010B7B0` | `_DisableIntc` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _EnableIntc (recvx) |
-| `0x0010B7C0` | `_EnableDmac` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _DisableIntc (recvx) |
-| `0x0010B7D0` | `_DisableDmac` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _EnableDmac (recvx) |
-| `0x0010B7E0` | `SetAlarm` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _DisableDmac (recvx) |
-| `0x0010B7F0` | `ReleaseAlarm` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _SetAlarm (recvx) |
-| `0x0010B800` | `_iEnableIntc` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _ReleaseAlarm (recvx) |
-| `0x0010B810` | `_iDisableIntc` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iEnableIntc (recvx) |
-| `0x0010B820` | `_iEnableDmac` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iDisableIntc (recvx) |
-| `0x0010B830` | `_iDisableDmac` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iEnableDmac (recvx) |
-| `0x0010B840` | `iSetAlarm` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iDisableDmac (recvx) |
-| `0x0010B850` | `iReleaseAlarm` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iSetAlarm (recvx) |
-| `0x0010B860` | `CreateThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | _iReleaseAlarm (recvx) |
-| `0x0010B870` | `DeleteThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateThread (recvx) |
-| `0x0010B880` | `_StartThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | DeleteThread (recvx) |
-| `0x0010B890` | `ExitThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | StartThread (recvx) |
-| `0x0010B8A0` | `ExitDeleteThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ExitThread (recvx) |
-| `0x0010B8B0` | `TerminateThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ExitDeleteThread (recvx) |
-| `0x0010B8C0` | `iTerminateThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | TerminateThread (recvx) |
-| `0x0010B8D0` | `DisableDispatchThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iTerminateThread (recvx) |
-| `0x0010B8E0` | `EnableDispatchThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DisableDispatchThread (recvx) |
-| `0x0010B8F0` | `ChangeThreadPriority` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | EnableDispatchThread (recvx) |
-| `0x0010B900` | `iChangeThreadPriority` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ChangeThreadPriority (recvx) |
-| `0x0010B910` | `RotateThreadReadyQueue` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iChangeThreadPriority (recvx) |
-| `0x0010B920` | `_iRotateThreadReadyQueue` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RotateThreadReadyQueue (recvx) |
-| `0x0010B930` | `ReleaseWaitThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iRotateThreadReadyQueue (recvx) |
-| `0x0010B940` | `iReleaseWaitThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReleaseWaitThread (recvx) |
-| `0x0010B950` | `GetThreadId` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | iReleaseWaitThread (recvx) |
-| `0x0010B960` | `ReferThreadStatus` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetThreadId (recvx) |
-| `0x0010B970` | `iReferThreadStatus` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReferThreadStatus (recvx) |
-| `0x0010B980` | `SleepThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iReferThreadStatus (recvx) |
-| `0x0010B990` | `WakeupThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SleepThread (recvx) |
-| `0x0010B9A0` | `_iWakeupThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | WakeupThread (recvx) |
-| `0x0010B9B0` | `CancelWakeupThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iWakeupThread (recvx) |
-| `0x0010B9C0` | `iCancelWakeupThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CancelWakeupThread (recvx) |
-| `0x0010B9D0` | `SuspendThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iCancelWakeupThread (recvx) |
-| `0x0010B9E0` | `_iSuspendThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | SuspendThread (recvx) |
-| `0x0010B9F0` | `ResumeThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iSuspendThread (recvx) |
-| `0x0010BA00` | `iResumeThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ResumeThread (recvx) |
-| `0x0010BA10` | `JoinThread` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | iResumeThread (recvx) |
-| `0x0010BA20` | `RFU060` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | JoinThread (recvx) |
-| `0x0010BA30` | `RFU061` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU060 (recvx) |
-| `0x0010BA40` | `EndOfHeap` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU061 (recvx) |
-| `0x0010BA50` | `RFU063` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | EndOfHeap (recvx) |
-| `0x0010BA60` | `CreateSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | RFU063 (recvx) |
-| `0x0010BA70` | `DeleteSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateSema (recvx) |
-| `0x0010BA80` | `SignalSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | DeleteSema (recvx) |
-| `0x0010BA90` | `iSignalSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SignalSema (recvx) |
-| `0x0010BAA0` | `WaitSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | iSignalSema (recvx) |
-| `0x0010BAB0` | `PollSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | WaitSema (recvx) |
-| `0x0010BAC0` | `iPollSema` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | PollSema (recvx) |
-| `0x0010BAD0` | `ReferSemaStatus` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iPollSema (recvx) |
-| `0x0010BAE0` | `iReferSemaStatus` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReferSemaStatus (recvx) |
-| `0x0010BAF0` | `RFU073` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | iReferSemaStatus (recvx) |
-| `0x0010BB00` | `SetOsdConfigParam` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU073 (recvx) |
-| `0x0010BB10` | `GetOsdConfigParam` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetOsdConfigParam (recvx) |
-| `0x0010BB20` | `GetGsHParam` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetOsdConfigParam (recvx) |
-| `0x0010BB30` | `GetGsVParam` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetGsHParam (recvx) |
-| `0x0010BB40` | `SetGsHParam` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetGsVParam (recvx) |
-| `0x0010BB50` | `SetGsVParam` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetGsHParam (recvx) |
-| `0x0010BB60` | `RFU080_CreateEventFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | SetGsVParam (recvx) |
-| `0x0010BB70` | `RFU081_DeleteEventFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU080_CreateEventFlag (recvx) |
-| `0x0010BB80` | `RFU082_SetEventFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU081_DeleteEventFlag (recvx) |
-| `0x0010BB90` | `RFU083_iSetEventFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU082_SetEventFlag (recvx) |
-| `0x0010BBA0` | `RFU084_ClearEventFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU083_iSetEventFlag (recvx) |
-| `0x0010BBB0` | `RFU085_iClearEventFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU084_ClearEventFlag (recvx) |
-| `0x0010BBC0` | `RFU086_WaitEvnetFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU085_iClearEventFlag (recvx), SetGsCrt (oni2) |
-| `0x0010BBD0` | `RFU087_PollEvnetFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU086_WaitEvnetFlag (recvx), SetVTLBRefillHandler (oni2) |
-| `0x0010BBE0` | `RFU088_iPollEvnetFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU087_PollEvnetFlag (recvx), SetVCommonHandler (oni2) |
-| `0x0010BBF0` | `RFU089_ReferEventFlagStatus` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | AddIntcHandler (oni2), RFU088_iPollEvnetFlag (recvx) |
-| `0x0010BC00` | `RFU090_iReferEventFlagStatus` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU089_ReferEventFlagStatus (recvx), RemoveIntcHandler (oni2) |
-| `0x0010BC10` | `RFU091` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | AddDmacHandler (oni2), RFU090_iReferEventFlagStatus (recvx) |
-| `0x0010BC20` | `EnableIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddDmacHandler2 (oni2), RFU091 (recvx) |
-| `0x0010BC30` | `iEnableIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | EnableIntcHandler (recvx), RemoveDmacHandler (oni2) |
-| `0x0010BC40` | `DisableIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _EnableIntc (oni2), iEnableIntcHandler (recvx) |
-| `0x0010BC50` | `iDisableIntcHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DisableIntcHandler (recvx), _DisableIntc (oni2) |
-| `0x0010BC60` | `EnableDmacHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _EnableDmac (oni2), iDisableIntcHandler (recvx) |
-| `0x0010BC70` | `iEnableDmacHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | EnableDmacHandler (recvx), _DisableDmac (oni2) |
-| `0x0010BC80` | `DisableDmacHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetAlarm (oni2), iEnableDmacHandler (recvx) |
-| `0x0010BC90` | `iDisableDmacHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateThread (oni2), DisableDmacHandler (recvx) |
-| `0x0010BCA0` | `KSeg0` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DeleteThread (oni2), iDisableDmacHandler (recvx) |
-| `0x0010BCB0` | `EnableCache` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | KSeg0 (recvx), StartThread (oni2) |
-| `0x0010BCC0` | `DisableCache` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | EnableCache (recvx), ExitDeleteThread (oni2) |
-| `0x0010BCD0` | `GetCop0` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DisableCache (recvx), TerminateThread (oni2) |
-| `0x0010BCE0` | `FlushCache` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | ChangeThreadPriority (oni2), GetCop0 (recvx) |
-| `0x0010BCF0` | `CpuConfig` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | FlushCache (recvx), RotateThreadReadyQueue (oni2) |
-| `0x0010BD00` | `iGetCop0` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CpuConfig (recvx), GetThreadId (oni2) |
-| `0x0010BD10` | `iFlushCache` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReferThreadStatus (oni2), iGetCop0 (recvx) |
-| `0x0010BD20` | `iCpuConfig` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SleepThread (oni2), iFlushCache (recvx) |
-| `0x0010BD30` | `sceSifStopDma` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | WakeupThread (oni2), iCpuConfig (recvx) |
-| `0x0010BD40` | `SetCPUTimerHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iWakeupThread (oni2), sceSifStopDma (recvx) |
-| `0x0010BD50` | `SetCPUTimer` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetCPUTimerHandler (recvx), SuspendThread (oni2) |
-| `0x0010BD60` | `SetOsdConfigParam2` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateSema (oni2), SetCPUTimer (recvx) |
-| `0x0010BD70` | `GetOsdConfigParam2` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DeleteSema (oni2), SetOsdConfigParam2 (recvx) |
-| `0x0010BD80` | `GsGetIMR` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetOsdConfigParam2 (recvx), SignalSema (oni2) |
-| `0x0010BD90` | `iGsGetIMR` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GsGetIMR (recvx), iSignalSema (oni2) |
-| `0x0010BDA0` | `GsPutIMR` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | WaitSema (oni2), iGsGetIMR (recvx) |
-| `0x0010BDB0` | `iGsPutIMR` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GsPutIMR (recvx), PollSema (oni2) |
-| `0x0010BDC0` | `SetPgifHandler` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetOsdConfigParam (oni2), iGsPutIMR (recvx) |
-| `0x0010BDD0` | `SetVSyncFlag` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetOsdConfigParam (oni2), SetPgifHandler (recvx) |
-| `0x0010BDE0` | `RFU116` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | FlushCache (oni2), SetVSyncFlag (recvx) |
-| `0x0010BDF0` | `_print` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU116 (recvx), sceSifStopDma (oni2) |
-| `0x0010BE00` | `sceSifDmaStat` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | GsGetIMR (oni2), print (recvx) |
-| `0x0010BE10` | `isceSifDmaStat` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iGsGetIMR (oni2), sceSifDmaStat (recvx) |
-| `0x0010BE20` | `sceSifSetDma` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | GsPutIMR (oni2), isceSifDmaStat (recvx) |
-| `0x0010BE30` | `isceSifSetDma` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iGsPutIMR (oni2), sceSifSetDma (recvx) |
-| `0x0010BE40` | `sceSifSetDChain` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | SetVSyncFlag (oni2), isceSifSetDma (recvx) |
-| `0x0010BE50` | `isceSifSetDChain` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | sceSifDmaStat (oni2), sceSifSetDChain (recvx) |
-| `0x0010BE60` | `sceSifSetReg` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | isceSifSetDChain (recvx), sceSifSetDma (oni2) |
-| `0x0010BE70` | `sceSifGetReg` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | isceSifSetDma (oni2), sceSifSetReg (recvx) |
-| `0x0010BE80` | `_ExecOSD` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | sceSifGetReg (recvx), sceSifSetDChain (oni2) |
-| `0x0010BE90` | `Deci2Call` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ExecOSD (recvx), isceSifSetDChain (oni2) |
-| `0x0010BEA0` | `PSMode` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | Deci2Call (recvx), sceSifSetReg (oni2) |
-| `0x0010BEB0` | `MachineType` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | PSMode (recvx), sceSifGetReg (oni2) |
-| `0x0010BEC0` | `GetMemorySize` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | Deci2Call (oni2), MachineType (recvx) |
-| `0x0010BED0` | `_InitTLB` | `sdk152:libkernl.a` `klib.o` | `0x10` | `226` | - | - | GetMemorySize (oni2), GetMemorySize (recvx) |
-| `0x0010BEE0` | `sceResetttyinit` | `sdk152:libkernl.a` `glue.o` | `0xC` | `226` | - | - | - |
-| `0x0010C120` | `open` | `sdk152:libkernl.a` `glue.o` | `0x28` | `226` | - | godhand | - |
-| `0x0010C148` | `close` | `sdk152:libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
-| `0x0010C150` | `ioctl` | `sdk152:libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
-| `0x0010C158` | `lseek` | `sdk152:libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
-| `0x0010C210` | `isatty` | `sdk152:libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
-| `0x0010C218` | `fstat` | `sdk152:libkernl.a` `glue.o` | `0x14` | `226` | - | - | - |
-| `0x0010C230` | `getpid` | `sdk152:libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
-| `0x0010C238` | `kill` | `sdk152:libkernl.a` `glue.o` | `0x28` | `226` | - | - | - |
-| `0x0010C260` | `stat` | `sdk152:libkernl.a` `glue.o` | `0x28` | `226` | - | - | - |
-| `0x0010C288` | `unlink` | `sdk152:libkernl.a` `glue.o` | `0x28` | `226` | - | - | - |
-| `0x0010C3D8` | `iSyncDCache` | `sdk152:libkernl.a` `cache.o` | `0x14` | `226` | - | - | - |
-| `0x0010C518` | `iInvalidDCache` | `sdk152:libkernl.a` `cache.o` | `0x14` | `226` | - | - | - |
-| `0x0010C530` | `QueryIntrContext` | `sdk152:libkernl.a` `intr.o` | `0x10` | `226` | - | - | - |
-| `0x0010C540` | `DisableIntc` | `sdk152:libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
-| `0x0010C5A8` | `EnableIntc` | `sdk152:libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
-| `0x0010C610` | `DisableDmac` | `sdk152:libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
-| `0x0010C678` | `EnableDmac` | `sdk152:libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
-| `0x0010C6E0` | `iEnableIntc` | `sdk152:libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iEnableDmac (recvx) |
-| `0x0010C700` | `iDisableIntc` | `sdk152:libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iDisableDmac (recvx) |
-| `0x0010C720` | `iEnableDmac` | `sdk152:libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iSetAlarm (recvx) |
-| `0x0010C740` | `iDisableDmac` | `sdk152:libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iReleaseAlarm (recvx) |
-| `0x0010CAD8` | `DelayThread` | `sdk152:libkernl.a` `thread.o` | `0xC8` | `226` | - | godhand | - |
-| `0x0010CD18` | `_DelayThreadHandler` | `sdk152:libkernl.a` `thread.o` | `0x28` | `226` | - | - | - |
-| `0x0010CD88` | `sceDeci2Close` | `sdk152:libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
-| `0x0010CDE0` | `sceDeci2Poll` | `sdk152:libkernl.a` `deci2.o` | `0x24` | `226` | - | - | sceDeci2Close (recvx) |
-| `0x0010CE38` | `sceDeci2GrpClose` | `sdk152:libkernl.a` `deci2.o` | `0x24` | `226` | - | - | sceDeci2Poll (recvx) |
-| `0x0010CE60` | `sceDeci2ExRecv` | `sdk152:libkernl.a` `deci2.o` | `0x34` | `226` | - | - | - |
-| `0x0010CE98` | `sceDeci2ExSend` | `sdk152:libkernl.a` `deci2.o` | `0x34` | `226` | - | - | - |
-| `0x0010CF00` | `sceDeci2ExLock` | `sdk152:libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
-| `0x0010CF28` | `sceDeci2ExUnLock` | `sdk152:libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
-| `0x0010CF50` | `kputs` | `sdk152:libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
-| `0x0010CF78` | `QueueInit` | `sdk152:libkernl.a` `tty.o` | `0x24` | `226` | - | - | - |
-| `0x0010E5B8` | `printf_char` | `sdk152:libkernl.a` `kprintf2.o` | `0x28` | `226` | - | - | - |
-| `0x0010E5E0` | `kprintf_char` | `sdk152:libkernl.a` `kprintf2.o` | `0x28` | `226` | - | - | - |
-| `0x0010E748` | `scePrintf` | `sdk152:libkernl.a` `kprintf2.o` | `0x80` | `226` | - | - | - |
-| `0x0010E7C8` | `kprintf` | `sdk152:libkernl.a` `kprintf2.o` | `0x80` | `226` | - | - | - |
-| `0x0010E848` | `_set_sreg` | `sdk152:libkernl.a` `sifcmd.o` | `0x1C` | `226` | - | - | - |
-| `0x0010E868` | `_change_addr` | `sdk152:libkernl.a` `sifcmd.o` | `0xC` | `226` | - | - | - |
-| `0x0010E878` | `sceSifGetSreg` | `sdk152:libkernl.a` `sifcmd.o` | `0x18` | `226` | - | - | - |
-| `0x0010E890` | `sceSifSetSreg` | `sdk152:libkernl.a` `sifcmd.o` | `0x1C` | `226` | - | - | - |
-| `0x0010E8B0` | `sceSifGetDataTable` | `sdk152:libkernl.a` `sifcmd.o` | `0xC` | `226` | - | - | - |
-| `0x0010EB78` | `sceSifSetCmdBuffer` | `sdk152:libkernl.a` `sifcmd.o` | `0x18` | `226` | - | - | - |
-| `0x0010EB90` | `sceSifSetSysCmdBuffer` | `sdk152:libkernl.a` `sifcmd.o` | `0x18` | `226` | - | - | - |
-| `0x0010F1C0` | `sceSifExitRpc` | `sdk152:libkernl.a` `sifrpc.o` | `0x24` | `120` | - | godhand | - |
-| `0x0010F290` | `_sceRpcFreePacket` | `sdk152:libkernl.a` `sifrpc.o` | `0x1C` | `120` | - | - | - |
-| `0x001107C0` | `_sceFsWaitS` | `sdk152:libkernl.a` `filestub.o` | `0x2C` | `120` | - | - | - |
-| `0x001107F0` | `_sceFsSigSema` | `sdk152:libkernl.a` `filestub.o` | `0xC` | `120` | - | - | - |
-| `0x00110AF0` | `_fs_version` | `sdk152:libkernl.a` `filestub.o` | `0x8C` | `120` | - | - | - |
-| `0x00112080` | `sceRemove` | `sdk152:libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
-| `0x00112258` | `sceRmdir` | `sdk152:libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
-| `0x00112628` | `sceDelDrv` | `sdk152:libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
-| `0x00112FE0` | `sceChdir` | `sdk152:libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
-| `0x00113430` | `sceUmount` | `sdk152:libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
-| `0x00113F00` | `sceSifFreeIopHeap` | `sdk152:libkernl.a` `iopheap.o` | `0x1C` | `120` | - | - | - |
-| `0x00114010` | `sceSifQueryMemSize` | `sdk152:libkernl.a` `iopheap.o` | `0x70` | `120` | - | - | - |
-| `0x00114080` | `sceSifQueryMaxFreeMemSize` | `sdk152:libkernl.a` `iopheap.o` | `0x70` | `120` | - | - | - |
-| `0x001140F0` | `sceSifQueryTotalFreeMemSize` | `sdk152:libkernl.a` `iopheap.o` | `0x70` | `120` | - | - | - |
-| `0x00114160` | `sceSifQueryBlockTopAddress` | `sdk152:libkernl.a` `iopheap.o` | `0x7C` | `120` | - | - | - |
-| `0x001141E0` | `sceSifQueryBlockSize` | `sdk152:libkernl.a` `iopheap.o` | `0x7C` | `120` | - | - | - |
-| `0x00114360` | `_lf_version` | `sdk152:libkernl.a` `eeloadfile.o` | `0x8C` | `120` | - | - | - |
-| `0x00114428` | `_sceSifLoadModuleBuffer` | `sdk152:libkernl.a` `eeloadfile.o` | `0x208` | `120` | - | godhand | - |
-| `0x00114630` | `sceSifStopModule` | `sdk152:libkernl.a` `eeloadfile.o` | `0x208` | `120` | - | - | - |
-| `0x00114838` | `sceSifUnloadModule` | `sdk152:libkernl.a` `eeloadfile.o` | `0x90` | `120` | - | - | - |
-| `0x00114968` | `sceSifSearchModuleByAddress` | `sdk152:libkernl.a` `eeloadfile.o` | `0x90` | `120` | - | - | - |
-| `0x001149F8` | `sceSifLoadModuleBuffer` | `sdk152:libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | - |
-| `0x00114A18` | `sceSifLoadStartModuleBuffer` | `sdk152:libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | - |
-| `0x00114C60` | `sceSifLoadModule` | `sdk152:libkernl.a` `eeloadfile.o` | `0x20` | `120` | eeloadfile.c | sly1 | - |
-| `0x00114C80` | `sceSifLoadStartModule` | `sdk152:libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | sceSifLoadModule (recvx) |
-| `0x00114DA8` | `sceSifLoadElfPart` | `sdk152:libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | - |
-| `0x00114DC8` | `sceSifLoadElf` | `sdk152:libkernl.a` `eeloadfile.o` | `0x28` | `120` | - | - | - |
-| `0x00115118` | `sceSifIsAliveIop` | `sdk152:libkernl.a` `iopreset.o` | `0x28` | `120` | - | - | - |
-| `0x00115388` | `Copy` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x001153D0` | `GetEntryAddress` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
-| `0x001153E0` | `setup` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x001154B8` | `PutTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x001154C8` | `iPutTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
-| `0x001154D8` | `_SetTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x00115518` | `iSetTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x00115528` | `GetTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
-| `0x00115538` | `iGetTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x00115548` | `ProbeTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
-| `0x00115558` | `iProbeTLBEntry` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
-| `0x00115568` | `ExpandScratchPad` | `sdk152:libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
-| `0x00115B70` | `EIntr` | `sdk152:libkernl.a` `diei.o` | `0x18` | `68` | - | godhand | - |
-| `0x00115BE8` | `__sceKernlGetEhSemaId` | `sdk152:libkernl.a` `initsys.o` | `0xC` | `68` | - | - | - |
-| `0x00115BF8` | `Copy_1` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `initsys.o` | `0x10` | `68` | - | - | - |
-| `0x00115C80` | `FindAddress` | `sdk152:libkernl.a` `initsys.o` | `0x10` | `68` | - | - | - |
-| `0x00115DC8` | `setup_1` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `initsys.o` | `0x10` | `68` | - | - | - |
-| `0x00115E30` | `setup_2` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `libosd.o` | `0x10` | `68` | - | - | - |
-| `0x00115E40` | `Copy_2` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `libosd.o` | `0x10` | `68` | - | - | - |
-| `0x00115E88` | `GetEntryAddress_1` (the corpus's `GetEntryAddress`, repeated in the image) | `sdk152:libkernl.a` `libosd.o` | `0x10` | `68` | - | godhand | - |
-| `0x00115FB0` | `Copy_3` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `exit.o` | `0x10` | `68` | - | - | - |
-| `0x00115FF0` | `setup_3` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `exit.o` | `0x10` | `68` | - | - | - |
-| `0x00116118` | `TerminateLibrary` | `sdk152:libkernl.a` `exit.o` | `0x8` | `68` | - | - | - |
-| `0x001161D8` | `Exit` | `sdk152:libkernl.a` `exit.o` | `0x28` | `68` | - | - | - |
-| `0x00116250` | `setup_4` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `alarm.o` | `0x10` | `68` | - | - | - |
-| `0x00116260` | `Copy_4` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `alarm.o` | `0x10` | `68` | - | - | - |
-| `0x001162A8` | `GetEntryAddress_2` (the corpus's `GetEntryAddress`, repeated in the image) | `sdk152:libkernl.a` `alarm.o` | `0x10` | `68` | - | godhand | - |
-| `0x00116400` | `SetT2_COUNT` | `sdk152:libkernl.a` `timer.o` | `0x10` | `68` | - | - | - |
-| `0x00116410` | `SetT2_MODE` | `sdk152:libkernl.a` `timer.o` | `0x10` | `68` | - | - | - |
-| `0x00116420` | `SetT2_COMP` | `sdk152:libkernl.a` `timer.o` | `0x10` | `68` | - | - | - |
-| `0x00116640` | `GetTimerPreScaleFactor` | `sdk152:libkernl.a` `timer.o` | `0x2C` | `68` | - | - | - |
-| `0x00116C78` | `iGetTimerSystemTime` | `sdk152:libkernl.a` `timer.o` | `0x4C` | `68` | - | godhand | - |
-| `0x00116D48` | `iAllocTimerCounter` | `sdk152:libkernl.a` `timer.o` | `0x70` | `68` | - | godhand | - |
-| `0x00116EA0` | `FreeTimerCounter` | `sdk152:libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
-| `0x00116EF0` | `iGetTimerUsedUnusedCounters` | `sdk152:libkernl.a` `timer.o` | `0x50` | `68` | - | - | - |
-| `0x00117050` | `StartTimerCounter` | `sdk152:libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
-| `0x00117168` | `StopTimerCounter` | `sdk152:libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
-| `0x00117288` | `iGetTimerBaseTime` | `sdk152:libkernl.a` `timer.o` | `0x48` | `68` | - | - | - |
-| `0x001172D0` | `GetTimerBaseTime` | `sdk152:libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
-| `0x00117390` | `GetTimerCount` | `sdk152:libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
-| `0x00117558` | `TimerBusClock2USec` | `sdk152:libkernl.a` `timer.o` | `0xA8` | `68` | - | godhand | - |
-| `0x00117600` | `TimerUSec2BusClock` | `sdk152:libkernl.a` `timer.o` | `0x70` | `68` | - | godhand | - |
-| `0x00117670` | `TimerBusClock2Freq` | `sdk152:libkernl.a` `timer.o` | `0x54` | `68` | - | - | - |
-| `0x001176C8` | `TimerFreq2BusClock` | `sdk152:libkernl.a` `timer.o` | `0x34` | `68` | - | - | - |
-| `0x00117700` | `_InitAlarm` | `sdk152:libkernl.a` `timeralarm.o` | `0x4C` | `6` | - | godhand | - |
-| `0x001177B0` | `SetTimerAlarm` | `sdk152:libkernl.a` `timeralarm.o` | `0x12C` | `6` | - | - | - |
-| `0x001178E0` | `iSetTimerAlarm` | `sdk152:libkernl.a` `timeralarm.o` | `0xF0` | `6` | - | - | - |
-| `0x001179D0` | `ReleaseTimerAlarm` | `sdk152:libkernl.a` `timeralarm.o` | `0xA8` | `6` | - | - | - |
-| `0x00117A78` | `iReleaseTimerAlarm` | `sdk152:libkernl.a` `timeralarm.o` | `0x78` | `6` | - | - | - |
-| `0x00117AF0` | `sceSifInitRebootNotify` | `sdk152:libkernl.a` `iopnotify.o` | `0x24` | `5` | - | - | - |
-| `0x001186E8` | `scePadStateIntToStr` | `sdk152:libpad.a` `libpad.o` | `0x34` | `33` | - | - | - |
-| `0x00118830` | `scePadReqIntToStr` | `sdk152:libpad.a` `libpad.o` | `0x34` | `33` | - | - | - |
-| `0x00119D88` | `sceCdSearchFile` | `sdk152:libcdvd.a` `cdvd000.o` | `0x1C` | `21` | - | - | - |
-| `0x00119DA8` | `_sceCd_ncmd_prechk` | `sdk152:libcdvd.a` `cdvd000.o` | `0x158` | `21` | - | - | - |
-| `0x0011A0A8` | `_sceCd_scmd_prechk` | `sdk152:libcdvd.a` `cdvd000.o` | `0x158` | `21` | - | - | - |
-| `0x0011AF10` | `sceCdStandby` | `sdk152:libcdvd.a` `cdvd011.o` | `0xAC` | `10` | - | - | - |
-| `0x0011B070` | `sceCdPause` | `sdk152:libcdvd.a` `cdvd013.o` | `0xAC` | `10` | - | - | - |
-| `0x0011B1B8` | `sceCdGetDiskType` | `sdk152:libcdvd.a` `cdvd014.o` | `0x24` | `10` | ../eecdvd.c | sly1 | - |
-| `0x0011B8D8` | `mceSifRpcEndFunc` | `sdk152:libmc.a` `libmc.o` | `0xC` | `24` | - | - | - |
-| `0x0011BBC8` | `sceMcClose` | `sdk152:libmc.a` `libmc.o` | `0xBC` | `24` | - | - | - |
-| `0x0011C6D8` | `sceMcFormat` | `sdk152:libmc.a` `libmc.o` | `0xCC` | `24` | - | - | - |
-| `0x0011C8C8` | `sceMcFlush` | `sdk152:libmc.a` `libmc.o` | `0xBC` | `24` | - | - | - |
-| `0x0011CCB0` | `sceMcUnformat` | `sdk152:libmc.a` `libmc.o` | `0xCC` | `24` | - | - | - |
-| `0x00121E30` | `sceSynthesizerClearKeyMap` | `recvx` | `0x8` | `3` | - | - | - |
-| `0x00121E40` | `fillkmap` | `recvx` | `0x30` | `3` | - | - | - |
-| `0x00121E70` | `clr_drum_nrpn` | `recvx` | `0x3C` | `3` | - | - | - |
-| `0x0012F820` | `sceSynthesizerChangePanpot` | `recvx` | `0x48` | `5` | - | - | - |
-| `0x0012F870` | `_callback_sceSynthesizerChangeEffectSend0` | `recvx` | `0x8` | `5` | - | - | - |
-| `0x0012F880` | `_callback_sceSynthesizerChangeEffectSend1` | `recvx` | `0x8` | `5` | - | - | - |
-| `0x0012F890` | `_callback_sceSynthesizerChangeEffectSend2` | `recvx` | `0x8` | `5` | - | - | - |
-| `0x0012F8A0` | `_callback_sceSynthesizerChangeEffectSend3` | `recvx` | `0x8` | `5` | - | - | - |
-| `0x001644F0` | `sceDeci2Open_1` (the corpus's `sceDeci2Open`, repeated in the image) | `oni2` | `0x44` | `3` | - | - | - |
-| `0x00164540` | `sceDeci2ReqSend_2` (the corpus's `sceDeci2ReqSend`, repeated in the image) | `oni2` | `0x30` | `3` | - | - | - |
-| `0x00164570` | `sceDeci2Poll_1` (the corpus's `sceDeci2Poll`, repeated in the image) | `oni2` | `0x24` | `3` | - | - | - |
-| `0x001B3750` | `sceScfSetT10kConfig` | `sdk152:libscf.a` `libscf.o` | `0x1C` | `21` | - | - | - |
-| `0x001B3978` | `tobcd` | `sdk152:libscf.a` `libscf.o` | `0x2C` | `21` | - | - | - |
-| `0x001B39A8` | `frombcd` | `sdk152:libscf.a` `libscf.o` | `0x20` | `21` | - | - | - |
-| `0x001B39C8` | `convertfrombcd` | `sdk152:libscf.a` `libscf.o` | `0x68` | `21` | - | - | - |
-| `0x001B3A30` | `converttobcd` | `sdk152:libscf.a` `libscf.o` | `0x68` | `21` | - | - | - |
-| `0x001B3C28` | `subhour` | `sdk152:libscf.a` `libscf.o` | `0x24` | `21` | - | - | - |
-| `0x001B3CE0` | `sceScfGetGMTfromRTC` | `sdk152:libscf.a` `libscf.o` | `0x8` | `21` | - | - | - |
+| `0x001004A8` | `sceGsGetGParam` | `sdk152:libgraph.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph001.o` | `0xC` | `11` | - | - | - |
+| `0x001005C0` | `_GetGsDxDyOffset` | `sdk152:libgraph.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libgraph.a` `graph003.o` | `0x10` | `11` | - | - | - |
+| `0x001018D0` | `sceGsSwapDBuffDc` | `recvx` *(no archive member)* | `0x5C` | `3` | - | - | - |
+| `0x00101A28` | `CheckAddress` | `sdk152:libdma.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x28` | `19` | - | - | - |
+| `0x00101A88` | `sceDmaGetChan` | `sdk152:libdma.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x28` | `19` | libdma.c | sly1 | - |
+| `0x00101DA0` | `sceDmaPutStallAddr` | `sdk152:libdma.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x14` | `19` | - | - | - |
+| `0x00101E20` | `sceDmaSendN` | `sdk152:libdma.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x74` | `19` | - | - | - |
+| `0x00101E98` | `sceDmaSendI` | `sdk152:libdma.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x74` | `19` | - | - | - |
+| `0x00102160` | `sceDmaRestart` | `sdk152:libdma.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdma.a` `libdma.o` | `0x14` | `19` | - | - | - |
+| `0x00102178` | `sceDevVu0CheckBusy` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x14` | `28` | - | - | - |
+| `0x00102190` | `sceDevVu0Reset` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x14` | `28` | - | - | - |
+| `0x001021A8` | `sceDevVu0Pause` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x60` | `28` | - | - | - |
+| `0x00102208` | `sceDevVu0Continue` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x50` | `28` | - | - | - |
+| `0x00102258` | `sceDevVu0PutDBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x30` | `28` | - | - | - |
+| `0x00102288` | `sceDevVu0PutTBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x30` | `28` | - | - | - |
+| `0x001022B8` | `sceDevVu0GetDBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x10` | `28` | - | - | - |
+| `0x001022C8` | `sceDevVu0GetTBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x10` | `28` | - | - | - |
+| `0x00102318` | `sceDevVu0Exec` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0x10` | `28` | - | - | - |
+| `0x00102328` | `sceDevVu0GetTpc` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu0.o` | `0xC` | `28` | - | - | - |
+| `0x00102610` | `sceVuCheckBusy` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x2C` | `28` | - | - | - |
+| `0x001026C8` | `sceDevVu1Reset` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x14` | `28` | - | - | - |
+| `0x001026E0` | `sceDevVu1Pause` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x60` | `28` | - | - | - |
+| `0x00102740` | `sceDevVu1Continue` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x50` | `28` | - | - | - |
+| `0x00102790` | `sceDevVu1PutDBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x30` | `28` | - | - | - |
+| `0x001027C0` | `sceDevVu1PutTBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x30` | `28` | - | - | - |
+| `0x001027F0` | `sceDevVu1GetDBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x10` | `28` | - | - | - |
+| `0x00102800` | `sceDevVu1GetTBit` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x10` | `28` | - | - | - |
+| `0x00102858` | `sceDevVu1Exec` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x10` | `28` | - | - | - |
+| `0x00102868` | `sceDevVu1GetTpc` | `sdk152:libdev.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libdev.a` `devvu1.o` | `0x24` | `28` | - | - | - |
+| `0x00102B68` | `sceVu0ApplyMatrix` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x2C` | `42` | - | godhand | - |
+| `0x00102BE0` | `sceVu0OuterProduct` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x1C` | `42` | - | godhand | - |
+| `0x00102C00` | `sceVu0InnerProduct` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x24` | `42` | - | godhand | - |
+| `0x00102D20` | `sceVu0DivVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x20` | `42` | - | godhand | - |
+| `0x00102D40` | `sceVu0DivVectorXYZ` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x20` | `42` | - | - | - |
+| `0x00102D60` | `sceVu0InterVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x28` | `42` | - | - | - |
+| `0x00102D88` | `sceVu0AddVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x14` | `42` | - | godhand | - |
+| `0x00102DA0` | `sceVu0SubVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x14` | `42` | - | godhand | - |
+| `0x00102DB8` | `sceVu0MulVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x14` | `42` | - | godhand | - |
+| `0x00102DD0` | `sceVu0ScaleVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x18` | `42` | - | godhand | - |
+| `0x00102DE8` | `sceVu0TransMatrix` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x2C` | `42` | - | godhand | - |
+| `0x00102E18` | `sceVu0CopyVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0xC` | `42` | - | - | - |
+| `0x00102E28` | `sceVu0CopyMatrix` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x24` | `42` | - | - | - |
+| `0x00102E50` | `sceVu0FTOI4Vector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x10` | `42` | - | godhand | - |
+| `0x00102E60` | `sceVu0FTOI0Vector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x10` | `42` | - | - | - |
+| `0x00102E70` | `sceVu0ITOF4Vector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x10` | `42` | - | - | - |
+| `0x00102E80` | `sceVu0ITOF0Vector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x10` | `42` | - | - | - |
+| `0x00102E90` | `sceVu0UnitMatrix` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x28` | `42` | - | godhand | - |
+| `0x00103178` | `sceVu0ClampVector` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x24` | `42` | - | - | - |
+| `0x001036B0` | `sceVu0CopyVectorXYZ` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x1C` | `42` | - | - | - |
+| `0x001036D0` | `sceVu0InterVectorXYZ` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x2C` | `42` | - | - | - |
+| `0x00103700` | `sceVu0ScaleVectorXYZ` | `sdk152:libvu0.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libvu0.a` `libvu0.o` | `0x18` | `42` | - | godhand | - |
+| `0x00106170` | `_flushBuf` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpc.o` | `0x8` | `20` | - | - | - |
+| `0x00107E70` | `_sequenceScalableExtension` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
+| `0x00107E80` | `_unknown_extension` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
+| `0x00108078` | `_pictureSpatialScalableExtension` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
+| `0x00108088` | `_pictureTemporalScalableExtension` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0xC` | `92` | - | - | - |
+| `0x001082A0` | `_flushBuf_1` (the corpus's `_flushBuf`, repeated in the image) | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x8` | `92` | - | - | - |
+| `0x00108400` | `flushBuf32` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `ext.o` | `0x8` | `92` | - | - | - |
+| `0x001093A0` | `sceMpegDelete` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x8` | `92` | - | - | - |
+| `0x00109478` | `sceMpegGetPictureAbort` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - | - |
+| `0x00109508` | `sceMpegIsEnd` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - | - |
+| `0x00109518` | `sceMpegIsRefBuffEmpty` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - | - |
+| `0x00109528` | `sceMpegSetDecodeMode` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x14` | `92` | - | - | - |
+| `0x00109540` | `sceMpegGetDecodeMode` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x20` | `92` | - | - | - |
+| `0x001095D0` | `sceMpegGetBuffType` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - | - |
+| `0x001097C0` | `sceMpegSetDefaultPtsGap` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x18` | `92` | - | - | - |
+| `0x001097D8` | `sceMpegResetDefaultPtsGap` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x14` | `92` | - | - | - |
+| `0x001097F0` | `sceMpegSetImageBuff` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - |  (sdk152:ntgui2.a), __sceErxGetStderr (sdk152:libc_export.a) |
+| `0x00109800` | `sceMpegDispWidth` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcStdlibGetErxEntries (sdk152:libc_export.a) |
+| `0x00109810` | `sceMpegDispHeight` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcStringGetErxEntries (sdk152:libc_export.a) |
+| `0x00109820` | `sceMpegDispCenterOffX` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcTimeGetErxEntries (sdk152:libc_export.a) |
+| `0x00109830` | `sceMpegDispCenterOffY` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0xC` | `92` | - | - |  (sdk152:ntgui2.a), sceLibcUnistdGetErxEntries (sdk152:libc_export.a) |
+| `0x00109840` | `_sceMpegSetBrokenLink` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x10` | `92` | - | - |  (sdk152:ntgui2.a), sceSetBrokenLink (recvx) |
+| `0x00109850` | `_sceMpegSetPtm` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `mpeg.o` | `0x18` | `92` | - | - |  (sdk152:ntgui2.a) |
+| `0x00109938` | `_sceMpegAlalcInit` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `alalc.o` | `0x14` | `92` | - | - | - |
+| `0x00109950` | `_sceMpegAlalcSetDynamic` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `alalc.o` | `0xC` | `92` | - | - | - |
+| `0x00109960` | `_sceMpegAlalcFree` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `alalc.o` | `0xC` | `92` | - | - | - |
+| `0x001099E0` | `_sceMpegAlalcReset` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `alalc.o` | `0x18` | `92` | - | - | - |
+| `0x001099F8` | `_sceMpegDefaultStopDMA` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `defhandler.o` | `0x24` | `92` | - | - | - |
+| `0x00109A20` | `_sceMpegDefaultRestartDMA` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `defhandler.o` | `0x24` | `92` | - | - | - |
+| `0x0010ADC0` | `_ErrMessage` | `sdk152:libmpeg.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmpeg.a` `error.o` | `0x10` | `5` | - | - | - |
+| `0x0010AFD0` | `setD3_CHCR` | `sdk152:libipu.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `libipu.o` | `0x74` | `7` | - | godhand | - |
+| `0x0010B048` | `setD4_CHCR` | `sdk152:libipu.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `libipu.o` | `0x74` | `7` | - | godhand | - |
+| `0x0010B360` | `setD4_CHCR_1` (the corpus's `setD4_CHCR`, repeated in the image) | `sdk152:libipu.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libipu.a` `ipuinit.o` | `0x74` | `7` | - | godhand | - |
+| `0x0010B640` | `RFU000_FullReset` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | - |
+| `0x0010B650` | `ResetEE` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU000_FullReset (recvx) |
+| `0x0010B660` | `SetGsCrt` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ResetEE (recvx) |
+| `0x0010B670` | `RFU003` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | SetGsCrt (recvx) |
+| `0x0010B680` | `_Exit` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU003 (recvx) |
+| `0x0010B690` | `RFU005` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | Exit (recvx) |
+| `0x0010B6A0` | `_LoadExecPS2` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU005 (recvx) |
+| `0x0010B6B0` | `_ExecPS2` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | LoadExecPS2 (recvx) |
+| `0x0010B6C0` | `RFU008` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | ExecPS2 (recvx) |
+| `0x0010B6D0` | `RFU009` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU008 (recvx) |
+| `0x0010B6E0` | `AddSbusIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU009 (recvx) |
+| `0x0010B6F0` | `RemoveSbusIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddSbusIntcHandler (recvx) |
+| `0x0010B700` | `Interrupt2Iop` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RemoveSbusIntcHandler (recvx) |
+| `0x0010B710` | `SetVTLBRefillHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | Interrupt2Iop (recvx) |
+| `0x0010B720` | `SetVCommonHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetVTLBRefillHandler (recvx) |
+| `0x0010B730` | `SetVInterruptHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetVCommonHandler (recvx) |
+| `0x0010B740` | `AddIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetVInterruptHandler (recvx) |
+| `0x0010B750` | `AddIntcHandler2` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddIntcHandler (recvx) |
+| `0x0010B760` | `RemoveIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddIntcHandler2 (recvx) |
+| `0x0010B770` | `AddDmacHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RemoveIntcHandler (recvx) |
+| `0x0010B780` | `AddDmacHandler2` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddDmacHandler (recvx) |
+| `0x0010B790` | `RemoveDmacHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddDmacHandler2 (recvx) |
+| `0x0010B7A0` | `_EnableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RemoveDmacHandler (recvx) |
+| `0x0010B7B0` | `_DisableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _EnableIntc (recvx) |
+| `0x0010B7C0` | `_EnableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _DisableIntc (recvx) |
+| `0x0010B7D0` | `_DisableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _EnableDmac (recvx) |
+| `0x0010B7E0` | `SetAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _DisableDmac (recvx) |
+| `0x0010B7F0` | `ReleaseAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _SetAlarm (recvx) |
+| `0x0010B800` | `_iEnableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _ReleaseAlarm (recvx) |
+| `0x0010B810` | `_iDisableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iEnableIntc (recvx) |
+| `0x0010B820` | `_iEnableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iDisableIntc (recvx) |
+| `0x0010B830` | `_iDisableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iEnableDmac (recvx) |
+| `0x0010B840` | `iSetAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iDisableDmac (recvx) |
+| `0x0010B850` | `iReleaseAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | _iSetAlarm (recvx) |
+| `0x0010B860` | `CreateThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | _iReleaseAlarm (recvx) |
+| `0x0010B870` | `DeleteThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateThread (recvx) |
+| `0x0010B880` | `_StartThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | DeleteThread (recvx) |
+| `0x0010B890` | `ExitThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | StartThread (recvx) |
+| `0x0010B8A0` | `ExitDeleteThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ExitThread (recvx) |
+| `0x0010B8B0` | `TerminateThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ExitDeleteThread (recvx) |
+| `0x0010B8C0` | `iTerminateThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | TerminateThread (recvx) |
+| `0x0010B8D0` | `DisableDispatchThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iTerminateThread (recvx) |
+| `0x0010B8E0` | `EnableDispatchThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DisableDispatchThread (recvx) |
+| `0x0010B8F0` | `ChangeThreadPriority` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | EnableDispatchThread (recvx) |
+| `0x0010B900` | `iChangeThreadPriority` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ChangeThreadPriority (recvx) |
+| `0x0010B910` | `RotateThreadReadyQueue` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iChangeThreadPriority (recvx) |
+| `0x0010B920` | `_iRotateThreadReadyQueue` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RotateThreadReadyQueue (recvx) |
+| `0x0010B930` | `ReleaseWaitThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iRotateThreadReadyQueue (recvx) |
+| `0x0010B940` | `iReleaseWaitThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReleaseWaitThread (recvx) |
+| `0x0010B950` | `GetThreadId` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | iReleaseWaitThread (recvx) |
+| `0x0010B960` | `ReferThreadStatus` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetThreadId (recvx) |
+| `0x0010B970` | `iReferThreadStatus` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReferThreadStatus (recvx) |
+| `0x0010B980` | `SleepThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iReferThreadStatus (recvx) |
+| `0x0010B990` | `WakeupThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SleepThread (recvx) |
+| `0x0010B9A0` | `_iWakeupThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | WakeupThread (recvx) |
+| `0x0010B9B0` | `CancelWakeupThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iWakeupThread (recvx) |
+| `0x0010B9C0` | `iCancelWakeupThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CancelWakeupThread (recvx) |
+| `0x0010B9D0` | `SuspendThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iCancelWakeupThread (recvx) |
+| `0x0010B9E0` | `_iSuspendThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | SuspendThread (recvx) |
+| `0x0010B9F0` | `ResumeThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iSuspendThread (recvx) |
+| `0x0010BA00` | `iResumeThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ResumeThread (recvx) |
+| `0x0010BA10` | `JoinThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | iResumeThread (recvx) |
+| `0x0010BA20` | `RFU060` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | JoinThread (recvx) |
+| `0x0010BA30` | `RFU061` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU060 (recvx) |
+| `0x0010BA40` | `EndOfHeap` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU061 (recvx) |
+| `0x0010BA50` | `RFU063` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | EndOfHeap (recvx) |
+| `0x0010BA60` | `CreateSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | RFU063 (recvx) |
+| `0x0010BA70` | `DeleteSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateSema (recvx) |
+| `0x0010BA80` | `SignalSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | DeleteSema (recvx) |
+| `0x0010BA90` | `iSignalSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SignalSema (recvx) |
+| `0x0010BAA0` | `WaitSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | iSignalSema (recvx) |
+| `0x0010BAB0` | `PollSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | WaitSema (recvx) |
+| `0x0010BAC0` | `iPollSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | PollSema (recvx) |
+| `0x0010BAD0` | `ReferSemaStatus` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iPollSema (recvx) |
+| `0x0010BAE0` | `iReferSemaStatus` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReferSemaStatus (recvx) |
+| `0x0010BAF0` | `RFU073` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | iReferSemaStatus (recvx) |
+| `0x0010BB00` | `SetOsdConfigParam` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | RFU073 (recvx) |
+| `0x0010BB10` | `GetOsdConfigParam` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetOsdConfigParam (recvx) |
+| `0x0010BB20` | `GetGsHParam` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetOsdConfigParam (recvx) |
+| `0x0010BB30` | `GetGsVParam` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetGsHParam (recvx) |
+| `0x0010BB40` | `SetGsHParam` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetGsVParam (recvx) |
+| `0x0010BB50` | `SetGsVParam` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetGsHParam (recvx) |
+| `0x0010BB60` | `RFU080_CreateEventFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | SetGsVParam (recvx) |
+| `0x0010BB70` | `RFU081_DeleteEventFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU080_CreateEventFlag (recvx) |
+| `0x0010BB80` | `RFU082_SetEventFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU081_DeleteEventFlag (recvx) |
+| `0x0010BB90` | `RFU083_iSetEventFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU082_SetEventFlag (recvx) |
+| `0x0010BBA0` | `RFU084_ClearEventFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU083_iSetEventFlag (recvx) |
+| `0x0010BBB0` | `RFU085_iClearEventFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU084_ClearEventFlag (recvx) |
+| `0x0010BBC0` | `RFU086_WaitEvnetFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU085_iClearEventFlag (recvx), SetGsCrt (oni2) |
+| `0x0010BBD0` | `RFU087_PollEvnetFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU086_WaitEvnetFlag (recvx), SetVTLBRefillHandler (oni2) |
+| `0x0010BBE0` | `RFU088_iPollEvnetFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU087_PollEvnetFlag (recvx), SetVCommonHandler (oni2) |
+| `0x0010BBF0` | `RFU089_ReferEventFlagStatus` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | AddIntcHandler (oni2), RFU088_iPollEvnetFlag (recvx) |
+| `0x0010BC00` | `RFU090_iReferEventFlagStatus` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU089_ReferEventFlagStatus (recvx), RemoveIntcHandler (oni2) |
+| `0x0010BC10` | `RFU091` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | AddDmacHandler (oni2), RFU090_iReferEventFlagStatus (recvx) |
+| `0x0010BC20` | `EnableIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | AddDmacHandler2 (oni2), RFU091 (recvx) |
+| `0x0010BC30` | `iEnableIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | EnableIntcHandler (recvx), RemoveDmacHandler (oni2) |
+| `0x0010BC40` | `DisableIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _EnableIntc (oni2), iEnableIntcHandler (recvx) |
+| `0x0010BC50` | `iDisableIntcHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DisableIntcHandler (recvx), _DisableIntc (oni2) |
+| `0x0010BC60` | `EnableDmacHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _EnableDmac (oni2), iDisableIntcHandler (recvx) |
+| `0x0010BC70` | `iEnableDmacHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | EnableDmacHandler (recvx), _DisableDmac (oni2) |
+| `0x0010BC80` | `DisableDmacHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetAlarm (oni2), iEnableDmacHandler (recvx) |
+| `0x0010BC90` | `iDisableDmacHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateThread (oni2), DisableDmacHandler (recvx) |
+| `0x0010BCA0` | `KSeg0` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DeleteThread (oni2), iDisableDmacHandler (recvx) |
+| `0x0010BCB0` | `EnableCache` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | KSeg0 (recvx), StartThread (oni2) |
+| `0x0010BCC0` | `DisableCache` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | EnableCache (recvx), ExitDeleteThread (oni2) |
+| `0x0010BCD0` | `GetCop0` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DisableCache (recvx), TerminateThread (oni2) |
+| `0x0010BCE0` | `FlushCache` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | klib.s | godhand, sly1 | ChangeThreadPriority (oni2), GetCop0 (recvx) |
+| `0x0010BCF0` | `CpuConfig` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | FlushCache (recvx), RotateThreadReadyQueue (oni2) |
+| `0x0010BD00` | `iGetCop0` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CpuConfig (recvx), GetThreadId (oni2) |
+| `0x0010BD10` | `iFlushCache` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ReferThreadStatus (oni2), iGetCop0 (recvx) |
+| `0x0010BD20` | `iCpuConfig` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SleepThread (oni2), iFlushCache (recvx) |
+| `0x0010BD30` | `sceSifStopDma` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | WakeupThread (oni2), iCpuConfig (recvx) |
+| `0x0010BD40` | `SetCPUTimerHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | _iWakeupThread (oni2), sceSifStopDma (recvx) |
+| `0x0010BD50` | `SetCPUTimer` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetCPUTimerHandler (recvx), SuspendThread (oni2) |
+| `0x0010BD60` | `SetOsdConfigParam2` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | CreateSema (oni2), SetCPUTimer (recvx) |
+| `0x0010BD70` | `GetOsdConfigParam2` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | DeleteSema (oni2), SetOsdConfigParam2 (recvx) |
+| `0x0010BD80` | `GsGetIMR` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetOsdConfigParam2 (recvx), SignalSema (oni2) |
+| `0x0010BD90` | `iGsGetIMR` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GsGetIMR (recvx), iSignalSema (oni2) |
+| `0x0010BDA0` | `GsPutIMR` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | WaitSema (oni2), iGsGetIMR (recvx) |
+| `0x0010BDB0` | `iGsPutIMR` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GsPutIMR (recvx), PollSema (oni2) |
+| `0x0010BDC0` | `SetPgifHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | SetOsdConfigParam (oni2), iGsPutIMR (recvx) |
+| `0x0010BDD0` | `SetVSyncFlag` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | GetOsdConfigParam (oni2), SetPgifHandler (recvx) |
+| `0x0010BDE0` | `RFU116` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | FlushCache (oni2), SetVSyncFlag (recvx) |
+| `0x0010BDF0` | `_print` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | RFU116 (recvx), sceSifStopDma (oni2) |
+| `0x0010BE00` | `sceSifDmaStat` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | GsGetIMR (oni2), print (recvx) |
+| `0x0010BE10` | `isceSifDmaStat` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iGsGetIMR (oni2), sceSifDmaStat (recvx) |
+| `0x0010BE20` | `sceSifSetDma` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | GsPutIMR (oni2), isceSifDmaStat (recvx) |
+| `0x0010BE30` | `isceSifSetDma` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | iGsPutIMR (oni2), sceSifSetDma (recvx) |
+| `0x0010BE40` | `sceSifSetDChain` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | SetVSyncFlag (oni2), isceSifSetDma (recvx) |
+| `0x0010BE50` | `isceSifSetDChain` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | sceSifDmaStat (oni2), sceSifSetDChain (recvx) |
+| `0x0010BE60` | `sceSifSetReg` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | isceSifSetDChain (recvx), sceSifSetDma (oni2) |
+| `0x0010BE70` | `sceSifGetReg` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | isceSifSetDma (oni2), sceSifSetReg (recvx) |
+| `0x0010BE80` | `_ExecOSD` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | sceSifGetReg (recvx), sceSifSetDChain (oni2) |
+| `0x0010BE90` | `Deci2Call` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | ExecOSD (recvx), isceSifSetDChain (oni2) |
+| `0x0010BEA0` | `PSMode` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | Deci2Call (recvx), sceSifSetReg (oni2) |
+| `0x0010BEB0` | `MachineType` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | PSMode (recvx), sceSifGetReg (oni2) |
+| `0x0010BEC0` | `GetMemorySize` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | godhand | Deci2Call (oni2), MachineType (recvx) |
+| `0x0010BED0` | `_InitTLB` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `klib.o` | `0x10` | `226` | - | - | GetMemorySize (oni2), GetMemorySize (recvx) |
+| `0x0010BEE0` | `sceResetttyinit` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0xC` | `226` | - | - | - |
+| `0x0010C120` | `open` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x28` | `226` | - | godhand | - |
+| `0x0010C148` | `close` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
+| `0x0010C150` | `ioctl` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
+| `0x0010C158` | `lseek` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
+| `0x0010C210` | `isatty` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
+| `0x0010C218` | `fstat` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x14` | `226` | - | - | - |
+| `0x0010C230` | `getpid` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x8` | `226` | - | - | - |
+| `0x0010C238` | `kill` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x28` | `226` | - | - | - |
+| `0x0010C260` | `stat` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x28` | `226` | - | - | - |
+| `0x0010C288` | `unlink` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `glue.o` | `0x28` | `226` | - | - | - |
+| `0x0010C3D8` | `iSyncDCache` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `cache.o` | `0x14` | `226` | - | - | - |
+| `0x0010C518` | `iInvalidDCache` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `cache.o` | `0x14` | `226` | - | - | - |
+| `0x0010C530` | `QueryIntrContext` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x10` | `226` | - | - | - |
+| `0x0010C540` | `DisableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
+| `0x0010C5A8` | `EnableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
+| `0x0010C610` | `DisableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
+| `0x0010C678` | `EnableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x68` | `226` | - | godhand | - |
+| `0x0010C6E0` | `iEnableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iEnableDmac (recvx) |
+| `0x0010C700` | `iDisableIntc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iDisableDmac (recvx) |
+| `0x0010C720` | `iEnableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iSetAlarm (recvx) |
+| `0x0010C740` | `iDisableDmac` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `intr.o` | `0x20` | `226` | - | godhand | iReleaseAlarm (recvx) |
+| `0x0010CAD8` | `DelayThread` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0xC8` | `226` | - | godhand | - |
+| `0x0010CD18` | `_DelayThreadHandler` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `thread.o` | `0x28` | `226` | - | - | - |
+| `0x0010CD88` | `sceDeci2Close` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
+| `0x0010CDE0` | `sceDeci2Poll` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x24` | `226` | - | - | sceDeci2Close (recvx) |
+| `0x0010CE38` | `sceDeci2GrpClose` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x24` | `226` | - | - | sceDeci2Poll (recvx) |
+| `0x0010CE60` | `sceDeci2ExRecv` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x34` | `226` | - | - | - |
+| `0x0010CE98` | `sceDeci2ExSend` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x34` | `226` | - | - | - |
+| `0x0010CF00` | `sceDeci2ExLock` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
+| `0x0010CF28` | `sceDeci2ExUnLock` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
+| `0x0010CF50` | `kputs` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `deci2.o` | `0x24` | `226` | - | - | - |
+| `0x0010CF78` | `QueueInit` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tty.o` | `0x24` | `226` | - | - | - |
+| `0x0010E5B8` | `printf_char` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x28` | `226` | - | - | - |
+| `0x0010E5E0` | `kprintf_char` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x28` | `226` | - | - | - |
+| `0x0010E748` | `scePrintf` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x80` | `226` | - | - | - |
+| `0x0010E7C8` | `kprintf` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `kprintf2.o` | `0x80` | `226` | - | - | - |
+| `0x0010E848` | `_set_sreg` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x1C` | `226` | - | - | - |
+| `0x0010E868` | `_change_addr` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0xC` | `226` | - | - | - |
+| `0x0010E878` | `sceSifGetSreg` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x18` | `226` | - | - | - |
+| `0x0010E890` | `sceSifSetSreg` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x1C` | `226` | - | - | - |
+| `0x0010E8B0` | `sceSifGetDataTable` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0xC` | `226` | - | - | - |
+| `0x0010EB78` | `sceSifSetCmdBuffer` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x18` | `226` | - | - | - |
+| `0x0010EB90` | `sceSifSetSysCmdBuffer` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifcmd.o` | `0x18` | `226` | - | - | - |
+| `0x0010F1C0` | `sceSifExitRpc` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x24` | `120` | - | godhand | - |
+| `0x0010F290` | `_sceRpcFreePacket` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `sifrpc.o` | `0x1C` | `120` | - | - | - |
+| `0x001107C0` | `_sceFsWaitS` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x2C` | `120` | - | - | - |
+| `0x001107F0` | `_sceFsSigSema` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0xC` | `120` | - | - | - |
+| `0x00110AF0` | `_fs_version` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x8C` | `120` | - | - | - |
+| `0x00112080` | `sceRemove` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
+| `0x00112258` | `sceRmdir` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
+| `0x00112628` | `sceDelDrv` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
+| `0x00112FE0` | `sceChdir` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
+| `0x00113430` | `sceUmount` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `filestub.o` | `0x1C` | `120` | - | - | - |
+| `0x00113F00` | `sceSifFreeIopHeap` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x1C` | `120` | - | - | - |
+| `0x00114010` | `sceSifQueryMemSize` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x70` | `120` | - | - | - |
+| `0x00114080` | `sceSifQueryMaxFreeMemSize` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x70` | `120` | - | - | - |
+| `0x001140F0` | `sceSifQueryTotalFreeMemSize` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x70` | `120` | - | - | - |
+| `0x00114160` | `sceSifQueryBlockTopAddress` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x7C` | `120` | - | - | - |
+| `0x001141E0` | `sceSifQueryBlockSize` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopheap.o` | `0x7C` | `120` | - | - | - |
+| `0x00114360` | `_lf_version` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x8C` | `120` | - | - | - |
+| `0x00114428` | `_sceSifLoadModuleBuffer` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x208` | `120` | - | godhand | - |
+| `0x00114630` | `sceSifStopModule` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x208` | `120` | - | - | - |
+| `0x00114838` | `sceSifUnloadModule` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x90` | `120` | - | - | - |
+| `0x00114968` | `sceSifSearchModuleByAddress` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x90` | `120` | - | - | - |
+| `0x001149F8` | `sceSifLoadModuleBuffer` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | - |
+| `0x00114A18` | `sceSifLoadStartModuleBuffer` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | - |
+| `0x00114C60` | `sceSifLoadModule` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x20` | `120` | eeloadfile.c | sly1 | - |
+| `0x00114C80` | `sceSifLoadStartModule` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | sceSifLoadModule (recvx) |
+| `0x00114DA8` | `sceSifLoadElfPart` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x1C` | `120` | - | - | - |
+| `0x00114DC8` | `sceSifLoadElf` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `eeloadfile.o` | `0x28` | `120` | - | - | - |
+| `0x00115118` | `sceSifIsAliveIop` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopreset.o` | `0x28` | `120` | - | - | - |
+| `0x00115388` | `Copy` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x001153D0` | `GetEntryAddress` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
+| `0x001153E0` | `setup` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x001154B8` | `PutTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x001154C8` | `iPutTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
+| `0x001154D8` | `_SetTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x00115518` | `iSetTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x00115528` | `GetTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
+| `0x00115538` | `iGetTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x00115548` | `ProbeTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | - | - |
+| `0x00115558` | `iProbeTLBEntry` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
+| `0x00115568` | `ExpandScratchPad` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `tlbfunc.o` | `0x10` | `120` | - | godhand | - |
+| `0x00115B70` | `EIntr` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `diei.o` | `0x18` | `68` | - | godhand | - |
+| `0x00115BE8` | `__sceKernlGetEhSemaId` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0xC` | `68` | - | - | - |
+| `0x00115BF8` | `Copy_1` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x10` | `68` | - | - | - |
+| `0x00115C80` | `FindAddress` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x10` | `68` | - | - | - |
+| `0x00115DC8` | `setup_1` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `initsys.o` | `0x10` | `68` | - | - | - |
+| `0x00115E30` | `setup_2` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `libosd.o` | `0x10` | `68` | - | - | - |
+| `0x00115E40` | `Copy_2` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `libosd.o` | `0x10` | `68` | - | - | - |
+| `0x00115E88` | `GetEntryAddress_1` (the corpus's `GetEntryAddress`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `libosd.o` | `0x10` | `68` | - | godhand | - |
+| `0x00115FB0` | `Copy_3` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x10` | `68` | - | - | - |
+| `0x00115FF0` | `setup_3` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x10` | `68` | - | - | - |
+| `0x00116118` | `TerminateLibrary` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x8` | `68` | - | - | - |
+| `0x001161D8` | `Exit` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `exit.o` | `0x28` | `68` | - | - | - |
+| `0x00116250` | `setup_4` (the corpus's `setup`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` | `0x10` | `68` | - | - | - |
+| `0x00116260` | `Copy_4` (the corpus's `Copy`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` | `0x10` | `68` | - | - | - |
+| `0x001162A8` | `GetEntryAddress_2` (the corpus's `GetEntryAddress`, repeated in the image) | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `alarm.o` | `0x10` | `68` | - | godhand | - |
+| `0x00116400` | `SetT2_COUNT` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x10` | `68` | - | - | - |
+| `0x00116410` | `SetT2_MODE` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x10` | `68` | - | - | - |
+| `0x00116420` | `SetT2_COMP` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x10` | `68` | - | - | - |
+| `0x00116640` | `GetTimerPreScaleFactor` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x2C` | `68` | - | - | - |
+| `0x00116C78` | `iGetTimerSystemTime` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x4C` | `68` | - | godhand | - |
+| `0x00116D48` | `iAllocTimerCounter` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x70` | `68` | - | godhand | - |
+| `0x00116EA0` | `FreeTimerCounter` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
+| `0x00116EF0` | `iGetTimerUsedUnusedCounters` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x50` | `68` | - | - | - |
+| `0x00117050` | `StartTimerCounter` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
+| `0x00117168` | `StopTimerCounter` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
+| `0x00117288` | `iGetTimerBaseTime` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x48` | `68` | - | - | - |
+| `0x001172D0` | `GetTimerBaseTime` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
+| `0x00117390` | `GetTimerCount` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x4C` | `68` | - | - | - |
+| `0x00117558` | `TimerBusClock2USec` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0xA8` | `68` | - | godhand | - |
+| `0x00117600` | `TimerUSec2BusClock` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x70` | `68` | - | godhand | - |
+| `0x00117670` | `TimerBusClock2Freq` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x54` | `68` | - | - | - |
+| `0x001176C8` | `TimerFreq2BusClock` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timer.o` | `0x34` | `68` | - | - | - |
+| `0x00117700` | `_InitAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timeralarm.o` | `0x4C` | `6` | - | godhand | - |
+| `0x001177B0` | `SetTimerAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timeralarm.o` | `0x12C` | `6` | - | - | - |
+| `0x001178E0` | `iSetTimerAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timeralarm.o` | `0xF0` | `6` | - | - | - |
+| `0x001179D0` | `ReleaseTimerAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timeralarm.o` | `0xA8` | `6` | - | - | - |
+| `0x00117A78` | `iReleaseTimerAlarm` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `timeralarm.o` | `0x78` | `6` | - | - | - |
+| `0x00117AF0` | `sceSifInitRebootNotify` | `sdk152:libkernl.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libkernl.a` `iopnotify.o` | `0x24` | `5` | - | - | - |
+| `0x001186E8` | `scePadStateIntToStr` | `sdk152:libpad.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x34` | `33` | - | - | - |
+| `0x00118830` | `scePadReqIntToStr` | `sdk152:libpad.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libpad.a` `libpad.o` | `0x34` | `33` | - | - | - |
+| `0x00119D88` | `sceCdSearchFile` | `sdk152:libcdvd.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x1C` | `21` | - | - | - |
+| `0x00119DA8` | `_sceCd_ncmd_prechk` | `sdk152:libcdvd.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x158` | `21` | - | - | - |
+| `0x0011A0A8` | `_sceCd_scmd_prechk` | `sdk152:libcdvd.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd000.o` | `0x158` | `21` | - | - | - |
+| `0x0011AF10` | `sceCdStandby` | `sdk152:libcdvd.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd011.o` | `0xAC` | `10` | - | - | - |
+| `0x0011B070` | `sceCdPause` | `sdk152:libcdvd.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd013.o` | `0xAC` | `10` | - | - | - |
+| `0x0011B1B8` | `sceCdGetDiskType` | `sdk152:libcdvd.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libcdvd.a` `cdvd014.o` | `0x24` | `10` | ../eecdvd.c | sly1 | - |
+| `0x0011B8D8` | `mceSifRpcEndFunc` | `sdk152:libmc.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xC` | `24` | - | - | - |
+| `0x0011BBC8` | `sceMcClose` | `sdk152:libmc.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xBC` | `24` | - | - | - |
+| `0x0011C6D8` | `sceMcFormat` | `sdk152:libmc.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xCC` | `24` | - | - | - |
+| `0x0011C8C8` | `sceMcFlush` | `sdk152:libmc.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xBC` | `24` | - | - | - |
+| `0x0011CCB0` | `sceMcUnformat` | `sdk152:libmc.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libmc.a` `libmc.o` | `0xCC` | `24` | - | - | - |
+| `0x00121E30` | `sceSynthesizerClearKeyMap` | `recvx` *(no archive member)* | `0x8` | `3` | - | - | - |
+| `0x00121E40` | `fillkmap` | `recvx` *(no archive member)* | `0x30` | `3` | - | - | - |
+| `0x00121E70` | `clr_drum_nrpn` | `recvx` *(no archive member)* | `0x3C` | `3` | - | - | - |
+| `0x0012F820` | `sceSynthesizerChangePanpot` | `recvx` *(no archive member)* | `0x48` | `5` | - | - | - |
+| `0x0012F870` | `_callback_sceSynthesizerChangeEffectSend0` | `recvx` *(no archive member)* | `0x8` | `5` | - | - | - |
+| `0x0012F880` | `_callback_sceSynthesizerChangeEffectSend1` | `recvx` *(no archive member)* | `0x8` | `5` | - | - | - |
+| `0x0012F890` | `_callback_sceSynthesizerChangeEffectSend2` | `recvx` *(no archive member)* | `0x8` | `5` | - | - | - |
+| `0x0012F8A0` | `_callback_sceSynthesizerChangeEffectSend3` | `recvx` *(no archive member)* | `0x8` | `5` | - | - | - |
+| `0x001644F0` | `sceDeci2Open_1` (the corpus's `sceDeci2Open`, repeated in the image) | `oni2` *(no archive member)* | `0x44` | `3` | - | - | - |
+| `0x00164540` | `sceDeci2ReqSend_2` (the corpus's `sceDeci2ReqSend`, repeated in the image) | `oni2` *(no archive member)* | `0x30` | `3` | - | - | - |
+| `0x00164570` | `sceDeci2Poll_1` (the corpus's `sceDeci2Poll`, repeated in the image) | `oni2` *(no archive member)* | `0x24` | `3` | - | - | - |
+| `0x001B3750` | `sceScfSetT10kConfig` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x1C` | `21` | - | - | - |
+| `0x001B3978` | `tobcd` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x2C` | `21` | - | - | - |
+| `0x001B39A8` | `frombcd` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x20` | `21` | - | - | - |
+| `0x001B39C8` | `convertfrombcd` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x68` | `21` | - | - | - |
+| `0x001B3A30` | `converttobcd` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x68` | `21` | - | - | - |
+| `0x001B3C28` | `subhour` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x24` | `21` | - | - | - |
+| `0x001B3CE0` | `sceScfGetGMTfromRTC` | `sdk152:libscf.a` `~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/libscf.a` `libscf.o` | `0x8` | `21` | - | - | - |
 
 ## Refused names
 

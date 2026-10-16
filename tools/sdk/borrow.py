@@ -196,7 +196,7 @@ CORPORA = (
                         "and are never committed.  What is recorded is a *derived* name for one of "
                         "this image's functions -- a name the SDK's own object carries -- and the "
                         "package it came from.",
-        "entry_point": "path: `borrow.archive_corpus()` -- every package tree "
+        "entry_point": "path: borrow.archive_corpus() -- every package tree "
                        "tools/sdk/revisions.py:ARCHIVE_ROOTS names (~/sdk-downloads, "
                        "~/sdk-extract)",
         "publishes": "292 SDK archives, 44,425 functions: tlib 2.5.0-2.5.5, SCE Tool-Libs 2.4.2, "
@@ -621,7 +621,11 @@ def run_proposals(ours: list[dict], theirs: list[dict], source: str,
                               "source": source,
                               "evidence": {"run": length,
                                            "source_address": other["address"],
-                                           "source_member": other.get("member")}})
+                                           "source_archives": sorted({_display(other["archive"])}
+                                                                      if other.get("archive")
+                                                                      else []),
+                                           "source_members": [other["member"]]
+                                                              if other.get("member") else []}})
     return proposals, refused
 
 
@@ -670,7 +674,10 @@ def byte_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict, their_
             "name": candidate["name"], "tier": "bytes", "source": source,
             "evidence": {"source_key": corpus_key(candidate),
                          "source_address": candidate["address"],
-                         "source_member": candidate.get("member"),
+                         "source_archives": sorted({_display(c["archive"]) for c, _ in matches
+                                                    if c.get("archive")}),
+                         "source_members": sorted({c["member"] for c, _ in matches
+                                                   if c.get("member")}),
                          "candidates": len(matches), "window": window,
                          "masked_words": result["masked_words"],
                          "exact": result["exact"],
@@ -737,7 +744,8 @@ def archive_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict,
             "address": mine["address"], "symbol": mine["symbol"], "size": mine["size"],
             "name": names[0], "tier": "bytes", "source": source,
             "evidence": {"source_key": corpus_key(candidate),
-                         "source_member": candidate["member"],
+                         "source_archives": sorted({_display(c["archive"]) for c, _ in whole}),
+                         "source_members": sorted({c["member"] for c, _ in whole}),
                          "candidates": len(whole), "window": mine["size"],
                          "masked_words": result["masked_words"],
                          "exact": result["exact"],
@@ -1064,9 +1072,19 @@ def _name_row(row: dict, run: bool = False) -> str:
     if row.get("borrowed_as"):
         name += f" (the corpus's `{row['borrowed_as']}`, repeated in the image)"
     source = f"`{row['source']}`"
-    member = row["evidence"].get("source_member")
-    if member:                      # an archive member is where the name and the bytes came from
-        source += f" `{member}`"
+    # Where the bytes were read: the archive, then the member(s) that carry the name.  A row whose
+    # corpus is not an archive set says so instead of leaving a claim that implies traceability it
+    # does not have -- the reviewer of this task's first round measured that a member name alone is
+    # not traceable: within `devkit152` alone, 692 member names appear in more than one archive.
+    fields = row["evidence"]
+    archives = fields.get("source_archives") or []
+    members = fields.get("source_members") or []
+    if archives:
+        source += " " + ", ".join(f"`{archive}`" for archive in archives)
+    if members:
+        source += "".join(f" `{member}`" for member in members)
+    if not archives and not members:
+        source += " *(no archive member)*"
     return (f"| `0x{row['address']:08X}` | {name} | {source} | `0x{row['size']:X}` | "
             f"{evidence} | {row.get('sdk_source') or '-'} | "
             f"{', '.join(row.get('corroborated_by') or []) or '-'} | "
@@ -1159,14 +1177,18 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
     out += ["\n## Names in the build artifact (byte evidence)\n",
             "Every name here was accepted because the corpus publishes the function's own bytes",
             "and they matched ours after relocation masking, at our function's own size.  These",
-            "are the lines of `config/<target>/borrowed_symbols.txt`.  `evidence` says whether the",
+            "are the lines of `config/<target>/borrowed_symbols.txt`.  `source` names the corpus,",
+            "then the *archive* the bytes were read out of and the member(s) that carry the name: a",
+            "package can hold several archives of one name (`toolibs242` ships four `libiberty.a`),",
+            "so the path is what makes a row traceable, and a row whose source is not an archive set",
+            "says `(no archive member)` rather than implying one.  `evidence` says whether the",
             "whole body matched or only the first 48 bytes (beyond which a corpus from another SDK",
             "revision is a different question).  `size` is the corpus's published size, which",
             "`validate` required to equal our split bounds.  `sdk source` is sly1's attribution of",
             "the name to its original SDK source file; `corroborated by` lists the further corpora",
             "that publish the same name; `contested by` lists a weaker proposal that named this",
             "address differently (it did not win).\n",
-            "| address | name | source (member) | size | evidence | sdk source | corroborated by | contested by |",
+            "| address | name | source (archive, member) | size | evidence | sdk source | corroborated by | contested by |",
             "|---|---|---|---|---|---|---|---|"]
     for row in sorted(artifact, key=lambda r: r["address"]):
         out.append(_name_row(row))
@@ -1176,7 +1198,7 @@ def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: lis
             "they are proposals with a measured chance level (see the control above), and they stay",
             "out of `symbol_addrs.txt`, whose lines carry no tier.  `run` is how many consecutive",
             "functions agreed, which is the strength of the claim.\n",
-            "| address | name | source (member) | size | run | sdk source | corroborated by | contested by |",
+            "| address | name | source (archive, member) | size | run | sdk source | corroborated by | contested by |",
             "|---|---|---|---|---|---|---|---|"]
     for row in sorted(proposed_only, key=lambda r: r["address"]):
         out.append(_name_row(row, run=True))
@@ -1296,7 +1318,7 @@ def corpus_records(key: str, cache: pathlib.Path) -> tuple[list[dict], str, dict
         if key == "sdk152":
             records, blobs = [], {}
             for archive in sorted(root.glob("*.a")):
-                records += [dict(r, source=f"sdk152:{archive.name}")
+                records += [dict(r, source=f"sdk152:{archive.name}", archive=str(archive))
                             for r in parse_archive(archive, blobs)]
             return records, "local", blobs
         records = parse_elf_symbols(root)
@@ -1326,9 +1348,9 @@ def archive_records(entries: list[dict]) -> tuple[list[dict], dict]:
 
     A record carries the archive member's symbol -- name, size, the member it lives in -- and a
     ``blob_key`` into ``blobs``, because a relocatable member restarts at address 0 and two
-    members' functions can share an address.  ``source`` names the archive the object came from,
-    with the *package* in front: ``provenance_of`` keeps the package, and library-names.md prints
-    the archive.
+    members' functions can share an address.  ``source`` is ``<package>:<archive>`` (the archive
+    *name* is not unique inside a package: `toolibs242` ships four `libiberty.a`), and ``archive``
+    is the archive's own path, which is what a row has to print to be traceable.
     """
     records, blobs = [], {}
     for entry in entries:
@@ -1337,7 +1359,7 @@ def archive_records(entries: list[dict]) -> tuple[list[dict], dict]:
             key = (entry["set"], entry["path"], index)
             records.append({"name": function["name"], "size": function["size"],
                             "member": function["member"], "blob_key": key,
-                            "source": archive})
+                            "source": archive, "archive": entry["path"]})
             blobs[key] = function["bytes"]
     return records, blobs
 
@@ -1356,11 +1378,19 @@ def archive_packages(entries: list[dict]) -> list[tuple[str, list[dict]]]:
 
 
 def _display(path) -> str:
-    """A path as a reader types it: repo-relative when it is inside the repo."""
+    """A path as a reader types it: repo-relative inside the repo, else with ``~`` for home.
+
+    The archives live outside this repository (they are never committed), and a reader has to be
+    able to *find* one: the file name alone is not enough, because a package can carry several
+    archives of one name (`toolibs242` has four `libiberty.a` and three `libgcc.a`).
+    """
+    text = str(pathlib.Path(path))
     try:
         return str(pathlib.Path(path).relative_to(ROOT))
     except ValueError:
-        return str(path)
+        pass
+    home = str(pathlib.Path.home())
+    return "~" + text[len(home):] if text.startswith(home) else text
 
 
 def main(argv: list[str] | None = None) -> int:
