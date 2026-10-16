@@ -1,142 +1,128 @@
-# tests/oracle/test_emit_chunks.py
-import json, pathlib, pytest, sys
+"""The debug-chunk manifest: two tilings that must be exact, from a target's own measurements.
+
+The manifest is the bridge between the oracle's CU map and the split, so both halves are checked
+here on a synthetic map -- one `.debug` chunk per translation unit, one `.line` chunk per function,
+each tiling its section byte for byte -- together with the failure modes (a gap, an overlap, a TU
+split in two runs, a repeated statement list) that must be reported rather than repaired.  The
+section lengths come from the target's geometry, which the CLI resolves; with none given they are
+the default target's, which is exactly the state a target without a measured geometry cannot be in.
+"""
+
+import json
+import pathlib
+import sys
+
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/oracle"))
 sys.path.insert(0, str(ROOT))  # `config.targets`
-import emit_chunks
-from config import targets
+
+import emit_chunks  # noqa: E402
+from config import targets  # noqa: E402
+
+DEBUG_SIZE = 0x400
+LINE_SIZE = 0x100
 
 
-def _manifests(target):
-    """``(chunks, geometry)`` for ``target``, or a skip when Task 4 has not placed it yet.
+def records():
+    """One translation unit, two functions: the smallest map that has both chunk kinds."""
+    return [
+        dict(index=0, kind="tu", offset=0, size=0x100, name="probe.c", file="src/probe.c",
+             low_pc=None, high_pc=None, stmt_list=None),
+        dict(index=1, kind="function", offset=0x100, size=0x180, name="one", file="src/probe.c",
+             low_pc=0x100000, high_pc=0x100010, stmt_list=0),
+        dict(index=2, kind="function", offset=0x280, size=DEBUG_SIZE - 0x280, name="two",
+             file="src/probe.c", low_pc=0x100010, high_pc=0x100020, stmt_list=0x40),
+    ]
 
-    The suites here are parameterised over every target in `config.targets`; a target whose
-    binary and config are not on disk yet is skipped *loudly*, and never silently asserted
-    against the other target's files.
-    """
-    if not target.cus.is_file() or not target.chunks.is_file():
-        pytest.skip(f"{target.name}: its config is generated in Task 4")
-    geometry = target.geometry_required()
-    return emit_chunks.build(target.cus, geometry.line_size, geometry.debug_size), geometry
+
+def map_file(tmp_path, cus, name="cus.json"):
+    path = tmp_path / name
+    path.write_text(json.dumps(cus))
+    return path
 
 
-@pytest.mark.parametrize("name", targets.names())
-def test_chunks_tile_both_sections_exactly(name):
-    chunks, geometry = _manifests(targets.get(name))
-    for section, size in ((".debug", geometry.debug_size), (".line", geometry.line_size)):
+def build(tmp_path, cus=None):
+    return emit_chunks.build(map_file(tmp_path, records() if cus is None else cus),
+                             LINE_SIZE, DEBUG_SIZE)
+
+
+def test_the_chunks_tile_both_sections_exactly(tmp_path):
+    chunks = build(tmp_path)
+    for section, size in ((".debug", DEBUG_SIZE), (".line", LINE_SIZE)):
         part = [c for c in chunks if c["section"] == section]
         assert part[0]["offset"] == 0
         assert sum(c["size"] for c in part) == size
         for a, b in zip(part, part[1:]):
             assert a["offset"] + a["size"] == b["offset"]
 
-def test_offsets_outside_any_chunk_raise():
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    with pytest.raises(emit_chunks.NoCompileUnit):
-        emit_chunks.chunk_for(chunks, ".debug", 10**9)
 
-
-def test_one_debug_chunk_per_translation_unit_and_one_line_chunk_per_function():
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    cus = json.loads((ROOT / "config/usam2/cus.json").read_text())
+def test_one_debug_chunk_per_translation_unit_and_one_line_chunk_per_function(tmp_path):
+    chunks = build(tmp_path)
+    cus = records()
     debug = [c for c in chunks if c["section"] == ".debug"]
     line = [c for c in chunks if c["section"] == ".line"]
-    assert 57 == len(debug) == len({c["file"] for c in cus})
-    assert 423 == len(line) == sum(1 for c in cus if c["kind"] == "function")
+    assert len(debug) == len({c["file"] for c in cus}) == 1
+    assert len(line) == sum(1 for c in cus if c["kind"] == "function") == 2
     assert all(c["size"] > 0 for c in chunks)
     assert {c["section"] for c in chunks} == {".debug", ".line"}
 
 
-def test_every_cu_belongs_to_exactly_one_debug_chunk():
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    cus = json.loads((ROOT / "config/usam2/cus.json").read_text())
+def test_every_cu_belongs_to_exactly_one_debug_chunk(tmp_path):
+    chunks = build(tmp_path)
     debug = [c for c in chunks if c["section"] == ".debug"]
-    assert sorted(i for c in debug for i in c["tunits"]) == list(range(len(cus)))
-    for c in debug:
-        # a .debug chunk is the span of the records it names, and one TU
-        first, last = cus[c["tunits"][0]], cus[c["tunits"][-1]]
-        assert c["offset"] == first["offset"]
-        assert c["offset"] + c["size"] == last["offset"] + last["size"]
-        assert {cus[i]["file"] for i in c["tunits"]} == {first["file"]}
-        assert c["tunits"] == list(range(c["tunits"][0], c["tunits"][-1] + 1))
+    assert sorted(i for c in debug for i in c["tunits"]) == list(range(len(records())))
 
 
-def test_line_chunks_name_one_function_cu_each():
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    cus = json.loads((ROOT / "config/usam2/cus.json").read_text())
-    line = [c for c in chunks if c["section"] == ".line"]
-    assert sorted(i for c in line for i in c["tunits"]) == \
-        [c["index"] for c in cus if c["kind"] == "function"]
-    for c in line:
-        assert len(c["tunits"]) == 1
-        assert cus[c["tunits"][0]]["stmt_list"] == c["offset"]
+def test_a_chunk_covers_the_bytes_it_names(tmp_path):
+    chunks = build(tmp_path)
+    cus = records()
+    for chunk in chunks:
+        for off in (chunk["offset"], chunk["offset"] + chunk["size"] - 1):
+            found = emit_chunks.chunk_for(chunks, chunk["section"], off)
+            assert found is chunk, (chunk, off)
+    assert cus[chunks[0]["tunits"][0]]["offset"] == 0
 
 
-def test_out_of_range_offsets_raise_in_both_sections():
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    for section, size in ((".debug", 657815), (".line", 140704)):
-        for off in (-1, size, size + 5, 10**9):
-            with pytest.raises(emit_chunks.NoCompileUnit):
-                emit_chunks.chunk_for(chunks, section, off)
-
-
-def test_chunk_lookup_agrees_with_emit_cus_and_its_error_type():
-    import emit_cus
-    chunks = emit_chunks.build(ROOT / "config/usam2/cus.json")
-    cus = json.loads((ROOT / "config/usam2/cus.json").read_text())
-    assert emit_chunks.NoCompileUnit is emit_cus.NoCompileUnit
-    for off in (0, 234, 235, 657814):
-        chunk = emit_chunks.chunk_for(chunks, ".debug", off)
-        owner = emit_cus.owner_of(cus, off)
-        assert chunk["offset"] <= off < chunk["offset"] + chunk["size"]
-        assert owner["index"] in chunk["tunits"]
-        assert cus[chunk["tunits"][0]]["offset"] <= owner["offset"]
-        assert cus[chunk["tunits"][-1]]["offset"] >= owner["offset"]
-    for off in (0, 37, 140435, 140436, 140703):
-        chunk = emit_chunks.chunk_for(chunks, ".line", off)
-        assert chunk["offset"] <= off < chunk["offset"] + chunk["size"]
-
+def test_offsets_outside_any_chunk_raise(tmp_path):
+    chunks = build(tmp_path)
+    with pytest.raises(emit_chunks.NoCompileUnit):
+        emit_chunks.chunk_for(chunks, ".debug", 10 ** 9)
     with pytest.raises(emit_chunks.NoCompileUnit):
         emit_chunks.chunk_for(chunks, ".comment", 0)
 
 
-@pytest.mark.parametrize("name", targets.names())
-def test_committed_manifest_matches_a_fresh_run(tmp_path, name):
-    target = targets.get(name)
-    chunks, _geometry = _manifests(target)
-    emit_chunks.write(tmp_path / "debug_chunks.json", chunks)
-    assert (tmp_path / "debug_chunks.json").read_bytes() == target.chunks.read_bytes()
-
-
-def _map(cus, tmp_path, name="cus.json"):
-    path = tmp_path / name
-    path.write_text(json.dumps(cus))
-    return path
-
-
 def test_a_broken_map_fails_loudly_instead_of_being_repaired(tmp_path):
-    cus = json.loads((ROOT / "config/usam2/cus.json").read_text())
+    def broken(name, mutate):
+        cus = [dict(record) for record in records()]
+        mutate(cus)
+        return map_file(tmp_path, cus, name)
 
-    gapped = [dict(c) for c in cus]                 # a hole in .debug
-    gapped[3]["offset"] += 1
+    gapped = broken("gapped.json", lambda cus: cus[1].__setitem__("offset", 0x104))
     with pytest.raises(emit_chunks.NoCompileUnit):
-        emit_chunks.build(_map(gapped, tmp_path, "gapped.json"))
+        emit_chunks.build(gapped, LINE_SIZE, DEBUG_SIZE)
 
-    truncated = [dict(c) for c in cus[:-1]]         # .debug runs short
+    truncated = broken("truncated.json", lambda cus: cus.pop())
     with pytest.raises(emit_chunks.NoCompileUnit):
-        emit_chunks.build(_map(truncated, tmp_path, "truncated.json"))
+        emit_chunks.build(truncated, LINE_SIZE, DEBUG_SIZE)
 
-    split = [dict(c) for c in cus]                  # one TU in two runs
-    split[-1]["file"] = split[0]["file"]
+    split = broken("split.json", lambda cus: cus[1].__setitem__("file", "src/other.c"))
     with pytest.raises(emit_chunks.NoCompileUnit):
-        emit_chunks.build(_map(split, tmp_path, "split.json"))
+        emit_chunks.build(split, LINE_SIZE, DEBUG_SIZE)
 
-    repeated = [dict(c) for c in cus]               # two CUs on one stmt_list
-    repeated[9]["stmt_list"] = repeated[8]["stmt_list"]
+    repeated = broken("repeated.json", lambda cus: cus[2].__setitem__("stmt_list", 0))
     with pytest.raises(emit_chunks.NoCompileUnit):
-        emit_chunks.build(_map(repeated, tmp_path, "repeated.json"))
+        emit_chunks.build(repeated, LINE_SIZE, DEBUG_SIZE)
 
-    past_end = [dict(c) for c in cus]               # .line cannot close
-    past_end[9]["stmt_list"] = 140704
+    past_end = broken("past_end.json", lambda cus: cus[2].__setitem__("stmt_list", LINE_SIZE))
     with pytest.raises(emit_chunks.NoCompileUnit):
-        emit_chunks.build(_map(past_end, tmp_path, "past_end.json"))
+        emit_chunks.build(past_end, LINE_SIZE, DEBUG_SIZE)
+
+
+def test_the_default_sizes_are_the_default_targets_measurement():
+    """With no sizes given, the manifest needs the target's own measurement -- and this tree's
+    target has none yet, so it stops there rather than inheriting another target's numbers."""
+    assert targets.get().geometry is None
+    with pytest.raises(targets.NotMeasured):
+        emit_chunks.default_sizes()

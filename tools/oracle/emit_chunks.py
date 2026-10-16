@@ -1,24 +1,44 @@
-"""Compile-unit map -> the debug chunk manifest, `config/usam2/debug_chunks.json`.
+"""Compile-unit map -> the debug chunk manifest, a target's `debug_chunks.json`.
 
 The manifest carries the two DWARF sections as byte ranges that a splitter can
-turn into one `databin` each: `.debug` splits once per translation unit (the 57
+turn into one `databin` each: `.debug` splits once per translation unit (the
 contiguous runs of CU records that share a `file`) and `.line` splits once per
-function CU (the 423 statement-list extents).  Both tilings must be exact --
-start at 0, abut, and end on the real section length.  A gap or an overlap
-means the manifest is wrong, so this module raises instead of repairing it
-(Review Focus 4); offsets resolve through `chunk_for`, which raises
+function CU (the statement-list extents).  Both tilings must be exact -- start at
+0, abut, and end on the real section length.  A gap or an overlap means the
+manifest is wrong, so this module raises instead of repairing it (Review Focus
+4); offsets resolve through `chunk_for`, which raises
 `emit_cus.NoCompileUnit` outside every chunk of the requested section.
+
+The two section lengths are *measurements of one retail ELF*, so they come from
+the target's descriptor (`config/targets.py`) rather than from a constant here:
+the defaults below are the default target's, and `ddr oracle` passes the named
+target's own.
 """
 import bisect, json, pathlib, sys
 
 import emit_cus
 from emit_cus import NoCompileUnit
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))  # `config.targets`
+from config import targets
+
+DEFAULT = targets.get(targets.DEFAULT)
+
 DEBUG = ".debug"
 LINE = ".line"
 SECTIONS = (DEBUG, LINE)
-DEBUG_SIZE = 657815     # .debug length in orig/SLUS_207.11 (see emit_cus)
-LINE_SIZE = 140704      # .line length in orig/SLUS_207.11
+
+
+def default_sizes():
+    """``(line_size, debug_size)`` of the default target's own ELF measurement.
+
+    A function rather than two constants: the sizes are that target's geometry, and a target
+    nobody has measured yet must not make this module unimportable -- the ``ddr oracle`` verb
+    passes the named target's own sizes in, and only the bare ``python3 emit_chunks.py``
+    convenience path falls back to these.
+    """
+    geometry = DEFAULT.geometry_required()
+    return geometry.line_size, geometry.debug_size
 
 
 def _records(path):
@@ -90,8 +110,17 @@ def _line_chunks(cus, size):
     return chunks
 
 
-def build(cus_path, line_size=LINE_SIZE, debug_size=DEBUG_SIZE):
-    """The manifest: 57 `.debug` chunks then 423 `.line` chunks, each tiling."""
+def build(cus_path, line_size=None, debug_size=None):
+    """The manifest: one `.debug` chunk per translation unit, one `.line` chunk per function.
+
+    The two section lengths are the target's own measurement; with neither given they are the
+    default target's, resolved here rather than as defaults in the signature (an unmeasured
+    target must stop at the call, not at import).
+    """
+    if line_size is None or debug_size is None:
+        default_line, default_debug = default_sizes()
+        line_size = default_line if line_size is None else line_size
+        debug_size = default_debug if debug_size is None else debug_size
     cus = _records(cus_path)
     return _debug_chunks(cus, debug_size) + _line_chunks(cus, line_size)
 
@@ -121,8 +150,8 @@ def write(path, chunks):
 
 
 if __name__ == "__main__":
-    cus_path = sys.argv[1] if len(sys.argv) > 1 else "config/usam2/cus.json"
-    out = sys.argv[2] if len(sys.argv) > 2 else "config/usam2/debug_chunks.json"
+    cus_path = sys.argv[1] if len(sys.argv) > 1 else str(DEFAULT.cus)
+    out = sys.argv[2] if len(sys.argv) > 2 else str(DEFAULT.chunks)
     chunks = build(cus_path)
     write(out, chunks)
     counts = {s: sum(1 for c in chunks if c["section"] == s) for s in SECTIONS}

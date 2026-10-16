@@ -1,9 +1,13 @@
-"""DWARF names + Ghidra function starts -> splat symbol_addrs.txt."""
+"""DWARF names + Ghidra function starts -> a target's splat symbol_addrs.txt."""
 import collections, json, pathlib, re, sys
 
 import dwarf1
 from dwarf1 import Dwarf
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))  # `config.targets`
+from config import targets
+
+DEFAULT = targets.get(targets.DEFAULT)
 UNPLACED_REASON = "no AT_location address"
 
 
@@ -99,16 +103,17 @@ def duplicates(records):
 # borrowed library names
 # ---------------------------------------------------------------------------
 
-# `config/usam2/borrowed_symbols.txt`, written by `tools/sdk/borrow.py`: one line per name a
+# The target's borrowed-name ledger, written by `tools/sdk/borrow.py`: one line per name a
 # corpus published for a library function, validated against that function's split bounds before
 # it was written.  Its `size:` is that validated number -- the split's own bound, because that is
 # what the validation compared against.  It is deliberately *not* forwarded into the symbol
 # ledger's `size:`: splat uses that attribute to lay the split out, and a non-zero size
 # re-segments the bytes around the function (measured: the split stops carrying an address
 # comment and the link fails), so the split keeps detecting the bounds itself -- the bounds this
-# ledger checked -- and the number stays here as evidence.
-BORROWED = pathlib.Path(__file__).resolve().parents[2] / "config" / "usam2" / \
-    "borrowed_symbols.txt"
+# ledger checked -- and the number stays here as evidence.  The path is the *target's*: a target
+# with no ledger yet (a retarget) borrows nothing, and `apply_borrowed` says so by returning the
+# records unchanged.
+BORROWED = targets.get(targets.DEFAULT).borrowed
 BORROWED_LINE = re.compile(
     r"^(?P<name>[A-Za-z_]\w*) = 0x(?P<address>[0-9A-F]{8}); // type:(?P<kind>func|obj) "
     r"size:0x(?P<size>[0-9A-F]+) provenance:(?P<provenance>\S+) tier:(?P<tier>\S+)")
@@ -227,8 +232,7 @@ if __name__ == "__main__":
     elf = sys.argv[1]
     gh = sys.argv[2] if len(sys.argv) > 2 else None
     placed, unplaced = final(build(elf, gh))
-    out = pathlib.Path(sys.argv[3] if len(sys.argv) > 3
-                       else "config/usam2/symbol_addrs.txt")
+    out = pathlib.Path(sys.argv[3] if len(sys.argv) > 3 else DEFAULT.symbols)
     orphan = pathlib.Path(sys.argv[4]) if len(sys.argv) > 4 \
         else out.with_name("unplaced_symbols.txt")
     write(out, placed)

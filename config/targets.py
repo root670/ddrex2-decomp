@@ -1,0 +1,432 @@
+"""The target descriptor: every fact that differs between decompilation targets.
+
+One decompilation target is one row of facts: the retail binary and its G1 pin, the disc image
+and its G3 pin, the config directory its manifests live in, the measured geometry that turns a
+file offset into a virtual address (and back), and the compiler/flag pair each promoted unit was
+measured against.  This module is the only place those are written down; every tool -- the CLI,
+``configure.py``, the oracle emitters, both gates, the ISO tool and the compiler driver -- reads
+them from here, so retargeting is adding a descriptor rather than editing a dozen files.
+
+    from config import targets
+    target = targets.get()                   # the default target
+    target = targets.get("ddrex2p")          # ... or one by name
+    target.elf, target.elf_sha256            # the retail ELF and the digest G1 pins
+    target.image, target.image_sha256        # the disc image and the digest G3 pins
+    target.config_dir                        # config/ddrex2p
+    target.cus, target.symbols               # the manifests inside it
+
+**One registry, named targets.**  :class:`Registry` is the set of targets this tree can build
+for, each addressed by name; :data:`TARGETS` is the one the tools use.  Adding a target is a
+:class:`Target` and a line in that registry -- there is no other place that has to learn about
+it, and no tool spells a target name or a retail path of its own.  ``--target <name>`` selects
+one on every command; the default is the registry's, and a name nothing defines is a loud usage
+error rather than a silent fallback to the default (a typo must not configure the wrong game).
+
+**A missing field fails loudly.**  Every field is validated on construction -- an empty pin, a
+nameless binary, a config directory that is not ``config/<name>`` -- because a descriptor that
+quietly defaults is a gate that quietly passes.
+
+**Geometry is measured, never assumed.**  :class:`Geometry` is the segment list and the file
+geometry the build, both gates and the ISO tool read; it is *absent* for a target whose retail
+ELF nobody has measured yet, and :meth:`Target.geometry_required` then raises rather than handing
+back another target's numbers.  The current target's is measured from its own binary when it is
+placed and split, which is what ``orig/<elf>`` plus a generated ``config/<name>/`` are for; until
+then every tool stops at that message instead of producing a plausible image of the wrong game.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import pathlib
+import re
+
+#: The repository root: every path in a descriptor is spelled from here, so a descriptor is
+#: readable in a diff without the reader resolving relative paths in their head.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+_NAME = re.compile(r"[a-z0-9_]+")
+
+
+class UnknownTarget(LookupError):
+    """A target name no descriptor in the registry defines."""
+
+
+class NotMeasured(RuntimeError):
+    """The target's geometry has not been measured from its own retail ELF yet."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Geometry:
+    """The measured shape of one retail ELF and of the disc image that carries it.
+
+    The numbers are measurements of a specific file, so every one of them is a field: the
+    loadable segment's file and virtual addresses, the zero-filled tail above it, the
+    sections that follow the loadable image (``trailing``) with the two chunked ones' lengths,
+    and where the boot ELF sits in the disc image.  The derived values -- the code size, the
+    bss base and size -- are properties, so a measurement cannot disagree with itself.
+
+    ``trailing`` is ``((name, file offset, size), ...)`` in file order: the whole segment list
+    after the loadable image, padding included or not (``configure.py`` fills the gaps with
+    ``pad_*`` databins of its own).  The last entry ends at the file's end, and the debug and
+    line sizes are the ``.debug``/``.line`` entries' sizes -- both checked at construction.
+    """
+
+    elf_size: int
+    loadable_rom: int
+    loadable_end: int
+    loadable_vram: int
+    bss_end: int
+    trailing: tuple
+    debug_size: int
+    line_size: int
+    image_elf_offset: int
+    code_segment: str = "main"
+
+    def __post_init__(self):
+        for field in ("elf_size", "loadable_end", "loadable_vram", "bss_end", "debug_size",
+                      "line_size", "image_elf_offset"):
+            value = getattr(self, field)
+            if not isinstance(value, int) or value <= 0:
+                raise ValueError(f"geometry {field} is {value!r}: it must be a positive "
+                                 f"integer, measured from the retail ELF")
+        if not isinstance(self.loadable_rom, int) or self.loadable_rom < 0:
+            raise ValueError(f"geometry loadable_rom is {self.loadable_rom!r}: the loadable "
+                             f"image starts at a file offset, zero at the earliest")
+        if not (self.loadable_rom < self.loadable_end < self.elf_size):
+            raise ValueError(
+                f"geometry says the loadable image is 0x{self.loadable_rom:X}.."
+                f"0x{self.loadable_end:X} of a 0x{self.elf_size:X}-byte file: it must lie "
+                f"inside the file")
+        if self.bss_end <= self.bss_vram:
+            raise ValueError(
+                f"geometry says bss ends at 0x{self.bss_end:X}, below its base "
+                f"0x{self.bss_vram:X}: the zero-filled tail must sit above the file-loaded "
+                f"image")
+        if not isinstance(self.code_segment, str) or not self.code_segment:
+            raise ValueError("geometry code_segment is empty: it names the yaml's `c` "
+                             "segment, which the splits live under")
+        if not self.trailing:
+            raise ValueError("geometry trailing is empty: the file's sections after the "
+                             "loadable image are part of the measurement")
+        names, previous_end = set(), self.loadable_end
+        for entry in self.trailing:
+            if not (isinstance(entry, tuple) and len(entry) == 3
+                    and isinstance(entry[0], str) and entry[0]
+                    and isinstance(entry[1], int) and isinstance(entry[2], int)):
+                raise ValueError(f"geometry trailing entry {entry!r} is not "
+                                 f"(name, file offset, size)")
+            name, offset, size = entry
+            if name in names:
+                raise ValueError(f"geometry trailing names {name!r} twice")
+            if size <= 0 or offset < previous_end:
+                raise ValueError(
+                    f"geometry trailing {name!r} is at 0x{offset:X}+0x{size:X}, which is not "
+                    f"after the 0x{previous_end:X} the previous section ends at: the "
+                    f"trailing sections must be in file order and must not overlap")
+            names.add(name)
+            previous_end = offset + size
+        if previous_end != self.elf_size:
+            raise ValueError(
+                f"geometry trailing sections end at 0x{previous_end:X}, not at the file's "
+                f"0x{self.elf_size:X} bytes: the measurement does not cover the file")
+        for section, size in (("debug", self.debug_size), ("line", self.line_size)):
+            if section not in names:
+                raise ValueError(f"geometry trailing names no {section!r} section")
+            if self.trailing_of(section)[1] != size:
+                raise ValueError(
+                    f"geometry {section}_size is {size}, but the .{section} section in "
+                    f"trailing is {self.trailing_of(section)[1]} bytes: one measurement, "
+                    f"two numbers")
+
+    @property
+    def code_size(self) -> int:
+        """The loadable image's byte length: the code region the link asserts."""
+        return self.loadable_end - self.loadable_rom
+
+    @property
+    def bss_vram(self) -> int:
+        """Where the zero-filled tail starts, as a virtual address."""
+        return self.loadable_end + self.loadable_vram - self.loadable_rom
+
+    @property
+    def bss_size(self) -> int:
+        """How many zero-filled bytes the segment's memsz reaches above its base."""
+        return self.bss_end - self.bss_vram
+
+    @property
+    def sections(self) -> tuple:
+        """``((".debug", offset, size), (".line", offset, size))``: the chunked sections.
+
+        The chunk manifests' offsets are relative to these, so this is the one place the two
+        views of the file are joined.
+        """
+        return tuple((f".{name}", *self.trailing_of(name)) for name in ("debug", "line"))
+
+    def trailing_of(self, name: str) -> tuple:
+        """``(file offset, size)`` of the trailing section ``name``."""
+        for entry_name, offset, size in self.trailing:
+            if entry_name == name:
+                return offset, size
+        raise KeyError(name)
+
+    def address_of(self, file_offset: int) -> int:
+        """The virtual address a byte of the loadable image has."""
+        return self.loadable_vram + file_offset - self.loadable_rom
+
+    def offset_of(self, address: int) -> int:
+        """The file offset of a loadable-image virtual address (the inverse of `address_of`)."""
+        return self.loadable_rom + address - self.loadable_vram
+
+
+@dataclasses.dataclass(frozen=True)
+class Target:
+    """One decompilation target: the binary, the image, their pins, and where its config is.
+
+    ``geometry`` is that target's measured file/disc layout, or None until somebody measures it
+    (:meth:`geometry_required`).  ``tu_builds`` is ``((source, compiler build, flags), ...)``:
+    the compiler/flag pair ``tools/toolchain/select_build.py`` *measured* as reproducing a
+    promoted unit's retail ``.text``/``.debug``/``.line`` bytes.  It is per target because a
+    pair measured against one retail binary says nothing about another, so a new target starts
+    with an empty table and ``configure.py`` refuses to promote a source nobody has measured
+    for *it*.
+    """
+
+    name: str
+    config_dir: pathlib.Path
+    elf: pathlib.Path
+    elf_sha256: str
+    image: pathlib.Path
+    image_sha256: str
+    geometry: "Geometry | None" = None
+    tu_builds: tuple = ()
+
+    def __post_init__(self):
+        if not isinstance(self.name, str) or not _NAME.fullmatch(self.name):
+            raise ValueError(f"target name {self.name!r} is not a lowercase identifier: it "
+                             f"names both this descriptor and config/<name>/")
+        for field in ("config_dir", "elf", "image"):
+            object.__setattr__(self, field, pathlib.Path(getattr(self, field)))
+        expected = REPO_ROOT / "config" / self.name
+        if self.config_dir != expected:
+            raise ValueError(
+                f"target {self.name}: config_dir is {self.config_dir}, but a target's config "
+                f"lives in config/<name>/ ({expected}): a descriptor pointing at another "
+                f"target's config is a retarget that has half landed")
+        for field, label in (("elf", "retail ELF"), ("image", "disc image")):
+            if not getattr(self, field).name:
+                raise ValueError(f"target {self.name}: {field} names no {label}")
+        for field, label in (("elf_sha256", "G1"), ("image_sha256", "G3")):
+            value = getattr(self, field)
+            if not isinstance(value, str) or not _SHA256.fullmatch(value):
+                raise ValueError(
+                    f"target {self.name}: {field} is {value!r}, not a sha256 digest: the "
+                    f"{label} pin is what makes the gate a gate")
+        if self.geometry is not None and not isinstance(self.geometry, Geometry):
+            raise ValueError(f"target {self.name}: geometry is {self.geometry!r}, not a "
+                             f"Geometry (or None, for a target nobody has measured yet)")
+        seen = set()
+        for entry in self.tu_builds:
+            if not (isinstance(entry, tuple) and len(entry) == 3
+                    and all(isinstance(part, str) and part for part in entry)):
+                raise ValueError(f"target {self.name}: tu_builds entry {entry!r} is not "
+                                 f"(source, compiler build, flags)")
+            if entry[0] in seen:
+                raise ValueError(f"target {self.name}: tu_builds names {entry[0]!r} twice")
+            seen.add(entry[0])
+
+    # -- paths, all inside the target's own config dir -----------------------
+
+    @property
+    def checksums(self) -> pathlib.Path:
+        """The gate manifest: ``<sha256>  <path>`` per binary and image this target pins."""
+        return self.config_dir / "checksums.txt"
+
+    @property
+    def cus(self) -> pathlib.Path:
+        """The oracle's compile-unit map."""
+        return self.config_dir / "cus.json"
+
+    @property
+    def chunks(self) -> pathlib.Path:
+        """The oracle's debug chunk manifest."""
+        return self.config_dir / "debug_chunks.json"
+
+    @property
+    def symbols(self) -> pathlib.Path:
+        """The oracle's symbol ledger."""
+        return self.config_dir / "symbol_addrs.txt"
+
+    @property
+    def ghidra(self) -> pathlib.Path:
+        """The target's Ghidra function list, if it has one."""
+        return self.config_dir / "ghidra_functions.json"
+
+    @property
+    def borrowed(self) -> pathlib.Path:
+        """The borrowed library-name ledger the oracle merges into the symbol ledger."""
+        return self.config_dir / "borrowed_symbols.txt"
+
+    @property
+    def unplaced(self) -> pathlib.Path:
+        """Symbols the oracle found but could not place."""
+        return self.config_dir / "unplaced_symbols.txt"
+
+    @property
+    def splat_symbols(self) -> pathlib.Path:
+        """``symbols`` in the syntax splat parses (generated, gitignored)."""
+        return self.config_dir / "splat_symbol_addrs.txt"
+
+    @property
+    def undefined_funcs(self) -> pathlib.Path:
+        """splat's own undefined-function file (generated, gitignored)."""
+        return self.config_dir / "undefined_funcs_auto.txt"
+
+    @property
+    def undefined_syms(self) -> pathlib.Path:
+        """splat's own undefined-symbol file (generated, gitignored)."""
+        return self.config_dir / "undefined_syms_auto.txt"
+
+    @property
+    def built(self) -> pathlib.Path:
+        """The linked image under ``out/``: the target's own ELF name, never a fixed one."""
+        return REPO_ROOT / "out" / self.elf.name
+
+    @property
+    def ld_script(self) -> pathlib.Path:
+        """The pinned linker script ``configure.py`` generates for this target."""
+        return REPO_ROOT / "build" / f"{self.elf.name}.ld"
+
+    def geometry_required(self) -> Geometry:
+        """The measured geometry, or a loud stop naming what has to be measured."""
+        if self.geometry is None:
+            raise NotMeasured(
+                f"target {self.name} ({self.elf.name}) has no measured geometry yet: its "
+                f"segment list, file layout and disc-image offset are measured from "
+                f"{_display(self.elf)} once that binary is placed and split (the retarget "
+                f"plan's Tasks 4-6 generate its config), and until then this target cannot "
+                f"be configured -- another target's numbers would produce a plausible wrong "
+                f"image")
+        return self.geometry
+
+    def build_pair(self, source: str):
+        """``(compiler build, flags)`` measured for ``source``, or None."""
+        for file, version, flags in self.tu_builds:
+            if file == source:
+                return version, flags
+        return None
+
+    def build_table(self) -> dict:
+        """``tu_builds`` as ``{source: (compiler build, flags)}``, for ``configure.py``."""
+        return {file: (version, flags) for file, version, flags in self.tu_builds}
+
+
+class Registry:
+    """The targets this tree can build for, by name, with one of them as the default.
+
+    It is data, not code: :meth:`add` is the whole of "support another target", and no tool
+    needs to know which names exist.  The default is a name, and :meth:`get` with no name (or
+    with the default's) returns that target -- so a tool that never sees ``--target`` works on
+    the target this tree is configured for, while a name nothing defines raises
+    :class:`UnknownTarget` instead of quietly doing the same thing.
+    """
+
+    def __init__(self, *targets: Target, default: str | None = None):
+        self._targets: dict = {}
+        for target in targets:
+            self.add(target)
+        if not self._targets:
+            raise ValueError("a registry needs at least one target")
+        if default is None:
+            default = next(iter(self._targets))
+        if default not in self._targets:
+            raise ValueError(f"the registry's default {default!r} is not one of its targets: "
+                             + ", ".join(self.names()))
+        self._default = default
+
+    @property
+    def default(self) -> str:
+        """The name every tool uses when no ``--target`` is given."""
+        return self._default
+
+    def add(self, target: Target) -> Target:
+        """Register ``target``; returns it, so the registry line reads as one expression."""
+        if not isinstance(target, Target):
+            raise TypeError(f"{target!r} is not a Target: a registry holds descriptors")
+        if target.name in self._targets:
+            raise ValueError(
+                f"a target named {target.name!r} is already registered: two descriptors for "
+                f"one name would make every path ambiguous")
+        self._targets[target.name] = target
+        return target
+
+    def names(self) -> tuple:
+        """Every registered target's name, in registration order."""
+        return tuple(self._targets)
+
+    def get(self, name: str | None = None) -> Target:
+        """The target ``name``, or the default one when no name is given."""
+        if name is None or name == "":
+            name = self._default
+        try:
+            return self._targets[name]
+        except KeyError:
+            raise UnknownTarget(
+                f"no target named {name!r}: this tree knows " + ", ".join(self.names())) \
+                from None
+
+
+def _display(path) -> str:
+    """A path as a reader types it: repo-relative when it is inside the repo."""
+    path = pathlib.Path(path)
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+# ---------------------------------------------------------------------------
+# the targets
+# ---------------------------------------------------------------------------
+
+#: The target this tree is built for: the *DDR Extreme 2 (US)* preview template
+#: (``SLUS_211.74``), whose DWARF covers 249 translation units.  ``orig/SLUS_211.74`` is
+#: gitignored like every retail binary; ``config/ddrex2p/`` holds its manifests and pins.
+#:
+#: Its ``geometry`` and ``tu_builds`` are empty *on purpose*: both are measurements of the
+#: binary, and nobody has measured it in this tree yet -- the config is generated from it and
+#: the segment list read out of it (the retarget plan's Tasks 4-6), and a promoted unit's
+#: compiler/flag pair is measured from bytes only a build can produce.  A guessed number would
+#: be a split of one game at another game's addresses; ``geometry_required()`` is what refuses
+#: to guess, and `tests/test_targets.py` pins both halves of that behaviour.
+DDREX2P = Target(
+    name="ddrex2p",
+    config_dir=REPO_ROOT / "config" / "ddrex2p",
+    elf=REPO_ROOT / "orig" / "SLUS_211.74",
+    elf_sha256="ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd",
+    image=pathlib.Path(
+        "$HOME/Downloads/Dance Dance Revolution Extreme 2 (May 10, 2005 "
+        "prototype)/PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso"),
+    image_sha256="70a9056657665e978c7de9fc223cb753956902416418993176438316f6cd652b",
+)
+
+#: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention
+#: here -- and, if it should be the default, the ``default=`` name; nothing else changes.
+TARGETS = Registry(DDREX2P, default="ddrex2p")
+
+#: The name every tool uses when no ``--target`` names another: the target this tree is for.
+DEFAULT = TARGETS.default
+
+
+def names() -> tuple:
+    """Every registered target's name, in registration order."""
+    return TARGETS.names()
+
+
+def get(name: str | None = None) -> Target:
+    """The registered target ``name``, or the default one when no name is given.
+
+    An unknown name raises :class:`UnknownTarget` naming the ones that exist: a typo must not
+    silently configure the default target and produce a plausible image of another game.
+    """
+    return TARGETS.get(name)

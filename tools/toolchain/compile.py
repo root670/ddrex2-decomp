@@ -68,11 +68,14 @@ for _extra in (str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT / "tools"), st
         sys.path.insert(0, _extra)
 
 import elf  # noqa: E402  the vendored 32-bit little-endian MIPS reader
+from config import targets  # noqa: E402  the one place a target's facts are written down
 from toolchain import check_deps, fetch, probe  # noqa: E402
 
-CONFIG = "usam2"
-CONFIG_DIR = REPO_ROOT / "config" / CONFIG
-RETAIL = REPO_ROOT / "orig" / "SLUS_207.11"
+#: The target a direct invocation works on when ``--target`` names none: the one the tree is
+#: configured for.  The ninja graph always names the target it was generated for, so a build
+#: never depends on this default; it is what `compile.py` and `select_build.py` do by hand.
+DEFAULT_TARGET = targets.get(targets.DEFAULT)
+RETAIL = DEFAULT_TARGET.elf
 BUILD = REPO_ROOT / "build"
 
 #: The ``mwccps2`` flags a direct invocation uses.  ``-O3`` is where the retail instruction
@@ -93,7 +96,7 @@ AS = ("mips-linux-gnu-as", "-Iasm/include", "--no-pad-sections", "-EL", "-march=
 #: Retail's CU name records the original build host's path, and a staged copy is put at a
 #: path whose guest spelling is exactly as long as retail's, so that replacing the
 #: recorded name cannot resize a DIE.  ``/tmp`` is the shortest root every host has (the
-#: repo's own path is longer than ``C:\\work\\usam2\\...``); it is resolved here because
+#: repo's own path is longer than the retail build's recorded one); it is resolved here because
 #: the *real* path is the one that has to fit.
 STAGING_ROOT = pathlib.Path("/tmp").resolve()
 
@@ -168,10 +171,16 @@ class Tu:
 
 
 class Manifests:
-    """``cus.json``, ``debug_chunks.json`` and ``symbol_addrs.txt``, read once."""
+    """A target's ``cus.json``, ``debug_chunks.json`` and ``symbol_addrs.txt``, read once.
 
-    def __init__(self, config=CONFIG):
-        self.dir = REPO_ROOT / "config" / config
+    The target is a parameter, never a module-level convention: the ninja ``cc`` edge passes
+    ``--target``, so a unit is placed against the manifests of the binary its object is
+    linked into rather than against whichever config a default happens to name.
+    """
+
+    def __init__(self, target=None):
+        self.target = target if target is not None else DEFAULT_TARGET
+        self.dir = self.target.config_dir
         self.cus = self._json(self.dir / "cus.json")
         self.chunks = self._json(self.dir / "debug_chunks.json")
         self.symbols = {}
@@ -199,7 +208,8 @@ class Manifests:
     def address_of(self, name) -> int:
         if name not in self.symbols:
             raise Unusable(
-                f"the object references {name!r}, which config/{CONFIG}/symbol_addrs.txt "
+                f"the object references {name!r}, which "
+                f"{self.target.symbols.relative_to(REPO_ROOT)} "
                 f"gives no address for; the unit cannot be placed")
         return self.symbols[name][0]
 
@@ -678,9 +688,10 @@ def _display(path) -> str:
 
 
 def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
-          keep=None) -> Placed:
+          keep=None, target=None) -> Placed:
     """Everything the ``cc`` rule does: compile, place, and write ``out``."""
-    manifests = manifests or Manifests()
+    target = target if target is not None else DEFAULT_TARGET
+    manifests = manifests if manifests is not None else Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
     placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep)
@@ -744,6 +755,10 @@ def _parser(with_out: bool) -> argparse.ArgumentParser:
                              "with --syntax-only)")
     parser.add_argument("--compiler", default=fetch.REQUIRED,
                         help=f"the mwccps2 build to use (default: {fetch.REQUIRED})")
+    parser.add_argument("--target", default=targets.DEFAULT,
+                        help="the target whose manifests place the unit and whose retail "
+                             f"binary it is compared with (default: {targets.DEFAULT}; "
+                             f"known: {', '.join(targets.names())})")
     parser.add_argument("--keep", type=pathlib.Path, default=None,
                         help="where to keep the Metrowerks object the compiler writes")
     parser.add_argument("--compare", action="store_true",
@@ -758,19 +773,23 @@ def main(argv=None) -> int:
     parser = _parser(with_out="--syntax-only" not in argv)
     args, flags = parser.parse_known_args(argv)
     try:
+        target = targets.get(args.target)
         if args.syntax_only:
             return syntax_only(args.source, flags, args.compiler, args.include)
-        manifests = Manifests()
+        manifests = Manifests(target)
         tu = manifests.tu_named(args.source)
         placed = build(tu, args.out, flags or DEFAULT_FLAGS, args.compiler, manifests,
-                       keep=args.keep)
+                       keep=args.keep, target=target)
         shown = _display(args.out)
-        print(f"cc {tu.file}: {len(placed.text):#x} bytes of .text, "
+        print(f"cc {tu.file} [{target.name}]: {len(placed.text):#x} bytes of .text, "
               f"{len(placed.debug):#x} of .debug, {len(placed.line):#x} of .line -> {shown}")
         if args.compare:
-            for part, (ok, detail) in compare(tu, placed).items():
+            for part, (ok, detail) in compare(tu, placed, target.elf).items():
                 print(f"cc {tu.file}: {part} {'ok' if ok else 'DIFFERS'} ({detail})")
         return 0
+    except targets.UnknownTarget as exc:
+        print(f"compile.py: error: {exc}", file=sys.stderr)
+        return 2
     except probe.ProbeError as exc:  # the compiler failed: the source, or the flags
         print(f"compile.py: error: {exc}", file=sys.stderr)
         return 1

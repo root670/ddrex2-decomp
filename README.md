@@ -1,8 +1,19 @@
-# ddrex-decomp — DDRMAX2 (US) matching decompilation
+# ddrex-decomp — DDR Extreme 2 (US) preview matching decompilation
 
-A **matching decompilation** of *DDRMAX2: Dance Dance Revolution* (USA) for the PlayStation 2,
-retail ELF `SLUS_207.11` — 2,512,980 bytes, sha256
-`a7596e8ab3da823236ed8e5f3f2804db3daee47265ae73e22f3311a5218aa8cc`.
+A **matching decompilation** of the *DDR Extreme 2 (US)* preview for the PlayStation 2, retail ELF
+`SLUS_211.74`, sha256 `ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`
+(copied to the gitignored `orig/SLUS_211.74`).
+
+**One target is registered, in one place**: [`config/targets.py`](config/targets.py) holds its retail
+ELF and G1 pin, its disc image and G3 pin, its config directory, its *measured* geometry and the
+compiler/flag pair each promoted unit was measured against.  Every tool reads that descriptor and
+`--target <name>` selects it (default: the registered target, so a bare `./ddr build` means the binary
+above); no other file spells a target name or a retail path.  Adding a target is a `Target(...)` plus
+one line in the registry there.
+
+The binary, its image and its generated config are **not in the tree yet** — placing the ELF,
+generating `config/ddrex2p/**` and measuring the segment list are the retarget plan's Tasks 4–6, so
+until they land every verb stops with the file or measurement it is missing instead of guessing.
 
 "Matching" means the reconstruction is *proved*, not judged: the built ELF must be byte-identical to
 the retail one, debug sections and all, and writing it back into the retail disc image must reproduce
@@ -13,28 +24,29 @@ unit being edited.
 
 | milestone | what it closed on | document |
 |---|---|---|
-| M1 — oracle, splat config, pinned link, ISO layer | `./ddr build` reproduces `out/SLUS_207.11`; `./ddr verify --iso` reproduces the disc image; **zero C written** | [`docs/milestones/m1-skeleton.md`](docs/milestones/m1-skeleton.md) |
-| M2 — the first promoted translation unit | `src/sys/sys_scf.c`: its `.text`, its `.debug` chunk and its `.line` chunks all match retail | [`docs/milestones/m2-sys-scf.md`](docs/milestones/m2-sys-scf.md) |
+| M1–M2 (removed target) | the skeleton and the first promoted unit of the previous target: oracle, splat config, pinned link, ISO layer, and one unit matching on `.text` + `.debug` + `.line` | records were removed with that target |
+| library sourcing (this target) | which SDK archive revision reproduces each library, byte-wise, names only | [`docs/milestones/m3-library-sourcing.md`](docs/milestones/m3-library-sourcing.md) |
 
-The design is in [`docs/superpowers/specs/2026-10-14-ddrmax2-us-decomp-design.md`](docs/superpowers/specs/2026-10-14-ddrmax2-us-decomp-design.md),
-the plan that built this skeleton in
-[`docs/superpowers/plans/2026-10-14-ddrmax2-us-oracle-toolchain-skeleton.md`](docs/superpowers/plans/2026-10-14-ddrmax2-us-oracle-toolchain-skeleton.md),
-and the working contract — the rules, the loop, and why each rule exists — is
-[`AGENTS.md`](AGENTS.md).  Read that one before editing anything.
+The retarget is specified in [`docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md`](docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md)
+and planned in [`docs/superpowers/plans/2026-10-16-ddrex2-preview-retarget.md`](docs/superpowers/plans/2026-10-16-ddrex2-preview-retarget.md)
+(the earlier skeleton plan kept it historical record); the working contract — the rules, the loop, and
+why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before editing anything.
 
 ## The gates
 
 Every claim about this repository is one of three machine-checkable digests.  Each gate checks its
-*reference* against the digest pinned in `config/usam2/checksums.txt` **before** comparing, so a
-corrupted or wrong-version input fails loudly instead of being compared with a build — and a
-reference *no* record names is refused outright (exit 2) rather than compared with itself, unless
-`--allow-unpinned-reference` says so in so many words on the success line.
+*reference* against the digest pinned in the target's `config/<target>/checksums.txt` **before**
+comparing, so a corrupted or wrong-version input fails loudly instead of being compared with a
+build — and a reference *no* record names is refused outright (exit 2) rather than compared with
+itself, unless `--allow-unpinned-reference` says so in so many words on the success line.  A
+target's inputs are its own: `./ddr --target ddrex2p verify` reads that target's binary and pin, and a
+target whose binary has not been placed yet is a loud stop rather than a fallback to another one.
 
 | gate | command | what it proves |
 |---|---|---|
-| **G1** binary | `./ddr verify` | `out/SLUS_207.11` sha256 == the retail ELF's — the whole file, `.debug`/`.line`/`.comment`/headers included |
+| **G1** binary | `./ddr verify` | the built image `out/<elf>` sha256 == the retail ELF's — the whole file, `.debug`/`.line`/`.comment`/headers included |
 | **G2** per-TU | `./ddr verify --tu sys_scf` | for a promoted unit: its `.text` span, its `.debug` chunk and its `.line` chunks against retail, naming the first divergence — this is the **promotion rule**: code *and* debug bytes |
-| **G3** disc | `./ddr verify --iso` | splicing the built ELF into a copy of the retail image at byte offset `0x92000` (LBA 292) reproduces the image's sha256 |
+| **G3** disc | `./ddr verify --iso` | splicing the built ELF into a copy of the target's retail image, at the offset its descriptor measured, reproduces that image's sha256 |
 
 A red gate is never worked around; on a red G1 the tool names the translation unit, the function,
 the compile unit and the chunk that own the first divergent byte, and that is where the fix goes.
@@ -58,10 +70,12 @@ curl -sL -o ~/.local/bin/objdiff-cli \
 **The retail files are yours to supply** — they are never committed (see `THIRD_PARTY_NOTICES.md`
 and `AGENTS.md` rule 5):
 
-* `orig/SLUS_207.11` — the retail ELF, extracted from your own copy of the disc.
-* `disc/DDRMAX2 Dance Dance Revolution (USA).iso` — the retail image, for G3.  A 1.24 GB copy of the
-  ELF inside it; if you mount the image at the path recorded in `tools/iso/reinsert.py` you can use
-  bare `./ddr verify --iso` and let the tool find it.
+* `orig/SLUS_211.74` — the retail ELF (7,725,036 bytes), copied out of your own copy of the preview
+  image.  The retarget plan's Task 4 places it.
+* the *DDR Extreme 2 (May 10, 2005 prototype)* image — the G3 reference.  Both paths, and the two
+  sha256 digests they are pinned by, are recorded in `config/targets.py` (the image is the one the
+  plan pinned: `70a90566…6cd652b`).  Mount it at the recorded path and bare `./ddr --target ddrex2p
+  verify --iso` finds it; an absent image skips (exit 0) with an explicit "nothing was compared".
 
 **The compiler** is proprietary and is fetched, hash-verified and extracted into the gitignored
 `toolchain/`:
@@ -80,8 +94,11 @@ python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
 ./ddr verify                      # G1
 ./ddr verify --tu sys_scf         # the promotion rule for one unit
 ./ddr verify --iso                # G3 (skips cleanly when the image is not mounted)
-python3 -m pytest -q              # the suite: real splat, real assembler, real compiler, ~9 min
+python3 -m pytest -q              # the suite: real splat, real assembler, real compiler (~16 s today)
 ```
+
+Any of those takes `--target <name>` (default: the registered target), before or after the
+verb: `./ddr --target ddrex2p verify` is the same gate on the same files as `./ddr verify`.
 
 `./ddr build` takes about a minute from scratch (4,102 ninja edges, 4,092 of them splits) and less
 when only the unit you edited changed.  `./ddr diff <symbol> <tu>` shows objdiff's instruction-level
@@ -91,19 +108,27 @@ view of one function; G1 and the per-TU verdicts are the arbiters (see the cavea
 ## How it works
 
 ```
-orig/SLUS_207.11 ──► ./ddr oracle ──► config/usam2/{cus,debug_chunks,symbol_addrs}.json/txt
+orig/<target ELF> ──► ./ddr oracle ──► config/<target>/{cus,debug_chunks,symbol_addrs}.json/txt
                                       include/src/**        (one header per translation unit)
-config/usam2/**   ──► configure.py ──► asm/** (splat splits), build/SLUS_207.11.ld,
+config/<target>/** ──► configure.py ─► asm/** (splat splits), build/<elf>.ld,
                                       build.ninja, objdiff.json
-asm/**, src/**    ──► ninja ─────────► build/** objects ──► ld ──► objcopy ──► cat ──► out/SLUS_207.11 ──► G1
+asm/**, src/**     ──► ninja ────────► build/** objects ──► ld ──► objcopy ──► cat ──► out/<elf> ──► G1
                                                                         out/rebuilt.iso ──► G3
 ```
 
+Every path above is the one `config/targets.py` gives the target `--target` names; with another
+target the same pipeline splits `orig/<its ELF>` into `config/<name>/**` and gates
+`out/<its ELF>`.  `asm/**`, `build/**`, `out/**` and `include/**` are single generated trees, so one
+target is configured at a time (another target's config and pins stay on disk untouched).
+
+* `config/targets.py` — the target descriptor: the ELF and its G1 pin, the disc image and its G3 pin,
+  the config directory, the measured geometry (loadable segment, trailing sections, chunk sizes,
+  disc-image offset) and the per-unit compiler/flag pairs.  Adding a target is adding a descriptor.
 * `tools/oracle/**` — the vendored DWARF 1 reader plus the emitters that turn the retail ELF's own
   debug information into the manifests and headers.  Names and line numbers come from the target, not
   from a guess.
-* `configure.py` — splits the ELF with splat and writes the ninja graph, the linker script that pins
-  every address, and the objdiff project the CI reports from.
+* `configure.py` — splits the target's ELF with splat and writes the ninja graph, the linker script
+  that pins every address, and the objdiff project the CI reports from.
 * `tools/toolchain/compile.py` — the `cc` rule's program: it runs `mwccps2` under wibo, reads the
   Metrowerks object with the oracle's own reader, and places the `.text`, `.debug` and `.line` bytes
   the compiler wrote (mainline binutils cannot read those objects, and `mwldps2` does not keep the

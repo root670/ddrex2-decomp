@@ -1,25 +1,28 @@
 #!/usr/bin/env python3
-"""G1 -- the whole-file gate: ``out/SLUS_207.11`` must equal ``orig/SLUS_207.11``.
+"""G1 -- the whole-file gate: a target's built image must equal its retail binary.
 
 G1 is milestone M1's acceptance criterion, so it compares the two images as *files*: both
 sha256 digests, and on a mismatch the first differing offset.  A bare offset is close to
-useless in a 2.5 MB image that is mostly debug data, so the offset is mapped back through
-the oracle's manifests (``cus.json``, ``debug_chunks.json``) to the compile unit and the
-translation unit that own it -- the localisation G2 will reuse when a promoted translation
+useless in a multi-megabyte image that is mostly debug data, so the offset is mapped back
+through the oracle's manifests (``cus.json``, ``debug_chunks.json``) to the compile unit and
+the translation unit that own it -- the localisation G2 will reuse when a promoted translation
 unit's bytes drift.  The manifests are the only place where byte offsets and source files
 meet, which is why a ``.line`` byte names the compile unit whose statement list it belongs
 to rather than a byte range.
 
 Usage::
 
-    python3 tools/verify/g1.py out/SLUS_207.11 [--retail orig/SLUS_207.11]
-                                               [--expected SHA256] [--checksums PATH]
+    python3 tools/verify/g1.py out/<elf> [--target NAME] [--retail orig/<elf>]
+                                        [--expected SHA256] [--checksums PATH]
 
-``--expected`` defaults to ``config/usam2/checksums.txt``, whose *first* record is the pinned
-digest of the built image; when it is known the *retail* file's digest is checked against it
-first, so a missing, truncated or different retail binary is reported as such instead of
-being compared with.  A second record pins the retail disc image; the ISO gate resolves it
-by file name through :func:`pinned_hash_for`, and this module's own gate never needs it.
+Every input is the *target's*: its retail binary, its ``checksums.txt`` (whose first record is
+the pinned digest of the built image) and its manifests.  The target is named with ``--target``
+and defaults to the one the tree is configured for; nothing here spells a target name or a
+retail path of its own.  When the pinned digest is known the *retail* file's digest is checked
+against it first, so a missing, truncated or different retail binary is reported as such
+instead of being compared with.  A second record pins the retail disc image; the ISO gate
+resolves it by file name through :func:`pinned_hash_for`, and this module's own gate never
+needs it.
 Exit codes: 0 identical, 1 they differ (or the retail binary is wrong), 2 a file is missing
 or unusable.
 """
@@ -35,25 +38,33 @@ import re
 import sys
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-# `configure.py` owns the file's geometry (R7: the numbers are measured from the retail
-# ELF), and the chunked sections' bases and sizes are read from it rather than copied: g2
-# uses `SECTIONS` as the base of the per-TU verdict windows, so a second copy here would be
-# a second source of truth for a load-bearing number.
+# The geometry (which sections exist, where they start and how the loadable image maps a
+# file offset to a virtual address) belongs to the *target*, and is measured there once
+# (`config/targets.py`); `configure.py` reads the same descriptor, so the split and this
+# gate cannot disagree about it.  The names below are the default target's, because that is
+# what a bare `python3 tools/verify/g1.py out/<elf>` means; every function that can be asked
+# to work on another target takes it as an argument.
 if str(REPO_ROOT) not in sys.path:  # run as `python3 tools/verify/g1.py` from ninja
     sys.path.insert(0, str(REPO_ROOT))
-import configure  # noqa: E402
+from config import targets  # noqa: E402
 
-RETAIL = REPO_ROOT / "orig" / "SLUS_207.11"
-CHECKSUMS = REPO_ROOT / "config" / "usam2" / "checksums.txt"
-SYMBOLS = REPO_ROOT / "config" / "usam2" / "symbol_addrs.txt"
-CUS = REPO_ROOT / "config" / "usam2" / "cus.json"
-CHUNKS = REPO_ROOT / "config" / "usam2" / "debug_chunks.json"
+TARGET = targets.get(targets.DEFAULT)
+RETAIL = TARGET.elf
+CHECKSUMS = TARGET.checksums
+SYMBOLS = TARGET.symbols
+CUS = TARGET.cus
+CHUNKS = TARGET.chunks
 
-# The retail file offsets and sizes of the two chunked sections, taken from configure.py's
-# trailing-section list (the chunk manifests' offsets are relative to these, so this is the
-# one place the two views are joined).
-_TRAILING = {name: (offset, size) for name, offset, size in configure.TRAILING}
-SECTIONS = ((".debug", *_TRAILING["debug"]), (".line", *_TRAILING["line"]))
+
+def geometry_of(target=None):
+    """The geometry the gate localises with: ``target``'s own measurement, or the default's.
+
+    Resolved when it is asked for, never at import: a target nobody has measured yet must be
+    able to *import* this gate (and run the pin check, which needs no geometry at all), and
+    stop only where a number nobody measured would be used.
+    """
+    return (target or TARGET).geometry_required()
+
 
 SYMBOL_LINE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 
@@ -186,13 +197,15 @@ class Localiser:
     the gate itself must never depend on the diagnostic.
     """
 
-    def __init__(self, cus_path=CUS, chunks_path=CHUNKS, symbols_path=SYMBOLS):
+    def __init__(self, cus_path=CUS, chunks_path=CHUNKS, symbols_path=SYMBOLS,
+                 geometry=None):
         try:
             self.records = json.loads(pathlib.Path(cus_path).read_text())
             self.chunks = json.loads(pathlib.Path(chunks_path).read_text())
         except (OSError, json.JSONDecodeError, TypeError):
             self.records, self.chunks = [], []
         self.symbols = _symbol_table(symbols_path)
+        self.geometry = geometry if geometry is not None else geometry_of()
 
     def tu_of(self, index):
         """The translation unit record that owns compile-unit record ``index``."""
@@ -203,7 +216,7 @@ class Localiser:
 
     def describe(self, offset) -> str:
         """``""`` outside the chunked sections, else the offset's CU and TU."""
-        for name, base, size in SECTIONS:
+        for name, base, size in self.geometry.sections:
             if base <= offset < base + size:
                 return self._in_section(name, offset - base)
         return ""
@@ -225,37 +238,61 @@ class Localiser:
                 f"{owner['file'] if owner else '?'}")
 
 
-def compare(built, retail, cus=CUS, chunks=CHUNKS) -> str:
-    """``"ok"``, or the mismatch message the brief's interface promises."""
+def compare(built, retail, cus=CUS, chunks=CHUNKS, geometry=None) -> str:
+    """``"ok"``, or the mismatch message the brief's interface promises.
+
+    The verdict itself needs nothing but the two files: two images that differ are reported as
+    differing whether or not anybody has measured the target's geometry.  The *localisation*
+    does need it, so a target whose segment list has not been measured yet says exactly that
+    instead of naming a translation unit from numbers nobody measured.
+    """
     built, retail = pathlib.Path(built), pathlib.Path(retail)
     expected, got = sha256(retail), sha256(built)
     if expected == got:
         return "ok"
     offset, note = _first_difference(built, retail)
-    where = "" if offset is None else Localiser(cus, chunks).describe(offset)
+    where = ""
+    if offset is not None:
+        try:
+            where = Localiser(cus, chunks, geometry=geometry).describe(offset)
+        except targets.NotMeasured:
+            where = (" -- the byte is not localised: this target has no measured geometry "
+                     "yet (its segment list is read from its own ELF when it is placed)")
     return (f"sha256 mismatch: expected {expected} got {got} at first difference "
             f"0x{offset:X}{note}{where}")
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("built", help="the image to verify (out/SLUS_207.11)")
-    parser.add_argument("--retail", default=str(RETAIL),
-                        help="the retail binary to compare against")
+    parser.add_argument("built", help="the image to verify (the target's out/<elf>)")
+    parser.add_argument("--target", default=targets.DEFAULT,
+                        help="the target whose retail binary and manifests this gate reads "
+                             f"(default: {targets.DEFAULT}; known: "
+                             f"{', '.join(targets.names())})")
+    parser.add_argument("--retail", default=None,
+                        help="the retail binary to compare against (default: the target's "
+                             "own retail ELF)")
     parser.add_argument("--expected", default=None,
                         help="pinned sha256 the retail binary must have")
-    parser.add_argument("--checksums", default=CHECKSUMS,
-                        help="file --expected is read from when it is not given")
-    parser.add_argument("--cus", default=CUS, type=pathlib.Path,
-                        help="the oracle's compile-unit map")
-    parser.add_argument("--chunks", default=CHUNKS, type=pathlib.Path,
-                        help="the oracle's debug chunk manifest")
+    parser.add_argument("--checksums", default=None,
+                        help="file --expected is read from when it is not given "
+                             "(default: the target's own)")
+    parser.add_argument("--cus", default=None, type=pathlib.Path,
+                        help="the target's compile-unit map")
+    parser.add_argument("--chunks", default=None, type=pathlib.Path,
+                        help="the target's debug chunk manifest")
     return parser.parse_args(argv)
 
 
 def main(argv=None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    built, retail = pathlib.Path(args.built), pathlib.Path(args.retail)
+    try:
+        target = targets.get(args.target)
+    except targets.UnknownTarget as exc:
+        print(f"g1: {exc}", file=sys.stderr)
+        return 2
+    built = pathlib.Path(args.built)
+    retail = pathlib.Path(args.retail) if args.retail else target.elf
     if not built.is_file():
         print(f"g1: {built}: no such file", file=sys.stderr)
         return 2
@@ -263,14 +300,17 @@ def main(argv=None) -> int:
         print(f"g1: {retail}: the retail binary is required to verify the build",
               file=sys.stderr)
         return 2
-    expected = args.expected or pinned_hash(args.checksums)
+    expected = args.expected or pinned_hash(args.checksums or target.checksums)
     got = sha256(retail)
     if expected and got != expected:
         print(f"g1: {retail} has sha256 {got} ({retail.stat().st_size} bytes), but the "
               f"pinned hash is {expected}: the retail binary is missing, truncated or a "
               f"different version", file=sys.stderr)
         return 1
-    message = compare(built, retail, args.cus, args.chunks)
+    # `target.geometry` may be None: the verdict does not need it, and `compare` says so in
+    # the one place the localisation would have used it.
+    message = compare(built, retail,
+                      args.cus or target.cus, args.chunks or target.chunks, target.geometry)
     print(message if message != "ok" else f"ok: {built} is {sha256(built)}")
     return 0 if message == "ok" else 1
 

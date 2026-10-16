@@ -16,10 +16,12 @@
 /.ninja_log
 /.ninja_deps
 
-# Configure output derived from the oracle's manifests and the yaml next to it.
-/config/usam2/splat_symbol_addrs.txt
-/config/usam2/undefined_funcs_auto.txt
-/config/usam2/undefined_syms_auto.txt
+# Configure output derived from the oracle's manifests and the yaml next to it.  Globbed per
+# target: every config/<target>/ has these, and hardcoding one target's name here would be the
+# same coupling `config/targets.py` exists to remove.
+/config/*/splat_symbol_addrs.txt
+/config/*/undefined_funcs_auto.txt
+/config/*/undefined_syms_auto.txt
 
 # Proprietary toolchains are fetched into place, never vendored.
 /toolchain/

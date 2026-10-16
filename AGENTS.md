@@ -1,12 +1,23 @@
 # Working in this repository
 
-This is a **matching decompilation** of *DDRMAX2: Dance Dance Revolution* (USA), PlayStation 2:
-`SLUS_207.11`, **2,512,980 bytes, sha256
-`a7596e8ab3da823236ed8e5f3f2804db3daee47265ae73e22f3311a5218aa8cc`**.  The goal is a C source tree
+This is a **matching decompilation** of the *DDR Extreme 2 (US) preview*, PlayStation 2:
+`SLUS_211.74`, **7,725,036 bytes, sha256
+`ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`**.  The goal is a C source tree
 that, compiled with the retail compiler and linked with the pinned layout, reproduces the retail
 artifacts **byte for byte** — not "looks right", not "runs the same".  The design is in
 `docs/superpowers/specs/2026-10-14-ddrmax2-us-decomp-design.md`; the plan that built the skeleton is
 `docs/superpowers/plans/2026-10-14-ddrmax2-us-oracle-toolchain-skeleton.md`.
+
+**One target is registered, in one descriptor.**  `ddrex2p` (the *DDR Extreme 2 (US)* preview,
+`SLUS_211.74`) is this tree's target; its binary, its config and its segment list land in the
+retarget plan's Tasks 4–6, and until then every verb stops naming what it is missing.  Adding
+another target is a `Target(...)` plus one line in the registry there, and nothing else changes.
+`config/targets.py` is the only place a target's facts are written down — its retail ELF and G1 pin, its disc image and G3 pin, its config directory, its
+*measured* geometry (segment list, chunked-section lengths, disc-image offset) and the
+compiler/flag pair each promoted unit was measured against.  Every tool reads them from there, so
+retargeting is adding a descriptor rather than editing a dozen files.  The flag that selects one is
+`--target <name>`, on `ddr` and on `configure.py`; the default is the registered target, which is why a bare
+`./ddr build` still means this target.
 
 The contract below is short because everything in this repository is *provable* by a command, and
 every rule here exists because breaking it produces a tree that still builds, still passes, and is
@@ -16,12 +27,17 @@ still wrong.  Read it before your first edit.
 
 ```bash
 ./ddr build                          # configure.py + ninja: the whole image, gates included
-./ddr verify                          # G1: out/SLUS_207.11 == the pinned retail ELF
+./ddr verify                          # G1: out/<elf> == the pinned retail ELF
 ./ddr verify --tu sys_scf            # ... plus the promotion rule for one unit
 ./ddr verify --iso                    # ... plus G3 on the mounted retail image (skipped if absent)
 ./ddr diff sysInitScf sys_scf         # objdiff-cli: retail's bytes vs the C object, one symbol
-python3 -m pytest -q                  # the suite (114 tests; ~9 minutes)
+python3 -m pytest -q                  # the suite (149 tests; ~16 s today)
 ```
+
+`--target <name>` (default: the registered target) goes on any of them — before the verb
+(`./ddr --target ddrex2p verify`) or after it (`./ddr verify --target ddrex2p`) -- and it decides which
+binary, image, pin, config directory and geometry the verb reads.  Its other spelling is
+`python3 configure.py --target <name>` (`./ddr build` runs exactly that for its target).
 
 `./ddr` is the project's whole command surface: `oracle`, `build`, `verify [--tu NAME] [--iso IMG]
 [--retail FILE]`, `diff SYMBOL TU`, `iso --iso IMG`.  Nothing else is a supported entry point, and
@@ -35,7 +51,7 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 
 ## The rules
 
-1. **A red gate is never worked around.**  Do not edit a pin (`config/usam2/checksums.txt`), do not
+1. **A red gate is never worked around.**  Do not edit a pin (`config/<target>/checksums.txt`), do not
    point `--retail`/`--iso` at a different file to make a gate green, do not exclude a unit from the
    graph, do not special-case a chunk.  A failing gate is the *result*; fix the bytes it names.  On a
    red G1 the tool prints the translation unit, the function, the compile unit and the chunk that own
@@ -43,18 +59,18 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    hand).
 
 2. **The generated tree is never hand-edited.**  `asm/**` (splat's splits),
-   `config/usam2/splat.yaml`, `config/usam2/splat_symbol_addrs.txt`,
-   `config/usam2/undefined_{syms,funcs}_auto.txt`, `build.ninja`, `build/SLUS_207.11.ld` and
+   `config/<target>/splat.yaml`, `config/<target>/splat_symbol_addrs.txt`,
+   `config/<target>/undefined_{syms,funcs}_auto.txt`, `build.ninja`, `build/<elf>.ld` and
    `objdiff.json` are all outputs of `configure.py`; `./ddr build` regenerates them.  The oracle's
-   artifacts — `config/usam2/cus.json`, `config/usam2/debug_chunks.json`,
-   `config/usam2/symbol_addrs.txt`, `config/usam2/unplaced_symbols.txt` and the generated header
+   artifacts — `config/<target>/cus.json`, `config/<target>/debug_chunks.json`,
+   `config/<target>/symbol_addrs.txt`, `config/<target>/unplaced_symbols.txt` and the generated header
    tree under `include/**` — are outputs of `./ddr oracle`, which is deterministic: a fresh run
    reproduces what is committed, byte for byte (`tests/test_cli.py::test_oracle_regenerates_the_committed_artifacts_byte_for_byte`).
    If one of those files is wrong, the fix belongs in the code that emits it, or in
-   `config/usam2/ghidra_functions.json` (the oracle's one hand-curated *input*), never in its output.
+   `config/<target>/ghidra_functions.json` (the oracle's one hand-curated *input*), never in its output.
 
 3. **Names are never invented.**  A symbol's name comes from the retail debug information or from
-   `config/usam2/ghidra_functions.json`; a function with no evidence keeps the name its address gives
+   `config/<target>/ghidra_functions.json`; a function with no evidence keeps the name its address gives
    it (`func_00214080`).  Inventing a plausible name (`Player_Update`, `RenderScene`) puts a lie in
    the symbol table, in the headers, and in every objdiff verdict that follows.
 
@@ -74,17 +90,21 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 6. **A translation unit counts as promoted only when its code *and* its debug bytes match.**  The
    verdict is `./ddr verify --tu <name>`, which prints the unit's `.text` span, its `.debug` chunk
    and its `.line` chunks against retail.  Writing a source under `src/` that matches nothing is not
-   promotion, and it is not silent either: a source with no measured pair in `configure.py`'s
-   `TU_BUILDS`, or a `TU_BUILDS` entry whose source is gone, is a configuration error (exit 2)
+   promotion, and it is not silent either: a source with no measured pair in its target's
+   `tu_builds`, or a `tu_builds` entry whose source is gone, is a configuration error (exit 2)
    rather than a silently unchanged image.  Every component of the verdict is load-bearing — the
    payloads on the tail edge are the *compiler's* bytes, not retail's databin under the same name,
    and `tests/test_m2_sys_scf.py` asserts exactly that, for `.debug` and for `.line`.
 
 7. **Reproduce the measurement, don't guess it.**  Which compiler build and flags reproduce a unit is
    *measured*: `python3 tools/toolchain/select_build.py --tu <file>` prints every candidate with its
-   verdict for text/debug/line, and the pair that wins is recorded in `configure.py`'s `TU_BUILDS`
-   next to the source it belongs to.  The same holds for the geometry in `configure.py`: those
-   numbers were read out of the retail ELF's own headers, not chosen.
+   verdict for text/debug/line, and the pair that wins is recorded next to the source it belongs to
+   in the *target's* `tu_builds` (`config/targets.py`) — per target, because a pair measured against
+   one retail binary says nothing about another.  The same holds for the geometry, which lives in the
+   same descriptor: those numbers were read out of that target's retail ELF's own headers, not
+   chosen.  A target whose geometry has not been measured yet (the retarget's is Task 5's) cannot be
+   configured at all — `geometry_required()` stops the tool and names it, rather than splitting one
+   game's bytes at another game's addresses.
 
 8. **`python3 -m pytest -q` is part of the loop, not a formality.**  A green suite is what makes the
    next change safe: the tests run the real tools (splat, the assembler, the linker, the compiler
@@ -125,11 +145,12 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 | path | what it is |
 |---|---|
 | `ddr` | the command surface: oracle, build, verify, diff, iso |
-| `configure.py` | manifests → splat inputs → `build.ninja`, the `ld` script and `objdiff.json` |
+| `config/targets.py` | **the target descriptor**: each target's ELF + G1 pin, image + G3 pin, config dir, measured geometry and per-unit build pairs — the only place a target's facts are written down |
+| `configure.py` | manifests → splat inputs → `build.ninja`, the `ld` script and `objdiff.json` (for the target `--target` names) |
 | `tools/oracle/**` | the vendored DWARF 1 reader and the emitters that produce the manifests and headers |
 | `tools/toolchain/**` | fetch/probe/verify the toolchain, and `compile.py`, the `cc` rule's program |
-| `tools/verify/**`, `tools/iso/**` | G1/G2 and the disc-image splice |
-| `config/usam2/**` | the oracle's artifacts and `ghidra_functions.json`, plus the pinned digests |
+| `tools/verify/**`, `tools/iso/**` | G1/G2 and the disc-image splice, each read through its target |
+| `config/<target>/**` | the oracle's artifacts and `ghidra_functions.json`, plus the pinned digests (the registered target's config arrives in Tasks 4–6) |
 | `include/types/**`, `include/types.h` | one named type each, defined once — generated |
 | `include/src/**` | one header per translation unit, generated |
 | `src/**` | the C being reconstructed — the only tree written by hand |

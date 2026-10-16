@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
-"""configure.py -- split the retail ELF with splat and write the ninja build graph.
+"""configure.py -- split a target's retail ELF with splat and write the ninja build graph.
 
 Usage::
 
-    python3 configure.py --config usam2              # every split, plus the link edges
-    python3 configure.py --config usam2 --objects    # object graph only (CI objdiff job)
+    python3 configure.py --target <name>             # every split, plus the link edges
+    python3 configure.py --target <name> --objects   # object graph only (CI objdiff job)
 
-The retail binary is read, never written: this script consumes ``orig/SLUS_207.11`` and the
+The target is *named*, never assumed.  ``config/targets.py`` owns the retail binary's path and
+its G1 pin, the disc image, the config directory, the measured geometry (the loadable segment
+in file and virtual addresses, the sections after it, the two chunked sections' lengths and
+where the boot ELF sits in the image) and the compiler/flag pair each promoted unit was
+measured against; this script reads all of it from there, so a second target is a second
+descriptor rather than a second copy of this file.
+
+The retail binary is read, never written: this script consumes the target's ELF and the
 oracle's manifests (``cus.json``, ``debug_chunks.json``, ``symbol_addrs.txt``) and writes
 
-* ``config/usam2/splat.yaml``            -- the whole segment list, refined per debug chunk
-* ``config/usam2/splat_symbol_addrs.txt`` -- ``symbol_addrs.txt`` in the syntax splat accepts
-* ``build/SLUS_207.11.ld``               -- the pinned link: every byte of the file at its
-                                             own file offset (see :func:`pinned_ld_script`)
-* ``config/usam2/undefined_{funcs,syms}_auto.txt``, ``asm/**``, ``build/**`` and ``build.ninja``
+* ``config/<target>/splat.yaml``             -- the whole segment list, refined per debug chunk
+* ``config/<target>/splat_symbol_addrs.txt`` -- ``symbol_addrs.txt`` in the syntax splat accepts
+* ``build/<elf>.ld``                         -- the pinned link: every byte of the file at its
+                                                own file offset (see :func:`pinned_ld_script`)
+* ``config/<target>/undefined_{funcs,syms}_auto.txt``, ``asm/**``, ``build/**`` and
+  ``build.ninja``
 
 via ``python3 -m splat split``.  Every byte of the file is covered by exactly one segment
 (the section header table and all inter-section padding included), so the split is a
@@ -21,8 +29,8 @@ faithful partition of the retail image rather than a text-only sketch of it.
 
 The image itself is assembled in two halves, because the retail ELF only *loads* the first
 one: ``ld`` pins the loadable image (ELF header, code, bss) at its retail addresses and
-``objcopy -O binary`` turns it into the file's first 0x1A2700 bytes, while the file's tail
--- ``.shstrtab``, ``.debug``, ``.line``, ``.comment``, ``.reginfo`` and the section header
+``objcopy -O binary`` turns it into the file's first ``loadable_end`` bytes, while the file's
+tail -- ``.shstrtab``, ``.debug``, ``.line``, ``.comment``, ``.reginfo`` and the section header
 table, none of which the retail ELF loads -- is assembled from splat's databin assets in
 manifest order.  ``objcopy`` cannot emit a non-loadable section, and a ``mwccps2`` link
 drops ``.debug``/``.line`` outright (R18), so the tail is file content, not linker output.
@@ -42,36 +50,47 @@ import sys
 REPO_ROOT = pathlib.Path(__file__).resolve().parent
 if str(REPO_ROOT / "tools") not in sys.path:  # run as `python3 configure.py` too
     sys.path.insert(0, str(REPO_ROOT / "tools"))
+if str(REPO_ROOT) not in sys.path:  # `config.targets`, the descriptor every tool reads
+    sys.path.insert(0, str(REPO_ROOT))
 
-from toolchain import compile as cc  # the one derivation of a unit's pinned placement
+from config import targets  # noqa: E402  the one place a target's facts are written down
+from toolchain import compile as cc  # noqa: E402  the one derivation of a unit's placement
 
 SPLAT = [sys.executable, "-m", "splat", "split"]
 # objdiff's config schema, named so an editor can check the emitted project.
 OBJDIFF_SCHEMA = ("https://raw.githubusercontent.com/encounter/objdiff/main/config.schema.json")
 
-# ---------------------------------------------------------------------------
-# Measured geometry of orig/SLUS_207.11 (2,512,980 bytes)
-# ---------------------------------------------------------------------------
-
-ELF_SIZE = 0x265854
-LOADABLE_ROM = 0x80          # ELF header + program headers
-LOADABLE_END = 0x1A2700      # one PT_LOAD section: text + rodata + data
-LOADABLE_VRAM = 0x00100000
-BSS_END = 0x006B6B80         # the loadable PT_LOAD's memsz: everything above is zero-fill
-# Sections after the loadable image: (name, file offset, size).
-TRAILING = (
-    ("shstrtab", 0x1A2700, 0x3A),
-    ("debug", 0x1A2740, 0xA0997),
-    ("line", 0x2430E0, 0x225A0),
-    ("comment", 0x265680, 0x2B),
-    ("reginfo", 0x2656AC, 0x18),
-    ("section_headers", 0x2656C4, ELF_SIZE - 0x2656C4),
-)
+# The default target -- the one the tree is configured for when no ``--target`` names another.
+# Nothing in this file spells a target name or a retail path: the numbers live in the
+# descriptor, and every function here takes the geometry it works on as an argument, so
+# ``--target`` is the only thing that decides which file is split and where its sections sit.
+# The geometry is resolved *lazily* (`_geometry` below): a target nobody has measured yet must
+# not make this module unimportable -- it must stop the one function that would have used a
+# number nobody measured, which is what `Target.geometry_required` does.
+TARGET = targets.get(targets.DEFAULT)
 CHUNKED = ("debug", "line")  # refined into one databin per debug_chunks.json entry
-CODE_SEGMENT = "main"        # the yaml's `c` segment: asm/nonmatchings/main/*.s
-CODE_SIZE = LOADABLE_END - LOADABLE_ROM              # 1,713,792 bytes of loadable image
-BSS_VRAM = LOADABLE_END + LOADABLE_VRAM - LOADABLE_ROM      # 0x002A2680: bss starts here
-BSS_SIZE = BSS_END - (LOADABLE_VRAM + LOADABLE_END - LOADABLE_ROM)
+
+
+def _geometry(target=None, geometry=None):
+    """The geometry a function works with: the argument, or the target's own measurement."""
+    if geometry is not None:
+        return geometry
+    return (target or TARGET).geometry_required()
+
+
+def _display(path) -> str:
+    """A path as the yaml, a ninja edge and a reader spell it: repo-relative, POSIX."""
+    path = pathlib.Path(path)
+    try:
+        return path.relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _config_path(target, name) -> str:
+    """A generated file inside ``target``'s config dir, spelled from the repo root."""
+    return _display(target.config_dir / pathlib.Path(name).name)
+
 
 # A split's instruction comments carry both views of the same byte: `/* <file offset>
 # <virtual address> <bytes> */`.  The address is what the link needs (splat does not put
@@ -86,22 +105,22 @@ ALIAS_TOKEN = re.compile(r"(?<![\w$.])((?:\.L|D_|lbl_|jtbl_|func_)[0-9A-F]{5,8})
 IDENTIFIER = re.compile(r"[A-Za-z_.][A-Za-z0-9_.]*")
 
 YAML_HEADER = """\
-# Generated by configure.py --config usam2 -- do not edit by hand.
+# Generated by configure.py --target {target} -- do not edit by hand.
 #
-# The segment list partitions orig/SLUS_207.11 byte for byte: the ELF header, every
+# The segment list partitions {elf} byte for byte: the ELF header, every
 # section, the section header table and all inter-section padding have a home.  The
 # .debug and .line sections are cut into one databin per debug_chunks.json entry so a
 # single translation unit's debug bytes can be diffed (and later matched) in isolation.
 """
 
 NINJA_HEADER = """\
-# Generated by configure.py --config usam2 -- do not edit by hand.
+# Generated by configure.py --target {target} -- do not edit by hand.
 #
 # `ninja splits` materialises the splat output, `ninja objects` assembles every split.
-# Bare `ninja` builds and gates out/SLUS_207.11: `ld` pins the loadable image to its
+# Bare `ninja` builds and gates {built}: `ld` pins the loadable image to its
 # retail addresses, `bin` objcopies it, `cat` assembles the file's non-loadable tail from
 # splat's databins and joins the two halves, and `g1` compares the result with
-# orig/SLUS_207.11 (R5).
+# {elf} (R5).
 """
 
 # `as` needs -Iasm/include for the `.include "macro.inc"` that splat writes into every
@@ -192,8 +211,9 @@ def check_manifests(cus, chunks) -> None:
                 f"{first}, which is not a record with a statement list")
 
 
-def check_chunk_tiling(chunks, section: str, offset: int, size: int) -> None:
+def check_chunk_tiling(chunks, section: str, offset: int, size: int, geometry=None) -> None:
     """The chunks of one section must tile it exactly, or databins would not cover it."""
+    geometry = _geometry(geometry=geometry)
     mine = sorted((c for c in chunks if c.get("section") == section),
                   key=lambda c: c["offset"])
     if not mine:
@@ -209,7 +229,7 @@ def check_chunk_tiling(chunks, section: str, offset: int, size: int) -> None:
         raise ConfigError(
             f"debug_chunks.json {section} chunks cover 0x{cursor:X} bytes, but the "
             f"section is 0x{size:X} bytes")
-    if offset + size > ELF_SIZE:
+    if offset + size > geometry.elf_size:
         raise ConfigError(f"section {section} runs past the end of the ELF")
 
 
@@ -218,7 +238,7 @@ def check_chunk_tiling(chunks, section: str, offset: int, size: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def databin_segments(chunks):
+def databin_segments(chunks, geometry=None):
     """Every non-code segment, in file order: ``(name, file offset, size)``.
 
     The yaml's segment list, the pinned link's tail edge and the tail's byte order all
@@ -226,10 +246,11 @@ def databin_segments(chunks):
     by another.  ``elf_header`` comes first (file offset 0); everything after it starts
     where the loadable image ends and runs to the end of the file.
     """
-    segments = [("elf_header", 0, LOADABLE_ROM)]
-    cursor = LOADABLE_END
-    previous = CODE_SEGMENT
-    for name, offset, size in TRAILING:
+    geometry = _geometry(geometry=geometry)
+    segments = [("elf_header", 0, geometry.loadable_rom)]
+    cursor = geometry.loadable_end
+    previous = geometry.code_segment
+    for name, offset, size in geometry.trailing:
         if offset > cursor:
             segments.append((f"pad_{previous}", cursor, offset - cursor))
         if name in CHUNKED:
@@ -245,12 +266,15 @@ def databin_segments(chunks):
     return segments
 
 
-def splat_yaml(chunks) -> str:
-    lines = [YAML_HEADER]
+def splat_yaml(chunks, target=None, geometry=None) -> str:
+    target = target or TARGET
+    geometry = geometry or target.geometry_required()
+    elf = target.elf.name
+    lines = [YAML_HEADER.format(target=target.name, elf=f"orig/{elf}")]
     lines.append("options:\n")
-    lines.append("  basename: SLUS_207.11\n")
+    lines.append(f"  basename: {elf}\n")
     lines.append("  base_path: ../..\n")
-    lines.append("  target_path: orig/SLUS_207.11\n")
+    lines.append(f"  target_path: orig/{elf}\n")
     lines.append("  platform: ps2\n")
     lines.append("  compiler: EEGCC\n")
     lines.append("  asm_path: asm\n")
@@ -259,7 +283,7 @@ def splat_yaml(chunks) -> str:
     lines.append("  src_path: build/src\n")
     lines.append("  build_path: build\n")
     lines.append("  asset_path: build/assets\n")
-    lines.append("  ld_script_path: build/SLUS_207.11.ld\n")
+    lines.append(f"  ld_script_path: {_display(target.ld_script)}\n")
     lines.append("  ld_rom_start: 0\n")
     lines.append('  section_order: [".text", ".rodata", ".data", ".bss"]\n')
     lines.append('  auto_link_sections: [".rodata", ".data", ".bss"]\n')
@@ -273,10 +297,10 @@ def splat_yaml(chunks) -> str:
     # wrong registers.  Numeric names assemble the same under either ABI (R21).
     lines.append("  named_regs_for_c_funcs: false\n")
     lines.append("  create_undefined_funcs_auto: true\n")
-    lines.append("  undefined_funcs_auto_path: config/usam2/undefined_funcs_auto.txt\n")
+    lines.append(f"  undefined_funcs_auto_path: {_config_path(target, target.undefined_funcs)}\n")
     lines.append("  create_undefined_syms_auto: true\n")
-    lines.append("  undefined_syms_auto_path: config/usam2/undefined_syms_auto.txt\n")
-    lines.append("  symbol_addrs_path: config/usam2/splat_symbol_addrs.txt\n")
+    lines.append(f"  undefined_syms_auto_path: {_config_path(target, target.undefined_syms)}\n")
+    lines.append(f"  symbol_addrs_path: {_config_path(target, target.splat_symbols)}\n")
     lines.append("  generate_asm_macros_files: true\n")
     lines.append("  generated_asm_macros_directory: asm/include\n")
     # The splits must assemble to the retail bytes, so the assembler is told not to
@@ -290,28 +314,28 @@ def splat_yaml(chunks) -> str:
         lines.append(f"    .set {alias}, ${alias}\n")
 
     lines.append("segments:\n")
-    segments = databin_segments(chunks)
+    segments = databin_segments(chunks, geometry)
     lines.append(f"  - [0x{segments[0][1]:X}, databin, {segments[0][0]}]\n")
-    lines.append("  - name: main\n")
+    lines.append(f"  - name: {geometry.code_segment}\n")
     lines.append("    type: code\n")
-    lines.append(f"    start: 0x{LOADABLE_ROM:X}\n")
-    lines.append(f"    vram: 0x{LOADABLE_VRAM:X}\n")
+    lines.append(f"    start: 0x{geometry.loadable_rom:X}\n")
+    lines.append(f"    vram: 0x{geometry.loadable_vram:X}\n")
     lines.append("    subsegments:\n")
     # One `c` subsegment covers the whole loadable image: the retail ELF keeps text,
     # rodata and data in a single PT_LOAD section, so there is no section boundary to
     # copy -- per-function splits come from the symbol file instead.
-    lines.append(f"      - [0x{LOADABLE_ROM:X}, c, {CODE_SEGMENT}]\n")
+    lines.append(f"      - [0x{geometry.loadable_rom:X}, c, {geometry.code_segment}]\n")
     for name, offset, _ in segments[1:]:
         lines.append(f"      - [0x{offset:X}, databin, {name}]\n")
-    # The loadable PT_LOAD's memsz reaches 0x6b6b80: everything above the file-loaded
-    # end is zero-fill at run time, and 61 DWARF objects plus the compiler's globals
-    # live there.  Without this segment splat cannot place them, and the splits that
-    # name them (g_game_w in 131 of them) reference symbols nothing defines.
+    # The loadable PT_LOAD's memsz reaches past the file-loaded end: everything above it is
+    # zero-fill at run time, and the compiler's globals and the DWARF objects live there.
+    # Without this segment splat cannot place them, and the splits that name them (g_game_w
+    # in 131 of them) reference symbols nothing defines.
     lines.append("  - name: bss\n")
     lines.append("    type: bss\n")
-    lines.append(f"    vram: 0x{BSS_VRAM:X}\n")
-    lines.append(f"    bss_size: 0x{BSS_SIZE:X}\n")
-    lines.append(f"  - [0x{ELF_SIZE:X}]\n")
+    lines.append(f"    vram: 0x{geometry.bss_vram:X}\n")
+    lines.append(f"    bss_size: 0x{geometry.bss_size:X}\n")
+    lines.append(f"  - [0x{geometry.elf_size:X}]\n")
     return "".join(lines)
 
 
@@ -328,7 +352,7 @@ SYMBOL_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 SPLAT_TYPES = {"func": "func", "obj": "label"}
 
 
-def splat_symbols(text: str) -> str:
+def splat_symbols(text: str, target=None) -> str:
     """Rewrite the oracle's symbol file into the syntax splat parses.
 
     Two measurements drive this.  splat reads every `key:value` in the trailing comment
@@ -337,7 +361,8 @@ def splat_symbols(text: str) -> str:
     carrying `size:0x0` suppresses spimdisasm's function detection outright, so zero
     sizes are dropped while the DWARF sizes that are known are kept.
     """
-    out = ["// Generated by configure.py from config/usam2/symbol_addrs.txt -- do not edit.",
+    target = target or TARGET
+    out = [f"// Generated by configure.py from {_display(target.symbols)} -- do not edit.",
            "// splat 0.50.1 syntax: unknown attributes are booleans, so provenance and",
            "// dwarf_name carry `=` instead of `:`, and zero sizes are omitted."]
     for number, line in enumerate(text.splitlines(), start=1):
@@ -383,16 +408,17 @@ def split_sources() -> dict:
     return sources
 
 
-def code_splits(sources):
+def code_splits(sources, geometry=None):
     """``[(retail address, split path)]`` for the code splits, in address order.
 
     The address comes from the split's own first instruction comment and is checked
-    against the loadable segment's geometry (file offset ``0x80 + VA - 0x100000``) -- the
-    same invariant :func:`splat_yaml` writes into the yaml.  Nothing else in the build
-    knows where a split belongs, so a split that cannot be placed is an error here rather
-    than a silent hole in the image.
+    against the loadable segment's geometry (file offset ``loadable_rom + VA -
+    loadable_vram``) -- the same invariant :func:`splat_yaml` writes into the yaml.
+    Nothing else in the build knows where a split belongs, so a split that cannot be
+    placed is an error here rather than a silent hole in the image.
     """
-    prefix = f"asm/nonmatchings/{CODE_SEGMENT}/"
+    geometry = _geometry(geometry=geometry)
+    prefix = f"asm/nonmatchings/{geometry.code_segment}/"
     rows = []
     for name, text in sources.items():
         if not name.startswith(prefix):
@@ -402,7 +428,7 @@ def code_splits(sources):
             raise ConfigError(f"{name} carries no address comment; splat's split format "
                               f"is not the one this linker script expects")
         file_offset, address = int(match.group(1), 16), int(match.group(2), 16)
-        expected = LOADABLE_ROM + address - LOADABLE_VRAM
+        expected = geometry.offset_of(address)
         if file_offset != expected:
             raise ConfigError(
                 f"{name} says VA 0x{address:X} is at file offset 0x{file_offset:X}, but "
@@ -411,9 +437,9 @@ def code_splits(sources):
     if not rows:
         raise ConfigError(f"splat produced no code splits under {prefix}")
     rows.sort()
-    if rows[0][0] != LOADABLE_VRAM:
+    if rows[0][0] != geometry.loadable_vram:
         raise ConfigError(f"the first code split is at 0x{rows[0][0]:X}, not the segment's "
-                          f"start 0x{LOADABLE_VRAM:X}")
+                          f"start 0x{geometry.loadable_vram:X}")
     if len(set(a for a, _ in rows)) != len(rows):
         raise ConfigError("two splits claim the same address; the link order is ambiguous")
     return rows
@@ -488,15 +514,14 @@ def link_aliases(sources, symbols_path, auto_paths):
 # promoted translation units
 # ---------------------------------------------------------------------------
 
-#: How a promoted unit is built.  The key is the unit's source file exactly as ``cus.json``
-#: spells it (the retail tree's own path); the value is the compiler build and the flag
-#: string ``tools/toolchain/select_build.py`` measured as reproducing its retail ``.text``,
-#: ``.debug`` and ``.line`` bytes, recorded in ``docs/milestones/m2-sys-scf.md``.  ``src/``
-#: and a listing here must agree: a source nobody has measured, or a listing whose source
-#: is gone, is a configuration error rather than a silently unchanged image.
-TU_BUILDS = {
-    "src/sys/sys_scf.c": ("3.0-011126", "-c -lang c -O3 -g"),
-}
+#: How a promoted unit is built, per target: the key is the unit's source file exactly as
+#: ``cus.json`` spells it (the retail tree's own path); the value is the compiler build and the
+#: flag string ``tools/toolchain/select_build.py`` measured as reproducing its retail ``.text``,
+#: ``.debug`` and ``.line`` bytes.  The table is the *target's* (``config/targets.py``): a pair
+#: measured against one retail binary says nothing about another, so it is never inherited.
+#: ``src/`` and the target's table must agree -- a source nobody has measured for *this* target,
+#: or a table entry whose source is gone, is a configuration error rather than a silently
+#: unchanged image.
 
 
 class Promotion:
@@ -525,7 +550,7 @@ class Promotion:
         self.splits = splits              # the split paths the ld script must not list
 
 
-def promotions(manifests=None) -> list:
+def promotions(manifests=None, target=None) -> list:
     """Every promoted unit, in address order, with the layout the oracle pinned for it.
 
     ``cc`` reports an unusable manifest or an unplaceable unit as :class:`cc.Unusable`; a
@@ -533,32 +558,36 @@ def promotions(manifests=None) -> list:
     than escaping as a traceback.
     """
     try:
-        return _promotions(manifests)
+        return _promotions(manifests, target)
     except cc.Unusable as exc:
         raise ConfigError(str(exc)) from exc
 
 
-def _promotions(manifests=None) -> list:
-    manifests = manifests or cc.Manifests()
+def _promotions(manifests=None, target=None) -> list:
+    target = target or TARGET
+    manifests = manifests or cc.Manifests(target)
+    builds = target.build_table()
     present = {file for file in manifests.tu_files() if (REPO_ROOT / file).is_file()}
-    if present - set(TU_BUILDS):
+    if present - set(builds):
         raise ConfigError(
-            "these translation units have a source under src/ but no measured build in "
-            "TU_BUILDS: " + ", ".join(sorted(present - set(TU_BUILDS)))
-            + "; run python3 tools/toolchain/select_build.py --tu <file> and record the pair")
-    if set(TU_BUILDS) - present:
+            f"these translation units have a source under src/ but no build measured for "
+            f"target {target.name}: " + ", ".join(sorted(present - set(builds)))
+            + "; run python3 tools/toolchain/select_build.py --tu <file> and record the "
+              "pair in that target's descriptor")
+    if set(builds) - present:
         raise ConfigError(
-            "TU_BUILDS lists units with no source under src/: "
-            + ", ".join(sorted(set(TU_BUILDS) - present)))
+            f"target {target.name} lists promoted units with no source under src/: "
+            + ", ".join(sorted(set(builds) - present)))
     out = []
-    for file, (version, flags) in sorted(TU_BUILDS.items()):
+    segment = target.geometry_required().code_segment
+    for file, (version, flags) in sorted(builds.items()):
         tu = manifests.tu_named(file)
         out.append(Promotion(
             file, tu.address, f"--compiler {version} {flags}",
             f"build/{file}.o", f"build/{file}.o.debug", f"build/{file}.o.line",
             f".debug_{manifests.debug_chunk_index(tu):03d}",
             [f".line_{index:03d}" for index in manifests.line_chunk_indices(tu)],
-            {f"asm/nonmatchings/{CODE_SEGMENT}/{function.name}.s"
+            {f"asm/nonmatchings/{segment}/{function.name}.s"
              for function in tu.functions}))
     return sorted(out, key=lambda promotion: promotion.address)
 
@@ -588,18 +617,18 @@ def tail_inputs(databins, promotions) -> list:
 
 
 LD_HEADER = """\
-/* Generated by configure.py --config usam2 -- do not edit by hand.
+/* Generated by configure.py --target {target} -- do not edit by hand.
  *
- * The pinned link: every byte of orig/SLUS_207.11 at the address it sits at in the
+ * The pinned link: every byte of {elf} at the address it sits at in the
  * retail file.  ld places an output section's LMA (AT) at its file offset and objcopy -O
- * binary writes sections out at their LMAs, so `.elf_header` covers file 0..0x80 and
- * `.main` covers 0x80..0x1A2700 with no gap between them and no filler anywhere.
+ * binary writes sections out at their LMAs, so `.elf_header` covers file 0..0x{rom:X} and
+ * `.{segment}` covers 0x{rom:X}..0x{end:X} with no gap between them and no filler anywhere.
  *
- * `.main` is the whole loadable image: 3,603 code splits listed in address order, with
+ * `.{segment}` is the whole loadable image: every code split listed in address order, with
  * SUBALIGN(1) so gas's per-object 16-byte .text alignment cannot pad one split away from
  * the next.  Their virtual addresses are the retail ones, so `jal` and `%hi`/`%lo`
  * resolve to the addresses the retail instructions encode.  `.bss` is NOLOAD at
- * 0x002A2680: the 61 DWARF objects above the file-loaded end need their retail addresses,
+ * 0x{bss:X}: the DWARF objects above the file-loaded end need their retail addresses,
  * and no byte of them reaches the file.
  *
  * The file's tail (`.shstrtab`, `.debug`, `.line`, `.comment`, `.reginfo` and the section
@@ -609,14 +638,18 @@ LD_HEADER = """\
 """
 
 
-def pinned_ld_script(code, aliases, promotions=()) -> str:
+def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None) -> str:
     """The linker script that pins the loadable image to the retail file's addresses.
 
     A promoted unit contributes one object where its splits used to be, at the address its
     first function sits at; every other split is listed exactly as before, so the object
     order still *is* the layout.
     """
-    lines = [LD_HEADER]
+    target = target or TARGET
+    geometry = geometry or target.geometry_required()
+    lines = [LD_HEADER.format(target=target.name, elf=f"orig/{target.elf.name}",
+                              rom=geometry.loadable_rom, end=geometry.loadable_end,
+                              segment=geometry.code_segment, bss=geometry.bss_vram)]
     if aliases:
         lines.append("/* Names some splits reference and no split defines; each one's\n"
                      " * name encodes the retail address it must resolve to. */\n")
@@ -627,9 +660,10 @@ def pinned_ld_script(code, aliases, promotions=()) -> str:
     lines.append("  .elf_header 0x0 : AT(0x0) SUBALIGN(1)\n  {\n"
                  "    build/asm/data/elf_header.s.o(.data)\n  }\n")
     # GNU ld 2.47 accepts ASSERT only without a trailing semicolon.
-    lines.append(f"  ASSERT(SIZEOF(.elf_header) == 0x{LOADABLE_ROM:X}, "
+    lines.append(f"  ASSERT(SIZEOF(.elf_header) == 0x{geometry.loadable_rom:X}, "
                  f"\"elf_header is not the retail ELF header\")\n\n")
-    lines.append(f"  .main 0x{LOADABLE_VRAM:X} : AT(0x{LOADABLE_ROM:X}) SUBALIGN(1)\n  {{\n")
+    lines.append(f"  .{geometry.code_segment} 0x{geometry.loadable_vram:X} : "
+                 f"AT(0x{geometry.loadable_rom:X}) SUBALIGN(1)\n  {{\n")
     promoted = {name for promotion in promotions for name in promotion.splits}
     listed = [(address, object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix())
               for address, name in code if name not in promoted]
@@ -640,12 +674,12 @@ def pinned_ld_script(code, aliases, promotions=()) -> str:
     for _, name in listed:
         lines.append(f"    {name}(.text)\n")
     lines.append("  }\n")
-    lines.append(f"  ASSERT(SIZEOF(.main) == 0x{CODE_SIZE:X}, "
-                 f"\"the code splits are not the retail {CODE_SIZE:,} bytes\")\n\n")
-    lines.append(f"  .bss 0x{BSS_VRAM:X} (NOLOAD) : SUBALIGN(1)\n  {{\n"
+    lines.append(f"  ASSERT(SIZEOF(.{geometry.code_segment}) == 0x{geometry.code_size:X}, "
+                 f"\"the code splits are not the retail {geometry.code_size:,} bytes\")\n\n")
+    lines.append(f"  .bss 0x{geometry.bss_vram:X} (NOLOAD) : SUBALIGN(1)\n  {{\n"
                  f"    build/asm/data/bss.bss.s.o(.bss)\n  }}\n")
-    lines.append(f"  ASSERT(SIZEOF(.bss) == 0x{BSS_SIZE:X}, "
-                 f"\"the bss split is not the retail {BSS_SIZE:,} bytes\")\n\n")
+    lines.append(f"  ASSERT(SIZEOF(.bss) == 0x{geometry.bss_size:X}, "
+                 f"\"the bss split is not the retail {geometry.bss_size:,} bytes\")\n\n")
     lines.append("  /DISCARD/ : { *(*) }\n}\n")
     return "".join(lines)
 
@@ -667,7 +701,7 @@ def generated_by(*inputs) -> str:
     return " | " + " ".join(inputs)
 
 
-def objdiff_json(code, promotions) -> str:
+def objdiff_json(code, promotions, geometry=None) -> str:
     """The objdiff project: one unit per linked code object, target against the C that exists.
 
     objdiff compares a unit's ``base_path`` with its ``target_path``.  The target side here
@@ -680,9 +714,10 @@ def objdiff_json(code, promotions) -> str:
     part of this graph -- it stays pinned retail bytes by design -- so neither are the data
     databins.
     """
+    geometry = _geometry(geometry=geometry)
     base_of = {split: promotion.object
                for promotion in promotions for split in promotion.splits}
-    units = [{"name": f"{CODE_SEGMENT}/{pathlib.Path(name).stem}",
+    units = [{"name": f"{geometry.code_segment}/{pathlib.Path(name).stem}",
               "target_path": object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix(),
               "base_path": base_of.get(name),
               "scratch": {},
@@ -694,20 +729,30 @@ def objdiff_json(code, promotions) -> str:
                        "min_version": "2.0.0", "units": units}, indent=2) + "\n"
 
 
-def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
-    lines = [NINJA_HEADER, "\n"]
+def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
+               geometry=None) -> str:
+    target = target or TARGET
+    geometry = geometry or target.geometry_required()
+    elf = target.elf.name
+    built = _display(target.built)
+    lines = [NINJA_HEADER.format(target=target.name, built=built,
+                                 elf=f"orig/{elf}"), "\n"]
     lines += [
         # ninja rule blocks accept only its own keywords, so the variables the specified
         # command lines interpolate are declared at the top level (and may be overridden
         # per edge, which is how Task 12 will pick a compiler flag set per TU).
-        "mapfile = build/SLUS_207.11.map\n",
+        f"mapfile = build/{elf}.map\n",
         "\n",
         "rule as\n",
         f"  command = {AS_RULE}\n",
         "  description = as $in\n",
         "\n",
         "rule cc\n",
-        "  command = python3 tools/toolchain/compile.py $in $out $flags\n",
+        # The target is a *flag* of the driver, not part of its input list: which config's
+        # manifests place the unit -- and which retail binary its DWARF is compared with --
+        # is exactly what `--target` decides, and ninja has to say it on every edge.
+        f"  command = python3 tools/toolchain/compile.py --target {target.name} "
+        "$in $out $flags\n",
         "  description = cc $in\n",
         "\n",
         # One section out of the object the compiler produced: the promoted unit's own
@@ -723,8 +768,8 @@ def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
         "  description = objsec $section $out\n",
         "\n",
         "rule ld\n",
-        "  command = mips-linux-gnu-ld -EL -T config/usam2/undefined_syms_auto.txt "
-        "-T config/usam2/undefined_funcs_auto.txt -Map $mapfile -T $in -o $out\n",
+        f"  command = mips-linux-gnu-ld -EL -T {_display(target.undefined_syms)} "
+        f"-T {_display(target.undefined_funcs)} -Map $mapfile -T $in -o $out\n",
         "  description = ld $out\n",
         "\n",
         "rule bin\n",
@@ -739,7 +784,9 @@ def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
         "  description = cat $out\n",
         "\n",
         "rule g1\n",
-        "  command = python3 tools/verify/g1.py $in\n",
+        # The gate reads the target too: its retail binary, its checksums manifest and its
+        # manifests are all the target's, and `$in` is the target's built image.
+        f"  command = python3 tools/verify/g1.py --target {target.name} $in\n",
         "  description = g1 $in\n",
         "\n",
     ]
@@ -767,23 +814,24 @@ def ninja_text(splits, databins, objects_only: bool, promotions=()) -> str:
     if objects_only:
         lines.append("default objects\n")
         return "".join(lines)
-    # elf_header is part of the loadable image (it is the file's first 0x80 bytes), so the
-    # tail is every databin after it, in file order -- with a promoted unit's own
-    # `.debug`/`.line` payload in place of the databins of the chunks it owns.
+    # elf_header is part of the loadable image (it is the file's first
+    # `loadable_rom` bytes), so the tail is every databin after it, in file order -- with a
+    # promoted unit's own `.debug`/`.line` payload in place of the databins of the chunks it
+    # owns.
     tail = tail_inputs(databins, promotions)
-    lines.append(f"build out/SLUS_207.11.elf: ld build/SLUS_207.11.ld"
+    lines.append(f"build out/{elf}.elf: ld {_display(target.ld_script)}"
                  f"{generated_by(*GENERATED_BY)} || objects\n")
-    lines.append("build build/SLUS_207.11.loadable: bin out/SLUS_207.11.elf"
+    lines.append(f"build build/{elf}.loadable: bin out/{elf}.elf"
                  f"{generated_by(*GENERATED_BY)}\n")
-    lines.append("build build/SLUS_207.11.tail: cat " + " ".join(tail)
+    lines.append(f"build build/{elf}.tail: cat " + " ".join(tail)
                  + f"{generated_by(*GENERATED_BY)}\n")
-    lines.append("build out/SLUS_207.11: cat build/SLUS_207.11.loadable "
-                 "build/SLUS_207.11.tail" + generated_by(*GENERATED_BY) + "\n")
+    lines.append(f"build {built}: cat build/{elf}.loadable "
+                 f"build/{elf}.tail" + generated_by(*GENERATED_BY) + "\n")
     lines.append("\n")
     # The gate is an edge of its own with no output file, so ninja runs it on every
     # build: `ninja` proves the image, `ninja objects` still stops at the objects.
-    lines.append("build g1: g1 out/SLUS_207.11 | orig/SLUS_207.11\n")
-    lines.append("\ndefault out/SLUS_207.11 g1\n")
+    lines.append(f"build g1: g1 {built} | orig/{elf}\n")
+    lines.append(f"\ndefault {built} g1\n")
     return "".join(lines)
 
 
@@ -799,23 +847,34 @@ def write_if_different(path: pathlib.Path, text: str) -> None:
     path.write_text(text, newline="\n")
 
 
-def configure(config: str, cus_path: pathlib.Path, chunks_path: pathlib.Path,
-              symbols_path: pathlib.Path, objects_only: bool) -> None:
-    config_dir = REPO_ROOT / "config" / config
+def configure(target: "targets.Target", cus_path=None, chunks_path=None,
+              symbols_path=None, objects_only: bool = False) -> None:
+    """Split ``target``'s retail ELF and write its graph, its linker script and its objdiff
+    project.
+
+    The geometry is resolved first and on purpose: a target whose segment list nobody has
+    measured stops here, before anything is written, rather than producing a split of one
+    file at another file's addresses.
+    """
+    geometry = target.geometry_required()
+    config_dir = target.config_dir
+    cus_path = pathlib.Path(cus_path) if cus_path else target.cus
+    chunks_path = pathlib.Path(chunks_path) if chunks_path else target.chunks
+    symbols_path = pathlib.Path(symbols_path) if symbols_path else target.symbols
     cus = load_json(cus_path, "cus.json")
     chunks = load_json(chunks_path, "debug_chunks.json")
     check_manifests(cus, chunks)
-    for name, offset, size in TRAILING:
+    for name, offset, size in geometry.trailing:
         if name in CHUNKED:
-            check_chunk_tiling(chunks, f".{name}", offset, size)
+            check_chunk_tiling(chunks, f".{name}", offset, size, geometry)
 
-    write_if_different(config_dir / "splat_symbol_addrs.txt",
-                       splat_symbols(symbols_path.read_text()))
+    write_if_different(target.splat_symbols,
+                       splat_symbols(symbols_path.read_text(), target))
     yaml_path = config_dir / "splat.yaml"
-    write_if_different(yaml_path, splat_yaml(chunks))
+    write_if_different(yaml_path, splat_yaml(chunks, target, geometry))
 
-    print(f"configure: splat split {yaml_path.relative_to(REPO_ROOT)}")
-    splat = [*SPLAT, str(yaml_path.relative_to(REPO_ROOT))]
+    print(f"configure: splat split {_display(yaml_path)}")
+    splat = [*SPLAT, _display(yaml_path)]
     proc = subprocess.run(splat, cwd=REPO_ROOT)
     if proc.returncode != 0:
         raise ConfigError(
@@ -826,28 +885,31 @@ def configure(config: str, cus_path: pathlib.Path, chunks_path: pathlib.Path,
     if not splits:
         raise ConfigError("splat produced no splits under asm/")
 
-    databins = databin_segments(chunks)
+    databins = databin_segments(chunks, geometry)
     tail = databins[1:]
-    covered = LOADABLE_END + sum(size for _, _, size in tail)
-    if covered != ELF_SIZE:
+    covered = geometry.loadable_end + sum(size for _, _, size in tail)
+    if covered != geometry.elf_size:
         raise ConfigError(
-            f"the databin segments after elf_header cover {covered - LOADABLE_END} bytes, "
-            f"so the file's tail would be 0x{ELF_SIZE - covered:X} bytes short of "
-            f"0x{ELF_SIZE:X}; splat's assets and the manifest disagree")
+            f"the databin segments after elf_header cover "
+            f"{covered - geometry.loadable_end} bytes, so the file's tail would be "
+            f"0x{geometry.elf_size - covered:X} bytes short of 0x{geometry.elf_size:X}; "
+            f"splat's assets and the manifest disagree")
 
     sources = split_sources()
-    code = code_splits(sources)
-    promoted = promotions()
+    code = code_splits(sources, geometry)
+    promoted = promotions(target=target)
     aliases = link_aliases(
-        sources, config_dir / "splat_symbol_addrs.txt",
-        [config_dir / "undefined_syms_auto.txt", config_dir / "undefined_funcs_auto.txt"])
-    write_if_different(REPO_ROOT / "build/SLUS_207.11.ld",
-                       pinned_ld_script(code, aliases, promoted))
+        sources, target.splat_symbols,
+        [target.undefined_syms, target.undefined_funcs])
+    write_if_different(target.ld_script,
+                       pinned_ld_script(code, aliases, promoted, target, geometry))
 
-    ninja = ninja_text(splits, databins, objects_only, promoted)
+    ninja = ninja_text(splits, databins, objects_only, promoted, target, geometry)
     write_if_different(REPO_ROOT / "build.ninja", ninja)
-    write_if_different(REPO_ROOT / "objdiff.json", objdiff_json(code, promoted))
-    print(f"configure: {len(splits)} splits, {len(code)} code splits at 0x{code[0][0]:X}, "
+    write_if_different(REPO_ROOT / "objdiff.json",
+                       objdiff_json(code, promoted, geometry))
+    print(f"configure: target {target.name} ({target.elf.name}): {len(splits)} splits, "
+          f"{len(code)} code splits at 0x{code[0][0]:X}, "
           f"{len(tail)} tail databins, {len(aliases)} link aliases, build.ninja written"
           + (" (objects only)" if objects_only else ""))
     if promoted:
@@ -857,14 +919,15 @@ def configure(config: str, cus_path: pathlib.Path, chunks_path: pathlib.Path,
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--config", default="usam2",
-                        help="configuration name under config/ (default: usam2)")
+    parser.add_argument("--target", default=targets.DEFAULT,
+                        help="the target to configure, by name (default: "
+                             f"{targets.DEFAULT}; known: {', '.join(targets.names())})")
     parser.add_argument("--cus", type=pathlib.Path, default=None,
-                        help="path to cus.json (default: config/<name>/cus.json)")
+                        help="path to cus.json (default: the target's own)")
     parser.add_argument("--chunks", type=pathlib.Path, default=None,
-                        help="path to debug_chunks.json (default: config/<name>/...)")
+                        help="path to debug_chunks.json (default: the target's own)")
     parser.add_argument("--symbols", type=pathlib.Path, default=None,
-                        help="path to symbol_addrs.txt (default: config/<name>/...)")
+                        help="path to symbol_addrs.txt (default: the target's own)")
     parser.add_argument("--objects", action="store_true",
                         help="emit the object graph only (the objdiff CI job's target)")
     return parser.parse_args(argv)
@@ -872,15 +935,15 @@ def parse_args(argv):
 
 def main(argv=None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    config_dir = REPO_ROOT / "config" / args.config
     try:
-        configure(
-            args.config,
-            args.cus or config_dir / "cus.json",
-            args.chunks or config_dir / "debug_chunks.json",
-            args.symbols or config_dir / "symbol_addrs.txt",
-            args.objects,
-        )
+        target = targets.get(args.target)
+        configure(target, args.cus, args.chunks, args.symbols, args.objects)
+    except targets.UnknownTarget as exc:
+        print(f"configure.py: error: {exc}", file=sys.stderr)
+        return 2
+    except targets.NotMeasured as exc:
+        print(f"configure.py: error: {exc}", file=sys.stderr)
+        return 2
     except ConfigError as exc:
         print(f"configure.py: error: {exc}", file=sys.stderr)
         return 2

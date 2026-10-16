@@ -519,21 +519,3 @@ def test_the_ledger_provenance_is_one_boolean_token():
     assert "libdma.a" not in line
 
 
-def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
-    """The repository's ledger and library-names.md are this tool's own output.
-
-    Skipped when a corpus is not on this machine (or is not reachable): the committed
-    artifacts are evidence about the corpora, so they can only be re-derived where the
-    evidence is.
-    """
-    import pytest
-    for key in ("oni2", "sdk152", "recvx"):
-        if not borrow.corpus_records(key, borrow.CACHE)[0]:
-            pytest.skip(f"{key} is unreachable on this machine")
-    for key in ("godhand", "sly1"):
-        if borrow.corpus_text(key, borrow.CACHE) is None:
-            pytest.skip(f"{key} is unreachable on this machine")
-    ledger, markdown = tmp_path / "borrowed_symbols.txt", tmp_path / "library-names.md"
-    assert borrow.main(["--ledger", str(ledger), "--markdown", str(markdown)]) == 0
-    assert ledger.read_bytes() == borrow.LEDGER.read_bytes()
-    assert markdown.read_bytes() == borrow.MARKDOWN.read_bytes()

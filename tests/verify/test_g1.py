@@ -1,12 +1,14 @@
-"""G1 -- the whole-file gate: the built image must equal the retail one, byte for byte.
+"""G1 -- the whole-file gate, driven on synthetic images and a synthetic target.
 
-The gate is the milestone's acceptance criterion, so it is tested against the real
-retail binary (the pinned hash) and against the two ways it can go wrong that matter:
-a truncated image, and a single corrupted byte -- which must be reported with its file
-offset *and* the translation unit that owns it, read out of the oracle's manifests.
+The gate's verdict is a sha256 of two files, so its logic is testable without a retail binary:
+identical files pass, a truncated one is reported at the offset where it runs out, and a
+divergence inside a chunked section or the loadable image is named by the manifests.  The parts
+that need a target's *measurement* -- the section bases, the loadable geometry -- are driven with
+a synthetic geometry, and the pin logic with a synthetic ``checksums.txt``: what is under test is
+that every input comes from the target, and that an unmeasured target degrades its *diagnostic*
+(the localisation) while still answering the verdict.
 """
 
-import bisect
 import json
 import pathlib
 import sys
@@ -18,194 +20,143 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT))  # `config.targets`
 
 from config import targets  # noqa: E402
-from verify import g1  # noqa: E402  (path set up above, as the brief specifies)
+from verify import g1, g2  # noqa: E402
 
-RETAIL = ROOT / "orig/SLUS_207.11"
-SHA = "a7596e8ab3da823236ed8e5f3f2804db3daee47265ae73e22f3311a5218aa8cc"
-# The two chunked sections' retail file offsets; the same geometry configure.py pins.
-DEBUG = 0x1A2740
-LINE = 0x2430E0
+DEBUG_BASE, DEBUG_SIZE = 0x1010, 0x400
+LINE_BASE, LINE_SIZE = 0x1410, 0x100
+ELF_SIZE = 0x2000
+LOADABLE_ROM, LOADABLE_VRAM = 0x80, 0x00100000
+
+GEOMETRY = targets.Geometry(
+    elf_size=ELF_SIZE, loadable_rom=LOADABLE_ROM, loadable_end=0x1000,
+    loadable_vram=LOADABLE_VRAM, bss_end=0x00110000,
+    trailing=(("shstrtab", 0x1000, 0x10), ("debug", DEBUG_BASE, DEBUG_SIZE),
+              ("line", LINE_BASE, LINE_SIZE),
+              ("section_headers", 0x1510, ELF_SIZE - 0x1510)),
+    debug_size=DEBUG_SIZE, line_size=LINE_SIZE, image_elf_offset=0x92000)
 
 
-def load(name):
-    return json.loads((ROOT / "config/usam2" / name).read_text())
+@pytest.fixture
+def manifests(tmp_path):
+    """A CU map and chunk manifest for the synthetic geometry: one TU, one function."""
+    cus = [
+        dict(index=0, kind="tu", offset=0, size=0x200, name="probe.c", file="src/probe.c",
+             low_pc=None, high_pc=None, stmt_list=None),
+        dict(index=1, kind="function", offset=0x200, size=DEBUG_SIZE - 0x200, name="probe_fn",
+             file="src/probe.c", low_pc=LOADABLE_VRAM, high_pc=LOADABLE_VRAM + 0x10,
+             stmt_list=0),
+    ]
+    chunks = [dict(section=".debug", offset=0, size=DEBUG_SIZE, tunits=[0, 1]),
+              dict(section=".line", offset=0, size=LINE_SIZE, tunits=[1])]
+    cus_path, chunks_path = tmp_path / "cus.json", tmp_path / "debug_chunks.json"
+    cus_path.write_text(json.dumps(cus))
+    chunks_path.write_text(json.dumps(chunks))
+    return cus_path, chunks_path
 
 
-def corrupted(tmp_path, offset, name="SLUS_207.11"):
-    """A copy of the retail image with one byte at ``offset`` flipped."""
-    data = bytearray(RETAIL.read_bytes())
+def image(tmp_path, name="built", size=ELF_SIZE, pattern=b"\x3D"):
+    path = tmp_path / name
+    path.write_bytes(pattern * size)
+    return path
+
+
+def corrupted(tmp_path, source, offset, name="bad"):
+    data = bytearray(source.read_bytes())
     data[offset] ^= 0xFF
     path = tmp_path / name
     path.write_bytes(bytes(data))
     return path
 
 
-def test_retail_hash_is_pinned():
-    assert g1.sha256(RETAIL) == SHA
-
-
-def test_truncated_copy_is_rejected(tmp_path):
-    bad = tmp_path / "SLUS_207.11"
-    bad.write_bytes(RETAIL.read_bytes()[:1000])
-    msg = g1.compare(bad, RETAIL)
-    assert msg.startswith("sha256 mismatch") and "0x" in msg
-
-
-def test_identical_copies_compare_ok(tmp_path):
-    same = tmp_path / "SLUS_207.11"
-    same.write_bytes(RETAIL.read_bytes())
-    assert g1.compare(same, RETAIL) == "ok"
+def test_identical_images_compare_ok(tmp_path):
+    built, retail = image(tmp_path, "built"), image(tmp_path, "retail")
+    assert g1.compare(built, retail) == "ok"
+    assert g1.sha256(built) == g1.sha256(retail)
 
 
 def test_a_truncated_image_is_reported_at_its_end(tmp_path):
-    """The first difference of a short file is the offset where it runs out."""
-    bad = tmp_path / "SLUS_207.11"
-    bad.write_bytes(RETAIL.read_bytes()[:1000])
-    msg = g1.compare(bad, RETAIL)
-    assert "0x3E8" in msg, msg
-    assert g1.sha256(bad) in msg and SHA in msg, msg
+    retail = image(tmp_path)
+    bad = tmp_path / "short"
+    bad.write_bytes(retail.read_bytes()[:1000])
+    message = g1.compare(bad, retail)
+    assert message.startswith("sha256 mismatch") and "0x3E8" in message
+    assert g1.sha256(bad) in message and g1.sha256(retail) in message
 
 
-def record_covering(cus, offset):
-    """The record covering ``.debug+offset``, from the CU map's byte tiling alone.
-
-    Deliberately *not* the rule the implementation uses (``chunk["tunits"][0]`` -> index):
-    this walks the offsets the chunk boundaries are derived from, so a chunk manifest whose
-    boundary does not line up with a translation unit's run of records is caught here instead
-    of being confirmed by the same rule twice (review finding 9).
-    """
-    index = bisect.bisect_right([c["offset"] for c in cus], offset) - 1
-    assert index >= 0 and offset < cus[index]["offset"] + cus[index]["size"], offset
-    return cus[index]
+def test_a_mismatch_says_the_byte_is_not_localised_while_the_geometry_is_unmeasured(tmp_path):
+    """The verdict never needs a measurement; the *diagnostic* does, and says so out loud."""
+    retail = image(tmp_path)
+    bad = corrupted(tmp_path, retail, 0x80 + 4)
+    assert targets.get().geometry is None
+    message = g1.compare(bad, retail)
+    assert "0x84" in message and "not localised" in message
 
 
-def test_a_debug_byte_names_its_translation_unit(tmp_path):
-    """The localisation that makes G2 a diagnostic: the offset decides the TU.
-
-    The expectation is derived from the CU map: the byte's *owning record* -- found by
-    bisecting the record offsets -- must be the compile unit the message names, and its
-    `file` the translation unit.
-    """
-    cus = load("cus.json")
-    chunk = next(c for c in load("debug_chunks.json") if c["section"] == ".debug")
-    owner = record_covering(cus, chunk["offset"])
-    offset = DEBUG + chunk["offset"]
-    msg = g1.compare(corrupted(tmp_path, offset), RETAIL)
-    assert f"0x{offset:X}" in msg, msg
-    assert owner["file"] in msg, msg
-    assert f"compile unit {owner['index']} (" in msg, msg
-    assert ".debug" in msg, msg
+def test_g1_does_not_guess_a_translation_unit_for_a_code_byte(tmp_path, manifests):
+    """G1 localises the chunked sections only; a code byte has no chunk manifest at all, and
+    inventing one would be a second, weaker opinion about the same offset (R32)."""
+    cus_path, chunks_path = manifests
+    retail = image(tmp_path)
+    message = g1.compare(corrupted(tmp_path, retail, LOADABLE_ROM + 4), retail,
+                         cus_path, chunks_path, GEOMETRY)
+    assert "0x84" in message and "src/probe.c" not in message
 
 
-def test_a_line_byte_names_its_translation_unit(tmp_path):
-    """The `.line` half: the statement list's own function CU names the TU.
-
-    Expectation derived from `cus.json` alone -- the function CU whose `stmt_list` *is* the
-    chunk's offset, and that record's own `file` -- never from the chunk manifest's
-    `tunits`/`tu_of` chain the implementation walks.
-    """
-    cus = load("cus.json")
-    chunk = next(c for c in load("debug_chunks.json") if c["section"] == ".line")
-    owner = next(c for c in cus
-                 if c["kind"] == "function" and c["stmt_list"] == chunk["offset"])
-    offset = LINE + chunk["offset"]
-    msg = g1.compare(corrupted(tmp_path, offset), RETAIL)
-    assert f"0x{offset:X}" in msg and ".line" in msg, msg
-    assert f"compile unit {owner['index']} (" in msg, msg
-    assert owner["file"] in msg, msg
+def test_a_loadable_byte_is_localised_by_the_address_it_maps_to(tmp_path, manifests):
+    """The .text half is G2's: the file offset becomes a VA through the target's geometry, and
+    the DWARF function CU covering that address names the unit."""
+    cus_path, chunks_path = manifests
+    symbols_path = tmp_path / "symbol_addrs.txt"
+    symbols_path.write_text("probe_fn = 0x00100000;  // type:func size:0x10 dwarf:dwarf\n")
+    retail = image(tmp_path)
+    located = g2.localise(corrupted(tmp_path, retail, LOADABLE_ROM + 4), retail,
+                          cus_path, chunks_path, symbols_path, GEOMETRY)
+    assert located["section"] == ".text" and located["offset"] == LOADABLE_ROM + 4
+    assert located["tu"] == "src/probe.c" and located["function"] == "probe_fn"
+    assert g2.localise(retail, retail) is None
 
 
-def test_a_loadable_byte_is_reported_without_a_translation_unit(tmp_path):
-    """Only .debug/.line bytes belong to a compile unit; code bytes must not be guessed."""
-    msg = g1.compare(corrupted(tmp_path, 0x80 + 0x100), RETAIL)
-    assert f"0x{0x80 + 0x100:X}" in msg, msg
+def test_a_debug_byte_names_its_translation_unit(tmp_path, manifests):
+    cus_path, chunks_path = manifests
+    retail = image(tmp_path)
+    message = g1.compare(corrupted(tmp_path, retail, DEBUG_BASE + 4), retail,
+                         cus_path, chunks_path, GEOMETRY)
+    assert f"0x{DEBUG_BASE + 4:X}" in message and ".debug" in message
+    assert "src/probe.c" in message and "compile unit 0 (" in message
 
 
-def test_the_pinned_hash_comes_from_the_checksum_file():
-    assert g1.pinned_hash() == SHA
+def test_the_pin_comes_from_the_targets_own_checksum_manifest(tmp_path):
+    """The manifest is read by path, so a target's pin can never be another target's."""
+    elf_sha = "ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd"
+    image_sha = "70a9056657665e978c7de9fc223cb753956902416418993176438316f6cd652b"
+    manifest = tmp_path / "checksums.txt"
+    manifest.write_text(f"{elf_sha}  out/SLUS_211.74\n{image_sha}  disc/probe.iso\n")
+    assert g1.pinned_hash(manifest) == elf_sha
+    assert g1.pinned_hash_for("probe.iso", manifest) == image_sha
+    assert g1.pinned_hash_for("no-such-image.iso", manifest) is None
+    missing = tmp_path / "absent.txt"
+    assert g1._pins(missing) == [] and g1.pinned_hash(missing) is None
+    # ... and the registered target resolves its own, which nobody has written yet.
+    assert g1.pinned_hash(targets.get().checksums) is None
 
 
-def test_cli_accepts_a_byte_identical_image(tmp_path, capsys):
-    good = tmp_path / "SLUS_207.11"
-    good.write_bytes(RETAIL.read_bytes())
-    assert g1.main([str(good)]) == 0
-    assert "ok" in capsys.readouterr().out
-
-
-def test_cli_rejects_a_corrupted_image(tmp_path, capsys):
-    assert g1.main([str(corrupted(tmp_path, DEBUG + 4))]) == 1
-    assert "sha256 mismatch" in capsys.readouterr().out
-
-
-def test_cli_refuses_a_missing_retail_binary(tmp_path, capsys):
-    built = tmp_path / "SLUS_207.11"
-    built.write_bytes(RETAIL.read_bytes())
-    absent = tmp_path / "absent"
-    assert g1.main([str(built), "--retail", str(absent)]) != 0
-    assert str(absent) in capsys.readouterr().err
-
-
-def test_cli_refuses_a_wrong_retail_binary(tmp_path, capsys):
-    """Review Focus 2: a missing, truncated or different retail binary fails loudly."""
-    truncated = tmp_path / "retail"
-    truncated.write_bytes(RETAIL.read_bytes()[:1000])
-    built = tmp_path / "SLUS_207.11"
-    built.write_bytes(RETAIL.read_bytes())
-    assert g1.main([str(built), "--retail", str(truncated)]) != 0
+def test_the_cli_needs_the_targets_retail_binary(tmp_path, capsys):
+    built = image(tmp_path)
+    assert g1.main([str(built)]) == 2
     err = capsys.readouterr().err
-    assert SHA in err and "1000 bytes" in err, err
+    assert targets.get().elf.name in err and "required" in err
 
 
-# ---------------------------------------------------------------------------
-# --target: one gate, two targets, and no pin inherited across them
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize("name", targets.names())
-def test_the_named_targets_pin_resolves_in_its_own_manifest_and_nowhere_else(name):
-    """A target's G1 criterion comes from its own ``checksums.txt``, or from nothing.
-
-    Falling back to another target's manifest would make the pin a property of the *tool*
-    rather than of the target -- the "retarget silently keeps an old pin" failure -- so the
-    absent case is asserted as None rather than as a default.  When the manifest exists its
-    two records must be this target's digests, which makes the check stronger, not weaker,
-    as the retarget lands.
-    """
-    target = targets.get(name)
-    other = targets.get("ddrex2p" if name == targets.DEFAULT else targets.DEFAULT)
-    assert other.config_dir.is_dir()  # there *is* another manifest to inherit from
-    assert other.checksums != target.checksums
-    if target.checksums.is_file():
-        assert g1.pinned_hash(target.checksums) == target.elf_sha256
-        assert g1.pinned_hash_for(target.image.name, target.checksums) \
-            == target.image_sha256
-    else:
-        assert g1._pins(target.checksums) == []
-        assert g1.pinned_hash(target.checksums) is None
-        assert g1.pinned_hash_for(target.image.name, target.checksums) is None
-        # ... and the *other* target's pin is not what a missing manifest resolves to.
-        assert g1.pinned_hash(target.checksums) != other.elf_sha256
-
-
-@pytest.mark.parametrize("name", targets.names())
-def test_the_cli_reads_the_named_targets_retail_binary(name, tmp_path, capsys):
-    """``g1.py --target NAME`` compares against *that* target's retail ELF and pin.
-
-    A garbage image is enough to prove which file the gate read: the mismatch names the
-    target's pinned digest.  A target whose geometry has not been measured stops with exit 2
-    and says so, because the offset localisation -- and the manifest geometry behind it --
-    is not something to guess from another target.
-    """
-    target = targets.get(name)
-    built = tmp_path / target.elf.name
-    built.write_bytes(b"not the image")
-    status = g1.main([str(built), "--target", name])
-    if target.geometry is None:
-        assert status == 2
-        err = capsys.readouterr().err
-        assert target.name in err and "geometry" in err
-        return
-    assert status == 1
+def test_the_cli_reports_a_mismatch_against_an_explicit_retail_binary(tmp_path, capsys):
+    built, retail = image(tmp_path, "built"), image(tmp_path, "retail", pattern=b"\x2E")
+    status = g1.main([str(built), "--retail", str(retail)])
     out = capsys.readouterr().out
-    assert "sha256 mismatch" in out
-    assert target.elf_sha256 in out or target.elf_sha256 in capsys.readouterr().err
+    assert status == 1
+    assert "sha256 mismatch" in out and g1.sha256(retail) in out
+
+
+def test_the_cli_rejects_an_unknown_target(tmp_path, capsys):
+    built = image(tmp_path)
+    assert g1.main([str(built), "--target", "usam2"]) == 2
+    err = capsys.readouterr().err
+    assert "usam2" in err and targets.DEFAULT in err and "Traceback" not in err

@@ -1,18 +1,24 @@
-"""`.debug` walk -> the compile-unit map, `config/usam2/cus.json`.
+"""`.debug` walk -> a target's compile-unit map, `cus.json`.
 
-Every DWARF 1 compile unit in the retail `.debug` section becomes one record:
-the 57 translation-unit headers (the range-less CU that opens each TU) and the
-423 per-function CUs nested after them.  Records tile `.debug` exactly: each
-record's `size` is the byte distance to the next record's offset, and the last
-ends at the section length.  A CU missing from that tiling is an error, not a
-gap to skip (Review Focus 4), so callers resolve offsets with `owner_of`,
-which raises `NoCompileUnit` outside every record.
+Every DWARF 1 compile unit in the retail `.debug` section becomes one record: the
+translation-unit headers (the range-less CU that opens each TU) and the per-function CUs
+nested after them.  Records tile `.debug` exactly: each record's `size` is the byte distance
+to the next record's offset, and the last ends at the section length.  A CU missing from that
+tiling is an error, not a gap to skip (Review Focus 4), so callers resolve offsets with
+`owner_of`, which raises `NoCompileUnit` outside every record.
+
+The ELF is a parameter (`build(elf_path)`) and the output path comes from the target's
+descriptor, so nothing here is bound to one game's config directory.
 """
 import bisect, json, pathlib, re, sys
 
 import dwarf1
 from dwarf1 import Dwarf
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))  # `config.targets`
+from config import targets
+
+DEFAULT = targets.get(targets.DEFAULT)
 DEBUG_SECTION = ".debug"
 
 
@@ -21,10 +27,11 @@ class NoCompileUnit(LookupError):
 
 
 def relpath(name):
-    """`C:\\work\\usam2\\src\\sys\\sys_scf.c` -> `src/sys/sys_scf.c` (POSIX).
+    """`<anything>/src/sys/sys_scf.c` -> `src/sys/sys_scf.c` (POSIX).
 
-    The tree-relative source path identifies a translation unit; it is the
-    same spelling the generated headers use under `include/`.
+    The retail build's own drive and working directory (`C:\\work\\<tree>\\...`) are dropped:
+    the tree-relative source path identifies a translation unit, and it is the same spelling
+    the generated headers use under `include/`.
     """
     p = (name or "").replace("\\", "/")
     m = re.search(r"(?:^|/)src/", p)
@@ -32,7 +39,7 @@ def relpath(name):
 
 
 def build(elf_path):
-    """The 480 compile-unit records, in `.debug` offset order."""
+    """Every compile-unit record, in `.debug` offset order."""
     dw = Dwarf(str(elf_path))
     units = []
     for tu in dw.tus:
@@ -78,7 +85,7 @@ def write(path, cus):
 
 if __name__ == "__main__":
     elf = sys.argv[1]
-    out = sys.argv[2] if len(sys.argv) > 2 else "config/usam2/cus.json"
+    out = sys.argv[2] if len(sys.argv) > 2 else str(DEFAULT.cus)
     cus = build(elf)
     write(out, cus)
     tus = sum(1 for c in cus if c["kind"] == "tu")
