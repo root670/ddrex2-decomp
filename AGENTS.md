@@ -5,8 +5,9 @@ This is a **matching decompilation** of the *DDR Extreme 2 (US) preview*, PlaySt
 `ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`**.  The goal is a C source tree
 that, compiled with the retail compiler and linked with the pinned layout, reproduces the retail
 artifacts **byte for byte** — not "looks right", not "runs the same".  The design is in
-`docs/superpowers/specs/2026-10-14-ddrmax2-us-decomp-design.md`; the plan that built the skeleton is
-`docs/superpowers/plans/2026-10-14-ddrmax2-us-oracle-toolchain-skeleton.md`.
+`docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md`; the plan that built the
+skeleton is `docs/superpowers/plans/2026-10-16-ddrex2-preview-retarget.md`, and the loop a unit goes
+through is `docs/unit-work.md`.
 
 **One target is registered, in one descriptor.**  `ddrex2p` (the *DDR Extreme 2 (US)* preview,
 `SLUS_211.74`) is this tree's target; its binary is yours to place (retail files are never
