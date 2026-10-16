@@ -111,7 +111,7 @@ BORROWED = pathlib.Path(__file__).resolve().parents[2] / "config" / "usam2" / \
     "borrowed_symbols.txt"
 BORROWED_LINE = re.compile(
     r"^(?P<name>[A-Za-z_]\w*) = 0x(?P<address>[0-9A-F]{8}); // type:(?P<kind>func|obj) "
-    r"size:0x(?P<size>[0-9A-F]+) provenance:(?P<provenance>\S+) ")
+    r"size:0x(?P<size>[0-9A-F]+) provenance:(?P<provenance>\S+) tier:(?P<tier>\S+)")
 
 
 def parse_borrowed(text):
@@ -128,11 +128,11 @@ def parse_borrowed(text):
         match = BORROWED_LINE.match(line.strip())
         if match is None:
             raise ValueError(f"borrowed_symbols.txt line {number} is not "
-                             f"`name = 0xADDR; // type:func size:0xSIZE provenance:SRC ...`: "
-                             f"{line.strip()}")
+                             f"`name = 0xADDR; // type:func size:0xSIZE provenance:SRC "
+                             f"tier:bytes`: {line.strip()}")
         out.append(dict(name=match["name"], address=int(match["address"], 16),
                         kind=match["kind"], size=int(match["size"], 16),
-                        provenance=match["provenance"]))
+                        provenance=match["provenance"], tier=match["tier"]))
     return out
 
 
@@ -158,6 +158,11 @@ def apply_borrowed(records, ledger_path=None):
     elsewhere = {r["name"]: r["address"] for r in records if r["address"] not in named}
     by_address = {r["address"]: r for r in records}
     for record in borrowed:
+        if record["tier"] != "bytes":
+            raise ValueError(
+                f"{path}: {record['name']} (0x{record['address']:08X}) is tier "
+                f"{record['tier']!r}: only byte-proven names may be renamed in the build, "
+                f"because a symbol file line carries no tier")
         if not record["size"] or record["size"] % 4:
             raise ValueError(
                 f"{path}: {record['name']} (0x{record['address']:08X}) carries size "

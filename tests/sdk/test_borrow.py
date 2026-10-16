@@ -70,6 +70,9 @@ def test_corpora_that_publish_sizes_say_so():
     assert catalogue["godhand"]["sizes"] is False
     assert catalogue["oni2"]["bytes"] is True and catalogue["oni2"]["sizes"] is True
     assert catalogue["sdk152"]["sizes"] is True
+    # An archive member *is* code: the devkit publishes the objects, so a name from it can be
+    # byte-validated (77 of its names are whole-function identical under relocation masking).
+    assert catalogue["sdk152"]["bytes"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +173,26 @@ def test_run_proposals_name_every_function_in_the_run():
     assert {p["tier"] for p in proposals} == {"run"}
     assert proposals[0]["evidence"]["run"] == 3
     assert proposals[0]["evidence"]["source_address"] == 0x1000
+
+
+def test_run_proposals_keep_the_corpus_order_it_is_given():
+    """An archive member restarts at address 0, so member order is the evidence.
+
+    Sorting the corpus's records by address would interleave the members and align our image
+    against a sequence no linker produced.
+    """
+    ours = [{"symbol": "func_1", "address": 0x100, "size": 0x10},
+            {"symbol": "func_2", "address": 0x110, "size": 0x20},
+            {"symbol": "func_3", "address": 0x130, "size": 0x30}]
+    # Three records, one per member, in member order -- and their addresses run *backwards*,
+    # which is what an address sort would destroy.
+    theirs = [{"name": "member_a", "address": 0x40, "size": 0x10},
+              {"name": "member_b", "address": 0x00, "size": 0x20},
+              {"name": "member_c", "address": 0x00, "size": 0x30}]
+    proposals, refused = borrow.run_proposals(ours, theirs, source="sdk152:libx.a")
+    assert refused == []
+    assert [p["name"] for p in proposals] == ["member_a", "member_b", "member_c"]
+    assert [p["address"] for p in proposals] == [0x100, 0x110, 0x130]
 
 
 def test_run_proposals_report_the_size_matches_that_were_not_evidence():
@@ -403,6 +426,16 @@ def test_the_ledger_carries_the_size_the_validation_used():
     line = [l for l in text.splitlines() if l.startswith("sceGsResetGraph")][0]
     assert "size:0x190 " in line
     assert "corpus_size:" not in line
+
+
+def test_a_name_row_names_the_archive_member_the_bytes_came_from(tmp_path):
+    """For an archive source the member is the provenance: the same archive restarts per member."""
+    row = {"name": "sceScfGetLanguage", "address": 0x0021BDD0, "size": 0x60,
+           "source": "sdk152", "tier": "bytes", "evidence": {
+               "source_member": "scf.o", "window": 48, "masked_words": 0,
+               "whole_function": True}}
+    text = borrow.render_markdown([row], [], [], [], [])
+    assert "`sdk152` `scf.o`" in text
 
 
 def test_the_ledger_provenance_is_one_boolean_token():

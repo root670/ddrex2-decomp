@@ -117,13 +117,16 @@ CORPORA = (
                         "recorded, with the same policy as the corpus's own bytes.",
         "entry_point": "path: ~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib/*.a",
         "path": "~/sdk-extract/devkit152/RTLibs_ToolchainSetup/MAINDIR/ee/lib",
-        "publishes": "66 SDK archives whose member symbol tables give names with sizes *in "
-                     "member order* (the order the linker preserves), e.g. libkernl.a, "
-                     "libgraph.a, libvu0.a, libdma.a, libpad.a, libcdvd.a, libssyn.a",
-        "sizes": True, "bytes": False, "names": True, "copyable": True,
+        "publishes": "66 SDK archives whose *member objects* are the code itself "
+                     "(relocatable, so the comparison masks the relocation fields) with their "
+                     "symbol tables: names with sizes, in member order (the order the linker "
+                     "preserves) -- libkernl.a, libgraph.a, libvu0.a, libdma.a, libpad.a, "
+                     "libcdvd.a, libssyn.a and the rest",
+        "sizes": True, "bytes": True, "names": True, "copyable": True,
         "fetch": "unpack the devkit 1.5.2 installers (the survey's Task 5 Step 4)",
-        "note": "the July-2005 era -- one generation *later* than this title, so a size-only "
-                "match is strong evidence for the name and no evidence at all for the bytes",
+        "note": "the July-2005 era -- one generation *later* than this title, so a name whose "
+                "whole body matches relocation-masked is a byte-validated name and a size-only "
+                "match carries the revision caveat (member order is not the game's link order)",
     },
     {
         "key": "recvx",
@@ -341,6 +344,19 @@ def parse_elf_symbols(path: pathlib.Path | str) -> list[dict]:
 ARCHIVE_JUNK = re.compile(r"^(gcc2_compiled\.|__gnu_compiled_c|__ps2_libinfo__|gp\.\d+|\.L)")
 
 
+def member_bytes(elf, symbol) -> bytes:
+    """A relocatable object's symbol bytes, read through the symbol's own *section*.
+
+    ``Elf.read`` follows program headers, and an archive member has none -- it is an object, not
+    an image -- so its code is located by section: the section's file offset plus the symbol's
+    address inside it.  Those bytes are the member's code with the address-carrying fields
+    unrelocated, which is exactly what :func:`match.compare` masks.
+    """
+    section = elf.sections[symbol.shndx]
+    start = section.offset + (symbol.value - section.addr)
+    return elf.data[start:start + symbol.size]
+
+
 def archive_members(path: pathlib.Path | str) -> list[tuple[str, bytes]]:
     """``(member name, member bytes)`` of an ``ar`` archive, in member order."""
     data = pathlib.Path(path).read_bytes()
@@ -368,11 +384,17 @@ def archive_members(path: pathlib.Path | str) -> list[tuple[str, bytes]]:
     return members
 
 
-def parse_archive(path: pathlib.Path | str) -> list[dict]:
+def parse_archive(path: pathlib.Path | str, blobs: dict | None = None) -> list[dict]:
     """One archive's text symbols with sizes, in member order (the linker's own order).
 
     A member's functions are linked contiguously, and the linker walks the archive in member
-    order, so this sequence is the layout evidence the size alignment keys on.
+    order, so this sequence is the layout evidence the size alignment keys on -- and because
+    every member restarts at address 0, the *order* is the only thing that makes it evidence.
+
+    ``blobs`` (when given) is filled with the member object's own bytes for each record, keyed
+    by ``blob_key``: an archive member is a relocatable object, so those bytes are the code
+    with the address-carrying fields unrelocated, which is exactly what ``match.compare``
+    masks.
     """
     out = []
     with tempfile.TemporaryDirectory() as work:
@@ -392,8 +414,12 @@ def parse_archive(path: pathlib.Path | str) -> list[dict]:
             for symbol in symbols:
                 if symbol.value < end:
                     continue
-                out.append({"name": symbol.name, "address": symbol.value,
-                            "size": symbol.size, "member": member})
+                record = {"name": symbol.name, "address": symbol.value,
+                          "size": symbol.size, "member": member,
+                          "blob_key": (member, symbol.value)}
+                out.append(record)
+                if blobs is not None:
+                    blobs[record["blob_key"]] = member_bytes(elf, symbol)
                 end = symbol.value + symbol.size
     return out
 
@@ -479,12 +505,16 @@ def run_proposals(ours: list[dict], theirs: list[dict], source: str,
                   min_run: int = MIN_RUN) -> tuple[list[dict], list[dict]]:
     """Name our functions from runs of identical sizes (the size-evidence proposer).
 
-    Returns ``(proposals, refused)``: the size matches that were *not* evidence -- an isolated
-    size equality, or a run that occurs more than once on one side -- are refusals, and they
-    are counted in the ledger's yield so "rejected" is the whole of what the source proposed.
+    Returns ``(proposals, refused)``: the runs that were *not* evidence -- shorter than
+    ``min_run``, or occurring more than once on one side -- are refusals, and they are counted
+    in the ledger's yield so the yield accounts for everything the source offered.
+
+    The corpus's records are used **in the order the caller gives them**, because for an archive
+    that order *is* the evidence: a member restarts at address 0, so sorting the records by
+    address would interleave the members and align our image against a sequence no linker ever
+    produced.  Our own side is address-sorted, which is the order the linker placed it in.
     """
     ours = sorted(ours, key=lambda r: r["address"])
-    theirs = sorted(theirs, key=lambda r: r["address"])
     blocks, refused = align([r["size"] for r in ours], [r["size"] for r in theirs], min_run)
     for refusal in refused:
         mine = ours[refusal["our_index"]]
@@ -523,9 +553,10 @@ def byte_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict, their_
         blob = our_bytes[mine["address"]]
         matches = []
         for candidate in by_size.get(mine["size"], []):
-            if candidate["address"] not in their_bytes:
+            key = corpus_key(candidate)
+            if key not in their_bytes:
                 continue
-            theirs_blob = their_bytes[candidate["address"]]
+            theirs_blob = their_bytes[key]
             result = match.compare(theirs_blob[:window], blob[:window])
             if result["identical"]:
                 matches.append((candidate, result))
@@ -537,18 +568,28 @@ def byte_proposals(ours: list[dict], theirs: list[dict], our_bytes: dict, their_
                             "reason": "names disagree", "names": names})
             continue
         candidate, result = matches[0]
-        full = match.compare(their_bytes[candidate["address"]], blob) if len(matches) == 1 \
-            else None
+        full = match.compare(their_bytes[corpus_key(candidate)], blob) \
+            if len(matches) == 1 else None
         proposals.append({
             "address": mine["address"], "symbol": mine["symbol"], "size": mine["size"],
             "name": candidate["name"], "tier": "bytes", "source": source,
-            "evidence": {"source_address": candidate["address"],
+            "evidence": {"source_key": corpus_key(candidate),
+                         "source_address": candidate["address"],
                          "source_member": candidate.get("member"),
                          "candidates": len(matches), "window": window,
                          "masked_words": result["masked_words"],
                          "exact": result["exact"],
                          "whole_function": bool(full and full["identical"])}})
     return proposals, refused
+
+
+def corpus_key(record: dict):
+    """Where a corpus record's bytes live in the blob table its parser filled.
+
+    An archive member restarts at address 0, so its records are keyed by ``(member, address)``;
+    a linked image's records are keyed by their address.
+    """
+    return record.get("blob_key", record["address"])
 
 
 def _rank(proposal: dict) -> tuple:
@@ -742,7 +783,11 @@ LEDGER_HEADER = """\
 // Every line is a name a corpus published for one of this image's library functions, and
 // passed tools/sdk/borrow.validate: the corpus's size is our function's own split bounds
 // (which is why `size:` here is the validated number and not 0), and where the corpus
-// publishes bytes they match after relocation masking.  `size:` here is that validated number;
+// publishes bytes they match after relocation masking -- so **every line is byte-proven**: the
+// run tier (a run of identical sizes in another link's layout) is a proposal and stays in
+// config/usam2/library-names.md, because a symbol file line carries no tier and a layout guess
+// would be indistinguishable from a name that was proved word for word.  `size:` is that
+// validated number;
 // what reaches splat is `size:0x0`, on purpose, because splat uses the attribute to lay the
 // split out: forwarding a non-zero size re-segments the bytes around it and produced a split
 // with no address comment (`asm/nonmatchings/main/func_001A6AE0.s`), which the link refuses.
@@ -752,6 +797,7 @@ LEDGER_HEADER = """\
 
 
 def render_ledger(records: list[dict]) -> str:
+    """The build artifact's input: one line per *byte-proven* name, address-sorted."""
     lines = [LEDGER_HEADER]
     for record in sorted(records, key=lambda r: r["address"]):
         lines.append(
@@ -810,14 +856,43 @@ def taken_names(path: pathlib.Path | str = ROOT / "config" / "usam2" / "symbol_a
 # ---------------------------------------------------------------------------
 
 
-def render_markdown(rows: list[dict], yields: list[dict], rejections: list[dict],
-                    controls: list[dict]) -> str:
-    """``config/usam2/library-names.md``: what was borrowed, from where, and how it was checked."""
+def _name_row(row: dict, run: bool = False) -> str:
+    """One row of either name table."""
+    if run:
+        evidence = f"`{row['evidence']['run']}`"
+    else:
+        evidence = (f"masked-equal over {row['evidence'].get('window')} bytes"
+                    + (", the whole function" if row["evidence"].get("whole_function")
+                       else ", the first instructions; the rest is a revision question")
+                    + f", {row['evidence'].get('masked_words')} relocated word(s)")
+    name = f"`{row['name']}`"
+    if row.get("borrowed_as"):
+        name += f" (the corpus's `{row['borrowed_as']}`, repeated in the image)"
+    source = f"`{row['source']}`"
+    member = row["evidence"].get("source_member")
+    if member:                      # an archive member is where the name and the bytes came from
+        source += f" `{member}`"
+    return (f"| `0x{row['address']:08X}` | {name} | {source} | `0x{row['size']:X}` | "
+            f"{evidence} | {row.get('sdk_source') or '-'} | "
+            f"{', '.join(row.get('corroborated_by') or []) or '-'} | "
+            f"{', '.join(row.get('contested') or []) or '-'} |")
+
+
+def render_markdown(artifact: list[dict], proposed_only: list[dict], yields: list[dict],
+                    rejections: list[dict], controls: list[dict]) -> str:
+    """``config/usam2/library-names.md``: what was borrowed, from where, and how it was checked.
+
+    Two tables of names, because the two kinds of evidence are not interchangeable: the byte
+    tier is what goes into the build artifact (`borrowed_symbols.txt` -> `./ddr oracle` ->
+    `symbol_addrs.txt`), and the run tier is a proposal about another link's layout that stays
+    here with its run length recorded.
+    """
     out = [
         "# Borrowed library names (M3 Task 5)\n",
-        "Generated by `tools/sdk/borrow.py`; do not hand-edit.  One row per name that entered",
-        "`config/usam2/borrowed_symbols.txt` (and from there, via `./ddr oracle`,",
-        "`config/usam2/symbol_addrs.txt`), plus the names that were refused and why.\n",
+        "Generated by `tools/sdk/borrow.py`; do not hand-edit.  Two lists: the names that went",
+        "into the build artifact (`config/usam2/borrowed_symbols.txt`, and from there via",
+        "`./ddr oracle` into `config/usam2/symbol_addrs.txt`) and the names that were *proposed*",
+        "but kept out of it, plus everything that was refused and why.\n",
         "Attribution: this file is derived from the decompilation projects below.  The corpora's",
         "bytes are never copied into this repository -- what is recorded is the *derived* name",
         "for one of this image's functions, with the licence of the corpus it came from.\n",
@@ -831,62 +906,72 @@ def render_markdown(rows: list[dict], yields: list[dict], rejections: list[dict]
                    f"| {entry['publishes']} | `{entry['entry_point']}` | `{digest[:16]}` |")
     out += ["\n## Yield per source\n",
             "`proposed` is the number of *names* the source proposed; `accepted` the number that",
-            "passed `validate`; `refused` the proposals refused (a conflict, disagreeing byte",
-            "candidates, a name this tree already carries, or a failed validation); and `size",
-            "matches refused` counts the size equalities the proposer itself refused as not",
-            "evidence -- no name was proposed for those, so they are counted rather than listed.",
-            "Proposals for one address are *merged* (the strongest evidence wins; see `also` and",
-            "`contested` below), so `accepted` is lower than the sum of `proposed` by design.\n",
-            "A source that publishes no sizes cannot propose a mapping, so its row is its",
-            "corroboration instead: how many accepted names it independently publishes as a",
-            "function.\n",
-            "| source | proposes | proposed | accepted | refused | size matches refused | corroborates |",
-            "|---|---|---|---|---|---|---|"]
+            "passed `validate`; `in artifact` the subset whose evidence is the function's own",
+            "bytes (the only names the build gets); `proposed only` the rest, which rest on a run",
+            "of identical sizes; `refused` the proposals refused (a conflict, disagreeing byte",
+            "candidates, a name this tree already carries, or a failed validation); and `runs",
+            "refused` counts the candidate runs the proposer itself refused as not evidence (too",
+            "short, or occurring more than once on one side) -- no name was proposed for those,",
+            "so they are counted rather than listed.  Proposals for one address are *merged* (the",
+            "strongest evidence wins; see `also` and `contested` below), so `accepted` is lower",
+            "than the sum of `proposed` by design.\n",
+            "`accepted` counts the names a source *won* (the strongest evidence at that",
+            "address); a name several sources propose is won once, and the others appear in the",
+            "winner's `also` and `contested` columns.  A source that publishes no sizes or bytes",
+            "cannot propose a mapping, so its row is its corroboration instead: how many accepted",
+            "names it independently publishes as a function.\n",
+            "| source | proposes | proposed | accepted | in artifact | proposed only | refused | runs refused | corroborates |",
+            "|---|---|---|---|---|---|---|---|---|"]
     for row in yields:
         out.append(f"| `{row['key']}` | {row['proposes']} | {row['proposed']} | "
-                   f"{row['accepted']} | {row['rejected']} | {row.get('size_matches_refused', 0)} "
-                   f"| {row.get('supports', 0)} |")
+                   f"{row['accepted']} | {row.get('in_artifact', 0)} | "
+                   f"{row.get('proposed_only', 0)} | {row['rejected']} | "
+                   f"{row.get('runs_refused', 0)} | {row.get('supports', 0)} |")
     out += ["\n## The control for the size evidence\n",
             "The size proposers claim that a *run* of identical function sizes which occurs",
             "exactly once on both sides is layout evidence.  The control shuffles the corpus's",
             "sizes -- every value survives, only the order the claim rests on is destroyed -- and",
             "runs the same alignment:\n",
-            "| source | observed names | chance mean | chance max | shuffles with any hit |",
+            "| source | positions named by runs | chance mean | chance max | shuffles with any hit |",
             "|---|---|---|---|---|"]
     for control in controls:
         out.append(f"| `{control['key']}` | {control['observed']} | {control['chance_mean']} | "
                    f"{control['chance_max']} | {control['chance_nonzero']}/{control['trials']} |")
-    out += ["\n## Accepted names\n",
-            "`tier` is the evidence: `bytes` = the corpus publishes the function's bytes and they",
-            "matched after relocation masking (strongest), `run` = a run of identical sizes unique",
-            "on both sides (a corpus that publishes no bytes cannot do better).  `size` is the",
-            "corpus's published size, which `validate` required to equal our split bounds.",
-            "`sdk source` is sly1's attribution of the name to its original SDK source file.",
-            "`corroborated by` lists the further corpora that publish the same name; `contested by`",
-            "lists a weaker proposal that named this address differently (it did not win).\n",
-            "| address | name | source | tier | size | evidence | sdk source | corroborated by | contested by |",
-            "|---|---|---|---|---|---|---|---|---|"]
-    for row in sorted(rows, key=lambda r: r["address"]):
-        evidence = (f"run of {row['evidence']['run']}"
-                    if row["tier"] == "run" else
-                    f"masked-equal over {row['evidence'].get('window')} bytes"
-                    + (", the whole function" if row["evidence"].get("whole_function")
-                       else ", the first instructions; the rest is a revision question")
-                    + f", {row['evidence'].get('masked_words')} relocated word(s)")
-        name = f"`{row['name']}`"
-        if row.get("borrowed_as"):
-            name += f" (the corpus's `{row['borrowed_as']}`, repeated in the image)"
-        out.append(f"| `0x{row['address']:08X}` | {name} | `{row['source']}` | "
-                   f"{row['tier']} | `0x{row['size']:X}` | {evidence} | "
-                   f"{row.get('sdk_source') or '-'} | {', '.join(row.get('corroborated_by') or []) or '-'} | "
-                   f"{', '.join(row.get('contested') or []) or '-'} |")
+    out += [f"\n**{len(artifact)} names are in the build artifact (every one of them",
+            f"byte-proven); {len(artifact) + len(proposed_only)} names were accepted in total and",
+            f"{len(proposed_only)} of those stay here as proposals.**\n"]
+    out += ["\n## Names in the build artifact (byte evidence)\n",
+            "Every name here was accepted because the corpus publishes the function's own bytes",
+            "and they matched ours after relocation masking, at our function's own size.  These",
+            "are the lines of `config/usam2/borrowed_symbols.txt`.  `evidence` says whether the",
+            "whole body matched or only the first 48 bytes (beyond which a corpus from another SDK",
+            "revision is a different question).  `size` is the corpus's published size, which",
+            "`validate` required to equal our split bounds.  `sdk source` is sly1's attribution of",
+            "the name to its original SDK source file; `corroborated by` lists the further corpora",
+            "that publish the same name; `contested by` lists a weaker proposal that named this",
+            "address differently (it did not win).\n",
+            "| address | name | source (member) | size | evidence | sdk source | corroborated by | contested by |",
+            "|---|---|---|---|---|---|---|---|"]
+    for row in sorted(artifact, key=lambda r: r["address"]):
+        out.append(_name_row(row))
+    out += ["\n## Names proposed, not in the build artifact (size-run evidence)\n",
+            "These rest on a run of identical function sizes that occurs exactly once on both",
+            "sides -- evidence about the *layout* of another link, not about this function -- so",
+            "they are proposals with a measured chance level (see the control above), and they stay",
+            "out of `symbol_addrs.txt`, whose lines carry no tier.  `run` is how many consecutive",
+            "functions agreed, which is the strength of the claim.\n",
+            "| address | name | source (member) | size | run | sdk source | corroborated by | contested by |",
+            "|---|---|---|---|---|---|---|---|"]
+    for row in sorted(proposed_only, key=lambda r: r["address"]):
+        out.append(_name_row(row, run=True))
+
     out += ["\n## Refused names\n",
             "`conflict` = two *equally strong* proposals disagree about one address (nothing was",
             "renamed);",
             "`names disagree` = several byte-matching candidates carried different names;",
-            "`isolated` = size matches with no run to anchor them (counted, not listed: no name",
-            "was proposed);",
-            "`ambiguous` = a matched run that occurs more than once on one side (likewise);",
+            "`isolated` = candidate runs too short to anchor anything (counted, not listed: no",
+            "name was proposed);",
+            "`ambiguous` = a candidate run that occurs more than once on one side (likewise);",
             "`name taken` = the name already names another address in this tree;\n",
             "| our symbol | name | source(s) | reason | detail |", "|---|---|---|---|---|"]
     for row in sorted(rejections, key=lambda r: (r["reason"], r.get("address") or 0)):
@@ -980,24 +1065,32 @@ def corpus_text(key: str, cache: pathlib.Path | str = CACHE) -> str | None:
         return None
 
 
-def corpus_records(key: str, cache: pathlib.Path) -> tuple[list[dict], str]:
-    """A corpus's name records, and how it was obtained: ``cache``, ``local`` or ``absent``."""
+def corpus_records(key: str, cache: pathlib.Path) -> tuple[list[dict], str, dict]:
+    """A corpus's records, how it was obtained, and the code bytes it publishes.
+
+    The third element is ``{}`` for a corpus that publishes no code: only a corpus that
+    publishes the function's own bytes can be byte-compared, and byte evidence is what decides a
+    name for the build artifact.
+    """
     entry = corpus(key)
     if entry.get("path"):
         root = pathlib.Path(entry["path"]).expanduser()
         if not root.exists():
-            return [], "absent"
+            return [], "absent", {}
         if key == "sdk152":
-            records = []
+            records, blobs = [], {}
             for archive in sorted(root.glob("*.a")):
                 records += [dict(r, source=f"sdk152:{archive.name}")
-                            for r in parse_archive(archive)]
-            return records, "local"
-        return parse_elf_symbols(root), "local"
+                            for r in parse_archive(archive, blobs)]
+            return records, "local", blobs
+        records = parse_elf_symbols(root)
+        elf = Elf(str(root))
+        return (records, "local",
+                {r["address"]: elf.read(r["address"], r["size"]) for r in records})
     text = corpus_text(key, cache)
     if text is None:
-        return [], "absent"
-    return parse_splat_symbols(text, game_start_of(key)), "cache"
+        return [], "absent", {}
+    return parse_splat_symbols(text, game_start_of(key)), "cache", {}
 
 
 def _display(path) -> str:
@@ -1006,12 +1099,6 @@ def _display(path) -> str:
         return str(pathlib.Path(path).relative_to(ROOT))
     except ValueError:
         return str(path)
-
-
-def read_oni2_blobs(records: list[dict], path: pathlib.Path | str) -> dict[int, bytes]:
-    """``address -> bytes`` for a corpus's ELF: its own read, not the retail one."""
-    elf = Elf(str(path))
-    return {r["address"]: elf.read(r["address"], r["size"]) for r in records}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1039,46 +1126,32 @@ def main(argv: list[str] | None = None) -> int:
     yields: list[dict] = []
     controls: list[dict] = []
     isolates: list[dict] = []
-    oni_blobs: dict[int, bytes] = {}
+    corpus_blobs: dict[str, dict] = {}
     our_sizes = [r["size"] for r in ours]
 
-    for key, label in (("oni2", "bytes, and runs over its library blob"),
-                       ("sdk152", "runs, per archive member order"),
-                       ("recvx", "runs over its library region")):
-        records, how = corpus_records(key, args.cache)
+    for key, label in (("oni2", "bytes and runs, over its library blob"),
+                       ("sdk152", "bytes and runs, per archive member order"),
+                       ("recvx", "runs only, over its library region")):
+        records, how, their_blobs = corpus_records(key, args.cache)
         if not records:
             print(f"borrow: {key} is {how}: a ledger without it would be a partial ledger, "
                   f"so nothing was written", file=sys.stderr)
             return 2
-        print(f"borrow: {key}: {len(records)} records ({how})")
+        print(f"borrow: {key}: {len(records)} records ({how}), "
+              f"{len(their_blobs)} with code")
+        corpus_blobs[key] = their_blobs
         hits = []
-        if key == "oni2":
-            oni_blobs = read_oni2_blobs(records, corpus(key)["path"])
-            byte_hits, refused = byte_proposals(ours, records, blobs, oni_blobs, key)
+        if their_blobs:                       # the corpus publishes the function's own code
+            byte_hits, refused = byte_proposals(ours, records, blobs, their_blobs, key)
             hits += byte_hits
             rejections += [dict(r, source=key) for r in refused]
-            inside = oni2_library_region(records)
-            minimum = MIN_RUN_BY_SOURCE[key]
-            run_hits, run_refused = run_proposals(ours, inside, key, minimum)
-            hits += run_hits
-            isolates += run_refused
-            controls.append(dict(coincidence_rate(our_sizes, [r["size"] for r in inside],
-                                                  minimum, args.trials), key=key,
-                                 sequences=1))
-        elif key == "recvx":
-            inside = records              # already its library region: below its game start
-            minimum = MIN_RUN_BY_SOURCE[key]
-            run_hits, run_refused = run_proposals(ours, inside, key, minimum)
-            hits += run_hits
-            isolates += run_refused
-            controls.append(dict(coincidence_rate(our_sizes, [r["size"] for r in inside],
-                                                  minimum, args.trials), key=key,
-                                 sequences=1))
-        else:
+        minimum = MIN_RUN_BY_SOURCE[key]
+        if key == "sdk152":
+            # One sequence per archive: a member restarts at address 0, and the archive's own
+            # member order is the only thing that makes the run evidence.
             by_archive = collections.defaultdict(list)
             for record in records:
                 by_archive[record["source"]].append(record)
-            minimum = MIN_RUN_BY_SOURCE[key]
             total = {"observed": 0, "chance_mean": 0.0, "chance_max": 0, "chance_nonzero": 0,
                      "trials": args.trials, "min_run": minimum, "key": key, "sequences": 0}
             for archive, group in sorted(by_archive.items()):
@@ -1094,9 +1167,17 @@ def main(argv: list[str] | None = None) -> int:
                 total["sequences"] += 1
             total["chance_mean"] = round(total["chance_mean"], 2)
             controls.append(total)
+        else:
+            inside = oni2_library_region(records) if key == "oni2" else records
+            run_hits, run_refused = run_proposals(ours, inside, key, minimum)
+            hits += run_hits
+            isolates += run_refused
+            controls.append(dict(coincidence_rate(our_sizes, [r["size"] for r in inside],
+                                                  minimum, args.trials), key=key,
+                                 sequences=1))
         proposals += hits
         yields.append({"key": key, "proposes": label, "proposed": len(hits),
-                       "accepted": 0, "rejected": 0})
+                       "accepted": 0, "in_artifact": 0, "proposed_only": 0, "rejected": 0})
 
     for key in ("godhand", "sly1"):
         # Both publish names and no function sizes, so neither can *propose* a mapping; what
@@ -1105,21 +1186,22 @@ def main(argv: list[str] | None = None) -> int:
         yields.append({"key": key,
                        "proposes": f"nothing (names only, {'cache' if text else 'absent'}): "
                                    f"corroboration, attribution",
-                       "proposed": 0, "accepted": 0, "rejected": 0})
+                       "proposed": 0, "accepted": 0, "in_artifact": 0, "proposed_only": 0,
+                       "rejected": 0})
 
     tree_names = taken_names(args.symbols)
     accepted, refused = decide(proposals, tree_names)
     rejections += refused
 
-    # The size proposers' own refusals, one row per (source, reason) with a count: a size that
-    # matched with no run to anchor it is not a name proposal, so there is no name to list.
+    # The run proposers' own refusals, one row per (source, reason) with a count of *runs*: a
+    # candidate run too short to anchor anything is not a name proposal, so there is no name.
     grouped = collections.Counter((r["source"].split(":")[0], r["reason"]) for r in isolates)
     for (source, reason), count in sorted(grouped.items()):
-        rejections.append({"source": source, "reason": reason, "names": [], "count": count,
-                           "detail": f"{count} size match(es)"
-                                     + (" with no run to anchor them"
+        rejections.append({"source": source, "reason": reason, "names": [], "runs": count,
+                           "detail": f"{count} candidate run(s)"
+                                     + (" shorter than the minimum"
                                         if reason == "isolated" else
-                                        " whose run occurs more than once on one side")})
+                                        " that occur more than once on one side")})
 
     corroborating: dict[str, set] = collections.defaultdict(set)
     texts = {key: corpus_text(key, args.cache) for key in ("godhand", "sly1")}
@@ -1130,8 +1212,8 @@ def main(argv: list[str] | None = None) -> int:
 
     rows = []
     for record in accepted:
-        published = oni_blobs.get(record["evidence"].get("source_address")) \
-            if record["tier"] == "bytes" else None
+        published = corpus_blobs[record["source"].split(":")[0]].get(
+            record["evidence"].get("source_key")) if record["tier"] == "bytes" else None
         verdict = validate(record["name"], record["size"], blobs[record["address"]],
                            published_bytes=published,
                            window=record["evidence"].get("window"))
@@ -1151,32 +1233,45 @@ def main(argv: list[str] | None = None) -> int:
         print(f"borrow: {len(renamed)} names are a repeat of a name already placed at a lower "
               f"address: suffixed the way resolve_names does")
 
+    # Only the byte tier goes into the build artifact.  A run of identical sizes is a proposal
+    # about the *layout* of a different link, and `symbol_addrs.txt` carries no tier, so a
+    # layout guess in it would be indistinguishable from a name that was proved word for word.
+    artifact = [row for row in rows if row["tier"] == "bytes"]
+    proposed_only = [row for row in rows if row["tier"] != "bytes"]
+
     per_source = collections.Counter(row["source"].split(":")[0] for row in rows)
+    per_artifact = collections.Counter(row["source"].split(":")[0] for row in artifact)
     per_reject: collections.Counter = collections.Counter()
-    per_size_match: collections.Counter = collections.Counter()
+    per_run: collections.Counter = collections.Counter()
     for refusal in rejections:
         if not refusal.get("source"):
             continue
         key = refusal["source"].split(":")[0]
-        if "count" in refusal:               # an aggregate row: no name was proposed
-            per_size_match[key] += refusal["count"]
+        if "runs" in refusal:                # an aggregate row: no name was proposed
+            per_run[key] += refusal["runs"]
         else:
             per_reject[key] += 1
     supports = collections.Counter(key for row in rows for key in row["corroborated_by"])
     for row in yields:
         row["accepted"] = per_source[row["key"]]
+        row["in_artifact"] = per_artifact[row["key"]]
+        row["proposed_only"] = row["accepted"] - row["in_artifact"]
         row["rejected"] = per_reject[row["key"]]
-        row["size_matches_refused"] = per_size_match[row["key"]]
+        row["runs_refused"] = per_run[row["key"]]
         row["supports"] = supports[row["key"]]
 
     args.ledger.parent.mkdir(parents=True, exist_ok=True)
-    args.ledger.write_text(render_ledger(rows))
-    args.markdown.write_text(render_markdown(rows, yields, rejections, controls))
-    print(f"borrow: {len(rows)} names accepted, {len(rejections)} refused -> "
-          f"{_display(args.ledger)} and {_display(args.markdown)}")
+    args.ledger.write_text(render_ledger(artifact))
+    args.markdown.write_text(render_markdown(artifact, proposed_only, yields, rejections,
+                                             controls))
+    print(f"borrow: {len(artifact)} names into the build artifact and {len(proposed_only)} "
+          f"proposed only, {len(rejections)} refused -> {_display(args.ledger)} and "
+          f"{_display(args.markdown)}")
     for row in yields:
-        print(f"  {row['key']:14s} {row['proposes']:38s} proposed {row['proposed']:5d} "
-              f"accepted {row['accepted']:5d} rejected {row['rejected']:5d}")
+        print(f"  {row['key']:14s} {row['proposes']:36s} proposed {row['proposed']:5d} "
+              f"accepted {row['accepted']:5d} artifact {row['in_artifact']:5d} "
+              f"proposed-only {row['proposed_only']:5d} refused {row['rejected']:4d} "
+              f"runs-refused {row['runs_refused']:5d}")
     for control in controls:
         print(f"  control {control['key']:12s} observed {control['observed']:5d} "
               f"chance mean {control['chance_mean']:6} max {control['chance_max']:4d} "
