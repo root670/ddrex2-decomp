@@ -48,3 +48,39 @@ strings are asserted by `tests/oracle/test_conformance.py`.
 `low_pc` set equals the one printed by the vendor's own dump
 (`orig/usam2.elf.txt`, a gitignored copy of the DWARF dump shipped with the
 community debug-symbol package).
+
+## The generated headers (`emit_headers.py`, ours, not vendored)
+
+`emit_headers.py` is this repository's own renderer; it reads the tree with
+the vendored `Dwarf` above and writes all of `include/**` (`./ddr oracle`):
+
+| path | what it is |
+|---|---|
+| `include/types/<tag>.h` | one named type, defined exactly once: the members with their offsets, the DIE it came from, the units that declare it, and a digest of its layout |
+| `include/types.h` | every named type |
+| `include/src/<unit>.h` | a unit: the shared types it includes, its own anonymous types, its globals, and its prototypes with retail's address and line range |
+
+It renders **C**, where the vendored `dwarf1.py header --cu` renders C++: there a
+use is a bare tag (`_tag_SYS_SCF_WORK *pscf;`), which cannot compile as C —
+CodeWarrior labels every compile unit `LANG_CPLUSPLUS` even for a `.c` file, and
+DWARF 1 resolves typedefs away, so `struct <tag>` is the only spelling the
+evidence offers.  A named type is therefore defined once and shared, and a unit's
+header includes what it uses.  An anonymous type (`@anon0..24`) is DWARF's
+per-unit numbering — the same name is a different type in a different unit — so it
+stays in the unit that declares it as `anon_<N>_<unit>`, and two units that
+declare one *named* type differently fail the oracle (`LayoutDisagreement`) naming
+the type and the member that differs.
+
+Every header is checked by the original compiler, not a host `cc`:
+
+```
+python3 tools/toolchain/compile.py --syntax-only --include include probe.c -c -lang c -O3 -g
+```
+
+`--syntax-only` is `mwccps2 -c -lang c -O3 -g` with the object thrown away — MWCC
+has no parse-only mode (`-nocodegen` skips the front end's own error reporting, so
+it exits 0 on a file it cannot parse).  No promoted unit includes a generated
+header yet: an `#include` changes the unit's debug bytes, because the type DIEs
+record a unit's own declaration is what puts its statements on retail's lines (measured on
+`sys_scf.c`: the same `.text`, but 240 -> 237 bytes of `.debug` and a moved `.line`
+table).

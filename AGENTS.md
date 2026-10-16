@@ -47,9 +47,9 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    `config/usam2/undefined_{syms,funcs}_auto.txt`, `build.ninja`, `build/SLUS_207.11.ld` and
    `objdiff.json` are all outputs of `configure.py`; `./ddr build` regenerates them.  The oracle's
    artifacts — `config/usam2/cus.json`, `config/usam2/debug_chunks.json`,
-   `config/usam2/symbol_addrs.txt`, `config/usam2/unplaced_symbols.txt` and every header under
-   `include/src/**` — are outputs of `./ddr oracle`, which is deterministic: a fresh run reproduces
-   what is committed, byte for byte (`tests/test_cli.py::test_oracle_regenerates_the_committed_artifacts_byte_for_byte`).
+   `config/usam2/symbol_addrs.txt`, `config/usam2/unplaced_symbols.txt` and the generated header
+   tree under `include/**` — are outputs of `./ddr oracle`, which is deterministic: a fresh run
+   reproduces what is committed, byte for byte (`tests/test_cli.py::test_oracle_regenerates_the_committed_artifacts_byte_for_byte`).
    If one of those files is wrong, the fix belongs in the code that emits it, or in
    `config/usam2/ghidra_functions.json` (the oracle's one hand-curated *input*), never in its output.
 
@@ -102,6 +102,24 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    `R_MIPS_GPREL16`; any other kind (a `R_MIPS_HI16`/`R_MIPS_LO16`-addressed access, say) raises
    `Unusable` and stops the build rather than being placed by guesswork.
 
+10. **A generated header compiles as C, and a named type is defined once.**  A use is
+    `struct <tag> *`, `union <tag> *` or `enum <tag>`, never a bare tag: CodeWarrior labels every
+    compile unit `LANG_CPLUSPLUS` even for a `.c` file, and DWARF 1 resolves typedefs away, so
+    `struct <tag>` is the only spelling the evidence offers.  `include/types/<tag>.h` holds the one
+    definition of that type (with its offsets, the DIE it came from, the units that declare it and a
+    digest of its layout), `include/types.h` includes them all, and `include/src/<unit>.h` is one
+    unit: the shared types it includes, its own anonymous types, its globals and its prototypes.  An
+    anonymous type (`@anon0..24` — DWARF's *per-unit* numbering, so the same name is a different
+    type in a different unit) stays in the unit that declares it, as `anon_<N>_<unit>`; a named type
+    whose layout contains one spells that member out inline, and a named type two units declare
+    *differently* fails the oracle by name instead of picking a layout.  Check a header with the
+    original compiler, never a host `cc`:
+    `python3 tools/toolchain/compile.py --syntax-only --include include <probe.c> -c -lang c -O3 -g`.
+    A promoted unit does **not** include one yet: adding an `#include` changes the unit's debug
+    bytes — measured on `sys_scf.c`, the same `.text` but 240 -> 237 bytes of `.debug` and a moved
+    `.line` table, because the unit's own declaration is what puts its statements on retail's lines
+    — so reproducing retail's own include graph is a generator problem, not a missing include.
+
 ## Where things live
 
 | path | what it is |
@@ -112,7 +130,8 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 | `tools/toolchain/**` | fetch/probe/verify the toolchain, and `compile.py`, the `cc` rule's program |
 | `tools/verify/**`, `tools/iso/**` | G1/G2 and the disc-image splice |
 | `config/usam2/**` | the oracle's artifacts and `ghidra_functions.json`, plus the pinned digests |
-| `include/src/**` | one header per translation unit, generated | 
+| `include/types/**`, `include/types.h` | one named type each, defined once — generated |
+| `include/src/**` | one header per translation unit, generated |
 | `src/**` | the C being reconstructed — the only tree written by hand |
 | `docs/` | the spec, the plan, and one document per closed milestone |
 

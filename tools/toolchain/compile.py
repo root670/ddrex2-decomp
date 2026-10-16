@@ -34,8 +34,19 @@ Usage::
     python3 tools/toolchain/compile.py src/sys/sys_scf.c build/src/sys/sys_scf.c.o \\
         --compiler 3.0-011126 -c -lang c -O3 -g
 
-Exit codes: 0 the object was written, 1 the compiler or the assembler failed, 2 the source, a
-manifest, a host tool or a name the object needs is not something this build can place.
+``--syntax-only`` is the second thing this program is: the *compiler's* verdict on whether a
+file is C, for the generated headers (`include/types/*.h`, `include/src/**`) that nothing
+compiles yet:
+
+    python3 tools/toolchain/compile.py --syntax-only --include include probe.c
+
+MWCC has no parse-only mode -- ``-nocodegen`` skips the front end's own error reporting, so
+it exits 0 on a file it cannot parse -- so the check runs the ordinary compile and throws
+the object away.  What is left is the exit status and the compiler's own diagnostics.
+
+Exit codes: 0 the object was written (or ``--syntax-only`` accepted the file), 1 the compiler
+or the assembler failed, 2 the source, a manifest, a host tool or a name the object needs is
+not something this build can place.
 """
 
 from __future__ import annotations
@@ -49,6 +60,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import tempfile
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 for _extra in (str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT / "tools"), str(REPO_ROOT)):
@@ -681,20 +693,73 @@ def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
     return placed
 
 
-def main(argv=None) -> int:
+def syntax_only(source, flags, compiler: str, includes=()) -> int:
+    """Compile ``source`` with the retail compiler and throw the object away.
+
+    Returns the compiler's exit status -- 0 it accepted the file, 1 it did not, with its own
+    diagnostics on stderr -- which is the whole point: a generated header is checked by
+    ``mwccps2 -lang c``, the compiler the units are measured against, not by a host ``cc``.
+    ``includes`` are added with ``-I`` (MWCC wants the directory joined to the flag), and
+    nothing survives the call, so the check cannot be mistaken for a build.
+    """
+    source = pathlib.Path(source).expanduser()
+    if not source.is_file():
+        raise Unusable(f"{source} does not exist")
+    command = list(flags or DEFAULT_FLAGS)
+    for directory in includes:
+        directory = pathlib.Path(directory).expanduser().resolve()
+        if not directory.is_dir():
+            raise Unusable(f"{directory} is not a directory: --include wants one")
+        command.append(f"-I{directory}")
+    compiler_dir = fetch.compiler(compiler)
+    wibo = fetch.wibo()
+    with tempfile.TemporaryDirectory(prefix="cc-syntax-") as scratch:
+        obj = pathlib.Path(scratch) / (source.stem + ".mw.o")
+        try:
+            probe.compile(source, obj, compiler_dir, wibo, command)
+        except probe.CompilerFailed as exc:
+            print(f"compile.py: {exc}", file=sys.stderr)
+            return 1
+    print(f"cc --syntax-only {_display(source)}: accepted as C")
+    return 0
+
+
+def _parser(with_out: bool) -> argparse.ArgumentParser:
+    """The CLI.  Two shapes, because mwcc's flags carry bare values.
+
+    ``--syntax-only`` checks one file and writes nothing, so its parser has one positional
+    and not two: with an optional ``out``, ``-lang c``'s value would be taken for the object
+    path and the flag would reach the compiler stripped of its argument.
+    """
     parser = argparse.ArgumentParser(prog="compile.py", description=__doc__.splitlines()[0])
-    parser.add_argument("source", help="the C source, as configure.py names it (src/...)")
-    parser.add_argument("out", type=pathlib.Path, help="the object to write")
+    parser.add_argument("source",
+                        help="the C source: as configure.py names it (src/...), or any file "
+                             "with --syntax-only")
+    if with_out:
+        parser.add_argument("out", type=pathlib.Path, help="the object to write")
+    parser.add_argument("--syntax-only", action="store_true",
+                        help="ask the compiler whether the source is C and write nothing")
+    parser.add_argument("--include", action="append", default=[], metavar="DIR",
+                        help="add DIR to the compiler's include search path (repeatable; "
+                             "with --syntax-only)")
     parser.add_argument("--compiler", default=fetch.REQUIRED,
                         help=f"the mwccps2 build to use (default: {fetch.REQUIRED})")
     parser.add_argument("--keep", type=pathlib.Path, default=None,
                         help="where to keep the Metrowerks object the compiler writes")
     parser.add_argument("--compare", action="store_true",
                         help="also report each part against the retail image")
+    return parser
+
+
+def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
     # Everything else is a flag for mwccps2 (`-c`, `-lang c`, `-O3`, `-g`, ...), which is
     # why the rule can pass `$flags` after the two paths without a separator.
+    parser = _parser(with_out="--syntax-only" not in argv)
     args, flags = parser.parse_known_args(argv)
     try:
+        if args.syntax_only:
+            return syntax_only(args.source, flags, args.compiler, args.include)
         manifests = Manifests()
         tu = manifests.tu_named(args.source)
         placed = build(tu, args.out, flags or DEFAULT_FLAGS, args.compiler, manifests,

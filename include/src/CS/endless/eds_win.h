@@ -1,158 +1,186 @@
 /*
  * C:\work\usam2\src\CS\endless\eds_win.c
- * MW MIPS C Compiler, overlay main; 25 functions, code 0x00233DE0-0x00236160
- * reconstructed from DWARF 1 by tools/dwarf1.py; offsets in hex
+ * MW MIPS C Compiler, overlay main; 25 functions, code 0x00233de0-0x00236160
+ * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
+ *
+ * C mode: a use is `struct <tag> *`, and the named types this unit needs are
+ * included from include/types/.  `@anonN` is this unit's own numbering, so it
+ * is named here (`anon_<N>_<unit>`) and nowhere else.
  */
+#ifndef DDR_UNIT_src_CS_endless_eds_win_c_H
+#define DDR_UNIT_src_CS_endless_eds_win_c_H
 
-/* forward declarations */
-struct _EDSTEX_INIT_SET; struct _EDSTEX_W; struct _GAME_MODE_W; struct _EDSWIN_W;
-struct _EDSRECORD_W; struct _EDSBREAK_W; struct demo_loop_w; struct play_loop_w;
-struct _EDSSYS_W;
+#include "types/_EDSSYS_W.h"
+#include "types/_EDSTEX_INIT_SET.h"
+#include "types/_EDSTEX_W.h"
+#include "types/_EDSWIN_W.h"
+#include "types/demo_loop_w.h"
+#include "types/play_loop_w.h"
 
-/* types (9) */
-struct demo_loop_w {   // size 0x8008
-    /* 0x000 */ int demo_loop_step;                   // 0x4
-    /* 0x004 */ int loop_ntimes;                      // 0x4
-    /* 0x008 */ unsigned int game_mode_memory[8192];  // 0x8000
+/* anonymous types (7) */
+
+/* anon_0_23 -- @anon0, 0x8008 bytes, eds_win.c (DIE 0x4e2fd) */
+union anon_0_23 {   // size 0x8008
+    /* 0x000 */ struct demo_loop_w demo_loop_w;       // 0x8008
+    /* 0x000 */ struct play_loop_w play_loop_w;       // 0x8008
 };
 
-struct play_loop_w {   // size 0x8008
-    /* 0x000 */ int play_loop_step;                   // 0x4
-    /* 0x004 */ int select_step;                      // 0x4
-    /* 0x008 */ unsigned int game_mode_memory[8192];  // 0x8000
+/* anon_5_23 -- @anon5, 0x4 bytes, eds_win.c (DIE 0x4fb0d) */
+union anon_5_23 {   // size 0x4
+    /* 0x000 */ int id;                               // 0x4
+    /* 0x000 */ float fd;                             // 0x4
 };
 
-struct _GAME_MODE_W {   // size 0x800C
-    /* 0x000 */ int game_mode_step;                   // 0x4
-    /* 0x004 */ union {   // size 0x8008
-        /* 0x000 */ demo_loop_w demo_loop_w;              // 0x8008
-        /* 0x000 */ play_loop_w play_loop_w;              // 0x8008
-    } u;
+/* anon_1_23 -- @anon1, 0x74 bytes, eds_win.c (DIE 0x4e601) */
+struct anon_1_23 {   // size 0x74
+    /* 0x000 */ union anon_5_23 x0;                   // 0x4
+    /* 0x004 */ union anon_5_23 y0;                   // 0x4
+    /* 0x008 */ union anon_5_23 x1;                   // 0x4
+    /* 0x00c */ union anon_5_23 y1;                   // 0x4
+    /* 0x010 */ union anon_5_23 x2;                   // 0x4
+    /* 0x014 */ union anon_5_23 y2;                   // 0x4
+    /* 0x018 */ union anon_5_23 x3;                   // 0x4
+    /* 0x01c */ union anon_5_23 y3;                   // 0x4
+    /* 0x020 */ unsigned int z0;                      // 0x4
+    /* 0x024 */ unsigned int z1;                      // 0x4
+    /* 0x028 */ unsigned int z2;                      // 0x4
+    /* 0x02c */ unsigned int z3;                      // 0x4
+    /* 0x030 */ float s0;                             // 0x4
+    /* 0x034 */ float t0;                             // 0x4
+    /* 0x038 */ float q0;                             // 0x4
+    /* 0x03c */ float s1;                             // 0x4
+    /* 0x040 */ float t1;                             // 0x4
+    /* 0x044 */ float q1;                             // 0x4
+    /* 0x048 */ float s2;                             // 0x4
+    /* 0x04c */ float t2;                             // 0x4
+    /* 0x050 */ float q2;                             // 0x4
+    /* 0x054 */ float s3;                             // 0x4
+    /* 0x058 */ float t3;                             // 0x4
+    /* 0x05c */ float q3;                             // 0x4
+    /* 0x060 */ unsigned char r0;                     // 0x1
+    /* 0x061 */ unsigned char g0;                     // 0x1
+    /* 0x062 */ unsigned char b0;                     // 0x1
+    /* 0x063 */ unsigned char a0;                     // 0x1
+    /* 0x064 */ unsigned char r1;                     // 0x1
+    /* 0x065 */ unsigned char g1;                     // 0x1
+    /* 0x066 */ unsigned char b1;                     // 0x1
+    /* 0x067 */ unsigned char a1;                     // 0x1
+    /* 0x068 */ unsigned char r2;                     // 0x1
+    /* 0x069 */ unsigned char g2;                     // 0x1
+    /* 0x06a */ unsigned char b2;                     // 0x1
+    /* 0x06b */ unsigned char a2;                     // 0x1
+    /* 0x06c */ unsigned char r3;                     // 0x1
+    /* 0x06d */ unsigned char g3;                     // 0x1
+    /* 0x06e */ unsigned char b3;                     // 0x1
+    /* 0x06f */ unsigned char a3;                     // 0x1
+    /* 0x070 */ int flg;                              // 0x4
 };
 
-struct _EDSWIN_W {   // size 0x48
-    /* 0x000 */ float x;                              // 0x4
-    /* 0x004 */ float y;                              // 0x4
-    /* 0x008 */ float sx;                             // 0x4
-    /* 0x00C */ float sy;                             // 0x4
-    /* 0x010 */ int w;                                // 0x4
-    /* 0x014 */ int h;                                // 0x4
-    /* 0x018 */ int sw;                               // 0x4
-    /* 0x01C */ int sh;                               // 0x4
-    /* 0x020 */ float waveY;                          // 0x4
-    /* 0x024 */ unsigned int flag;                    // 0x4
-    /* 0x028 */ unsigned char alpha;                  // 0x1
-    /* 0x029 */ unsigned char salpha;                 // 0x1
-    /* 0x02A */ char step;                            // 0x1
-    /* 0x02B */ char s_step;                          // 0x1
-    /* 0x02C */ unsigned char type;                   // 0x1
-    /* 0x02D */ unsigned char tex_id;                 // 0x1
-    /* 0x02E */ // 0x2 bytes padding
-    /* 0x030 */ _EDSTEX_INIT_SET *def;                // 0x4
-    /* 0x034 */ _EDSTEX_W *tex[5];                    // 0x14
+/* anon_2_23 -- @anon2, 0x48 bytes, eds_win.c (DIE 0x4eb28) */
+struct anon_2_23 {   // size 0x48
+    /* 0x000 */ unsigned long *addr;                  // 0x4
+    /* 0x004 */ unsigned long *pict_addr;             // 0x4
+    /* 0x008 */ unsigned long *clut_addr;             // 0x4
+    /* 0x00c */ // 0x4 bytes padding
+    /* 0x010 */ unsigned long regTex0;                // 0x8
+    /* 0x018 */ unsigned long size;                   // 0x8
+    /* 0x020 */ unsigned long flg;                    // 0x8
+    /* 0x028 */ float rw;                             // 0x4
+    /* 0x02c */ float rh;                             // 0x4
+    /* 0x030 */ unsigned short pict_size;             // 0x2
+    /* 0x032 */ unsigned short clut_size;             // 0x2
+    /* 0x034 */ unsigned short w;                     // 0x2
+    /* 0x036 */ unsigned short h;                     // 0x2
+    /* 0x038 */ unsigned short tbw;                   // 0x2
+    /* 0x03a */ unsigned short tw;                    // 0x2
+    /* 0x03c */ unsigned short th;                    // 0x2
+    /* 0x03e */ unsigned short psm;                   // 0x2
+    /* 0x040 */ unsigned short cpsm;                  // 0x2
+    /* 0x042 */ unsigned short colors;                // 0x2
+    /* 0x044 */ // 0x4 bytes padding
 };
 
-struct _EDSRECORD_W {   // size 0x4
-    /* 0x000 */ int flag;                             // 0x4
+/* anon_3_23 -- @anon3, 0x1c bytes, eds_win.c (DIE 0x4f661) */
+struct anon_3_23 {   // size 0x1c
+    /* 0x000 */ union anon_5_23 x0;                   // 0x4
+    /* 0x004 */ union anon_5_23 y0;                   // 0x4
+    /* 0x008 */ unsigned int z0;                      // 0x4
+    /* 0x00c */ float w;                              // 0x4
+    /* 0x010 */ float h;                              // 0x4
+    /* 0x014 */ unsigned char r0;                     // 0x1
+    /* 0x015 */ unsigned char g0;                     // 0x1
+    /* 0x016 */ unsigned char b0;                     // 0x1
+    /* 0x017 */ unsigned char a0;                     // 0x1
+    /* 0x018 */ int flg;                              // 0x4
 };
 
-struct _EDSBREAK_W {   // size 0x4
-    /* 0x000 */ char music_no;                        // 0x1
-    /* 0x001 */ char BackTex;                         // 0x1
-    /* 0x002 */ char FontVTime;                       // 0x1
-    /* 0x003 */ char MainStep;                        // 0x1
+/* anon_4_23 -- @anon4, 0x24 bytes, eds_win.c (DIE 0x4f86f) */
+struct anon_4_23 {   // size 0x24
+    /* 0x000 */ union anon_5_23 x0;                   // 0x4
+    /* 0x004 */ union anon_5_23 y0;                   // 0x4
+    /* 0x008 */ unsigned int z0;                      // 0x4
+    /* 0x00c */ float w;                              // 0x4
+    /* 0x010 */ float h;                              // 0x4
+    /* 0x014 */ float u;                              // 0x4
+    /* 0x018 */ float v;                              // 0x4
+    /* 0x01c */ unsigned char r0;                     // 0x1
+    /* 0x01d */ unsigned char g0;                     // 0x1
+    /* 0x01e */ unsigned char b0;                     // 0x1
+    /* 0x01f */ unsigned char a0;                     // 0x1
+    /* 0x020 */ int flg;                              // 0x4
 };
 
-struct _EDSSYS_W {   // size 0xB00
-    /* 0x000 */ void (*MainFunc)();                   // 0x4
-    /* 0x004 */ _GAME_MODE_W *game_w;                 // 0x4
-    /* 0x008 */ _EDSWIN_W *work[34];                  // 0x88
-    /* 0x090 */ float sys_timer;                      // 0x4
-    /* 0x094 */ int all_music_max;                    // 0x4
-    /* 0x098 */ int music_max;                        // 0x4
-    /* 0x09C */ int SystemFlag;                       // 0x4
-    /* 0x0A0 */ int GameFlag;                         // 0x4
-    /* 0x0A4 */ char Sorting;                         // 0x1
-    /* 0x0A5 */ char MainStep;                        // 0x1
-    /* 0x0A6 */ char TexInitStep;                     // 0x1
-    /* 0x0A7 */ char WarningStep;                     // 0x1
-    /* 0x0A8 */ char MenuStep;                        // 0x1
-    /* 0x0A9 */ char ReturnGStep;                     // 0x1
-    /* 0x0AA */ char OrderStep;                       // 0x1
-    /* 0x0AB */ char RecordStep;                      // 0x1
-    /* 0x0AC */ char MenuCursor;                      // 0x1
-    /* 0x0AD */ char MenuStCursor[12];                // 0xC
-    /* 0x0B9 */ char OrderCursorX;                    // 0x1
-    /* 0x0BA */ unsigned char OrderCursorY;           // 0x1
-    /* 0x0BB */ unsigned char OldOrderMusic;          // 0x1
-    /* 0x0BC */ char OrderTopID;                      // 0x1
-    /* 0x0BD */ unsigned char PlayTbl[69];            // 0x45
-    /* 0x102 */ // 0x2 bytes padding
-    /* 0x104 */ int Level;                            // 0x4
-    /* 0x108 */ int Combo;                            // 0x4
-    /* 0x10C */ int ComboMax;                         // 0x4
-    /* 0x110 */ int StageMax;                         // 0x4
-    /* 0x114 */ unsigned int ScoreMax[2];             // 0x8
-    /* 0x11C */ short Gauge;                          // 0x2
-    /* 0x11E */ char BreakStage;                      // 0x1
-    /* 0x11F */ unsigned char HelpAlpha;              // 0x1
-    /* 0x120 */ unsigned char CurAlpha;               // 0x1
-    /* 0x121 */ unsigned char MusicNo[69];            // 0x45
-    /* 0x166 */ // 0x2 bytes padding
-    /* 0x168 */ _EDSWIN_W Obj[34];                    // 0x990
-    /* 0xAF8 */ _EDSRECORD_W rwork;                   // 0x4
-    /* 0xAFC */ _EDSBREAK_W bwork;                    // 0x4
+/* anon_6_23 -- @anon6, 0x30 bytes, eds_win.c (DIE 0x4fb6a) */
+struct anon_6_23 {   // size 0x30
+    /* 0x000 */ union anon_5_23 x0;                   // 0x4
+    /* 0x004 */ union anon_5_23 y0;                   // 0x4
+    /* 0x008 */ union anon_5_23 x1;                   // 0x4
+    /* 0x00c */ union anon_5_23 y1;                   // 0x4
+    /* 0x010 */ unsigned int z0;                      // 0x4
+    /* 0x014 */ unsigned int z1;                      // 0x4
+    /* 0x018 */ float w;                              // 0x4
+    /* 0x01c */ float h;                              // 0x4
+    /* 0x020 */ float u;                              // 0x4
+    /* 0x024 */ float v;                              // 0x4
+    /* 0x028 */ unsigned char r0;                     // 0x1
+    /* 0x029 */ unsigned char g0;                     // 0x1
+    /* 0x02a */ unsigned char b0;                     // 0x1
+    /* 0x02b */ unsigned char a0;                     // 0x1
+    /* 0x02c */ int flg;                              // 0x4
 };
 
-struct _EDSTEX_INIT_SET {   // size 0x28
-    /* 0x000 */ float x;                              // 0x4
-    /* 0x004 */ float y;                              // 0x4
-    /* 0x008 */ int w;                                // 0x4
-    /* 0x00C */ int h;                                // 0x4
-    /* 0x010 */ int flag;                             // 0x4
-    /* 0x014 */ int id[5];                            // 0x14
-};
-
-struct _EDSTEX_W {   // size 0x20
-    /* 0x000 */ int x;                                // 0x4
-    /* 0x004 */ int y;                                // 0x4
-    /* 0x008 */ int u;                                // 0x4
-    /* 0x00C */ int v;                                // 0x4
-    /* 0x010 */ int w;                                // 0x4
-    /* 0x014 */ int h;                                // 0x4
-    /* 0x018 */ int z;                                // 0x4
-    /* 0x01C */ int tex_num;                          // 0x4
-};
 
 /* variables (4) */
-static int (*EdsWin_Func[5])(_EDSWIN_W *);                       /* @0x00285200 size 0x14 */
-static _EDSTEX_W EdsMainTextureData[54];                         /* @0x00285220 size 0x6C0 */
-static _EDSTEX_INIT_SET EdsMainWindowData[28];                   /* @0x002858E0 size 0x460 */
-_EDSSYS_W *EDSSYSW;                                              /* @0x002A2254 size 0x4 */
+static int (*EdsWin_Func[5])(struct _EDSWIN_W *);                /* @0x00285200 size 0x14 */
+static struct _EDSTEX_W EdsMainTextureData[54];                  /* @0x00285220 size 0x6c0 */
+static struct _EDSTEX_INIT_SET EdsMainWindowData[28];            /* @0x002858e0 size 0x460 */
+struct _EDSSYS_W *EDSSYSW;                                       /* @0x002a2254 size 0x4 */
 
 /* functions defined (25) */
-void EdsWinSelectAllFrameDisp(unsigned char _alpha);             /* 0x00233DE0-0x00233E6C lines 1572-1582 */
-static void EdsWinSelectFrame(int _x, int _y, unsigned char _alpha, int _size); /* 0x00233E70-0x00234148 lines 1496-1564 */
+void EdsWinSelectAllFrameDisp(unsigned char _alpha);             /* 0x00233de0-0x00233e6c lines 1572-1582 */
+static void EdsWinSelectFrame(int _x, int _y, unsigned char _alpha, int _size); /* 0x00233e70-0x00234148 lines 1496-1564 */
 void EdsWinSelectBox(int _x, int _y, char _flag);                /* 0x00234150-0x00234214 lines 1471-1490 */
-static void EdsOrderCheckList(int _y, char _no, unsigned char _alpha); /* 0x00234220-0x0023434C lines 1443-1463 */
+static void EdsOrderCheckList(int _y, char _no, unsigned char _alpha); /* 0x00234220-0x0023434c lines 1443-1463 */
 static void EdsCheck(int _x, int _y, int _type, unsigned char _alpha); /* 0x00234350-0x00234528 lines 1397-1435 */
-void EdsWinAllDestroy(void);                                     /* 0x00234530-0x002346D8 lines 1358-1376 */
-void EdsWinSetTex(_EDSWIN_W *winw, unsigned char _tex, int _flag); /* 0x002346E0-0x00234764 lines 1337-1345 */
-void EdsWinSetMoveXY(_EDSWIN_W *winw, float x, float y);         /* 0x00234770-0x002347F0 lines 1309-1316 */
-void EdsWinSetXY(_EDSWIN_W *winw, float x, float y);             /* 0x002347F0-0x00234848 lines 1285-1289 */
-void EdsWinSetType(_EDSWIN_W *winw, char type);                  /* 0x00234850-0x002348B4 lines 1270-1277 */
-void EdsWinSetMode(_EDSWIN_W *winw, int mode);                   /* 0x002348C0-0x002349DC lines 1233-1262 */
-static void EdsWinSetDefaultPartsWH(_EDSWIN_W *winw);            /* 0x002349E0-0x00234AC0 lines 1183-1225 */
-static void EdsWinDefaultAllSet(_EDSWIN_W *winw);                /* 0x00234AC0-0x00234B98 lines 1150-1170 */
-static int EdsWinAlphaAnime(_EDSWIN_W *winw);                    /* 0x00234BA0-0x00234E38 lines 1089-1112 */
-static int EdsWinWHMove(_EDSWIN_W *winw);                        /* 0x00234E40-0x00235008 lines 1042-1082 */
-static int EdsWinXYMove(_EDSWIN_W *winw, int speed);             /* 0x00235010-0x00235220 lines 991-1035 */
-static int EdsWinXYWHMove(_EDSWIN_W *winw, int speed);           /* 0x00235220-0x002354C0 lines 934-983 */
-static void EdsWinDisp(_EDSWIN_W *winw);                         /* 0x002354C0-0x00235A18 lines 761-891 */
-static int EdsWinDestroy(_EDSWIN_W *winw);                       /* 0x00235A20-0x00235A80 lines 738-753 */
-static int EdsWinClose(_EDSWIN_W *winw);                         /* 0x00235A80-0x00235C60 lines 670-730 */
-static int EdsWinMain(_EDSWIN_W *winw);                          /* 0x00235C60-0x00235D28 lines 656-662 */
-static int EdsWinOpen(_EDSWIN_W *winw);                          /* 0x00235D30-0x00235F98 lines 571-648 */
-static int EdsWinSet(_EDSWIN_W *winw);                           /* 0x00235FA0-0x00235FAC lines 560-563 */
-_EDSWIN_W *EdsWinGetInit(int id);                                /* 0x00235FB0-0x00236094 lines 512-551 */
-void EdsWinFunc(_EDSWIN_W *winw);                                /* 0x002360A0-0x00236160 lines 479-505 */
+void EdsWinAllDestroy(void);                                     /* 0x00234530-0x002346d8 lines 1358-1376 */
+void EdsWinSetTex(struct _EDSWIN_W *winw, unsigned char _tex, int _flag); /* 0x002346e0-0x00234764 lines 1337-1345 */
+void EdsWinSetMoveXY(struct _EDSWIN_W *winw, float x, float y);  /* 0x00234770-0x002347f0 lines 1309-1316 */
+void EdsWinSetXY(struct _EDSWIN_W *winw, float x, float y);      /* 0x002347f0-0x00234848 lines 1285-1289 */
+void EdsWinSetType(struct _EDSWIN_W *winw, char type);           /* 0x00234850-0x002348b4 lines 1270-1277 */
+void EdsWinSetMode(struct _EDSWIN_W *winw, int mode);            /* 0x002348c0-0x002349dc lines 1233-1262 */
+static void EdsWinSetDefaultPartsWH(struct _EDSWIN_W *winw);     /* 0x002349e0-0x00234ac0 lines 1183-1225 */
+static void EdsWinDefaultAllSet(struct _EDSWIN_W *winw);         /* 0x00234ac0-0x00234b98 lines 1150-1170 */
+static int EdsWinAlphaAnime(struct _EDSWIN_W *winw);             /* 0x00234ba0-0x00234e38 lines 1089-1112 */
+static int EdsWinWHMove(struct _EDSWIN_W *winw);                 /* 0x00234e40-0x00235008 lines 1042-1082 */
+static int EdsWinXYMove(struct _EDSWIN_W *winw, int speed);      /* 0x00235010-0x00235220 lines 991-1035 */
+static int EdsWinXYWHMove(struct _EDSWIN_W *winw, int speed);    /* 0x00235220-0x002354c0 lines 934-983 */
+static void EdsWinDisp(struct _EDSWIN_W *winw);                  /* 0x002354c0-0x00235a18 lines 761-891 */
+static int EdsWinDestroy(struct _EDSWIN_W *winw);                /* 0x00235a20-0x00235a80 lines 738-753 */
+static int EdsWinClose(struct _EDSWIN_W *winw);                  /* 0x00235a80-0x00235c60 lines 670-730 */
+static int EdsWinMain(struct _EDSWIN_W *winw);                   /* 0x00235c60-0x00235d28 lines 656-662 */
+static int EdsWinOpen(struct _EDSWIN_W *winw);                   /* 0x00235d30-0x00235f98 lines 571-648 */
+static int EdsWinSet(struct _EDSWIN_W *winw);                    /* 0x00235fa0-0x00235fac lines 560-563 */
+struct _EDSWIN_W *EdsWinGetInit(int id);                         /* 0x00235fb0-0x00236094 lines 512-551 */
+void EdsWinFunc(struct _EDSWIN_W *winw);                         /* 0x002360a0-0x00236160 lines 479-505 */
+
+#endif /* DDR_UNIT_src_CS_endless_eds_win_c_H */
