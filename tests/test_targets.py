@@ -19,6 +19,7 @@ import dataclasses
 import pathlib
 import re
 import sys
+import tokenize
 
 import pytest
 
@@ -42,6 +43,46 @@ THREADED = (ROOT / "configure.py", ROOT / "ddr") \
     + tuple(sorted((ROOT / "tools" / "oracle").glob("emit_*.py"))) \
     + tuple(sorted((ROOT / "tools" / "verify").glob("*.py"))) \
     + (ROOT / "tools" / "iso" / "reinsert.py", ROOT / "tools" / "toolchain" / "compile.py")
+
+#: Every binary this tree has pointed at *other than* the registered target, and the addresses
+#: its own geometry measured.  As integers, because one file spells `0x21C410` and another
+#: `0x0021C410`.  `SLUS_202.67` is the binary `tools/oracle/dwarf1.py` was vendored against;
+#: `usam2` is the target this tree was retargeted away from (its geometry is the constants at
+#: `f7b6e6e^:configure.py`).  A tool may *document* those numbers; it may not use one.
+FOREIGN_ADDRESSES = {
+    0x400800: "SLUS_202.67's overlay base (dwarf1's old main-image end)",
+    0x21C410: "DDRMAX2 (US)'s lowest game-code PC (borrow.py's GAME_START)",
+    0x1A2700: "DDRMAX2 (US)'s loadable_end", 0x1A2740: "its .debug offset",
+    0x225A0: "its .line size", 0x2430E0: "its .line offset",
+    0x265680: "its .comment offset", 0x2656AC: "its .reginfo offset",
+    0x2656C4: "its section header offset", 0x265854: "its elf_size",
+    0x6B6B80: "its bss_end", 0x2A2680: "its bss base", 0xA0997: "its .debug size",
+    0x92000: "its boot-ELF offset in the disc image",
+}
+
+#: The tools that read a target's binary or its geometry.  `dwarf1.py` is here because it is
+#: where a literal of exactly this kind survived two retargets: the name/path guard above
+#: cannot see a number, and `THREADED` did not include the vendored reader.
+BUILD_PATH_TOOLS = THREADED + (ROOT / "tools" / "oracle" / "dwarf1.py",)
+
+
+def scan_addresses(path):
+    """``(line, literal, why)`` for every *code* literal that is a removed target's address.
+
+    Comments and strings are dropped: an address in a docstring is provenance ("verified
+    against SLUS_202.67"), while an address in code is a measurement of some binary, and the
+    only licensed sources for one are the descriptor and the ELF being read.
+    """
+    hits = []
+    with path.open() as handle:
+        for token in tokenize.generate_tokens(handle.readline):
+            if token.type in (tokenize.COMMENT, tokenize.STRING):
+                continue
+            for literal in re.findall(r"0x[0-9A-Fa-f]+", token.string):
+                value = int(literal, 16)
+                if value in FOREIGN_ADDRESSES:
+                    hits.append((token.start[0], literal, FOREIGN_ADDRESSES[value]))
+    return hits
 
 
 def probe_target(name="probe", **overrides):
@@ -293,3 +334,38 @@ def test_no_tool_spells_a_target_name_or_a_retail_path():
             offenders[path.relative_to(ROOT).as_posix()] = sorted(set(hits))
     assert targets.get().name not in (ROOT / "config").name  # sanity: the scan is live
     assert not offenders, f"target names/paths outside the descriptor: {offenders}"
+
+
+def test_no_tool_spells_a_removed_targets_address():
+    """The guard the literal `0x400800` walked through: names and paths were scanned, numbers
+    were not.
+
+    `tools/oracle/dwarf1.py` decided main-versus-overlay with `0x400800`, a boundary of the
+    binary it was vendored against, so this target inherited that game's address space (four
+    bss globals came out as 16 records at 4 addresses, and splat refuses those).  The guard
+    above cannot see it, because it is a number; this one is checked by integer, since one
+    file spells an address `0x21C410` and another `0x0021C410`.
+    """
+    assert FOREIGN_ADDRESSES and BUILD_PATH_TOOLS  # sanity: the scan is live
+    offenders = {}
+    for path in BUILD_PATH_TOOLS:
+        hits = scan_addresses(path)
+        if hits:
+            offenders[path.relative_to(ROOT).as_posix()] = hits
+    assert not offenders, f"a removed target's address in tool code: {offenders}"
+
+
+def test_the_address_guard_reads_code_and_not_provenance(tmp_path):
+    """A docstring may name an address ("verified against ..."), code may not.
+
+    Without this split the guard would have to allow-list the very documentation that records
+    where the numbers came from -- and an allow-list is what lets the next one through.
+    """
+    provenance = tmp_path / "provenance.py"
+    provenance.write_text('"""Vendored against the binary whose overlay base was 0x400800."""\n'
+                          "KIND = 'DDRMAX2 (US)'\n")
+    assert scan_addresses(provenance) == []
+
+    literal = tmp_path / "literal.py"
+    literal.write_text("# its game start\nGAME_START = 0x0021C410\n")
+    assert scan_addresses(literal) == [(2, "0x0021C410", FOREIGN_ADDRESSES[0x21C410])]
