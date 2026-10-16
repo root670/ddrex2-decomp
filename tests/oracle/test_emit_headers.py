@@ -218,7 +218,9 @@ def test_write_all_writes_the_whole_generated_tree(tmp_path):
     """Nothing extra, nothing missing: the committed tree is exactly what a run writes.
 
     `write_all` returns the translation-unit headers (what `./ddr oracle` counts); the
-    shared tree is checked on disk, which is also what makes a stray file fail here.
+    shared tree is checked on disk, which is also what makes a stray file fail here.  The
+    emitter never deletes, so a target switch that leaves another target's headers behind is
+    *expected* to fail this test until they are removed — that is the check, not noise.
     """
     units = emit_headers.write_all(RETAIL, tmp_path)
     assert len(units) == 57
@@ -227,6 +229,20 @@ def test_write_all_writes_the_whole_generated_tree(tmp_path):
     assert fresh == generated(INCLUDE)
     assert sum(1 for rel in fresh if str(rel).startswith("types/")) == 98
     assert {pathlib.Path("types.h"), pathlib.Path("README.md")} <= fresh
+
+
+def test_every_header_spells_hex_the_same_way():
+    """Upper-case offsets, as every header under `include/` has spelled them.
+
+    The two families are written by two calls (`write_all` writes the unit headers from
+    `_unit_header`, the shared tree from `render_types`), and a run that upper-cased one and
+    not the other would be a tree that reads two ways.  Every offset here is a comment, so
+    this is the only thing that makes the convention real.
+    """
+    lower = re.compile(r"0x[0-9a-f]*[a-f][0-9a-f]*")
+    for path in sorted(INCLUDE.rglob("*.h")):
+        text = path.read_text()
+        assert not lower.search(text), f"{path}: {lower.search(text).group(0)}"
 
 
 def test_committed_headers_match_a_fresh_run(tmp_path):

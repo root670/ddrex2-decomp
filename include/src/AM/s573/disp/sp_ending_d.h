@@ -1,6 +1,6 @@
 /*
  * C:\work\usam2\src\AM\s573\disp\sp_ending_d.c
- * MW MIPS C Compiler, overlay main; 2 functions, code 0x0022ae60-0x0022af30
+ * MW MIPS C Compiler, overlay main; 2 functions, code 0x0022AE60-0x0022AF30
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
@@ -16,7 +16,7 @@
 
 /* anonymous types (2) */
 
-/* anon_0_14 -- @anon0, 0x4 bytes, sp_ending_d.c (DIE 0x3330c) */
+/* anon_0_14 -- @anon0, 0x4 bytes, sp_ending_d.c (DIE 0x3330C) */
 struct anon_0_14 {   // size 0x4
     /* 0x000 */ unsigned char old_stat;               // 0x1
     /* 0x001 */ unsigned char cur_stat;               // 0x1
@@ -24,7 +24,7 @@ struct anon_0_14 {   // size 0x4
     /* 0x003 */ unsigned char warning;                // 0x1
 };
 
-/* anon_1_14 -- @anon1, 0x8 bytes, sp_ending_d.c (DIE 0x35dcf) */
+/* anon_1_14 -- @anon1, 0x8 bytes, sp_ending_d.c (DIE 0x35DCF) */
 struct anon_1_14 {   // size 0x8
     /* 0x000 */ unsigned long number : 16;            // bits 0..15
     /* 0x000 */ unsigned long sector : 24;            // bits 16..39
@@ -33,12 +33,12 @@ struct anon_1_14 {   // size 0x8
 
 
 /* variables (3) */
-struct g_game_w g_game_w;                                        /* @0x00592050 size 0xab544 */
-struct G_SYS_W_ g_sys_w;                                         /* @0x0063d5a0 size 0x90 */
+struct g_game_w g_game_w;                                        /* @0x00592050 size 0xAB544 */
+struct G_SYS_W_ g_sys_w;                                         /* @0x0063D5A0 size 0x90 */
 struct anon_1_14 zzenda_ip2[];                                   /* not allocated */
 
 /* functions defined (2) */
-int special_ending_disp_step(void);                              /* 0x0022ae60-0x0022ae68 lines 1002-1002 */
-void special_ending_disp_init(void *w);                          /* 0x0022ae70-0x0022af30 lines 284-360 */
+int special_ending_disp_step(void);                              /* 0x0022AE60-0x0022AE68 lines 1002-1002 */
+void special_ending_disp_init(void *w);                          /* 0x0022AE70-0x0022AF30 lines 284-360 */
 
 #endif /* DDR_UNIT_src_AM_s573_disp_sp_ending_d_c_H */

@@ -33,12 +33,12 @@ what makes that faithful -- because a per-unit tag must not leak into a shared h
 compiler (`tools/toolchain/compile.py --syntax-only`, which is `mwccps2 -lang c`).
 
 No promoted unit includes one of these yet.  A unit that does gets different debug bytes: its
-own declaration is what puts its statements on the lines retail has them on, so removing it
-moves the unit's `.line` table (measured on `sys_scf.c`: the same `.text`, 240 -> 237 bytes
-of `.debug`, and a `.line` payload with different rows).  Reproducing retail's own includes is
-a generator problem, and `src/sys/sys_scf.c` keeps its hand-written declarations for now.
+own declarations are what put its statements on the lines retail has them on, so replacing
+them with an `#include` moves the unit's `.line` table (and, with it, `.debug`).  Reproducing
+retail's own include graph is a generator problem, and a promoted unit keeps its hand-written
+declarations until that is solved.
 """
-import collections, hashlib, pathlib, re, sys
+import collections, hashlib, pathlib, re, sys, weakref
 
 import dwarf1
 import emit_cus
@@ -62,12 +62,19 @@ README_NAME = "README.md"
 #: `u_long128`, which is the *SDK typedef's* name (`eetypes.h`) and not something
 #: `mwccps2 -lang c` knows: it rejects the name until that header is included.  The keyword
 #: it does take is `__int128`, and the vendor's `u_` says which sign.  Measured: this and the
-#: plain C names are the only fundamental types orig/SLUS_207.11 uses; a `bool`, `label` or
+#: plain C names are the only fundamental types the image the oracle reads uses; a `bool`,
+#: `label` or
 #: `complex` would fail the C gate loudly rather than silently, which is where it would get
 #: its mapping.
 FUNDAMENTAL = {0xa510: "unsigned __int128"}
 
 CACHE = {}
+
+#: `dwarf()`'s path -> repo root, for prose that names the ELF it was generated from.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+#: `{Dwarf: {TU: [anonymous DIE, ...]}}`: the per-ELF anonymous-type index (see `unit_types`).
+_OWNED = weakref.WeakKeyDictionary()
 
 
 class NoSuchUnit(LookupError):
@@ -108,6 +115,35 @@ def header_for(relpath):
 def anonymous(die):
     """DWARF's name for a type it has no name for: absent, or `@anonN`."""
     return not die.name or die.name.startswith("@")
+
+
+def _display(path):
+    """A path as a reader types it: repo-relative when it is inside the repo."""
+    path = pathlib.Path(path)
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def unit_types(dw):
+    """`{TU: [anonymous DIE, ...]}` -- every unit's anonymous types, from one scan.
+
+    A unit's own anonymous aggregates are what its header defines, and asking `.debug` for
+    them once per unit is `O(units x DIEs)`: 57 units over 16,125 DIEs is 919,125 entries
+    today, and the retarget has 249 units.  The index is built once per parsed ELF, in
+    `.debug` order, which is the order the dependency walk and the emitted definitions use.
+    """
+    index = _OWNED.get(dw)
+    if index is None:
+        index = collections.defaultdict(list)
+        for die in sorted(dw.dies.values(), key=lambda d: d.off):
+            if die.tag in AGGREGATES and anonymous(die) and die.cu is not None:
+                owner = dw.tu_of.get(die.cu.off)
+                if owner is not None:
+                    index[owner].append(die)
+        _OWNED[dw] = index
+    return index
 
 
 def _kind(dw, die):
@@ -416,15 +452,13 @@ class Unit:
         the silent mix-up `anon_<N>_<unit>` exists to prevent.
         """
         own = collections.OrderedDict()
-        for die in sorted(self.dw.dies.values(), key=lambda d: d.off):
-            if die.tag in AGGREGATES and anonymous(die) and self.owns(die):
-                tag = self.tag(die)
-                first = own.setdefault(tag, die)
-                if first is not die and \
-                        _signature(self.dw, first) != _signature(self.dw, die):
-                    raise LayoutDisagreement(
-                        f"{tag}: {_where(first)} and {_where(die)} are both this unit's "
-                        f"anonymous types and want the same tag")
+        for die in unit_types(self.dw).get(self.tu, []):
+            tag = self.tag(die)
+            first = own.setdefault(tag, die)
+            if first is not die and _signature(self.dw, first) != _signature(self.dw, die):
+                raise LayoutDisagreement(
+                    f"{tag}: {_where(first)} and {_where(die)} are both this unit's "
+                    f"anonymous types and want the same tag")
         order, done = [], set()
 
         def visit(die):
@@ -548,14 +582,14 @@ def _type_header(dw, name, canonical, dies):
         lines.append("")
     lines += definition(dw, canonical, name, _shared_tagger(dw), inline_anonymous=True)
     lines += ["", f"#endif /* {g} */"]
-    return "\n".join(lines) + "\n"
+    return _uppercase("\n".join(lines) + "\n")
 
 
-def _index_text(names):
+def _index_text(names, elf):
     """`include/types.h`: every named type, for a reader or for a source that wants them all."""
     g = _guard("DDR", "TYPES", "H")
     return "\n".join(
-        ["/* Every named type the oracle recovered from orig/SLUS_207.11, one definition each.",
+        [f"/* Every named type the oracle recovered from {_display(elf)}, one definition each.",
          " *",
          " * Generated by tools/oracle/emit_headers.py; do not hand-edit.  Compile with the",
          " * include root on the search path:",
@@ -665,7 +699,7 @@ def _unit_header(dw, tu):
                 lines.append(f"{prototype(dw, function, unit.specifier)};".ljust(64)
                              + f" /* {_range(dw, function)} */")
     lines += ["", f"#endif /* {g} */"]
-    return "\n".join(lines) + "\n"
+    return _uppercase("\n".join(lines) + "\n")
 
 
 def _name(dw, die):
@@ -718,16 +752,14 @@ def _uppercase(text):
 def render_types(dw):
     """`{tag: text}` -- the canonical definition of every named type, for the shared tree."""
     groups = named_types(dw)
-    return {name: _uppercase(_type_header(dw, name,
-                                          _canonical(dw, name, groups[name]),
-                                          groups[name]))
+    return {name: _type_header(dw, name, _canonical(dw, name, groups[name]), groups[name])
             for name in sorted(groups)}
 
 
 def render(elf_path, cu_substring):
     """The C header for the translation unit whose source path contains `cu_substring`."""
     dw = dwarf(elf_path)
-    return _uppercase(_unit_header(dw, _unit(dw, cu_substring)))
+    return _unit_header(dw, _unit(dw, cu_substring))
 
 
 def _unit(dw, needle):
@@ -752,6 +784,12 @@ def write_all(elf_path, outdir):
     them) and `include/README.md`, plus one header per translation unit under
     `include/src/`.  The return value is the unit headers -- what `./ddr oracle` counts and
     what a caller working unit by unit wants; the shared tree is written alongside them.
+
+    Nothing is deleted: a file from a previous run -- another target's `types/<tag>.h`, a unit
+    this ELF does not have -- stays until someone removes it.  That is on purpose (the set of
+    tags is evidence, and silently deleting a header is how a stale one survives a target
+    switch unnoticed); `tests/oracle/test_emit_headers.py` compares the committed tree with a
+    fresh run, so a leftover file fails the suite instead.
     """
     dw = dwarf(elf_path)
     outdir = pathlib.Path(outdir)
@@ -760,8 +798,8 @@ def write_all(elf_path, outdir):
     types_dir.mkdir(parents=True, exist_ok=True)
     for name in sorted(types):
         (types_dir / f"{name}.h").write_text(types[name])
-    (outdir / INDEX).write_text(_index_text(types))
-    (outdir / README_NAME).write_text(README)
+    (outdir / INDEX).write_text(_index_text(types, elf_path))
+    (outdir / README_NAME).write_text(readme(elf_path))
     units = []
     seen = {}
     for tu in dw.tus:
@@ -776,9 +814,11 @@ def write_all(elf_path, outdir):
     return units
 
 
-README = """# include/
+def readme(elf):
+    """`include/README.md`: what the tree is, and how to check it."""
+    return f"""# include/
 
-Generated from `orig/SLUS_207.11` by `tools/oracle/emit_headers.py` (`./ddr oracle`).
+Generated from `{_display(elf)}` by `tools/oracle/emit_headers.py` (`./ddr oracle`).
 Do not hand-edit anything here: a fresh run overwrites it.
 
 | path | what it is |
@@ -801,11 +841,15 @@ Check a header the way the compiler does, not with a host `cc`:
 
     python3 tools/toolchain/compile.py --syntax-only --include include <probe.c> -c -lang c -O3 -g
 
-No promoted translation unit includes one of these yet: a unit's own declaration is what puts
-its statements on the lines retail has them on, so an `#include` in its place moves the unit's
-`.line` table (measured on `sys_scf.c`: the same `.text`, 240 -> 237 bytes of `.debug`).  So
-reproducing retail's own include graph is a generator problem and not a missing include.
-Hand-written reconstruction lives under `src/`.
+No promoted translation unit includes one of these yet: a unit's own declarations are what put
+its statements on the lines retail has them on, so an `#include` in their place moves the
+unit's `.line` table.  Reproducing retail's own include graph is a generator problem and not a
+missing include.  Hand-written reconstruction lives under `src/`.
+
+A run never deletes anything: point the oracle at another retail ELF and the previous target's
+`types/*.h` and `src/*.h` stay on disk until they are removed.  That is deliberate — the set of
+tags is evidence — and `tests/oracle/test_emit_headers.py` compares the committed tree against
+a fresh run, so a stale file is a failure to clean up, not something to silence.
 """
 
 

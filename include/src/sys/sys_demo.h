@@ -1,6 +1,6 @@
 /*
  * C:\work\usam2\src\sys\sys_demo.c
- * MW MIPS C Compiler, overlay main; 1 functions, code 0x00227b00-0x00227b08
+ * MW MIPS C Compiler, overlay main; 1 functions, code 0x00227B00-0x00227B08
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
@@ -14,7 +14,7 @@
 
 /* anonymous types (1) */
 
-/* anon_0_10 -- @anon0, 0x24 bytes, sys_demo.c (DIE 0x27ef5) */
+/* anon_0_10 -- @anon0, 0x24 bytes, sys_demo.c (DIE 0x27EF5) */
 struct anon_0_10 {   // size 0x24
     /* 0x000 */ unsigned int lsn;                     // 0x4
     /* 0x004 */ unsigned int size;                    // 0x4
@@ -25,9 +25,9 @@ struct anon_0_10 {   // size 0x24
 
 
 /* variables (1) */
-struct _tag_SYS_DEMO_WORK *pdemo;                                /* @0x002a2aa0 size 0x4 */
+struct _tag_SYS_DEMO_WORK *pdemo;                                /* @0x002A2AA0 size 0x4 */
 
 /* functions defined (1) */
-void sysDemoSet(struct _tag_SYS_DEMO_WORK *p);                   /* 0x00227b00-0x00227b08 lines 54-54 */
+void sysDemoSet(struct _tag_SYS_DEMO_WORK *p);                   /* 0x00227B00-0x00227B08 lines 54-54 */
 
 #endif /* DDR_UNIT_src_sys_sys_demo_c_H */

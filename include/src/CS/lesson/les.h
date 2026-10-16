@@ -1,6 +1,6 @@
 /*
  * C:\work\usam2\src\CS\lesson\les.c
- * MW MIPS C Compiler, overlay main; 13 functions, code 0x0021d8d0-0x0021e424
+ * MW MIPS C Compiler, overlay main; 13 functions, code 0x0021D8D0-0x0021E424
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
@@ -25,8 +25,8 @@ struct anon_0_2 {   // size 0x4
     /* 0x003 */ unsigned char warning;                // 0x1
 };
 
-/* anon_1_2 -- @anon1, 0xcc8 bytes, les.c (DIE 0x5783) */
-struct anon_1_2 {   // size 0xcc8
+/* anon_1_2 -- @anon1, 0xCC8 bytes, les.c (DIE 0x5783) */
+struct anon_1_2 {   // size 0xCC8
     /* 0x000 */ unsigned int program_calorie[9];      // 0x24
     /* 0x024 */ unsigned int program_play_count[9];   // 0x24
     /* 0x048 */ unsigned int song_calorie[80][5];     // 0x640
@@ -35,33 +35,33 @@ struct anon_1_2 {   // size 0xcc8
 
 
 /* variables (10) */
-static unsigned char *les_bin_data[5];                           /* @0x0027ebc0 size 0x14 */
-struct _tag_cLes *pLes;                                          /* @0x002a2128 size 0x4 */
-static struct _tag_cModeData ModeData[5];                        /* @0x0027ebe0 size 0x64 */
-struct _tag_cDDR7SaveData SaveData;                              /* @0x002b0470 size 0x5e30 */
-struct g_game_w g_game_w;                                        /* @0x00592050 size 0xab544 */
-unsigned int less_joy_new;                                       /* @0x002a2a7c size 0x4 */
-unsigned int less_joy_trg;                                       /* @0x002a2a80 size 0x4 */
-static struct _tag_cLes _pLes;                                   /* @0x006af500 size 0x284 */
+static unsigned char *les_bin_data[5];                           /* @0x0027EBC0 size 0x14 */
+struct _tag_cLes *pLes;                                          /* @0x002A2128 size 0x4 */
+static struct _tag_cModeData ModeData[5];                        /* @0x0027EBE0 size 0x64 */
+struct _tag_cDDR7SaveData SaveData;                              /* @0x002B0470 size 0x5E30 */
+struct g_game_w g_game_w;                                        /* @0x00592050 size 0xAB544 */
+unsigned int less_joy_new;                                       /* @0x002A2A7C size 0x4 */
+unsigned int less_joy_trg;                                       /* @0x002A2A80 size 0x4 */
+static struct _tag_cLes _pLes;                                   /* @0x006AF500 size 0x284 */
 static short font_anime_pos_y;                                   /* not allocated size 0x2 */
 static short font_anime_pos_x;                                   /* not allocated size 0x2 */
 
 /* functions referenced (1) */
-void DecodeFilepackData_Th(void *);                              /* @0x00180b60 */
+void DecodeFilepackData_Th(void *);                              /* @0x00180B60 */
 
 /* functions defined (13) */
-int is_can_play_last_section(int level);                         /* 0x0021d8d0-0x0021d920 lines 543-561 */
-void SetLessonState(int level, int section, int val);            /* 0x0021d920-0x0021d93c lines 532-536 */
-int GetLessonState(int level, int section);                      /* 0x0021d940-0x0021d95c lines 528-529 */
-static int init_tex(void);                                       /* 0x0021d960-0x0021dbcc lines 430-522 */
-void SetPreRead_Les(void);                                       /* 0x0021dbd0-0x0021dc0c lines 423-426 */
-static int init_kanji(void);                                     /* 0x0021dc10-0x0021dcf4 lines 390-419 */
-static void close_func(void);                                    /* 0x0021dd00-0x0021ddfc lines 329-361 */
-static void open_func(void);                                     /* 0x0021de00-0x0021df9c lines 268-317 */
-static void init_func(void);                                     /* 0x0021dfa0-0x0021e0ec lines 231-265 */
-void Term_Les(void);                                             /* 0x0021e0f0-0x0021e120 lines 212-223 */
-int Step_Les(void);                                              /* 0x0021e120-0x0021e378 lines 170-208 */
-void Init_Les(void);                                             /* 0x0021e380-0x0021e3fc lines 130-166 */
-void SetStep_Les(int _step, int _next_mode);                     /* 0x0021e400-0x0021e424 lines 104-109 */
+int is_can_play_last_section(int level);                         /* 0x0021D8D0-0x0021D920 lines 543-561 */
+void SetLessonState(int level, int section, int val);            /* 0x0021D920-0x0021D93C lines 532-536 */
+int GetLessonState(int level, int section);                      /* 0x0021D940-0x0021D95C lines 528-529 */
+static int init_tex(void);                                       /* 0x0021D960-0x0021DBCC lines 430-522 */
+void SetPreRead_Les(void);                                       /* 0x0021DBD0-0x0021DC0C lines 423-426 */
+static int init_kanji(void);                                     /* 0x0021DC10-0x0021DCF4 lines 390-419 */
+static void close_func(void);                                    /* 0x0021DD00-0x0021DDFC lines 329-361 */
+static void open_func(void);                                     /* 0x0021DE00-0x0021DF9C lines 268-317 */
+static void init_func(void);                                     /* 0x0021DFA0-0x0021E0EC lines 231-265 */
+void Term_Les(void);                                             /* 0x0021E0F0-0x0021E120 lines 212-223 */
+int Step_Les(void);                                              /* 0x0021E120-0x0021E378 lines 170-208 */
+void Init_Les(void);                                             /* 0x0021E380-0x0021E3FC lines 130-166 */
+void SetStep_Les(int _step, int _next_mode);                     /* 0x0021E400-0x0021E424 lines 104-109 */
 
 #endif /* DDR_UNIT_src_CS_lesson_les_c_H */

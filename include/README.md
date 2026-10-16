@@ -23,8 +23,12 @@ Check a header the way the compiler does, not with a host `cc`:
 
     python3 tools/toolchain/compile.py --syntax-only --include include <probe.c> -c -lang c -O3 -g
 
-No promoted translation unit includes one of these yet: a unit's own declaration is what puts
-its statements on the lines retail has them on, so an `#include` in its place moves the unit's
-`.line` table (measured on `sys_scf.c`: the same `.text`, 240 -> 237 bytes of `.debug`).  So
-reproducing retail's own include graph is a generator problem and not a missing include.
-Hand-written reconstruction lives under `src/`.
+No promoted translation unit includes one of these yet: a unit's own declarations are what put
+its statements on the lines retail has them on, so an `#include` in their place moves the
+unit's `.line` table.  Reproducing retail's own include graph is a generator problem and not a
+missing include.  Hand-written reconstruction lives under `src/`.
+
+A run never deletes anything: point the oracle at another retail ELF and the previous target's
+`types/*.h` and `src/*.h` stay on disk until they are removed.  That is deliberate — the set of
+tags is evidence — and `tests/oracle/test_emit_headers.py` compares the committed tree against
+a fresh run, so a stale file is a failure to clean up, not something to silence.
