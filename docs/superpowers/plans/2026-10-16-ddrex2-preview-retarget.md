@@ -141,7 +141,7 @@
 
 Port the M3 work already briefed, re-pointed at this target (four times the TUs make each item load-bearing):
 - C-mode, centralised type headers across 249 TUs (the in-flight Task 1 work is target-generic);
-- a `ddr diff` basis built from retail bytes for the unit under edit (in-flight Task 2 brief);
+- a **`ddr diff` basis built from retail bytes for the unit under edit**: a target object whose `.text` is the retail bytes of the symbol under work, emitted so objdiff pairs it against our object, plus a verb that prints what it compared. Rationale: `./ddr verify --tu` gates a whole translation unit, so iterating on one function needs a per-function percentage — and for an unpromoted unit the split's unresolved `jal` targets would otherwise depress the score for a legitimate reason;
 - a calibrated promotion batch, recorded in `docs/milestones/ddrex2p-batch-one.md` with throughput measured honestly.
 
 Acceptance for the batch: each promoted TU green on `.text` + `.debug` + `.line`, G1 and G3 unmoved, and the batch's throughput written down rather than asserted.
