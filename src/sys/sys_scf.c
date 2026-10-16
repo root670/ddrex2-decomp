@@ -12,11 +12,11 @@ struct _tag_SYS_SCF_WORK {
 };
 
 /* The two calls sysInitScf makes have no compile unit of their own in retail DWARF, so
- * the only names the evidence offers are the oracle's address-derived ones in
- * config/usam2/symbol_addrs.txt; both return the value stored into a pscf field.
- */
-int func_0021BF20(struct _tag_SYS_SCF_WORK *p);
-int func_0021BDD0(void);
+ * their names come from the SDK archive ledger (libscf.a's member symbol table, sizes
+ * validated against the split bounds -- config/usam2/library-names.md, provenance sdk152);
+ * both return the value stored into a pscf field. */
+int sceScfGetDateNotation(struct _tag_SYS_SCF_WORK *p);
+int sceScfGetLanguage(void);
 
 /* The work object every caller of this unit shares. */
 struct _tag_SYS_SCF_WORK *pscf;
@@ -26,10 +26,10 @@ void sysInitScf(struct _tag_SYS_SCF_WORK *p) {
      * store of p and the call to the first of them are one statement pair on one retail
      * line, because mwcc schedules the store into the call's delay slot. */
 
-    pscf = p; pscf->date_notation = func_0021BF20(p);
+    pscf = p; pscf->date_notation = sceScfGetDateNotation(p);
 
     /* The second field, from the function that owns it. */
-    pscf->language = func_0021BDD0();
+    pscf->language = sceScfGetLanguage();
 
 }
 

@@ -1,0 +1,434 @@
+"""``borrow``: catalogue the corpora, propose names, and accept only what validates.
+
+The rules under test are the ones the survey measured: a corpus that publishes bytes is
+checked word for word (after relocation masking), a corpus that publishes sizes is checked
+against our own function bounds, and a name that is only *plausible* -- a single size that
+happens to match, an alignment that could have landed in two places -- does not enter the
+ledger.
+"""
+import pathlib, sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools"))
+
+from sdk import borrow, match  # noqa: E402
+
+RECVX_SAMPLE = """\
+// a corpus's own symbol file, in splat syntax
+D_20000010                     = 0x20000010; // ignore:true
+.L002CAEE4                     = 0x002CAEE4; // type:label
+_root                          = 0x001000B8; // type:label visibility:local
+sceGsResetGraph                = 0x001000C0; // size:0x110
+sceGsGetGParam                 = 0x001001D0; // size:0xC
+_loopMulMatrix                 = 0x001029EC; // visibility:local
+write                          = 0x0010C080; // size:0x48
+main                           = 0x0012B0A0; // size:0x44
+sceVu0ApplyMatrix              = 0x0012B0F0; // size:0x58
+"""
+
+
+def words(*values):
+    return b"".join(value.to_bytes(4, "little") for value in values)
+
+
+def from_bytes(records, blobs):
+    """The candidate callback ``borrow`` takes: address -> bytes."""
+    return {record["address"]: blobs[record["address"]] for record in records}
+
+
+# ---------------------------------------------------------------------------
+# the corpora catalogue
+# ---------------------------------------------------------------------------
+
+
+def test_corpora_records_every_surveyed_source_with_its_licence():
+    catalogue = {entry["key"]: entry for entry in borrow.corpora()}
+    assert {"recvx", "godhand", "sly1", "ps2sdk", "ghidra-patterns", "mvc2",
+            "oni2", "sdk152"} <= set(catalogue)
+    assert catalogue["recvx"]["licence"] == "MIT"
+    assert catalogue["godhand"]["licence"] == "MIT"
+    assert catalogue["sly1"]["licence"] == "CC0-1.0"
+    assert catalogue["ps2sdk"]["licence"] == "AFL-2.0"
+    assert catalogue["ghidra-patterns"]["licence"] == "Apache-2.0"
+    for key, entry in catalogue.items():
+        assert entry["publishes"], key
+        assert entry["entry_point"], key
+
+
+def test_corpora_refuses_to_copy_from_the_corpus_without_a_licence():
+    """mvc2-ps2-decomp declares no licence: nothing may be copied out of it."""
+    entry = {e["key"]: e for e in borrow.corpora()}["mvc2"]
+    assert entry["licence"] is None
+    assert entry["copyable"] is False
+    assert "no licence" in entry["note"].lower()
+
+
+def test_corpora_that_publish_sizes_say_so():
+    catalogue = {entry["key"]: entry for entry in borrow.corpora()}
+    assert catalogue["recvx"]["sizes"] is True
+    assert catalogue["recvx"]["bytes"] is False
+    assert catalogue["godhand"]["sizes"] is False
+    assert catalogue["oni2"]["bytes"] is True and catalogue["oni2"]["sizes"] is True
+    assert catalogue["sdk152"]["sizes"] is True
+
+
+# ---------------------------------------------------------------------------
+# reading a corpus's symbol file
+# ---------------------------------------------------------------------------
+
+
+def test_parse_splat_symbols_keeps_only_sized_functions_of_the_library_region():
+    records = borrow.parse_splat_symbols(RECVX_SAMPLE, game_start=0x0012B0A0)
+    names = [r["name"] for r in records]
+    assert names == ["sceGsResetGraph", "sceGsGetGParam", "write"]
+    assert records[0]["size"] == 0x110
+    assert records[0]["address"] == 0x001000C0
+
+
+def test_parse_splat_symbols_skips_ignored_labels_unsized_and_out_of_range_lines():
+    records = borrow.parse_splat_symbols(RECVX_SAMPLE, game_start=0x0012B0A0)
+    names = {r["name"] for r in records}
+    assert "D_20000010" not in names          # ignore:true
+    assert ".L002CAEE4" not in names           # type:label
+    assert "_root" not in names                # type:label
+    assert "_loopMulMatrix" not in names       # no size published
+    assert "main" not in names                 # at the corpus's game start, not library code
+    assert "sceVu0ApplyMatrix" not in names    # past the game start
+
+
+def test_parse_function_names_counts_only_marked_functions():
+    """Corroboration is about functions: a sized data symbol is not one."""
+    text = ("sceGsResetGraph = 0x001000C0; // type:func\n"
+            "g_table = 0x002483B8; // size:0x9\n"
+            ".L002CAEE4 = 0x002CAEE4; // type:label\n"
+            "D_20000010 = 0x20000010; // ignore:true\n")
+    assert borrow.parse_function_names(text) == {"sceGsResetGraph"}
+
+
+def test_parse_source_paths_attributes_a_name_to_its_sdk_source():
+    """sly1 labels its entries with the SDK source file the function came from."""
+    text = ("////////////////////////////////////////\n"
+            "// /usr/local/sce/ee/gcc/src/newlib/libm/math/wf_fmod.c\n"
+            "////////////////////////////////////////\n"
+            "fmodf = 0x2058a0; // type:func\n"
+            "\n"
+            "////////////////////////////////////////\n"
+            "// libdma.c\n"
+            "////////////////////////////////////////\n"
+            "memclr = 0x202768; // type:func\n")
+    assert borrow.parse_source_paths(text) == {
+        "fmodf": "/usr/local/sce/ee/gcc/src/newlib/libm/math/wf_fmod.c",
+        "memclr": "libdma.c"}
+
+
+# ---------------------------------------------------------------------------
+# proposing from a sequence of sizes
+# ---------------------------------------------------------------------------
+
+
+def test_align_accepts_a_unique_run_of_three():
+    ours = [0x10, 0x20, 0x30, 0x40]
+    theirs = [0x20, 0x30, 0x40]
+    blocks, rejected = borrow.align(ours, theirs)
+    assert blocks == [(1, 0, 3)]
+    assert rejected == []
+
+
+def test_align_rejects_a_single_size_match():
+    """A lone size equality is the coincidence the survey warns about."""
+    blocks, rejected = borrow.align([0x10, 0x20, 0x30], [0x20, 0x99, 0x88])
+    assert blocks == []
+    assert [r["reason"] for r in rejected] == ["isolated"]
+
+
+def test_align_rejects_a_run_that_could_have_landed_twice():
+    ours = [0x10, 0x20, 0x30, 0x10, 0x20, 0x30]
+    theirs = [0x10, 0x20, 0x30]
+    blocks, rejected = borrow.align(ours, theirs)
+    assert blocks == []
+    assert [r["reason"] for r in rejected] == ["ambiguous"]
+
+
+def test_align_keeps_the_min_run_that_was_measured():
+    ours = [4, 4, 8, 0x1C]
+    theirs = [4, 8, 0x1C]
+    blocks, _ = borrow.align(ours, theirs, min_run=3)
+    assert blocks == [(1, 0, 3)]
+
+
+def test_run_proposals_name_every_function_in_the_run():
+    ours = [{"symbol": "func_00100008", "address": 0x100008, "size": 0x10},
+            {"symbol": "func_00100018", "address": 0x100018, "size": 0x20},
+            {"symbol": "func_00100038", "address": 0x100038, "size": 0x30}]
+    theirs = [{"name": "sceA", "address": 0x1000, "size": 0x10},
+              {"name": "sceB", "address": 0x1010, "size": 0x20},
+              {"name": "sceC", "address": 0x1030, "size": 0x30}]
+    proposals, refused = borrow.run_proposals(ours, theirs, source="recvx")
+    assert refused == []
+    assert [(p["address"], p["name"]) for p in proposals] == [
+        (0x100008, "sceA"), (0x100018, "sceB"), (0x100038, "sceC")]
+    assert {p["tier"] for p in proposals} == {"run"}
+    assert proposals[0]["evidence"]["run"] == 3
+    assert proposals[0]["evidence"]["source_address"] == 0x1000
+
+
+def test_run_proposals_report_the_size_matches_that_were_not_evidence():
+    """A lone size equality is refused, and the refusal says which function it was about."""
+    ours = [{"symbol": "func_00100008", "address": 0x100008, "size": 0x10},
+            {"symbol": "func_00100018", "address": 0x100018, "size": 0x20}]
+    theirs = [{"name": "sceA", "address": 0x1000, "size": 0x20},
+              {"name": "sceB", "address": 0x1040, "size": 0x99}]
+    proposals, refused = borrow.run_proposals(ours, theirs, source="recvx")
+    assert proposals == []
+    assert [(r["source"], r["reason"], r["address"], r["names"]) for r in refused] == [
+        ("recvx", "isolated", 0x100018, ["sceA"])]
+
+
+# ---------------------------------------------------------------------------
+# proposing from bytes
+# ---------------------------------------------------------------------------
+
+
+def test_byte_proposals_are_size_exact_and_masked():
+    ours = [{"symbol": "func_00100288", "address": 0x100288, "size": 0x30}]
+    theirs = [{"name": "sceGsResetGraph", "address": 0x4A0000, "size": 0x30}]
+    our_bytes = {0x100288: words(0x27BDFFF0, 0x3C020021, 0x2442C410, 0xAC820000,
+                                 0x03E00008, 0x00000000, 0x00000000, 0x00000000,
+                                 0x00000000, 0x00000000, 0x00000000, 0x00000000)}
+    their_bytes = {0x4A0000: words(0x27BDFFF0, 0x3C02004A, 0x2442A0C0, 0xAC820000,
+                                   0x03E00008, 0x00000000, 0x00000000, 0x00000000,
+                                   0x00000000, 0x00000000, 0x00000000, 0x00000000)}
+    proposals, rejected = borrow.byte_proposals(ours, theirs, our_bytes, their_bytes,
+                                                source="oni2")
+    assert rejected == []
+    assert [(p["name"], p["tier"]) for p in proposals] == [("sceGsResetGraph", "bytes")]
+    assert proposals[0]["evidence"]["masked_words"] == 2
+    assert proposals[0]["evidence"]["exact"] is False
+
+
+def test_byte_proposals_reject_a_different_size():
+    ours = [{"symbol": "func_00100288", "address": 0x100288, "size": 0x30}]
+    theirs = [{"name": "sceGsResetGraph", "address": 0x4A0000, "size": 0x2C}]
+    blob = words(*([0x27BDFFF0] * 12))
+    proposals, rejected = borrow.byte_proposals(
+        ours, theirs, {0x100288: blob}, {0x4A0000: blob}, source="oni2")
+    assert proposals == [] and rejected == []
+
+
+def test_byte_proposals_reject_candidates_that_disagree_about_the_name():
+    ours = [{"symbol": "func_00100288", "address": 0x100288, "size": 0x30}]
+    theirs = [{"name": "sceOne", "address": 0x4A0000, "size": 0x30},
+              {"name": "sceTwo", "address": 0x4B0000, "size": 0x30}]
+    blob = words(*([0x27BDFFF0] * 12))
+    proposals, rejected = borrow.byte_proposals(
+        ours, theirs, {0x100288: blob},
+        {0x4A0000: blob, 0x4B0000: blob}, source="oni2")
+    assert proposals == []
+    assert rejected[0]["reason"] == "names disagree"
+    assert rejected[0]["names"] == ["sceOne", "sceTwo"]
+
+
+# ---------------------------------------------------------------------------
+# deciding between sources
+# ---------------------------------------------------------------------------
+
+
+def test_decide_refuses_a_tie_that_disagrees():
+    """Equally strong sources naming one address differently: nothing is renamed."""
+    proposals = [
+        {"address": 0x100288, "symbol": "func_00100288", "size": 0x30, "name": "sceAlpha",
+         "tier": "run", "source": "recvx", "evidence": {"run": 3}},
+        {"address": 0x100288, "symbol": "func_00100288", "size": 0x30, "name": "sceBeta",
+         "tier": "run", "source": "sdk152:libgp.a", "evidence": {"run": 3}},
+    ]
+    accepted, rejected = borrow.decide(proposals)
+    assert accepted == []
+    assert rejected[0]["reason"] == "conflict"
+    assert rejected[0]["names"] == ["sceAlpha", "sceBeta"]
+
+
+def test_decide_prefers_the_byte_tier_and_keeps_the_other_as_corroboration():
+    proposals = [
+        {"address": 0x100288, "symbol": "func_00100288", "size": 0x30, "name": "sceAlpha",
+         "tier": "run", "source": "recvx", "evidence": {"run": 5}},
+        {"address": 0x100288, "symbol": "func_00100288", "size": 0x30, "name": "sceAlpha",
+         "tier": "bytes", "source": "oni2", "evidence": {"whole_function": True}},
+    ]
+    accepted, rejected = borrow.decide(proposals)
+    assert rejected == []
+    assert accepted[0]["source"] == "oni2"
+    assert accepted[0]["tier"] == "bytes"
+    assert accepted[0]["also"] == ["recvx"]
+
+
+def test_decide_prefers_a_long_run_to_a_short_one_and_records_the_loser():
+    """A run of 37 beats a run of 3: the chance-level yield lives in the short runs."""
+    proposals = [
+        {"address": 0x100288, "symbol": "func_00100288", "size": 0x30, "name": "sceVu0AddVector",
+         "tier": "run", "source": "recvx", "evidence": {"run": 37}},
+        {"address": 0x100288, "symbol": "func_00100288", "size": 0x30, "name": "sceGpSetAbe",
+         "tier": "run", "source": "sdk152:libgp.a", "evidence": {"run": 3}},
+    ]
+    accepted, rejected = borrow.decide(proposals)
+    assert rejected == []
+    assert accepted[0]["name"] == "sceVu0AddVector"
+    assert accepted[0]["contested"] == ["sceGpSetAbe (sdk152:libgp.a)"]
+
+
+def test_decide_rejects_a_name_another_symbol_already_carries():
+    proposals = [{"address": 0x100288, "symbol": "func_00100288", "size": 0x30,
+                  "name": "sysInitScf", "tier": "run", "source": "recvx", "evidence": {}}]
+    accepted, rejected = borrow.decide(proposals, taken={"sysInitScf": 0x0021C420})
+    assert accepted == []
+    assert rejected[0]["reason"] == "name taken"
+
+
+def test_disambiguate_gives_repeated_names_the_ledgers_own_suffix():
+    """A routine linked into several members is several functions with one name."""
+    rows = [{"address": 0x200, "name": "kCopy"}, {"address": 0x100, "name": "kCopy"},
+            {"address": 0x300, "name": "sceA"}]
+    out, renamed = borrow.disambiguate(rows)
+    assert [(r["address"], r["name"]) for r in out] == [
+        (0x100, "kCopy"), (0x200, "kCopy_1"), (0x300, "sceA")]
+    assert renamed[0]["borrowed_as"] == "kCopy"
+
+
+def test_disambiguate_skips_a_suffix_the_tree_already_carries():
+    rows = [{"address": 0x100, "name": "kCopy"}, {"address": 0x200, "name": "kCopy"}]
+    out, _ = borrow.disambiguate(rows, taken={"kCopy_1"})
+    assert [r["name"] for r in out] == ["kCopy", "kCopy_2"]
+
+
+# ---------------------------------------------------------------------------
+# validation
+# ---------------------------------------------------------------------------
+
+
+def test_validate_accepts_a_size_that_matches_our_bounds():
+    blob = words(0x27BDFFF0, 0x03E00008)
+    result = borrow.validate("sceGsGetGParam", len(blob), blob)
+    assert result["accepted"] is True
+    assert result["evidence"]["bytes"] is None
+    assert "size alone" in result["reason"]
+
+
+def test_validate_rejects_a_size_mismatch():
+    blob = words(0x27BDFFF0, 0x03E00008)
+    result = borrow.validate("sceGsGetGParam", 0x30, blob)
+    assert result["accepted"] is False
+    assert "size mismatch" in result["reason"]
+    assert "0x30" in result["reason"] and "0x8" in result["reason"]
+
+
+def test_validate_rejects_published_bytes_that_differ():
+    ours = words(0x27BDFFF0, 0x03E00008)
+    theirs = words(0x27BDFFF0, 0x00000025)
+    result = borrow.validate("sceGsGetGParam", len(ours), ours, published_bytes=theirs)
+    assert result["accepted"] is False
+    assert "word 1" in result["reason"]
+
+
+def test_validate_accepts_published_bytes_that_differ_only_by_relocation():
+    ours = words(0x3C020021, 0x03E00008)
+    theirs = words(0x3C02004A, 0x03E00008)
+    result = borrow.validate("sceGsGetGParam", len(ours), ours, published_bytes=theirs)
+    assert result["accepted"] is True
+    assert result["evidence"]["masked_words"] == 1
+
+
+def test_validate_checks_only_the_published_window():
+    """A corpus from another revision keeps the head of a function and not its body."""
+    ours = words(0x27BDFFF0, 0x3C020021, 0x00000021, 0x03E00008)
+    theirs = words(0x27BDFFF0, 0x3C02004A, 0x00000023, 0x03E00008)
+    assert borrow.validate("sceA", len(ours), ours, published_bytes=theirs,
+                           window=8)["accepted"] is True
+    assert borrow.validate("sceA", len(ours), ours, published_bytes=theirs,
+                           window=12)["accepted"] is False
+
+
+def test_validate_rejects_a_published_digest_that_does_not_match():
+    import hashlib
+    blob = words(0x27BDFFF0, 0x03E00008)
+    result = borrow.validate("sceGsGetGParam", len(blob), blob,
+                             published_digest=hashlib.sha256(b"other").hexdigest())
+    assert result["accepted"] is False
+    assert "digest" in result["reason"]
+
+
+def test_validate_rejects_a_name_that_is_not_an_identifier():
+    blob = words(0x27BDFFF0)
+    result = borrow.validate("$L0", len(blob), blob)
+    assert result["accepted"] is False
+    assert "identifier" in result["reason"]
+
+
+def test_validate_rejects_a_size_that_is_not_a_positive_multiple_of_four():
+    result = borrow.validate("sceGsGetGParam", 0x6, words(0x27BDFFF0, 0x03E00008)[:6])
+    assert result["accepted"] is False
+    assert "multiple of four" in result["reason"]
+
+
+def test_taken_names_ignores_the_names_a_previous_borrow_placed(tmp_path):
+    """The borrow step is idempotent: its own ledger must not refuse the names it derived."""
+    ledger = tmp_path / "symbol_addrs.txt"
+    ledger.write_text(
+        "sysInitScf = 0x0021C420; // type:func size:0x30 provenance:dwarf\n"
+        "sceGsResetGraph = 0x00100288; // type:func size:0x0 provenance:oni2\n"
+        "sceScfGetLanguage = 0x0021BDD0; // type:func size:0x0 provenance:sdk152:libscf.a\n")
+    assert borrow.taken_names(ledger) == {"sysInitScf": 0x0021C420}
+
+
+# ---------------------------------------------------------------------------
+# the ledger
+# ---------------------------------------------------------------------------
+
+
+def test_the_ledger_round_trips_through_its_own_parser():
+    records = [{"name": "sceGsResetGraph", "address": 0x00100288, "size": 0x190,
+                "source": "oni2", "tier": "bytes"},
+               {"name": "_sceSDC", "address": 0x00103DD0, "size": 0x10,
+                "source": "recvx", "tier": "run"}]
+    text = borrow.render_ledger(records)
+    assert "sceGsResetGraph = 0x00100288; // type:func size:0x190 provenance:oni2" in text
+    parsed = borrow.parse_ledger(text)
+    assert [(r["name"], r["address"], r["source"], r["size"]) for r in parsed] == [
+        ("sceGsResetGraph", 0x00100288, "oni2", 0x190),
+        ("_sceSDC", 0x00103DD0, "recvx", 0x10)]
+
+
+def test_the_ledger_carries_the_size_the_validation_used():
+    """The size check must stay live in the build, not be dropped into a comment."""
+    text = borrow.render_ledger([{"name": "sceGsResetGraph", "address": 0x00100288,
+                                  "size": 0x190, "source": "oni2", "tier": "bytes"}])
+    line = [l for l in text.splitlines() if l.startswith("sceGsResetGraph")][0]
+    assert "size:0x190 " in line
+    assert "corpus_size:" not in line
+
+
+def test_the_ledger_provenance_is_one_boolean_token():
+    """``configure.py`` hands the comment to splat as ``provenance=KEY``: no colons."""
+    text = borrow.render_ledger([{"name": "sceDmaGetEnv", "address": 0x00101CD8,
+                                  "size": 0x40, "source": "sdk152:libdma.a", "tier": "run"}])
+    line = [l for l in text.splitlines() if l.startswith("sceDmaGetEnv")][0]
+    assert "provenance:sdk152 " in line
+    assert "libdma.a" not in line
+
+
+def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
+    """The repository's ledger and library-names.md are this tool's own output.
+
+    Skipped when a corpus is not on this machine (or is not reachable): the committed
+    artifacts are evidence about the corpora, so they can only be re-derived where the
+    evidence is.
+    """
+    import pytest
+    for key in ("oni2", "sdk152", "recvx"):
+        if not borrow.corpus_records(key, borrow.CACHE)[0]:
+            pytest.skip(f"{key} is unreachable on this machine")
+    for key in ("godhand", "sly1"):
+        if borrow.corpus_text(key, borrow.CACHE) is None:
+            pytest.skip(f"{key} is unreachable on this machine")
+    ledger, markdown = tmp_path / "borrowed_symbols.txt", tmp_path / "library-names.md"
+    assert borrow.main(["--ledger", str(ledger), "--markdown", str(markdown)]) == 0
+    assert ledger.read_bytes() == borrow.LEDGER.read_bytes()
+    assert markdown.read_bytes() == borrow.MARKDOWN.read_bytes()

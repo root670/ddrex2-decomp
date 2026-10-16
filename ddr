@@ -10,7 +10,10 @@ tools.  Nothing is re-implemented in this file; the one decision it makes is *wh
 those to call, in which order, and what to print.
 
     ./ddr oracle            regenerate the symbol/CU/chunk/header artifacts from the retail
-                            ELF (deterministic: a fresh run reproduces what is committed)
+                            ELF (deterministic: a fresh run reproduces what is committed),
+                            applying config/usam2/borrowed_symbols.txt -- the library names
+                            tools/sdk/borrow.py validated against the corpora -- to the
+                            symbol ledger
     ./ddr build             configure (manifests -> splat inputs -> build.ninja) then ninja
     ./ddr verify            G1: orig/SLUS_207.11 must be the pinned retail binary, and
                             out/SLUS_207.11 must equal it
@@ -64,6 +67,7 @@ CHECKSUMS = CONFIG_DIR / "checksums.txt"
 CUS = CONFIG_DIR / "cus.json"
 CHUNKS = CONFIG_DIR / "debug_chunks.json"
 SYMBOLS = CONFIG_DIR / "symbol_addrs.txt"
+BORROWED = CONFIG_DIR / "borrowed_symbols.txt"
 UNPLACED = CONFIG_DIR / "unplaced_symbols.txt"
 INCLUDE = REPO_ROOT / "include"
 BUILT = REPO_ROOT / "out" / "SLUS_207.11"
@@ -128,11 +132,13 @@ def cmd_oracle(args) -> int:
     print(f"oracle: {counts['.debug']} .debug + {counts['.line']} .line chunks "
           f"-> {_display(CHUNKS)}")
 
-    placed, unplaced = emit_symbols.final(emit_symbols.build(RETAIL, GHIDRA))
+    records, borrowed = emit_symbols.apply_borrowed(
+        emit_symbols.build(RETAIL, GHIDRA), BORROWED)
+    placed, unplaced = emit_symbols.final(records)
     emit_symbols.write(SYMBOLS, placed)
     emit_symbols.write_unplaced(UNPLACED, unplaced)
     print(f"oracle: {len(placed)} placed + {len(unplaced)} unplaced symbols "
-          f"-> {_display(SYMBOLS)}")
+          f"({borrowed} borrowed library names) -> {_display(SYMBOLS)}")
 
     headers = emit_headers.write_all(RETAIL, INCLUDE)
     print(f"oracle: {len(headers)} translation-unit headers -> {_display(INCLUDE)}")
