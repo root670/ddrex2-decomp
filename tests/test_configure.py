@@ -200,6 +200,29 @@ def test_splat_symbols_rewrites_attributes_the_way_splat_reads_them():
         configure.splat_symbols("not a symbol line\n")
 
 
+def test_two_names_that_differ_only_in_case_get_distinct_split_paths():
+    """splat names a split file after its symbol, and one filesystem cannot hold both spellings.
+
+    Measured on this target: `Tr_load_seq_th` (0x0027FC90, 0x68 B) and `tr_load_seq_th`
+    (0x0027FD00, 0x1F0 B) are two functions whose names differ only in case, so splat wrote
+    one split and the second write replaced it -- the link then came up 0x70 bytes short of
+    the retail image's 1,958,272.  The `filename:` attribute disambiguates the *path* (splat
+    splits an attribute on its colon); the symbol name, and so the label inside the split,
+    stays the DWARF's own.
+    """
+    text = ("Tr_load_seq_th = 0x0027FC90; // type:func size:0x68 provenance:dwarf\n"
+            "tr_load_seq_th = 0x0027FD00; // type:func size:0x1F0 provenance:dwarf\n"
+            "beside_them = 0x0027FEF0; // type:func size:0x10 provenance:dwarf\n")
+    out = configure.splat_symbols(text)
+    assert "filename:Tr_load_seq_th_0027FC90" in out
+    assert "filename:tr_load_seq_th_0027FD00" in out
+    assert "filename:" not in [line for line in out.splitlines()
+                              if line.startswith("beside_them")][0], \
+        "a name nobody shares keeps its own path"
+    assert "Tr_load_seq_th = 0x0027FC90;" in out, "the symbol name is evidence: unchanged"
+    assert configure.case_collisions([("a", "0x1"), ("A", "0x2"), ("b", "0x3")]) == {"a", "A"}
+
+
 SOURCES = {
     "asm/nonmatchings/main/a.s": "glabel a\n/* 0 00100000 00000000 */\n.L00100010\nnamed\n",
     "asm/nonmatchings/main/b.s": "glabel b\n/* 0 00100010 00000000 */\n.L00100010\nD_00100020\n",
@@ -318,3 +341,30 @@ def test_the_registered_targets_promotions_agree_with_its_sources():
     promoted = configure.promotions(target=TARGET)
     present = {path.relative_to(ROOT).as_posix() for path in (ROOT / "src").rglob("*.c")}
     assert {promotion.file for promotion in promoted} == present
+
+
+def test_load_json_stops_on_a_missing_or_broken_manifest(tmp_path):
+    """A manifest that is not there, or is not JSON, is a configuration error naming the file --
+    reported before anything is written, never repaired and never defaulted."""
+    missing = tmp_path / "cus.json"
+    with pytest.raises(configure.ConfigError, match="cus.json not found"):
+        configure.load_json(missing, "cus.json")
+    broken = tmp_path / "debug_chunks.json"
+    broken.write_text("{not json")
+    with pytest.raises(configure.ConfigError, match="not valid JSON"):
+        configure.load_json(broken, "debug_chunks.json")
+    good = tmp_path / "cus.json"
+    good.write_text('[{"index": 0, "kind": "tu"}]\n')
+    assert configure.load_json(good, "cus.json") == [{"index": 0, "kind": "tu"}]
+
+
+def test_a_configuration_that_cannot_be_placed_writes_nothing(monkeypatch, capsys):
+    """`configure()` reads its manifests *before* it writes anything: a missing one leaves the
+    target's config and the graph untouched (the generator never half-lands)."""
+    target = targets.get()
+    before = {path: path.read_text() for path in (target.splat_symbols, target.undefined_syms)
+              if path.is_file()}
+    status = configure.main(["--target", target.name, "--cus", "/nonexistent/cus.json"])
+    err = capsys.readouterr().err
+    assert status == 2 and "cus.json not found" in err and "Traceback" not in err
+    assert {path: path.read_text() for path in before} == before

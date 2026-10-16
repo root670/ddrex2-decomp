@@ -205,3 +205,14 @@ def test_the_cli_honours_an_explicit_expectation(tmp_path, capsys):
     status = g1.main([str(built), "--retail", str(retail), "--expected", "0" * 64])
     err = capsys.readouterr().err
     assert status == 1 and "0" * 64 in err and "different version" in err
+
+
+def test_the_cli_reports_ok_for_two_identical_files(tmp_path, capsys):
+    """G1's green path: the exit-0 branch, with no pin in play (`--checksums` names an absent
+    manifest, so the comparison itself is what the verdict rests on)."""
+    built, retail = image(tmp_path, "built"), image(tmp_path, "retail")
+    status = g1.main([str(built), "--retail", str(retail),
+                      "--checksums", str(tmp_path / "absent.txt")])
+    out = capsys.readouterr().out
+    assert status == 0
+    assert out.startswith("ok: ") and g1.sha256(built) in out

@@ -25,18 +25,29 @@ pytestmark = pytest.mark.skipif(
 
 
 def a_unit():
-    """One translation unit of this binary, taken from the committed CU map."""
+    """One translation unit of this binary, as its *repo path*, from the committed CU map."""
     import json
     cus = json.loads(TARGET.cus.read_text())
     return next(record["file"] for record in cus
-                if record.get("kind") == "tu" and record.get("file")).split("/")[-1]
+               if record.get("kind") == "tu" and record.get("file"))
+
+
+def a_unit_name():
+    """The name the *retail build recorded* for that unit: what `render` is asked for.
+
+    The recorded path is the build host's (`C:\\work2\\...\\src\\sys\\sys_scf.c`), and the emitter
+    matches on its tail; the repo path (`src/sys/sys_scf.c`) is what identifies the unit in this
+    tree and what its header's location mirrors -- the two are not interchangeable.
+    """
+    return a_unit().split("/")[-1]
 
 
 def test_a_units_header_is_generated_from_its_own_evidence():
-    unit = a_unit()
+    unit = a_unit_name()
     text = emit_headers.render(TARGET.elf, unit)
     assert text.count("#ifndef") == 1 and "DDR_UNIT_" in text
     assert "#endif /* DDR_UNIT_" in text, "the header is guarded and closes its guard"
+    assert unit in text, "the header names the unit it was generated from"
     assert unit in text, "the header names the unit it was generated from"
 
 
@@ -45,10 +56,14 @@ def test_an_unknown_unit_is_refused():
         emit_headers.render(TARGET.elf, "no_such_unit_at_all.c")
 
 
-def test_the_committed_header_matches_a_fresh_render(tmp_path):
-    """The committed tree is the generator's output: the same unit renders the same bytes."""
+def test_the_committed_header_matches_a_fresh_render():
+    """The committed tree is the generator's output: the same unit renders the same bytes.
+
+    The path is the generator's own rule -- a unit's header mirrors its repo path under
+    `include/` -- so this proves the committed header, not a path this test imagined.
+    """
     unit = a_unit()
-    committed = ROOT / "include" / emit_headers.header_for(f"src/{unit}")
-    if not committed.is_file():
-        pytest.skip(f"include/{emit_headers.header_for(f'src/{unit}')} is not committed yet")
-    assert emit_headers.render(TARGET.elf, unit) == committed.read_text()
+    path = emit_headers.header_for(unit)                 # mirrors the repo path under include/
+    committed = ROOT / "include" / path
+    assert committed.is_file(), f"include/{path} is not committed"
+    assert emit_headers.render(TARGET.elf, a_unit_name()) == committed.read_text()

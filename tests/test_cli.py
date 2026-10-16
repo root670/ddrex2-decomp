@@ -206,6 +206,40 @@ def test_iso_stops_rather_than_splicing_at_an_offset_nobody_measured(tmp_path, m
     assert reinsert.retail_image(probe) == probe.image
 
 
+def test_the_two_g3_success_lines_are_distinguishable(monkeypatch, capsys, tmp_path):
+    """A pinned reference reports the *pin*; an unpinned one says so in so many words.
+
+    Both are the same splice and the same hash -- what a reader must be able to tell apart is
+    whether the criterion was the descriptor's pinned digest or the file the copy was made from.
+    """
+    ddr = load_ddr()
+    offset = target_support.geometry().image_elf_offset
+    probe = target_support.without_binary(tmp_path, monkeypatch, ddr, "probe_cli")
+    probe = dataclasses.replace(probe, geometry=target_support.geometry())
+    monkeypatch.setattr(ddr.targets, "get", lambda name=None: probe)
+    elf = tmp_path / "stamp.elf"
+    elf.write_bytes(b"\x7fELF" + bytes(range(60)))
+    image = tmp_path / "synthetic.iso"
+    data = bytearray(b"\x3D" * (offset + 0x100))
+    data[offset:offset + len(elf.read_bytes())] = elf.read_bytes()  # the image it was built from
+    image.write_bytes(bytes(data))
+
+    unpinned = tmp_path / "unpinned.iso"
+    assert ddr.main(["iso", "--iso", str(image), "--elf", str(elf), "--out", str(unpinned),
+                     "--allow-unpinned-reference"]) == 0
+    out = capsys.readouterr().out
+    assert "G3 ok" in out and "(UNPINNED)" in out
+    assert "equals the reference image it was spliced into" in out
+
+    pinned = tmp_path / "pinned.iso"
+    digest = reinsert.sha256(image)
+    monkeypatch.setattr(ddr.g1, "pinned_hash_for", lambda name, checksums: digest)
+    assert ddr.main(["iso", "--iso", str(image), "--elf", str(elf), "--out", str(pinned)]) == 0
+    out = capsys.readouterr().out
+    assert "G3 ok" in out and f"equals the pinned digest of {image.name}" in out
+    assert "(UNPINNED)" not in out
+
+
 # ---------------------------------------------------------------------------
 # diff: the contract, and the refusal that protects it
 # ---------------------------------------------------------------------------
