@@ -241,6 +241,40 @@ python3 tools/toolchain/select_build.py --sample 12
 
 ---
 
+### Task 7: Sibling DWARF as the engine's vocabulary and type source
+
+**Files:**
+- Create: `tools/sdk/engine_symbols.py`, `config/usam2/engine-names.md`, `tests/sdk/test_engine_symbols.py`
+- Modify: `config/usam2/symbol_addrs.txt` (names only, each carrying its provenance)
+- Modify: `docs/milestones/m3-library-sourcing.md` only if a measurement contradicts it
+
+**Why:** the ~1.08 MB of DWARF-less game code must be reversed (see the correction section of
+`docs/milestones/m3-library-sourcing.md`). Sibling builds cannot identify it by bytes (0.1–8.8 % transfer across
+five builds), but they carry **names, signatures and type layouts** for the same engine — the use M1 already
+made of the E3/Festival dumps. The richest source is the 2005 preview build `SLUS_211.74`: 2,676 functions
+across 249 source files (`cs`, `network`, `am`, `common`, `sound`, `eyetoy`, `sys`, `gs`).
+
+**Interfaces:**
+- `engine_symbols.harvest(elf) -> list[dict]` — per sibling function: name, signature, source file, size,
+  and a normalised code digest.
+- `engine_symbols.propose(region) -> list[dict]` — for each unnamed function of ours, candidate sibling
+  names with the evidence that produced them (whole-body identical / 16-byte prefix equal / size + call
+  context), each marked with its tier.
+- `engine_symbols.types(elf) -> dict` — aggregates with layouts, for reuse in our own headers.
+
+- [ ] **Step 1: Write the failing test** — a validated tier (whole-body identical) is distinguished from a proposed tier (prefix or size only), and a proposal never overwrites an existing name.
+- [ ] **Step 2: Run to verify it fails.**
+- [ ] **Step 3: Harvest the five sibling builds** and the preview's types; record in `engine-names.md`.
+- [ ] **Step 4: Propose names for the unnamed functions**, tiered by evidence. Only the *validated* tier
+  (whole-body identical: 49 sibling names measured so far) may enter `symbol_addrs.txt` as a real rename;
+  everything else is a proposal, recorded with its reasoning, and stays out of the ledger until a reviewer
+  or the reversing work confirms it.
+- [ ] **Step 5: Report coverage honestly** — how many unnamed functions have a validated name, a proposed
+  name, or nothing; how much of the region that accounts for by bytes.
+- [ ] **Step 6: Commit** — `sdk: harvest sibling engine vocabulary and types (M3)`
+
+---
+
 ## Self-Review Notes
 
 - **Spec coverage:** M3's spec line — "the loop at scale: workflow, docs, CI, progress reporting; N TUs promoted, all gates green per change" — is Tasks 1–4; the library workstream (spec's M4) is Task 5, kept in the same plan because the SDK question the user raised is what turns 3,180 unknown functions into pinned objects, and its first step (get the media into reach) is independent of promotion work.
