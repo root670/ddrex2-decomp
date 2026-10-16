@@ -206,8 +206,11 @@ def test_the_yield_and_its_control_are_computed_over_one_sequence(tmp_path):
     (tmp_path / "aaa_high.s").write_text(_split_file(
         "nonmatching high, 0x10\n\n/* 38 00100038 280C0070 */  padduw $1, $0, $0\n"))
     ours = borrow.split_functions(tmp_path)
-    theirs = [{"name": "first", "address": 0x00, "size": 0x30},
-              {"name": "second", "address": 0x30, "size": 0x10}]
+    # The corpus's records run *against* their addresses too, so a re-sort on either side -- ours
+    # by the proposer, the corpus's by anything that "helpfully" orders it -- breaks the alignment
+    # and trips this test.  An ascending corpus would only catch the first of those.
+    theirs = [{"name": "first", "address": 0x40, "size": 0x30},
+              {"name": "second", "address": 0x00, "size": 0x10}]
     proposals, _ = borrow.run_proposals(ours, theirs, source="synthetic", min_run=2)
     control = borrow.coincidence_rate([r["size"] for r in ours],
                                       [r["size"] for r in theirs], min_run=2, trials=1)
