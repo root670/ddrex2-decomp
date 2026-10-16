@@ -6,7 +6,8 @@ against our own function bounds, and a name that is only *plausible* -- a single
 happens to match, an alignment that could have landed in two places -- does not enter the
 ledger.
 """
-import pathlib, sys
+import pathlib
+import pytest, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
@@ -519,3 +520,26 @@ def test_the_ledger_provenance_is_one_boolean_token():
     assert "libdma.a" not in line
 
 
+def test_the_committed_ledger_is_what_the_tool_derives(tmp_path):
+    """The ledger a target's config carries is this tool's own output.
+
+    Skipped when a corpus is not on this machine, or when the target has no ledger yet (its
+    library names are the retarget's Task 9): the committed artifact is evidence about the
+    corpora, so it can only be re-derived where the evidence is.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+    from tests import target_support
+
+    target = target_support.registered()
+    if not target.borrowed.is_file():
+        pytest.skip(f"{target.name}: no borrowed_symbols.txt yet (the library pass)")
+    for key in ("oni2", "sdk152", "recvx"):
+        if not borrow.corpus_records(key, borrow.CACHE)[0]:
+            pytest.skip(f"{key} is unreachable on this machine")
+    for key in ("godhand", "sly1"):
+        if borrow.corpus_text(key, borrow.CACHE) is None:
+            pytest.skip(f"{key} is unreachable on this machine")
+    ledger, markdown = tmp_path / "borrowed_symbols.txt", tmp_path / "library-names.md"
+    assert borrow.main(["--ledger", str(ledger), "--markdown", str(markdown)]) == 0
+    assert ledger.read_bytes() == target.borrowed.read_bytes()

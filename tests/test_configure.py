@@ -11,6 +11,7 @@ function of the target it was given, not of a constant in the tool.
 import dataclasses
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -21,6 +22,8 @@ sys.path.insert(0, str(ROOT))
 
 import configure  # noqa: E402
 from config import targets  # noqa: E402
+
+TARGET = targets.get()
 
 DEBUG_SIZE = 0x400
 LINE_SIZE = 0x100
@@ -177,3 +180,141 @@ def test_an_unknown_target_is_a_configuration_error_not_a_traceback(capsys):
     err = capsys.readouterr().err
     assert status == 2
     assert "usam2" in err and targets.DEFAULT in err and "Traceback" not in err
+
+
+# ---------------------------------------------------------------------------
+# the helpers every generated artefact is made of
+# ---------------------------------------------------------------------------
+
+
+def test_splat_symbols_rewrites_attributes_the_way_splat_reads_them():
+    """splat reads `key:value` as an attribute and rejects unknown ones, so provenance becomes
+    `key=value`, and a zero size is dropped (it suppresses function detection outright)."""
+    text = ("probe_one = 0x00100000; // type:func size:0x10 provenance:ghidra dwarf_name:x\n"
+            "probe_obj = 0x00100040; // type:obj size:0x0 provenance:ghidra\n")
+    out = configure.splat_symbols(text)
+    assert "probe_one = 0x00100000; // type:func size:0x10 provenance=ghidra dwarf_name=x" in out
+    assert "probe_obj = 0x00100040; // type:label provenance=ghidra" in out
+    assert "size:0x0" not in out and "provenance:ghidra" not in out
+    with pytest.raises(configure.ConfigError, match="symbol_addrs.txt line 1"):
+        configure.splat_symbols("not a symbol line\n")
+
+
+SOURCES = {
+    "asm/nonmatchings/main/a.s": "glabel a\n/* 0 00100000 00000000 */\n.L00100010\nnamed\n",
+    "asm/nonmatchings/main/b.s": "glabel b\n/* 0 00100010 00000000 */\n.L00100010\nD_00100020\n",
+}
+
+
+def test_link_aliases_defines_only_the_names_nothing_defines(tmp_path):
+    """A cross-split reference to a local label, an undefined `D_` name, and a named symbol some
+    split mentions: each encodes its own address, so each becomes a linker-script assignment --
+    and a name splat already resolved is left to splat."""
+    symbols = tmp_path / "symbol_addrs.txt"
+    symbols.write_text("named = 0x00100030;  // type:func\n")
+    assert dict(configure.link_aliases(SOURCES, symbols, [])) == {
+        ".L00100010": 0x00100010, "D_00100020": 0x00100020, "named": 0x00100030}
+    auto = tmp_path / "undefined_funcs_auto.txt"
+    auto.write_text("D_00100020 = 0x00100020;\n")
+    assert dict(configure.link_aliases(SOURCES, symbols, [auto])) == {
+        ".L00100010": 0x00100010, "named": 0x00100030}
+
+
+def test_tail_inputs_substitutes_a_promotions_payloads_by_name():
+    import types
+    databins = [("elf_header", 0, 0x80), ("shstrtab", 0x1000, 0x10),
+                (".debug_000", 0x1010, 0x400), (".line_000", 0x1410, 0x100)]
+    promotion = types.SimpleNamespace(debug_payload="build/x.o.debug",
+                                      debug_databin=".debug_000",
+                                      line_payload="build/x.o.line",
+                                      line_databins=[".line_000"])
+    assert configure.tail_inputs(databins, [promotion]) == [
+        "build/assets/shstrtab.databin.bin", "build/x.o.debug", "build/x.o.line"]
+    assert configure.tail_inputs(databins, []) == [
+        f"build/assets/{name}.databin.bin" for name in ("shstrtab", ".debug_000", ".line_000")]
+
+
+def test_objdiff_json_lists_every_linked_object_under_the_targets_segment():
+    target = probe()
+    code = [(target.geometry.loadable_vram, "asm/nonmatchings/main/a.s")]
+    project = json.loads(configure.objdiff_json(code, [], target.geometry))
+    assert project["custom_make"] == "ninja" and project["min_version"]
+    unit = project["units"][0]
+    assert unit["name"] == f"{target.geometry.code_segment}/a"
+    assert unit["target_path"].endswith("a.s.o") and unit["base_path"] is None
+
+
+def test_write_if_different_leaves_an_identical_file_alone(tmp_path):
+    path = tmp_path / "generated"
+    configure.write_if_different(path, "one\n")
+    stamp = path.stat().st_mtime_ns
+    configure.write_if_different(path, "one\n")
+    assert path.read_text() == "one\n" and path.stat().st_mtime_ns == stamp
+    configure.write_if_different(path, "two\n")
+    assert path.read_text() == "two\n"
+
+
+def test_the_object_graph_stops_before_the_link():
+    """`--objects` is the objdiff job's target: objects only, no link, no gate, no image."""
+    target = probe()
+    ninja = configure.ninja_text([], configure.databin_segments(chunks(), target.geometry),
+                                 True, [], target, target.geometry)
+    assert "default objects" in ninja
+    assert "build g1:" not in ninja and "build out/" not in ninja
+    assert "rule ld" in ninja                      # the rule exists; no edge uses it
+
+
+def test_the_yaml_asks_splat_for_a_byte_exact_split():
+    """The settings the G1-proven split depends on: no input alignment, numeric registers,
+    no dropped function tails, and the R5900 register aliases in the generated macro."""
+    text = configure.splat_yaml(chunks(), probe())
+    assert "  subalign: 1\n" in text
+    assert "  named_regs_for_c_funcs: false\n" in text
+    assert "  detect_redundant_function_end: false\n" in text
+    assert "macro.inc" in text and "set noat" in text and "set noreorder" in text
+    for alias in ("ACC", "Q", "I"):
+        assert f"    .set {alias}, ${alias}\n" in text
+
+
+def test_the_linker_script_lists_its_inputs_in_address_order():
+    target = probe()
+    code = [(0x100010, "asm/nonmatchings/main/b.s"), (0x100000, "asm/nonmatchings/main/a.s")]
+    script = configure.pinned_ld_script(code, [], [], target, target.geometry)
+    listed = re.findall(r"^\s+(\S+)\(\.text\)$", script, re.M)
+    assert listed == ["build/asm/nonmatchings/main/a.s.o",
+                      "build/asm/nonmatchings/main/b.s.o"]
+    ambiguous = [(0x100000, "asm/nonmatchings/main/a.s"),
+                 (0x100000, "asm/nonmatchings/main/b.s")]
+    with pytest.raises(configure.ConfigError, match="ambiguous"):
+        configure.pinned_ld_script(ambiguous, [], [], target, target.geometry)
+
+
+def test_code_splits_reads_each_splits_own_address_comment():
+    geo = geometry()
+    good = {"asm/nonmatchings/main/a.s": "/* 80 00100000 00000000 */\nglabel a\n"}
+    assert configure.code_splits(good, geo) == [(0x100000, "asm/nonmatchings/main/a.s")]
+    with pytest.raises(configure.ConfigError, match="file offset"):
+        configure.code_splits(
+            {"asm/nonmatchings/main/a.s": "/* 84 00100000 00000000 */\n"}, geo)
+    with pytest.raises(configure.ConfigError, match="no address comment"):
+        configure.code_splits({"asm/nonmatchings/main/a.s": "glabel a\n"}, geo)
+    with pytest.raises(configure.ConfigError, match="no code splits"):
+        configure.code_splits({}, geo)
+
+
+def test_promotions_refuses_a_table_entry_whose_source_is_gone():
+    """A `tu_builds` pair whose source no longer exists is a configuration error, not a silently
+    unchanged image (the same rule in the other direction is what keeps a promoted unit honest)."""
+    unbuilt = probe(tu_builds=(("src/nothing.c", "3.0-011126", "-c -g"),))
+    manifests = type("M", (), {"tu_files": lambda self: {"src/nothing.c"}})()
+    with pytest.raises(configure.ConfigError, match="no source under src/"):
+        configure.promotions(manifests, unbuilt)
+
+
+def test_the_registered_targets_promotions_agree_with_its_sources():
+    """Whatever the target lists is exactly what `src/` provides -- today, nothing."""
+    if not TARGET.cus.is_file():
+        pytest.skip(f"{TARGET.name}: its config is generated in Task 4")
+    promoted = configure.promotions(target=TARGET)
+    present = {path.relative_to(ROOT).as_posix() for path in (ROOT / "src").rglob("*.c")}
+    assert {promotion.file for promotion in promoted} == present

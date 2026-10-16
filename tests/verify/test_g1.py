@@ -18,10 +18,13 @@ import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
-sys.path.insert(0, str(ROOT))  # `config.targets`
+sys.path.insert(0, str(ROOT))       # `config.targets`
 
+from tests import target_support  # noqa: E402
 from config import targets  # noqa: E402
 from verify import g1, g2  # noqa: E402
+
+TARGET = target_support.registered()
 
 DEBUG_BASE, DEBUG_SIZE = 0x1010, 0x400
 LINE_BASE, LINE_SIZE = 0x1410, 0x100
@@ -89,7 +92,7 @@ def test_a_mismatch_says_the_byte_is_not_localised_while_the_geometry_is_unmeasu
     """The verdict never needs a measurement; the *diagnostic* does, and says so out loud."""
     retail = image(tmp_path)
     bad = corrupted(tmp_path, retail, 0x80 + 4)
-    monkeypatch.setattr(g1, "TARGET", dataclasses.replace(targets.get(), geometry=None))
+    monkeypatch.setattr(g1, "TARGET", target_support.unmeasured(targets.get()))
     message = g1.compare(bad, retail)
     assert "0x84" in message and "not localised" in message
 
@@ -175,3 +178,30 @@ def test_the_cli_rejects_an_unknown_target(tmp_path, capsys):
     assert g1.main([str(built), "--target", "usam2"]) == 2
     err = capsys.readouterr().err
     assert "usam2" in err and targets.DEFAULT in err and "Traceback" not in err
+
+
+def test_the_cli_refuses_a_retail_binary_that_is_not_the_pinned_one(tmp_path, capsys):
+    """A self-consistent pair is not a green G1: the pin is checked *before* the comparison.
+
+    The manifest is the target's own (the two digests its descriptor carries), and the impostor is
+    a file that merely sits where a retail binary would: the gate must answer "this is not the
+    binary" -- with both digests -- rather than compare two files that agree with each other.
+    """
+    if not TARGET.checksums.is_file():
+        pytest.skip(f"{TARGET.name}: its checksums.txt is generated in Task 4")
+    built = image(tmp_path, "built")
+    impostor = tmp_path / "impostor"
+    impostor.write_bytes(b"\x7fELF" + bytes(range(60)))
+    status = g1.main([str(built), "--retail", str(impostor)])
+    err = capsys.readouterr().err
+    assert status == 1
+    assert TARGET.elf_sha256 in err and g1.sha256(impostor) in err, err
+    assert "G1" not in err or "pinned" in err
+
+
+def test_the_cli_honours_an_explicit_expectation(tmp_path, capsys):
+    """``--expected`` is the same pin, named on the command line instead of read from the file."""
+    built, retail = image(tmp_path, "built"), image(tmp_path, "retail")
+    status = g1.main([str(built), "--retail", str(retail), "--expected", "0" * 64])
+    err = capsys.readouterr().err
+    assert status == 1 and "0" * 64 in err and "different version" in err
