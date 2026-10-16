@@ -105,3 +105,46 @@ expect CAB). Later era than the game, so expect names and member order to transf
 Borrowing now has three tiers, in order of strength: **local sibling bytes+names** (Oni 2 dev build),
 **extracted SDK archive member symbol tables** (names + sizes + member order), then the **published
 corpora** (names, sometimes sizes). Yield is recorded per source in `config/usam2/library-names.md`.
+
+## tlib 2.5.x — the game's own release, obtained from `archive.org/download/ps2_sdks`
+
+The item `ps2_sdks` holds the whole tlib 2.5 line plus toolchain and CodeWarrior packages. Downloaded
+outside the repo to `~/sdk-downloads/`: **`tlib_250.tgz`** (12 MB — the full 2.5.0 runtime-library
+release, 38 archives under `sce/ee/lib/`) and the patch drops `tlib_251/252/253/254/255.tgz`.
+
+**Our game's version stamps, complete list** — only eight libraries carry one, and each names its own
+patch level:
+
+| our stamp | libraries | matching tlib |
+|---|---|---|
+| `…2500` | libgraph, libdma, libipu, libpad, libscf | **tlib 2.5.0** |
+| `…2530` | libcdvd | tlib 2.5.3 |
+| `…2540` | libkernl, libmc | tlib 2.5.4 |
+
+`tlib_250` also ships the rest of the link list (`libdev libpkt libvu0 libssyn libsdr libmpeg libmtap`);
+`libc`/`libm`/`libgcc` come from the GNU toolchain packages (`DTL-S13010`, `ee001003_1.tgz`).
+
+**Measured: masked whole-body comparison against our 2,180 library functions that have a full body.**
+
+| archive set | 48-byte prefix | same size | **whole body identical** |
+|---|---|---|---|
+| tlib 2.5.0 (38 archives, 1,885 funcs) | 308 | 5 | **162** |
+| tlib 2.5.2 (2, 198) | 178 | 1 | 95 |
+| tlib 2.5.3 (15, 760) | 205 | 1 | 108 |
+| tlib 2.5.4 (2, 175) | 175 | 1 | 91 |
+| tlib 2.5.5 (9, 1,614) | 148 | 1 | 78 |
+
+The split by library is exactly what the stamps predict: 2.5.0 matches libgraph/libdma
+(`sceGsResetGraph`, `sceGsResetPath`, `checkModelVersion`, `sceGsPutDrawEnv`, `WaitDma`), while
+2.5.2–2.5.5 match libkernl (`VSync`, `DisableIntc`, `topThread`, `iSuspendThread`). So the game links
+**2.5.0 with per-library patches**, and a "whole body identical" hit means the archive object can be
+linked as-is and reproduce retail bytes — the library region stops being 3,032 unknowns and becomes
+**named, pinned objects**. What remains is coverage accounting, not reversal.
+
+## What this does and does not prove
+
+- Proved: the exact release family, the per-library patch levels, whole-object identity for a growing
+  subset, and that names come from Sony's own archives rather than inference.
+- Not yet proved: the complete per-library mapping including `libc`/`libm`/`libgcc`, and how many of the
+  3,032 are covered once every archive set is in play. That is Task 6's job, with the covered/uncovered
+  split reported as numbers rather than asserted.
