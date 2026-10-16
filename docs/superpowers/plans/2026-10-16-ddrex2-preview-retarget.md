@@ -55,7 +55,7 @@
 - [ ] **Step 1: Write the failing test** — a batch run over three named TUs of the new target returns one verdict per (TU, build) pair, including builds that fail, and never silently drops a TU.
 - [ ] **Step 2: Run to verify it fails.**
 - [ ] **Step 3: Run the sample** over the smallest and largest TUs of the new target, across all five builds present (`2.4-001213`, `3.0-011126`, `3.0.1-020123`, `3.0.3-020716`, `3.0b38-030307`) and the flag axes already in use.
-  Anchor: the preview's `sys_scf.c` compiles to **byte-identical code** to the old target's for both of its functions (12 B and 48 B, same sizes), so at least that TU should pin immediately.
+  Already measured on `sys_scf.c` (the sweep that motivated this task): with `-c -lang c -O3 -g` the object's function sizes are 12 B and 48 B, matching retail, while `-O2 -g` gives 16 B and 60 B and is therefore **ruled out**; `2.4-001213` reproduces the *old* target's `sys_scf.c` only 1/2 and is also **ruled out**; `3.0-011126`, `3.0.1-020123`, `3.0.3-020716` and `3.0b38-030307` each reproduce it 2/2, so the tie must be broken by a wider sample. Note the flags are per-TU in this project (`configure.py`'s `TU_BUILDS`), so the sample must vary them, not assume one set.
 - [ ] **Step 4: Record the verdict** in `docs/milestones/ddrex2p-compiler-sample.md`: the winning (build, flags) per TU, the ties, and the counter-evidence. If more than one build survives the whole sample, prefer the one that also reproduces the retail `.comment` bytes and say so.
 - [ ] **Step 5: Commit** — `ddrex2p: pin the compiler by measured sample, not by ident`
 
@@ -126,7 +126,7 @@
 
 **Files:** `src/sys/sys_scf.c` (already written for the old target, same source exists here), `tests/test_m2_sys_scf.py` (parameterised), `docs/milestones/ddrex2p-m2.md`
 
-- [ ] **Step 1: Promote `sys_scf.c`** — its two functions are already known to be byte-identical between the two builds, so this proves the loop on the new target with the smallest possible step: `./ddr --target ddrex2p verify --tu sys_scf.c` must be green on all three parts.
+- [ ] **Step 1: Promote `sys_scf.c`** — a small port, not a copy: the source drifted between builds (the preview's `sysInitScf` has `li a0,1` where DDRMAX2's calls a function; the two functions are *not* byte-identical), so the task is to reproduce the preview's bytes, adjusting the C where the source changed, and to get `./ddr --target ddrex2p verify --tu sys_scf.c` green on all three parts.
 - [ ] **Step 2: Commit** — `ddrex2p: promote sys_scf.c (M2)`
 
 ### Task 8: The loop at scale

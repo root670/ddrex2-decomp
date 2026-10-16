@@ -80,8 +80,10 @@ per TU: DWARF facts (fn/lines) → C on the retail line numbers → ddr diff →
 ## Milestones
 
 - **M1 (skeleton):** target descriptor, new config, split, G1 green, G3 green. No C.
-- **M2 (first TU):** one small TU promoted with code *and* debug identity (the DDRMAX2 US `sys_scf.c`
-  work ports as a starting point — the same source exists in this build).
+- **M2 (first TU):** one small TU promoted with code *and* debug identity. The DDRMAX2 US `sys_scf.c` work
+  is the starting point, but **not a copy**: the source has drifted (the preview's `sysInitScf` contains
+  `li a0,1` where DDRMAX2's calls a function, so the two are not byte-identical), and it is a small port
+  rather than a straight port.
 - **M3 (the loop at scale):** C-mode centralised headers (the existing Task 1, now four times more
   valuable), a `ddr diff` basis for the unit under edit (Task 2), a wider compiler/flag sample (Task 3),
   then a calibrated batch of promotions (Task 4).
