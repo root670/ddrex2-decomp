@@ -114,6 +114,24 @@ Invented, with provenance recorded — because DWARF does not carry it:
 
 The rule to follow is tww's, and it is a good one: **no names are better than incorrect names.**
 
+## Comment style
+
+The C is evidence, not an essay. Keep it to a short header and local notes:
+
+- **A two-line header**: the source path the DWARF records, and that the unit was reconstructed from
+  `orig/SLUS_211.74`'s DWARF and disassembly.
+- **An inline comment only where the C is genuinely non-obvious** — a magic constant, an unusual
+  expression shape, a gap the evidence forces.
+- **No narrated reasoning.** Why the source drifted, what the disassembly showed, which names were
+  invented, which gates accepted it — that belongs in this document, in `docs/milestones/*.md`, or in
+  `config/<target>/library-names.md`. Anywhere a reader goes looking for rationale rather than code.
+
+**One mechanical exception, and it is a real one:** the `.line` gate pins *statement* lines to retail's
+own line numbers, so the number of lines before the first statement and between statements is fixed by
+evidence, not by taste. Where that forces space, use **blank lines** — a comment thick enough to fill a
+twenty-line gap is padding pretending to be documentation. The statement lines must not move; what
+fills the space between them is your choice.
+
 ## House rules that keep the gates honest
 
 - Gates are pins, not opinions: `config/ddrex2p/checksums.txt` holds both, and a gate that lacks its
