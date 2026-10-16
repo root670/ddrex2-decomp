@@ -1,0 +1,912 @@
+{
+ "libmc_lead": {
+  "explained": 49,
+  "explained_identical": 41,
+  "identical": 43,
+  "identical_bytes": 11212,
+  "in_iso": "~/sdk-extract/devkit152/SoftwareToolsSetup/MAINDIR/SCEE_Tools/YNCFTool/Iso/SCEE_YNCF_Tool_1.1.iso",
+  "limitation": "a linked binary, not an archive: it can validate bytes for libmc 3.0.2, but it has no relocatable member to pin or link",
+  "path": "~/sdk-extract/devkit152/SoftwareToolsSetup/MAINDIR/SCEE_Tools/YNCFTool/Cdburn/Slus_123.45",
+  "slots": 84,
+  "stamp": "PsIIlibmc3020",
+  "stamp_offset": 1328096,
+  "unexplained": 35,
+  "unexplained_identical": 2,
+  "window": [
+   1153256,
+   1175180
+  ]
+ },
+ "libraries": [
+  {
+   "alternatives": [
+    {
+     "bytes": 6208,
+     "functions": 19,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibgraph3000"
+     ]
+    },
+    {
+     "bytes": 6208,
+     "functions": 19,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibgraph2500"
+     ]
+    },
+    {
+     "bytes": 4376,
+     "functions": 16,
+     "set": "toolibs242",
+     "stamp": false,
+     "versions": [
+      "PsIIlibgraph2400"
+     ]
+    },
+    {
+     "bytes": 3816,
+     "functions": 14,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": [
+      "PsIIlibgraph2000"
+     ]
+    }
+   ],
+   "bytes": 6208,
+   "exact": 2,
+   "functions": 19,
+   "library": "libgraph",
+   "library_file": "libgraph.a",
+   "object_bytes": 5616,
+   "objects": 15,
+   "objects_total": 29,
+   "on_disk": [
+    "PsIIlibgraph2000",
+    "PsIIlibgraph2400",
+    "PsIIlibgraph2500",
+    "PsIIlibgraph3000"
+   ],
+   "range": [
+    1049368,
+    1055020
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibgraph3000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibgraph3000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 1724,
+     "functions": 16,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibdma3000"
+     ]
+    },
+    {
+     "bytes": 1724,
+     "functions": 16,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibdma2500"
+     ]
+    },
+    {
+     "bytes": 328,
+     "functions": 3,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": [
+      "PsIIlibdma2000"
+     ]
+    },
+    {
+     "bytes": 328,
+     "functions": 3,
+     "set": "toolibs242",
+     "stamp": false,
+     "versions": [
+      "PsIIlibdma2400"
+     ]
+    }
+   ],
+   "bytes": 1724,
+   "exact": 1,
+   "functions": 16,
+   "library": "libdma",
+   "library_file": "libdma.a",
+   "object_bytes": 2116,
+   "objects": 1,
+   "objects_total": 2,
+   "on_disk": [
+    "PsIIlibdma2000",
+    "PsIIlibdma2400",
+    "PsIIlibdma2500",
+    "PsIIlibdma3000"
+   ],
+   "range": [
+    1055024,
+    1057120
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibdma3000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibdma3000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 2208,
+     "functions": 18,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibvu03000"
+     ]
+    },
+    {
+     "bytes": 2208,
+     "functions": 18,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": []
+    },
+    {
+     "bytes": 2208,
+     "functions": 18,
+     "set": "toolibs242",
+     "stamp": false,
+     "versions": []
+    },
+    {
+     "bytes": 2148,
+     "functions": 17,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": []
+    }
+   ],
+   "bytes": 2208,
+   "exact": 9,
+   "functions": 18,
+   "library": "libvu0",
+   "library_file": "libvu0.a",
+   "object_bytes": 3396,
+   "objects": 1,
+   "objects_total": 1,
+   "on_disk": [
+    "PsIIlibvu03000"
+   ],
+   "range": [
+    1059736,
+    1063084
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibvu03000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibvu03000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 2280,
+     "functions": 10,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibipu3000"
+     ]
+    },
+    {
+     "bytes": 1236,
+     "functions": 4,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibipu2500"
+     ]
+    },
+    {
+     "bytes": 1236,
+     "functions": 4,
+     "set": "toolibs242",
+     "stamp": false,
+     "versions": [
+      "PsIIlibipu2400"
+     ]
+    },
+    {
+     "bytes": 104,
+     "functions": 1,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": [
+      "PsIIlibipu2000"
+     ]
+    }
+   ],
+   "bytes": 2280,
+   "exact": 1,
+   "functions": 10,
+   "library": "libipu",
+   "library_file": "libipu.a",
+   "object_bytes": 1600,
+   "objects": 2,
+   "objects_total": 2,
+   "on_disk": [
+    "PsIIlibipu2000",
+    "PsIIlibipu2400",
+    "PsIIlibipu2500",
+    "PsIIlibipu3000"
+   ],
+   "range": [
+    1093584,
+    1095184
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibipu3000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibipu3000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 51104,
+     "functions": 247,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibkernl3000"
+     ]
+    },
+    {
+     "bytes": 19792,
+     "functions": 129,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibkernl2500"
+     ]
+    },
+    {
+     "bytes": 19792,
+     "functions": 129,
+     "set": "tlib_252",
+     "stamp": false,
+     "versions": [
+      "PsIIlibkernl2520"
+     ]
+    },
+    {
+     "bytes": 19792,
+     "functions": 129,
+     "set": "tlib_253",
+     "stamp": false,
+     "versions": [
+      "PsIIlibkernl2530"
+     ]
+    }
+   ],
+   "bytes": 51104,
+   "exact": 25,
+   "functions": 247,
+   "library": "libkernl",
+   "library_file": "libkernl.a",
+   "object_bytes": 50896,
+   "objects": 24,
+   "objects_total": 26,
+   "on_disk": [
+    "PsIIlibkernl2000",
+    "PsIIlibkernl2420",
+    "PsIIlibkernl2500",
+    "PsIIlibkernl2520",
+    "PsIIlibkernl2530",
+    "PsIIlibkernl2540",
+    "PsIIlibkernl2550",
+    "PsIIlibkernl3000"
+   ],
+   "range": [
+    1097456,
+    1146192
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibkernl3000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibkernl3000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 6328,
+     "functions": 38,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibpad3020"
+     ]
+    },
+    {
+     "bytes": 2912,
+     "functions": 21,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibpad2500"
+     ]
+    },
+    {
+     "bytes": 2912,
+     "functions": 21,
+     "set": "toolibs242",
+     "stamp": false,
+     "versions": [
+      "PsIIlibpad2410"
+     ]
+    },
+    {
+     "bytes": 1592,
+     "functions": 14,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": [
+      "PsIIlibpad2000"
+     ]
+    }
+   ],
+   "bytes": 6328,
+   "exact": 0,
+   "functions": 38,
+   "library": "libpad",
+   "library_file": "libpad.a",
+   "object_bytes": 5936,
+   "objects": 1,
+   "objects_total": 1,
+   "on_disk": [
+    "PsIIlibpad2000",
+    "PsIIlibpad2410",
+    "PsIIlibpad2500",
+    "PsIIlibpad3020"
+   ],
+   "range": [
+    1146192,
+    1152076
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibpad3020",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibpad3020"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 9848,
+     "functions": 39,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibcdvd3000"
+     ]
+    },
+    {
+     "bytes": 3908,
+     "functions": 19,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibcdvd2500"
+     ]
+    },
+    {
+     "bytes": 3908,
+     "functions": 19,
+     "set": "tlib_252",
+     "stamp": false,
+     "versions": [
+      "PsIIlibcdvd2520"
+     ]
+    },
+    {
+     "bytes": 3908,
+     "functions": 19,
+     "set": "tlib_253",
+     "stamp": false,
+     "versions": [
+      "PsIIlibcdvd2530"
+     ]
+    }
+   ],
+   "bytes": 9848,
+   "exact": 0,
+   "functions": 39,
+   "library": "libcdvd",
+   "library_file": "libcdvd.a",
+   "object_bytes": 8636,
+   "objects": 14,
+   "objects_total": 29,
+   "on_disk": [
+    "PsIIlibcdvd2000",
+    "PsIIlibcdvd2420",
+    "PsIIlibcdvd2500",
+    "PsIIlibcdvd2520",
+    "PsIIlibcdvd2530",
+    "PsIIlibcdvd3000"
+   ],
+   "range": [
+    1152128,
+    1160788
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibcdvd3000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibcdvd3000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 6272,
+     "functions": 27,
+     "set": "devkit152",
+     "stamp": false,
+     "versions": [
+      "PsIIlibmc3030"
+     ]
+    },
+    {
+     "bytes": 52,
+     "functions": 1,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": [
+      "PsIIlibmc2000"
+     ]
+    },
+    {
+     "bytes": 52,
+     "functions": 1,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibmc2500"
+     ]
+    },
+    {
+     "bytes": 52,
+     "functions": 1,
+     "set": "tlib_253",
+     "stamp": false,
+     "versions": [
+      "PsIIlibmc2530"
+     ]
+    }
+   ],
+   "bytes": 6272,
+   "exact": 0,
+   "functions": 27,
+   "library": "libmc",
+   "library_file": "libmc.a",
+   "object_bytes": 0,
+   "objects": 0,
+   "objects_total": 2,
+   "on_disk": [
+    "PsIIlibmc2000",
+    "PsIIlibmc2400",
+    "PsIIlibmc2500",
+    "PsIIlibmc2530",
+    "PsIIlibmc2540",
+    "PsIIlibmc3030"
+   ],
+   "range": [
+    1161448,
+    1166988
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibmc3020",
+   "stamp_matched": false,
+   "versions": [
+    "PsIIlibmc3030"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 1588,
+     "functions": 16,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIIlibscf3000"
+     ]
+    },
+    {
+     "bytes": 1476,
+     "functions": 15,
+     "set": "tlib_250",
+     "stamp": false,
+     "versions": [
+      "PsIIlibscf2500"
+     ]
+    },
+    {
+     "bytes": 1476,
+     "functions": 15,
+     "set": "toolibs242",
+     "stamp": false,
+     "versions": [
+      "PsIIlibscf2400"
+     ]
+    },
+    {
+     "bytes": 284,
+     "functions": 4,
+     "set": "rlib20",
+     "stamp": false,
+     "versions": [
+      "PsIIlibscf2000"
+     ]
+    }
+   ],
+   "bytes": 1588,
+   "exact": 0,
+   "functions": 16,
+   "library": "libscf",
+   "library_file": "libscf.a",
+   "object_bytes": 1776,
+   "objects": 1,
+   "objects_total": 1,
+   "on_disk": [
+    "PsIIlibscf2000",
+    "PsIIlibscf2400",
+    "PsIIlibscf2500",
+    "PsIIlibscf3000"
+   ],
+   "range": [
+    1783360,
+    1784872
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibscf3000",
+   "stamp_matched": true,
+   "versions": [
+    "PsIIlibscf3000"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 48,
+     "functions": 1,
+     "set": "devkit152",
+     "stamp": false,
+     "versions": [
+      "PsIIlibeyety1400"
+     ]
+    }
+   ],
+   "bytes": 48,
+   "exact": 1,
+   "functions": 1,
+   "library": "libeyetoy",
+   "library_file": "libeyetoy.a",
+   "object_bytes": 0,
+   "objects": 0,
+   "objects_total": 1,
+   "on_disk": [
+    "PsIIlibeyety1400"
+   ],
+   "range": [
+    1967280,
+    1967328
+   ],
+   "set": "devkit152",
+   "stamp": "PsIIlibeyety1300",
+   "stamp_matched": false,
+   "versions": [
+    "PsIIlibeyety1400"
+   ]
+  },
+  {
+   "alternatives": [
+    {
+     "bytes": 5432,
+     "functions": 41,
+     "set": "devkit152",
+     "stamp": true,
+     "versions": [
+      "PsIInetcnfif3020"
+     ]
+    }
+   ],
+   "bytes": 5432,
+   "exact": 0,
+   "functions": 41,
+   "library": "netcnfif",
+   "library_file": "netcnfif.a",
+   "object_bytes": 4564,
+   "objects": 3,
+   "objects_total": 6,
+   "on_disk": [
+    "PsIInetcnfif2500",
+    "PsIInetcnfif2530",
+    "PsIInetcnfif3020"
+   ],
+   "range": [
+    1998952,
+    2003524
+   ],
+   "set": "devkit152",
+   "stamp": "PsIInetcnfif3020",
+   "stamp_matched": true,
+   "versions": [
+    "PsIInetcnfif3020"
+   ]
+  }
+ ],
+ "region": {
+  "archive_functions": 44425,
+  "archives": 292,
+  "base": 1048576,
+  "below_game_start": {
+   "bytes": 724732,
+   "end": 1785136,
+   "functions": 1633,
+   "matched_bytes": 109024,
+   "matched_functions": 462,
+   "unexplained_bytes": 614700
+  },
+  "bytes": 1958272,
+  "control_boundaries": 4314,
+  "control_functions": 0,
+  "dwarf_found": 1763,
+  "dwarf_starts": 1816,
+  "exact_bytes": 10344,
+  "functions": 3536,
+  "matched_bytes": 123784,
+  "matched_functions": 557,
+  "min_bytes": 48,
+  "runs": [
+   [
+    2758376,
+    3006848,
+    248472
+   ],
+   [
+    2696112,
+    2753612,
+    57500
+   ],
+   [
+    2004528,
+    2056832,
+    52304
+   ],
+   [
+    1920528,
+    1963672,
+    43144
+   ],
+   [
+    2398064,
+    2440880,
+    42816
+   ],
+   [
+    1266800,
+    1309008,
+    42208
+   ],
+   [
+    1309040,
+    1348752,
+    39712
+   ],
+   [
+    1604720,
+    1643552,
+    38832
+   ]
+  ],
+  "size_mismatches": 471,
+  "slot_bytes": 1939192,
+  "stamped_bytes": 80732,
+  "stamped_functions": 378,
+  "stamped_window_bytes": 76380,
+  "stamped_window_functions": 348,
+  "unexplained_bytes": 1814152,
+  "unexplained_functions": 2979
+ },
+ "unstamped": [
+  {
+   "bytes": 28712,
+   "exact": 21,
+   "functions": 84,
+   "library": "libmpeg",
+   "library_file": "libmpeg.a",
+   "sets": [
+    "devkit152"
+   ],
+   "versions": [
+    "PsIIlibmpeg3000"
+   ]
+  },
+  {
+   "bytes": 13532,
+   "exact": 15,
+   "functions": 102,
+   "library": "libc",
+   "library_file": "libc.a",
+   "sets": [
+    "devkit152",
+    "devkit152/soft"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 13532,
+   "exact": 15,
+   "functions": 102,
+   "library": "libg",
+   "library_file": "libg.a",
+   "sets": [
+    "devkit152",
+    "devkit152/soft"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 7236,
+   "exact": 0,
+   "functions": 22,
+   "library": "libmpeg",
+   "library_file": "libmpeg.a",
+   "sets": [
+    "tlib_250"
+   ],
+   "versions": [
+    "PsIIlibmpeg2500"
+   ]
+  },
+  {
+   "bytes": 5676,
+   "exact": 0,
+   "functions": 18,
+   "library": "libmpeg",
+   "library_file": "libmpeg.a",
+   "sets": [
+    "toolibs242"
+   ],
+   "versions": [
+    "PsIIlibmpeg2420"
+   ]
+  },
+  {
+   "bytes": 3120,
+   "exact": 7,
+   "functions": 31,
+   "library": "libdev",
+   "library_file": "libdev.a",
+   "sets": [
+    "devkit152"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 2268,
+   "exact": 5,
+   "functions": 27,
+   "library": "libdev",
+   "library_file": "libdev.a",
+   "sets": [
+    "tlib_250",
+    "rlib20",
+    "toolibs242"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 2228,
+   "exact": 7,
+   "functions": 7,
+   "library": "libc",
+   "library_file": "libc.a",
+   "sets": [
+    "ee001003_1",
+    "ee001003_1/soft"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 2228,
+   "exact": 7,
+   "functions": 7,
+   "library": "libg",
+   "library_file": "libg.a",
+   "sets": [
+    "ee001003_1",
+    "ee001003_1/soft"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 1940,
+   "exact": 1,
+   "functions": 15,
+   "library": "libgcc",
+   "library_file": "libgcc.a",
+   "sets": [
+    "devkit152/soft"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 1892,
+   "exact": 1,
+   "functions": 15,
+   "library": "libgcc",
+   "library_file": "libgcc.a",
+   "sets": [
+    "devkit152"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 1688,
+   "exact": 0,
+   "functions": 12,
+   "library": "libtimer",
+   "library_file": "libtimer.a",
+   "sets": [
+    "devkit152"
+   ],
+   "versions": [
+    "PsIIlibtimer3000"
+   ]
+  },
+  {
+   "bytes": 1140,
+   "exact": 3,
+   "functions": 3,
+   "library": "libc",
+   "library_file": "libc.a",
+   "sets": [
+    "toolibs242",
+    "toolibs242/soft"
+   ],
+   "versions": []
+  },
+  {
+   "bytes": 1140,
+   "exact": 3,
+   "functions": 3,
+   "library": "libg",
+   "library_file": "libg.a",
+   "sets": [
+    "toolibs242",
+    "toolibs242/soft"
+   ],
+   "versions": []
+  }
+ ]
+}
