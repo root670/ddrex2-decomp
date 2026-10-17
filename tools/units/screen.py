@@ -12,14 +12,14 @@ that has actually cost time:
 * plenty of DWARF line records, because ``.line`` punishes guesswork hardest.
 
 It also refuses a unit whose split disassembly names a branch/call/address target the promotion
-path cannot resolve.  ``compile.py`` resolves a relocation against the unit's own functions or
-against ``symbol_addrs.txt`` (plus the one ``unplaced_symbols.txt`` reason it reads as address
-0); a target in no ledger, or one the oracle could not place, stops the build before any
-comparison.  Four units that read as clean on shape alone were blocked this way -- a callee
-recorded only in ``unplaced_symbols.txt`` (``NetRouterMain``, stored through ``%hi(D_008062B0)``
-rather than called) and callees in no ledger at all (``func_001C43E8``, ``func_00128600``,
-``func_0012CD70``).  The screen sees the same operand text splat wrote, so the check costs one
-pass over the splits it already reads and no compiler.
+path cannot resolve.  That is the link's symbol set, not one ledger (``compile.py``,
+``Manifests``): a split label the ld script places, a ``symbol_addrs.txt`` record, a ``-T``
+assignment this layout holds an address for, or the one ``unplaced_symbols.txt`` reason
+``compile.py`` reads as address 0.  What is left is two different refusals: a record outside
+every declared segment -- an overlay window, ``NetRouterMain`` stored through
+``%hi(D_008062B0)``, deferred by design -- and a name with no record anywhere.  The screen sees
+the same operand text splat wrote, so the check costs one pass over the splits it already reads
+and no compiler.
 
 The units that failed for shape reasons -- ``el_mes.c``/the ``mes_*`` siblings,
 ``AM/s573/doll/vu0.c``, ``sys_demo.c``, ``lang.c`` and ``eyetoy/eye_filter.c`` (ranked #1 before
@@ -32,7 +32,8 @@ Everything is measured from the repository, never compiled:
 * ``orig/SLUS_211.74``'s DWARF via ``tools/oracle/dwarf1.py`` -- types, globals, line tables;
 * ``asm/nonmatchings/main/*.s`` -- calls, address operands, VU0/FPU/128-bit-GPR instructions;
 * ``config/ddrex2p/symbol_addrs.txt``, ``borrowed_symbols.txt`` and ``unplaced_symbols.txt``
-  -- name resolution, in the same order ``compile.py`` applies them.
+  -- the oracle's ledgers, and ``undefined_{syms,funcs}_auto.txt`` with the generated ld script
+  -- the other half of the link's symbol set (``load_link_placement``).
 
 Usage::
 
@@ -43,8 +44,8 @@ Usage::
 
 Exit codes: 0 a ranking was produced, 2 an input is missing or unreadable.
 
-Costs, measured on this tree: DWARF parse ~0.5 s, reference graph ~0.4 s, reading the 2,676
-unit splits ~1 s; the whole screen ~2.5 s and no compiler, linker or build graph is touched.
+Costs, measured on this tree: DWARF parse ~0.5 s, reference graph ~0.4 s, the split listing ~1 s;
+the whole screen ~2.4 s and no compiler, linker or build graph is touched.
 """
 
 from __future__ import annotations
@@ -119,6 +120,16 @@ _FPU_RE = re.compile(r"\b(lwc1|swc1|ldc1|sdc1|madd\.s|msub\.s|add\.s|sub\.s|mul\
 
 _SYMBOL_RE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+)")
 
+#: A bare assignment in a linker script: splat's ``undefined_{syms,funcs}_auto.txt`` and the
+#: aliases ``configure.py`` writes into the ld script.  The link's other symbol source, and
+#: the same line ``compile.py``'s ``LINK_ASSIGN`` reads.
+_LINK_ASSIGN_RE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
+
+try:  # the registry is part of this tree; a tree without it is a loud failure elsewhere
+    from config.targets import TARGETS as _TARGETS  # noqa: E402
+except ImportError:  # pragma: no cover
+    _TARGETS = None
+
 
 # --------------------------------------------------------------------------- inputs
 
@@ -157,6 +168,43 @@ def load_unplaced(path: pathlib.Path) -> tuple[dict[str, dict], dict[int, str]]:
         by_name[name] = {"address": address, "reason": reason}
         by_addr.setdefault(address, name)
     return by_name, by_addr
+
+
+def load_link_placement(target=None) -> tuple[set[str], set[int]]:
+    """Names and addresses the *generated link* resolves besides ``symbol_addrs.txt``.
+
+    ``compile.py`` resolves a relocation against the link's own symbol set, not one ledger:
+    the split objects its ld script lists (whose global labels are the split file names, read
+    as ``split_names``) and its ``-T`` files' assignments -- ``undefined_{syms,funcs}_auto.txt``
+    and the aliases ``configure.py`` writes into the ld script.  A ``-T`` assignment counts
+    only where this layout holds its address, inside the declared segments; a target nobody
+    has measured has no segments and so places none of them.  Reading the same three files
+    under the same rule is what keeps the screen's verdict equal to the compiler's; before
+    this, 1,146 in-segment split labels were reported as a ledger lookup gap that the
+    promotion path had already stopped having.
+    """
+    target = _TARGETS.get() if target is None and _TARGETS is not None else target
+    names: set[str] = set()
+    addrs: set[int] = set()
+    geometry = getattr(target, "geometry", None)
+    if geometry is None:
+        return names, addrs
+    lo, hi = geometry.loadable_vram, geometry.bss_end
+    paths = []
+    for attr in ("undefined_syms", "undefined_funcs", "ld_script"):
+        path = getattr(target, attr, None)
+        if path is not None and pathlib.Path(path).is_file():
+            paths.append(pathlib.Path(path))
+    for path in paths:
+        for line in path.read_text().splitlines():
+            match = _LINK_ASSIGN_RE.match(line.strip())
+            if match is None:
+                continue
+            address = int(match.group(2), 16)
+            if lo <= address < hi:
+                names.add(match.group(1))
+                addrs.add(address)
+    return names, addrs
 
 
 def load_borrowed(path: pathlib.Path) -> tuple[set[str], set[int]]:
@@ -331,8 +379,16 @@ def find_unresolvable_references(text: str, *, unit_functions: set[str],
                                  unit_lo: int | None, unit_hi: int | None,
                                  by_name: dict[str, int], borrowed_names: set[str],
                                  split_names: set[str], unplaced: dict[str, dict],
-                                 unplaced_by_addr: dict[int, str]) -> list[dict]:
+                                 unplaced_by_addr: dict[int, str],
+                                 link_names: set[str] | None = None) -> list[dict]:
     """Find named relocations that ``compile.py`` cannot resolve without compiling.
+
+    A name resolves when the *link* resolves it: a split label the ld script places, a ledger
+    record, a ``-T`` assignment this layout holds an address for (``link_names``, see
+    ``load_link_placement``), or a borrowed name.  Only two things are left, and they are
+    different refusals.  An unplaced record outside every declared segment is an overlay
+    window this milestone does not model -- deferred by design.  A name in none of those sets
+    has no record anywhere, and ``compile.py`` says so in those words.
 
     Unknown data-only operands are deliberately not treated as callees.  The one useful
     exception is an encoded address whose oracle record says it is an unplaced function (the
@@ -341,10 +397,13 @@ def find_unresolvable_references(text: str, *, unit_functions: set[str],
     """
     found: list[dict] = []
     seen: set[tuple[str, str]] = set()
+    link_names = link_names or frozenset()
     for kind, token in _reference_tokens(text):
         if token.startswith(".L") or token in unit_functions:
             continue
         if token in by_name or token in borrowed_names:
+            continue
+        if token in split_names or token in link_names:
             continue
         record = unplaced.get(token)
         mapped_name = token
@@ -383,11 +442,9 @@ def find_unresolvable_references(text: str, *, unit_functions: set[str],
         if key in seen:
             continue
         seen.add(key)
-        if token in split_names:
-            reason = ("code target with a split but no symbol_addrs record "
-                      "(lookup gap: the link places it, compile.py cannot relocate it)")
-        else:
-            reason = "call target with neither a symbol_addrs record nor a split"
+        reason = ("code target with no record anywhere: not a split label the link places, "
+                  "not in symbol_addrs.txt, not in the link's -T files, and not in "
+                  "unplaced_symbols.txt")
         found.append({"kind": kind, "target": token, "callee": token,
                       "address": address, "reason": reason})
     return found
@@ -423,7 +480,8 @@ def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: in
 def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int],
                  by_name, by_addr, borrowed_names, borrowed_addrs, splits: pathlib.Path,
                  split_names: set[str], unplaced: dict | None = None,
-                 unplaced_by_addr: dict[int, str] | None = None) -> dict:
+                 unplaced_by_addr: dict[int, str] | None = None,
+                 link_names: set[str] | None = None) -> dict:
     """Every signal for one unpromoted (or promoted) unit.  No I/O beyond its splits."""
     promoted = (REPO_ROOT / "src" / rel).exists()
     library = "/src/" not in tu.name.replace("\\", "/")
@@ -493,7 +551,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
                 text, unit_functions=unit_functions, unit_lo=unit_lo, unit_hi=unit_hi,
                 by_name=by_name, borrowed_names=borrowed_names,
                 split_names=split_names, unplaced=unplaced or {},
-                unplaced_by_addr=unplaced_by_addr or {}):
+                unplaced_by_addr=unplaced_by_addr or {},
+                link_names=link_names):
             if ref["target"] in unresolved_seen:
                 continue
             unresolved_seen.add(ref["target"])
@@ -630,6 +689,7 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
     units = load_units(root / "config/ddrex2p/cus.json")
     by_name, by_addr = load_symbol_addrs(root / "config/ddrex2p/symbol_addrs.txt")
     borrowed_names, borrowed_addrs = load_borrowed(root / "config/ddrex2p/borrowed_symbols.txt")
+    link_names, _link_addrs = load_link_placement()
     unplaced_path = root / "config/ddrex2p/unplaced_symbols.txt"
     unplaced, unplaced_by_addr = (load_unplaced(unplaced_path) if unplaced_path.is_file()
                                   else ({}, {}))
@@ -649,7 +709,8 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                                  by_name=by_name, by_addr=by_addr,
                                  borrowed_names=borrowed_names, borrowed_addrs=borrowed_addrs,
                                  splits=splits, split_names=split_names,
-                                 unplaced=unplaced, unplaced_by_addr=unplaced_by_addr))
+                                 unplaced=unplaced, unplaced_by_addr=unplaced_by_addr,
+                                 link_names=link_names))
     # A cus.json unit with no DWARF TU is a manifest inconsistency; surface it, never average it.
     for rel, info in units.items():
         if rel not in seen:

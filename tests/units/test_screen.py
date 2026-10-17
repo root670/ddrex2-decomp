@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+import types
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -199,7 +200,8 @@ def _analyze(tmp_path, tu, functions, sizes, **ledgers):
                                borrowed_addrs=set(), splits=tmp_path,
                                split_names=split_names,
                                unplaced=ledgers.get("unplaced", {}),
-                               unplaced_by_addr=ledgers.get("unplaced_by_addr", {}))
+                               unplaced_by_addr=ledgers.get("unplaced_by_addr", {}),
+                               link_names=ledgers.get("link_names", set()))
 
 
 def _write_split(tmp_path, name, text):
@@ -301,18 +303,59 @@ def test_128bit_gpr_operation_blocks_but_quadword_assignment_does_not(tmp_path):
     assert row2["quad_ops"] == [] and "no 128-bit GPR ops" in " ".join(row2["good"])
 
 
-def test_split_only_callee_blocks_as_an_unresolvable_target(tmp_path):
-    """A split is not a ledger record: compile.py still has no address for the name."""
+def test_a_split_only_callee_resolves_because_the_link_places_it(tmp_path):
+    """`compile.py` resolves the split objects its ld script lists, not one ledger.
+
+    `func_001C43E8` -- called from `net_grf.c` and in no symbol file -- is the measured case:
+    the promotion path places it, so it must not block the unit here either.
+    """
     tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
     fn = FakeFunction("f", 0x10, 0x20)
     _write_split(tmp_path, "f", "glabel f\n    jal func_00002000\n")
     _write_split(tmp_path, "func_00002000", "glabel func_00002000\n    jr $31\n")
     row = _analyze(tmp_path, tu, [fn], {})
-    assert "unresolvable-callees" in row["flags"]
-    assert row["blocked"] is True
-    assert row["unresolvable"][0]["callee"] == "func_00002000"
-    assert "no symbol_addrs record" in row["reasons"][0]
+    assert row["flags"] == [] and row["blocked"] is False
+    assert row["unresolvable"] == []
+
+
+def test_a_callee_with_no_record_anywhere_still_blocks(tmp_path):
+    """No split label, no ledger record, no `-T` assignment: nothing places the name."""
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x20)
+    _write_split(tmp_path, "f", "glabel f\n    jal func_0000DEAD\n")
+    row = _analyze(tmp_path, tu, [fn], {})
+    assert "unresolvable-callees" in row["flags"] and row["blocked"] is True
+    assert "no record anywhere" in row["reasons"][0]
     assert row["warnings"] == []
+
+
+def test_a_link_assignment_this_layout_places_resolves(tmp_path):
+    """The `-T` files are the link's other symbol source (`load_link_placement`)."""
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x20)
+    _write_split(tmp_path, "f", "glabel f\n    jal func_0000BEEF\n")
+    resolved = _analyze(tmp_path, tu, [fn], {}, link_names={"func_0000BEEF"})
+    assert resolved["flags"] == [] and resolved["unresolvable"] == []
+    refused = _analyze(tmp_path, tu, [fn], {}, link_names={"some_other_name"})
+    assert "unresolvable-callees" in refused["flags"]
+
+
+def test_load_link_placement_counts_only_what_the_layout_holds(tmp_path):
+    syms = tmp_path / "undefined_syms_auto.txt"
+    syms.write_text("D_001158C0 = 0x001158C0;\nD_008062B0 = 0x008062B0;\n")
+    funcs = tmp_path / "undefined_funcs_auto.txt"
+    funcs.write_text("func_0010012C = 0x10012C;\n")
+    measured = types.SimpleNamespace(
+        geometry=types.SimpleNamespace(loadable_vram=0x100000, bss_end=0x723700),
+        undefined_syms=syms, undefined_funcs=funcs, ld_script=tmp_path / "absent.ld")
+    names, addrs = screen.load_link_placement(measured)
+    # `D_008062B0` is the overlay window this layout does not model, so it stays a refusal.
+    assert names == {"D_001158C0", "func_0010012C"}
+    assert addrs == {0x1158C0, 0x10012C}
+    # A target nobody has measured has no segments, so it places none of them.
+    bare = types.SimpleNamespace(geometry=None, undefined_syms=syms,
+                                 undefined_funcs=funcs, ld_script=tmp_path / "absent.ld")
+    assert screen.load_link_placement(bare) == (set(), set())
 
 
 def test_unplaced_callee_blocks_and_is_named_by_its_dwarf_alias(tmp_path):
