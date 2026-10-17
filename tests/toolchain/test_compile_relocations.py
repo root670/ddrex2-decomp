@@ -1,13 +1,18 @@
-"""`compile.py`'s relocations and the one unplaced record it may read as address 0.
+"""`compile.py`'s relocations and the symbol sets it resolves them against.
 
-Two couplings in `tools/toolchain/compile.py` are string- and shape-level rather than
+Three couplings in `tools/toolchain/compile.py` are string- and shape-level rather than
 type-level, so they are pinned here rather than trusted:
 
-* the reason the placement treats as "retail gives this object no address" is the *oracle's*
-  own word for it (`emit_symbols.UNPLACED_REASON`).  A rewording on either side would silently
-  stop the substitution -- a unit would fail to place for a name the symbol file has no address
-  for, or worse, address 0 would come from the *other* reason, whose objects have real
-  addresses in the overlay reservations this layout does not model.
+* the two reasons the oracle withholds a record are read apart: "no AT_location address"
+  is the only one whose value is 0 and can be placed, while "outside every declared
+  segment" (an overlay reservation this layout does not model) is a refusal by design and
+  is reported as one.  Both spellings are the *oracle's* own words
+  (`emit_symbols.UNPLACED_REASON`, `emit_symbols.OUTSIDE_REASON`).
+* a relocation resolves against the symbols the *link* knows -- the ledger, and the global
+  labels of the split objects the generated ld script lists (a `func_001C43E8` has a split
+  but no DWARF record, and the old ledger-only lookup refused it falsely) -- and the two
+  refusal messages are distinct: an overlay address says where it lives, an unknown name
+  says it has no record at all.
 * a `lui`/`addiu` address pair relocates as `symbol + addend`, where the addend is the
   *instruction's* own sign-extended low half.  A pair split any other way is refused with the
   block's name, not approximated.
@@ -36,12 +41,22 @@ class Symbol:
         self.name = name
 
 
-def config_dir(tmp_path, placed=(), unplaced=()):
-    """A synthetic config: only the three files a `Manifests` reads have to exist."""
+def config_dir(tmp_path, placed=(), unplaced=(), splits=()):
+    """A synthetic config: only the files a `Manifests` reads have to exist.
+
+    `splits` are `(name, text)` under the code segment's split directory -- the objects the
+    generated ld script lists, whose global labels are the link's own symbol set.  They are
+    written under `tmp_path` on purpose: `Manifests` is given `root=tmp_path`, so a test can
+    never see (or depend on) the repository's generated `asm/`.
+    """
     (tmp_path / "cus.json").write_text(json.dumps([]))
     (tmp_path / "debug_chunks.json").write_text(json.dumps([]))
     (tmp_path / "symbol_addrs.txt").write_text("".join(placed))
     (tmp_path / "unplaced_symbols.txt").write_text("".join(unplaced))
+    for name, text in splits:
+        path = tmp_path / "asm" / "nonmatchings" / "main" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
     return tmp_path
 
 
@@ -49,7 +64,12 @@ def manifests(tmp_path, **kwargs):
     directory = config_dir(tmp_path, **kwargs)
     target = types.SimpleNamespace(config_dir=directory,
                                   symbols=directory / "symbol_addrs.txt")
-    return cc.Manifests(target)
+    return cc.Manifests(target, root=tmp_path)
+
+
+def split(function, text):
+    """A generated split's text: the label macro, then splat's per-instruction comments."""
+    return f'.include "macro.inc"\nnonmatching {function}, 0x8\n\nglabel {function}\n' + text
 
 
 # -- the reason string, pinned to its owner ---------------------------------------------
@@ -88,6 +108,118 @@ def test_the_placed_ledger_wins_over_an_unplaced_record_of_the_same_name(tmp_pat
                   "reason:no AT_location address\n"])
     assert m.symbols["mesLanguage"] == (0x2B33C0, {"type": "obj", "size": "0x18",
                                                    "provenance": "dwarf"})
+
+
+# -- the link's symbol set, which is what a relocation resolves against ------------------
+
+
+def test_the_outside_reason_is_the_oracles_own_word():
+    """The overlay reason is pinned to its owner, like the no-address one."""
+    assert cc.UNPLACED_OUTSIDE == emit_symbols.OUTSIDE_REASON
+    assert cc.UNPLACED_OUTSIDE != cc.UNPLACED_NO_ADDRESS
+
+
+def test_a_split_label_the_link_places_resolves(tmp_path):
+    """`func_001C43E8`: the ld script places its split object, so the link resolves it.
+
+    It has no record in either ledger -- the oracle's DWARF never named it -- which is
+    exactly the case the old lookup refused, falsely.
+    """
+    m = manifests(tmp_path, splits=[("func_001C43E8.s", split(
+        "func_001C43E8",
+        "    /* C45E8 001C43E8 90FFBD27 */  addiu      $29, $29, -0x70\n"
+        "    /* C4634 001C4634 0800E003 */  jr         $31\n"))])
+    assert m.address_of("func_001C43E8") == 0x001C43E8
+    assert "func_001C43E8" not in m.symbols        # the oracle's ledger never names it
+    assert m.placed["func_001C43E8"] == 0x001C43E8
+
+
+def test_a_label_binds_to_the_instruction_that_follows_it(tmp_path):
+    """A mid-split entry point resolves to its own address, not the split's."""
+    m = manifests(tmp_path, splits=[("two.s", split(
+        "first",
+        "    /* 0 00100000 00000000 */  nop\n"
+        "alabel second\n"
+        "    /* 4 00100004 00000000 */  nop\n"))])
+    assert m.address_of("first") == 0x100000
+    assert m.address_of("second") == 0x100004
+
+
+def test_the_ledger_name_wins_over_a_split_label_at_the_same_address(tmp_path):
+    m = manifests(tmp_path,
+                  placed=["mesLanguage = 0x002B33C0; // type:obj provenance:dwarf\n"],
+                  splits=[("D_002B33C0.s", split(
+                      "D_002B33C0", "    /* 0 002B33C0 00000000 */  nop\n"))])
+    assert m.address_of("D_002B33C0") == 0x2B33C0
+    assert m.by_address[0x2B33C0] == "mesLanguage"
+
+
+def test_a_name_outside_every_declared_segment_is_refused_by_design(tmp_path):
+    """`NetRouterMain` is an overlay function: it has an address, but no place here."""
+    m = manifests(tmp_path, unplaced=[
+        "NetRouterMain = 0x008062B0; // type:func provenance:dwarf "
+        "reason:outside every declared segment\n"])
+    assert "NetRouterMain" not in m.symbols        # not address 0, and not the ledger
+    assert "NetRouterMain" not in m.placed
+    with pytest.raises(cc.Unusable) as refusal:
+        m.address_of("NetRouterMain")
+    assert "outside every declared segment" in str(refusal.value)
+    assert "0x008062B0" in str(refusal.value)      # the refusal names where it really lives
+
+
+def test_a_name_with_no_record_at_all_is_refused_differently(tmp_path):
+    """The two refusals have to be tellable apart by a reader, not both look like a bug."""
+    m = manifests(tmp_path, unplaced=[
+        "NetRouterMain = 0x008062B0; // type:func provenance:dwarf "
+        "reason:outside every declared segment\n"])
+    with pytest.raises(cc.Unusable) as outside:
+        m.address_of("NetRouterMain")
+    with pytest.raises(cc.Unusable) as absent:
+        m.address_of("neverHeardOfIt")
+    assert "outside every declared segment" in str(outside.value)
+    assert "outside every declared segment" not in str(absent.value)
+    assert "neverHeardOfIt" in str(absent.value)
+
+
+#: The range the synthetic tests measure: the split bases above sit inside it, the overlay
+#: window (`0x008062B0`) does not.
+SEGMENTS = types.SimpleNamespace(loadable_vram=0x100000, bss_end=0x723700)
+
+
+def link_manifests(tmp_path, syms=(), funcs=(), aliases=()):
+    """A `Manifests` whose target carries the link's `-T` inputs as well."""
+    directory = config_dir(tmp_path)
+    (directory / "undefined_syms_auto.txt").write_text("".join(syms))
+    (directory / "undefined_funcs_auto.txt").write_text("".join(funcs))
+    (directory / "SLUS_211.74.ld").write_text("".join(aliases))
+    target = types.SimpleNamespace(
+        config_dir=directory, symbols=directory / "symbol_addrs.txt",
+        undefined_syms=directory / "undefined_syms_auto.txt",
+        undefined_funcs=directory / "undefined_funcs_auto.txt",
+        ld_script=directory / "SLUS_211.74.ld", geometry=SEGMENTS)
+    return cc.Manifests(target, root=tmp_path)
+
+
+def test_a_link_assignment_inside_the_segments_resolves(tmp_path):
+    """`undefined_*_auto.txt` is a linker script: what it assigns, the link resolves.
+
+    Splat writes one for every name no split defines (`D_001158C0` is data a split reads and
+    nothing labels), and an ld script alias is the same kind of assignment.
+    """
+    m = link_manifests(tmp_path, syms=["D_001158C0 = 0x001158C0;\n"],
+                       aliases=["option_icon_tex = 0x2C0460;\n"])
+    assert m.address_of("D_001158C0") == 0x1158C0
+    assert m.address_of("option_icon_tex") == 0x2C0460
+
+
+def test_a_link_assignment_outside_the_segments_is_refused_not_resolved(tmp_path):
+    """`D_008062B0` is assigned where nothing is placed: an overlay window, not an address."""
+    m = link_manifests(tmp_path, syms=["D_008062B0 = 0x008062B0;\n"])
+    assert "D_008062B0" not in m.placed
+    with pytest.raises(cc.Unusable) as refusal:
+        m.address_of("D_008062B0")
+    assert "outside every declared segment" in str(refusal.value)
+    assert "undefined_syms_auto.txt" in str(refusal.value)
 
 
 # -- the lui/addiu address pair ----------------------------------------------------------

@@ -23,9 +23,10 @@ the Metrowerks object it writes into the one object the pinned build needs:
 Why a translation rather than a link of the Metrowerks object (R23): mainline binutils
 cannot read a ``mwccps2`` object at all, and ``mwldps2`` -- which can -- does not keep
 ``.debug``/``.line`` for a link without debug flags.  Every address a relocation needs is
-already pinned by the oracle's manifests -- the unit's own chunk in ``.debug``, each
-function's record and statement list, the unit's address, and ``$gp`` from the retail
-ELF's ``.reginfo`` -- so the object's bytes can be placed directly under the pinned layout.
+already pinned -- the unit's own chunk in ``.debug``, each function's record and statement
+list, the unit's address, ``$gp`` from the retail ELF's ``.reginfo``, and every other name
+the pinned link itself resolves (the split objects its ld script lists and its ``-T`` files'
+assignments) -- so the object's bytes can be placed directly under the pinned layout.
 G1 and the unit's per-chunk verdicts are what prove the result; this program only has to be
 honest about what it wrote.
 
@@ -107,6 +108,13 @@ STAGING_ROOT = pathlib.Path("/tmp").resolve()
 #: objects live in the overlay reservations this layout does not model.
 UNPLACED_NO_ADDRESS = "no AT_location address"
 
+#: The oracle's word for the other way a name misses the placed ledger: the record lives
+#: outside every declared segment (one of this target's overlay reservations), so this
+#: layout has no place to relocate it to and the promotion is refused *by design* until the
+#: overlay milestone models those segments.  Kept distinct from `UNPLACED_NO_ADDRESS` so the
+#: refusal can say which of the two it is instead of looking like a lookup that broke.
+UNPLACED_OUTSIDE = "outside every declared segment"
+
 R_MIPS_NONE, R_MIPS_32, R_MIPS_26, R_MIPS_HI16, R_MIPS_LO16, R_MIPS_GPREL16 = 0, 2, 4, 5, 6, 7
 RELOC_NAMES = {R_MIPS_32: "R_MIPS_32", R_MIPS_26: "R_MIPS_26",
                R_MIPS_HI16: "R_MIPS_HI16", R_MIPS_LO16: "R_MIPS_LO16",
@@ -116,8 +124,16 @@ SHT_REL = 9
 STT_SECTION, STT_FUNC = 3, 2
 SYMBOL_LINE = re.compile(
     r"^(?P<name>\S+)\s*=\s*(?P<address>0x[0-9A-Fa-f]+);\s*//\s*(?P<attrs>.*)$")
+#: The global labels a generated split defines (`asm/include/macro.inc`'s macros).  The one
+#: label at an address is the same name the link knows, and `_split_symbols` binds each to the
+#: address of the instruction that follows it.
+SPLIT_LABEL = re.compile(r"^\s*(?:glabel|alabel|ehlabel|jlabel|dlabel)\s+(\S+)", re.M)
 SPLIT_ADDRESS = re.compile(
     r"/\*\s+[0-9A-Fa-f]+\s+([0-9A-Fa-f]+)\s+[0-9A-Fa-f]{8}\s+\*/")
+#: A bare assignment in a linker script -- splat's ``undefined_{syms,funcs}_auto.txt`` and
+#: the aliases ``configure.py`` writes into the ld script itself.  These are the link's other
+#: symbol source, and the ones ``symbol_addrs.txt`` does not carry.
+LINK_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 
 
 class Unusable(Exception):
@@ -181,30 +197,45 @@ class Tu:
 
 
 class Manifests:
-    """A target's ``cus.json``, ``debug_chunks.json`` and ``symbol_addrs.txt``, read once.
+    """A target's manifests, plus the symbol set its generated link actually resolves.
 
     The target is a parameter, never a module-level convention: the ninja ``cc`` edge passes
     ``--target``, so a unit is placed against the manifests of the binary its object is
     linked into rather than against whichever config a default happens to name.
+
+    Resolution follows the link, not one ledger.  The link's inputs are the split objects the
+    ld script lists (``asm/nonmatchings/<segment>/*.s``) and its ``-T`` files
+    (``undefined_{syms,funcs}_auto.txt`` and the ld script's own aliases), so a name in any of
+    them resolves here -- which is what makes a callee the oracle's DWARF never named, like
+    `func_001C43E8`, placeable.  ``symbol_addrs.txt`` adds the oracle's own addresses, and a
+    ``-T`` assignment only counts where this layout holds its address.
+
+    A name that misses all of it is refused, and the refusal says which way: an address
+    outside every declared segment (an overlay window this layout does not model) is a
+    boundary deferred by design, while a name with no record at all is a gap.
     """
 
-    def __init__(self, target=None):
+    def __init__(self, target=None, root=REPO_ROOT):
         self.target = target if target is not None else DEFAULT_TARGET
+        self.root = pathlib.Path(root)
         self.dir = self.target.config_dir
         self.cus = self._json(self.dir / "cus.json")
         self.chunks = self._json(self.dir / "debug_chunks.json")
         self.symbols = {}
+        self.placed = {}
+        self.withheld = {}
         self.by_address = {}
         # An object the oracle could not place *because retail's own DWARF gives it no
         # address* still has a value a placement has to reproduce: 0, which is what retail's
-        # `AT_location` holds for it.  Those records are in `unplaced_symbols.txt` with that
-        # reason, and nothing else in that file may be read this way -- an object outside
-        # every declared segment (this target's overlay reservations) has a real address that
-        # this layout does not model, so substituting 0 for it would be a guess.  The name is
-        # the oracle's own word for the reason (`emit_symbols.UNPLACED_REASON`), and
-        # `tests/toolchain/test_compile_relocations.py` pins the two together.
-        for name, address, _attrs in self._unplaced_without_address():
-            self.symbols.setdefault(name, (address, {"provenance": "unplaced"}))
+        # `AT_location` holds for it.  Anything else it withheld is a refusal, not an address:
+        # an object outside every declared segment lives in an overlay this layout does not
+        # model, so it is kept aside with its reason for `address_of` to report.
+        for name, address, attrs in self._unplaced():
+            if attrs["reason"] == UNPLACED_NO_ADDRESS:
+                self.symbols.setdefault(name, (address, {"provenance": "unplaced"}))
+            else:
+                self.withheld.setdefault(
+                    name, (address, attrs["reason"], self.dir / "unplaced_symbols.txt"))
         for line in (self.dir / "symbol_addrs.txt").read_text().splitlines():
             match = SYMBOL_LINE.match(line.strip())
             if match is None:
@@ -218,13 +249,87 @@ class Manifests:
             if known is None or (attrs.get("provenance") == "dwarf"
                                  and self.symbols[known][1].get("provenance") != "dwarf"):
                 self.by_address[address] = match["name"]
+        # The split objects the ld script places define their own global labels, and those are
+        # in neither ledger: `func_001C43E8` has a split and no DWARF record, so the link
+        # resolves it while the symbol file never mentions it.  Read last, so a ledger name
+        # keeps its attrs, and `by_address` gains the name of a split no DWARF record covers.
+        for name, address in self._split_symbols().items():
+            self.placed.setdefault(name, address)
+            self.by_address.setdefault(address, name)
+        # The link's other inputs are its `-T` files.  They are only half a symbol set: an
+        # assignment names an address, and this layout has to hold one.  `D_001158C0` (data a
+        # split reads and nothing labels) is inside the declared segments, so it resolves;
+        # `D_008062B0`, the overlay's generated stand-in, is outside every one of them, so it
+        # is a refusal with that reason -- the same boundary `NetRouterMain` hits from the
+        # oracle's ledger.  A target nobody has measured gets neither (see `_within_segments`).
+        for name, address, source in self._link_assignments():
+            if self._within_segments(address):
+                self.placed.setdefault(name, address)
+                self.by_address.setdefault(address, name)
+            else:
+                self.withheld.setdefault(name, (address, UNPLACED_OUTSIDE, source))
 
-    def _unplaced_without_address(self):
-        """``[(name, address, attrs)]`` for the unplaced records retail gives no address.
+    def _link_assignments(self):
+        """``[(name, address, path)]`` for the ``-T`` linker scripts' own assignments."""
+        out = []
+        for path in (getattr(self.target, "undefined_syms", None),
+                     getattr(self.target, "undefined_funcs", None),
+                     getattr(self.target, "ld_script", None)):
+            if path is None or not pathlib.Path(path).is_file():
+                continue
+            for line in pathlib.Path(path).read_text().splitlines():
+                match = LINK_ASSIGN.match(line.strip())
+                if match is not None:
+                    out.append((match.group(1), int(match.group(2), 16), path))
+        return out
 
-        The placed ledger wins over every one of them (they are read first), so this can
-        only ever *add* a name: one whose object exists in the unit's DWARF and nowhere in
-        the image.
+    def _within_segments(self, address) -> bool:
+        """Whether ``address`` is one this layout places: inside the declared segments.
+
+        A target nobody has measured has no segments to be inside, and its link is not
+        generated either, so everything from the ``-T`` files is refused rather than placed.
+        """
+        geometry = getattr(self.target, "geometry", None)
+        if geometry is None:
+            return False
+        return geometry.loadable_vram <= address < geometry.bss_end
+
+    def _split_symbols(self):
+        """``{label: address}`` for the global labels of the split objects the link places.
+
+        The ld script lists ``build/asm/nonmatchings/<segment>/*.s.o``; this reads the
+        *sources* of those same objects, so a name resolves here exactly when the link
+        resolves it.  A label is bound to the address of the instruction that follows it --
+        splat's per-instruction ``/* fileoffset address bytes */`` comment -- which is the
+        same address `configure.py` checks against the segment geometry.
+        """
+        geometry = getattr(self.target, "geometry", None)
+        segment = getattr(geometry, "code_segment", "main")
+        directory = self.root / "asm" / "nonmatchings" / segment
+        if not directory.is_dir():
+            return {}
+        out = {}
+        for path in sorted(directory.glob("*.s")):
+            text = path.read_text()
+            addresses = [(match.start(), int(match.group(1), 16))
+                         for match in SPLIT_ADDRESS.finditer(text)]
+            if not addresses:
+                continue
+            for label in SPLIT_LABEL.finditer(text):
+                # The label belongs to the instruction after it, so the first address
+                # comment past the label is its address (a label in the directives before
+                # any instruction -- every `glabel` -- gets the first instruction's).
+                entry = next((address for position, address in addresses
+                              if position > label.start()), None)
+                if entry is not None:
+                    out.setdefault(label.group(1), entry)
+        return out
+
+    def _unplaced(self):
+        """``[(name, address, attrs)]`` for every record outside the placed ledger.
+
+        The placed ledger wins over all of them (they are read first), so these can only ever
+        *add* a name: one whose object exists in the unit's DWARF and nowhere in the image.
         """
         path = self.dir / "unplaced_symbols.txt"
         if not path.is_file():
@@ -241,8 +346,7 @@ class Manifests:
             if "reason:" not in tail:
                 continue
             reason = tail.split("reason:", 1)[1].split(" dwarf_name:", 1)[0].strip()
-            if reason == UNPLACED_NO_ADDRESS:
-                out.append((match["name"], int(match["address"], 16), {"reason": reason}))
+            out.append((match["name"], int(match["address"], 16), {"reason": reason}))
         return out
 
     @staticmethod
@@ -252,12 +356,27 @@ class Manifests:
         return json.loads(path.read_text())
 
     def address_of(self, name) -> int:
-        if name not in self.symbols:
+        if name in self.symbols:
+            return self.symbols[name][0]
+        if name in self.placed:
+            return self.placed[name]
+        withheld = self.withheld.get(name)
+        if withheld is not None:
+            address, reason, source = withheld
             raise Unusable(
-                f"the object references {name!r}, which "
-                f"{self.target.symbols.relative_to(REPO_ROOT)} "
-                f"gives no address for; the unit cannot be placed")
-        return self.symbols[name][0]
+                f"the object references {name!r}, which is at 0x{address:08X}, {reason} "
+                f"({_display(source)}); this layout has no place to relocate it to -- the "
+                f"segments that hold it are the overlay milestone's -- so the unit cannot "
+                f"be placed")
+        raise Unusable(
+            f"the object references {name!r}, which has no record at all: not among the "
+            f"split labels the link places, not in {_display(self.target.symbols)}, not in "
+            f"the link's -T files, and not in {self._unplaced_path()}; the unit cannot be "
+            f"placed")
+
+    def _unplaced_path(self):
+        """The target's unplaced ledger, as a reader types it."""
+        return _display(self.dir / "unplaced_symbols.txt")
 
     def tu_named(self, name: str) -> Tu:
         """The unit ``name`` spells -- a repo path, a path tail, or a file name.
@@ -352,13 +471,14 @@ def _contiguous(runs) -> bool:
                for i in range(len(ordered) - 1))
 
 
-def _split_extent(tu: Tu, manifests: Manifests, root=REPO_ROOT) -> tuple[int, int]:
+def _split_extent(tu: Tu, manifests: Manifests, root=None) -> tuple[int, int]:
     """Return the address range occupied by the splits a promotion removes.
 
     Splat's function split includes the trailing bytes up to the next split, which can be
     padding outside the function's DWARF ``high_pc``.  The linker removes that whole run,
     so a promoted object has to fill it too.
     """
+    root = manifests.root if root is None else root
     segment = manifests.target.geometry_required().code_segment
     directory = pathlib.Path(root) / "asm" / "nonmatchings" / segment
     if not directory.is_dir():
@@ -504,10 +624,11 @@ class MWObject:
     def resolve(self, tu: Tu, symbol):
         """The pinned value of ``symbol`` in the layout this unit goes into.
 
-        Three cases, all pinned: one of the unit's own section symbols (the offset of the
+        Four cases, all pinned: one of the unit's own section symbols (the offset of the
         block it carries: the unit's records, a function's DWARF record, or a statement
-        list), a function of the unit (its retail address), and anything else -- which has
-        to be a name the oracle's symbol file gives an address for.
+        list), a function of the unit (its retail address), a global label of a split the
+        link places, and anything else -- which has to be a name the manifests give an
+        address for, and is otherwise refused by :meth:`Manifests.address_of`.
         """
         pinned = self._section_offset(tu, symbol)
         if pinned is not None:
