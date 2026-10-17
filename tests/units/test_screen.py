@@ -184,7 +184,7 @@ def test_classify_calls_counts_a_borrowed_address_without_the_name():
 # --------------------------------------------------------------------------- block flags
 
 
-def _analyze(tmp_path, tu, functions, sizes):
+def _analyze(tmp_path, tu, functions, sizes, **ledgers):
     dwarf = FakeDwarf(sizes)
     edges, roots = screen.build_reference_graph(
         {d.off: d for d in tu.decl.children})
@@ -193,9 +193,13 @@ def _analyze(tmp_path, tu, functions, sizes):
     split_names = {p.stem for p in tmp_path.glob("*.s")}
     return screen.analyze_unit(dwarf, "X/fake.c", tu, units={},
                                reachable=reach,
-                               by_name={}, by_addr={}, borrowed_names=set(),
+                               by_name=ledgers.get("by_name", {}),
+                               by_addr=ledgers.get("by_addr", {}),
+                               borrowed_names=ledgers.get("borrowed_names", set()),
                                borrowed_addrs=set(), splits=tmp_path,
-                               split_names=split_names)
+                               split_names=split_names,
+                               unplaced=ledgers.get("unplaced", {}),
+                               unplaced_by_addr=ledgers.get("unplaced_by_addr", {}))
 
 
 def _write_split(tmp_path, name, text):
@@ -255,15 +259,99 @@ def test_vu0_and_missing_split_and_overlay_flags(tmp_path):
     assert "missing-splits" in row2["flags"]
 
 
-def test_placeholder_call_is_a_warning_not_a_block(tmp_path):
+def test_split_only_callee_blocks_as_an_unresolvable_target(tmp_path):
+    """A split is not a ledger record: compile.py still has no address for the name."""
     tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
     fn = FakeFunction("f", 0x10, 0x20)
     _write_split(tmp_path, "f", "glabel f\n    jal func_00002000\n")
     _write_split(tmp_path, "func_00002000", "glabel func_00002000\n    jr $31\n")
     row = _analyze(tmp_path, tu, [fn], {})
-    assert "calls-without-record" in row["flags"]
-    assert row["blocked"] is False
-    assert row["warnings"] and "mid-unit" in row["warnings"][0]
+    assert "unresolvable-callees" in row["flags"]
+    assert row["blocked"] is True
+    assert row["unresolvable"][0]["callee"] == "func_00002000"
+    assert "no symbol_addrs record" in row["reasons"][0]
+    assert row["warnings"] == []
+
+
+def test_unplaced_callee_blocks_and_is_named_by_its_dwarf_alias(tmp_path):
+    """`NetRouterMain` reaches the split as `%hi(D_008062B0)`, not as a `jal`."""
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lui        $3, %hi(D_008062B0)",
+        "    addiu      $3, $3, %lo(D_008062B0)",
+        "    jr         $31",
+    ]))
+    row = _analyze(
+        tmp_path, tu, [fn], {},
+        unplaced={"NetRouterMain": {"address": 0x8062B0,
+                                    "reason": "outside every declared segment"}},
+        unplaced_by_addr={0x8062B0: "NetRouterMain"})
+    assert "unresolvable-callees" in row["flags"]
+    assert row["blocked"] is True
+    ref = row["unresolvable"][0]
+    assert ref["target"] == "D_008062B0" and ref["callee"] == "NetRouterMain"
+    assert "NetRouterMain" in row["reasons"][0]
+    assert "outside every declared segment" in row["reasons"][0]
+
+
+def test_a_function_of_the_unit_is_not_foreign_even_by_encoded_address(tmp_path):
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "glabel f\n    jal func_00000020\n    jr $31\n")
+    row = _analyze(tmp_path, tu, [fn], {})
+    assert row["flags"] == [] and row["blocked"] is False
+
+
+def test_a_resolvable_data_symbol_and_a_local_label_are_not_flagged(tmp_path):
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lui        $1, %hi(g_game_w)",
+        "    b          .L00000030",
+        ".align 2",
+        "  .L00000030:",
+        "    jr         $31",
+    ]))
+    row = _analyze(tmp_path, tu, [fn], {}, by_name={"g_game_w": 0x607A70})
+    assert row["flags"] == [] and row["blocked"] is False
+
+
+def test_an_unknown_data_operand_alone_is_out_of_the_signal(tmp_path):
+    """`D_` without an unplaced function record is a data-only dependency, not a callee."""
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lui        $1, %hi(D_002D3140)",
+        "    jr         $31",
+    ]))
+    row = _analyze(tmp_path, tu, [fn], {})
+    assert row["flags"] == [] and row["blocked"] is False
+
+
+def test_an_indirect_call_carries_no_target_the_signal_can_see(tmp_path):
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "glabel f\n    jalr $3, $31\n    jr $31\n")
+    row = _analyze(tmp_path, tu, [fn], {})
+    assert row["flags"] == [] and row["blocked"] is False
+
+
+def test_load_unplaced_keeps_the_reason_and_the_alias_address(tmp_path):
+    ledger = tmp_path / "unplaced_symbols.txt"
+    ledger.write_text(
+        "NetRouterMain = 0x008062B0; // type:func provenance:dwarf "
+        "reason:outside every declared segment\n"
+        "mesLanguageOK = 0x00000000; // type:obj provenance:dwarf "
+        "reason:no AT_location address\n")
+    by_name, by_addr = screen.load_unplaced(ledger)
+    assert by_name["NetRouterMain"] == {
+        "address": 0x8062B0, "reason": "outside every declared segment"}
+    assert by_addr[0x8062B0] == "NetRouterMain"
+    assert by_name["mesLanguageOK"]["reason"] == "no AT_location address"
 
 
 def test_clean_unit_has_no_flags_and_rich_lines(tmp_path):

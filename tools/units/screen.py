@@ -9,6 +9,16 @@ that has actually cost time:
 * calls absent or already named in ``config/ddrex2p/borrowed_symbols.txt``;
 * plenty of DWARF line records, because ``.line`` punishes guesswork hardest.
 
+It also refuses a unit whose split disassembly names a branch/call/address target the promotion
+path cannot resolve.  ``compile.py`` resolves a relocation against the unit's own functions or
+against ``symbol_addrs.txt`` (plus the one ``unplaced_symbols.txt`` reason it reads as address
+0); a target in no ledger, or one the oracle could not place, stops the build before any
+comparison.  Four units that read as clean on shape alone were blocked this way -- a callee
+recorded only in ``unplaced_symbols.txt`` (``NetRouterMain``, stored through ``%hi(D_008062B0)``
+rather than called) and callees in no ledger at all (``func_001C43E8``, ``func_00128600``,
+``func_0012CD70``).  The screen sees the same operand text splat wrote, so the check costs one
+pass over the splits it already reads and no compiler.
+
 The four units that failed for shape reasons -- ``el_mes.c``/the ``mes_*`` siblings,
 ``AM/s573/doll/vu0.c``, ``sys_demo.c`` and ``lang.c`` -- are the screen's acceptance test:
 a class it cannot see is reported as unseen rather than silently scored.
@@ -17,8 +27,9 @@ Everything is measured from the repository, never compiled:
 
 * ``config/ddrex2p/cus.json`` -- the unit list, function counts and source paths;
 * ``orig/SLUS_211.74``'s DWARF via ``tools/oracle/dwarf1.py`` -- types, globals, line tables;
-* ``asm/nonmatchings/main/*.s`` -- calls, VU0/FPU instructions;
-* ``config/ddrex2p/symbol_addrs.txt`` and ``borrowed_symbols.txt`` -- name resolution.
+* ``asm/nonmatchings/main/*.s`` -- calls, address operands, VU0/FPU instructions;
+* ``config/ddrex2p/symbol_addrs.txt``, ``borrowed_symbols.txt`` and ``unplaced_symbols.txt``
+  -- name resolution, in the same order ``compile.py`` applies them.
 
 Usage::
 
@@ -60,8 +71,13 @@ LARGE_TABLE_BYTES = 256
 #: (``lang.c`` has nine); one or two are ordinary data.
 ARRAY_ORDER_TABLES = 2
 
-#: ``jal`` targets.  ``jalr`` is indirect and carries no name the screen can resolve.
+#: Direct control-flow targets.  ``jalr`` is indirect and carries no name the screen can
+#: resolve; computed targets have the same limitation.
 _CALL_RE = re.compile(r"\bjal\s+([A-Za-z_.$][\w.$]*)")
+_CONTROL_RE = re.compile(
+    r"\b(jal|j|b|beq|bne|beqz|bnez|bgez|blez|bgtz|bltz|bgezal|bltzal|bc1f|bc1t|bc1fl|bc1tl)\s+(.+)$")
+_ADDRESS_RE = re.compile(r"%(hi|lo|gp_rel|call16|got)\(([^)]+)\)")
+_ENCODED_ADDR_RE = re.compile(r"^(?:func|D)_([0-9A-Fa-f]{8})$")
 
 #: VU0 macro-mode operations.  The retail ELF is stripped of section names, so ``.vutext``
 #: membership is inferred from the unit's own split: inline VU0 asm is the blocker, and it is
@@ -91,6 +107,28 @@ def load_symbol_addrs(path: pathlib.Path) -> tuple[dict[str, int], dict[int, str
         name, addr = m.group(1), int(m.group(2), 16)
         by_name[name] = addr
         by_addr.setdefault(addr, name)
+    return by_name, by_addr
+
+
+def load_unplaced(path: pathlib.Path) -> tuple[dict[str, dict], dict[int, str]]:
+    """Load names the oracle found outside the target's declared segments.
+
+    ``compile.py`` intentionally does not put these records in its address map: an overlay
+    address is real, but this target has no placement for it.  Keeping the address-to-name
+    index lets the screen recognize splat's ``D_XXXXXXXX`` spelling of a function pointer.
+    """
+    by_name: dict[str, dict] = {}
+    by_addr: dict[int, str] = {}
+    for line in path.read_text().splitlines():
+        match = _SYMBOL_RE.match(line)
+        if match is None:
+            continue
+        comment = line.split("//", 1)[1] if "//" in line else ""
+        reason_match = re.search(r"\breason:(.*?)(?:\s+dwarf_name:|$)", comment)
+        reason = reason_match.group(1).strip() if reason_match else ""
+        name, address = match.group(1), int(match.group(2), 16)
+        by_name[name] = {"address": address, "reason": reason}
+        by_addr.setdefault(address, name)
     return by_name, by_addr
 
 
@@ -238,8 +276,98 @@ def classify_calls(text: str, *, unit_functions: set[str], unit_lo: int | None,
     return dict(counts)
 
 
+def _asm_line(line: str) -> str:
+    """Drop splat's address comment before looking at instruction operands."""
+    return re.sub(r"/\*.*?\*/", "", line)
+
+
+def _reference_tokens(text: str):
+    """Yield ``(kind, token)`` for relocatable control/address operands.
+
+    Address pairs are included because a function pointer such as ``NetRouterMain`` is emitted
+    as ``%hi(D_XXXXXXXX)``/``%lo(D_XXXXXXXX)`` rather than a ``jal``.  ``jalr`` and computed
+    branches intentionally yield nothing: their target is not present in the split text.
+    """
+    for raw in text.splitlines():
+        line = _asm_line(raw)
+        for _kind, token in _ADDRESS_RE.findall(line):
+            token = re.sub(r"\s*[+-]\s*0x[0-9A-Fa-f]+$", "", token).strip()
+            yield "address", token
+        match = _CONTROL_RE.search(line)
+        if match is None:
+            continue
+        operands = match.group(2).split(",")
+        yield "control", operands[-1].strip()
+
+
+def find_unresolvable_references(text: str, *, unit_functions: set[str],
+                                 unit_lo: int | None, unit_hi: int | None,
+                                 by_name: dict[str, int], borrowed_names: set[str],
+                                 split_names: set[str], unplaced: dict[str, dict],
+                                 unplaced_by_addr: dict[int, str]) -> list[dict]:
+    """Find named relocations that ``compile.py`` cannot resolve without compiling.
+
+    Unknown data-only operands are deliberately not treated as callees.  The one useful
+    exception is an encoded address whose oracle record says it is an unplaced function (the
+    ``D_008062B0`` spelling of ``NetRouterMain``).  This keeps the signal conservative while
+    still catching function pointers visible in the split.
+    """
+    found: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for kind, token in _reference_tokens(text):
+        if token.startswith(".L") or token in unit_functions:
+            continue
+        if token in by_name or token in borrowed_names:
+            continue
+        record = unplaced.get(token)
+        mapped_name = token
+        address = None
+        if record is not None:
+            address = record["address"]
+        else:
+            encoded = _ENCODED_ADDR_RE.fullmatch(token)
+            if encoded:
+                address = int(encoded.group(1), 16)
+                if (unit_lo is not None and unit_hi is not None
+                        and unit_lo <= address < unit_hi):
+                    continue
+                mapped_name = unplaced_by_addr.get(address, token)
+                record = unplaced.get(mapped_name)
+        if record is not None:
+            # ``compile.py`` substitutes address 0 for the one unplaced reason that retail's
+            # DWARF itself gives no location; every other unplaced record is a real address
+            # this layout does not model and is refused.
+            if record["reason"].startswith("no AT_location"):
+                continue
+            key = (kind, token)
+            if key not in seen:
+                seen.add(key)
+                found.append({"kind": kind, "target": token, "callee": mapped_name,
+                              "address": address,
+                              "reason": (f"{record['reason']} (overlay boundary: the target "
+                                         "has no placement in this layout)")})
+            continue
+        # A func_XXXXXXXX in an address pair is still a code target, while an unknown D_
+        # operand is an unnamed view of data the screen cannot classify from assembly.
+        is_code_target = kind == "control" or token.startswith("func_")
+        if not is_code_target:
+            continue
+        key = (kind, token)
+        if key in seen:
+            continue
+        seen.add(key)
+        if token in split_names:
+            reason = ("code target with a split but no symbol_addrs record "
+                      "(lookup gap: the link places it, compile.py cannot relocate it)")
+        else:
+            reason = "call target with neither a symbol_addrs record nor a split"
+        found.append({"kind": kind, "target": token, "callee": token,
+                      "address": address, "reason": reason})
+    return found
+
+
 def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: int,
-               arrays: int) -> float:
+               arrays: int, unresolvable: int = 0) -> float:
     """Expected-ease score: few functions dominates, then call naming, then line records.
 
     It is a tie-break among unblocked units, not a claim of certainty; every term is printed
@@ -250,6 +378,7 @@ def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: in
     lines_per_function = (statements / functions) if functions else 0.0
     score = 100.0
     score -= 6.0 * max(0, functions - 1)
+    score -= 25.0 * min(unresolvable, 8)
     score -= 2.0 * min(calls.get("placeholder", 0), 12)
     score -= 1.0 * min(calls.get("named", 0), 20)
     score -= 0.5 * min(calls.get("borrowed", 0), 20)
@@ -266,7 +395,8 @@ def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: in
 
 def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int],
                  by_name, by_addr, borrowed_names, borrowed_addrs, splits: pathlib.Path,
-                 split_names: set[str]) -> dict:
+                 split_names: set[str], unplaced: dict | None = None,
+                 unplaced_by_addr: dict[int, str] | None = None) -> dict:
     """Every signal for one unpromoted (or promoted) unit.  No I/O beyond its splits."""
     promoted = (REPO_ROOT / "src" / rel).exists()
     library = "/src/" not in tu.name.replace("\\", "/")
@@ -306,6 +436,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
     fp_functions = 0
     split_missing = 0
     calls = collections.Counter()
+    unresolvable: list[dict] = []
+    unresolved_seen: set[str] = set()
     unit_functions = {f.name for f in functions if f.name}
     unit_lo = min((f.attrs[AT_low_pc] for f in functions), default=None)
     unit_hi = max((f.attrs[AT_high_pc] for f in functions), default=None)
@@ -324,6 +456,15 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
                                     borrowed_names=borrowed_names,
                                     borrowed_addrs=borrowed_addrs,
                                     split_names=split_names))
+        for ref in find_unresolvable_references(
+                text, unit_functions=unit_functions, unit_lo=unit_lo, unit_hi=unit_hi,
+                by_name=by_name, borrowed_names=borrowed_names,
+                split_names=split_names, unplaced=unplaced or {},
+                unplaced_by_addr=unplaced_by_addr or {}):
+            if ref["target"] in unresolved_seen:
+                continue
+            unresolved_seen.add(ref["target"])
+            unresolvable.append({**ref, "function": f.name})
         lo, hi = f.attrs[AT_low_pc], f.attrs[AT_high_pc]
         line_counts.append(sum(1 for addr, line in dwarf.line_table(f.cu)
                                if line and lo <= addr < hi))
@@ -374,27 +515,30 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         flags.append("array-die-order")
         reasons.append(f"{len(tables)} array tables / {len(arrays)} array DIEs: "
                        "array-DIE order is compiler-table order, not declaration order")
-    if calls.get("placeholder"):
-        flags.append("calls-without-record")
-        warnings.append(f"{calls['placeholder']} call(s) to a split-only func_ name "
-                        "(no symbol_addrs record): a name has to be imported mid-unit")
-    if calls.get("unknown"):
-        flags.append("unknown-calls")
-        reasons.append(f"{calls['unknown']} call(s) with neither a symbol record nor a split")
+    if unresolvable:
+        flags.append("unresolvable-callees")
+        shown = []
+        for ref in unresolvable[:3]:
+            where = f" at 0x{ref['address']:X}" if ref["address"] is not None else ""
+            alias = (f" ({ref['callee']})" if ref["callee"] != ref["target"] else "")
+            shown.append(f"{ref['target']}{alias}{where}: {ref['reason']}")
+        reasons.append(f"{len(unresolvable)} branch/call target(s) the promotion path cannot "
+                       f"resolve: " + "; ".join(shown))
 
     blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "library",
                            "unreferenced-arrays", "large-tables", "unreferenced-tables",
-                           "array-die-order", "unknown-calls"} for flag in flags)
+                           "array-die-order", "unresolvable-callees"} for flag in flags)
 
     score = score_unit(functions=n, statements=statements, calls=calls,
-                       fp_functions=fp_functions, arrays=len(arrays))
+                       fp_functions=fp_functions, arrays=len(arrays),
+                       unresolvable=len(unresolvable))
 
     good = [
         f"{n} function{'s' if n != 1 else ''}",
         f"{statements} line record{'s' if statements != 1 else ''}"
         f" ({lines_per_function:.1f}/function)",
         (f"calls: {calls['borrowed']} borrowed, {calls['named']} named, "
-         f"{calls['placeholder']} placeholder, {calls['internal']} internal")
+         f"{calls['internal']} internal")
         if sum(calls.values()) else "no calls",
         "no array/table risk" if not arrays and not tables else
         f"{len(arrays)} array DIE(s), {len(tables)} file-scope table(s), all referenced",
@@ -422,6 +566,7 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         "fp_functions": fp_functions,
         "split_missing": split_missing,
         "calls": dict(calls),
+        "unresolvable": unresolvable,
         "flags": flags,
         "warnings": warnings,
         "blocked": blocked,
@@ -440,6 +585,9 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
     units = load_units(root / "config/ddrex2p/cus.json")
     by_name, by_addr = load_symbol_addrs(root / "config/ddrex2p/symbol_addrs.txt")
     borrowed_names, borrowed_addrs = load_borrowed(root / "config/ddrex2p/borrowed_symbols.txt")
+    unplaced_path = root / "config/ddrex2p/unplaced_symbols.txt"
+    unplaced, unplaced_by_addr = (load_unplaced(unplaced_path) if unplaced_path.is_file()
+                                  else ({}, {}))
     edges, roots = build_reference_graph(dwarf.dies)
     reachable = reachable_offsets(edges, roots)
     splits = root / "asm/nonmatchings/main"
@@ -455,7 +603,8 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
         rows.append(analyze_unit(dwarf, rel, tu, units=units, reachable=reachable,
                                  by_name=by_name, by_addr=by_addr,
                                  borrowed_names=borrowed_names, borrowed_addrs=borrowed_addrs,
-                                 splits=splits, split_names=split_names))
+                                 splits=splits, split_names=split_names,
+                                 unplaced=unplaced, unplaced_by_addr=unplaced_by_addr))
     # A cus.json unit with no DWARF TU is a manifest inconsistency; surface it, never average it.
     for rel, info in units.items():
         if rel not in seen:
@@ -464,7 +613,8 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                          "statements": 0, "lines_per_function": 0.0, "arrays": 0,
                          "unreferenced_arrays": [], "tables": [], "large_tables": [],
                          "unreferenced_tables": [], "vu_functions": 0, "fp_functions": 0,
-                         "split_missing": 0, "calls": {}, "flags": ["missing-dwarf"],
+                         "split_missing": 0, "calls": {}, "unresolvable": [],
+                         "flags": ["missing-dwarf"],
                          "blocked": True, "score": 0.0,
                          "reasons": ["cus.json names this unit but the DWARF has no TU for it"],
                          "good": []})
