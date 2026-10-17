@@ -457,9 +457,20 @@ DDREX2P = Target(
     ),
     # (source, compiler build, flags): measured, never inherited -- see the note above.
     # `select_build.py --tu sys_scf.c` (2026-10-16, all five installed builds, every flag
-    # set) is the evidence for this line; four builds reproduce the unit and `.comment` cuts
-    # the tie to three, of which this is the first.
-    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),),
+    # set) is the evidence for the first line; four builds reproduce the unit and `.comment`
+    # cuts the tie to three, of which this is the first.
+    #
+    # The other two are the pair the *gate* accepts -- `verify --tu` reports text, debug and
+    # line ok for both, checked by the controller -- recorded as provisional because
+    # `select_build` reports "no installed compiler reproduces" them.  That disagreement is a
+    # tooling finding, not a bad unit: `select_build` compares a raw object's `.debug` while
+    # the gate compares the post-processed chunk that lands in the image, and for units whose
+    # DIE order matters (see the `.debug`-ordering blocker in the plan) the two are not the
+    # same measurement.  Until that is fixed, trust the gate and treat these two rows as
+    # "the pair this target promotes", not as a discriminated winner.
+    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),
+               ("src/sys/sys_demo.c", "3.0-011126", "-c -lang c -O3 -g"),
+               ("src/CS/lang.c", "3.0-011126", "-c -lang c -O3 -g")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention
