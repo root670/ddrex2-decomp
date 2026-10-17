@@ -13,7 +13,21 @@
  * so it is spelled out here, member for member, in the order the offsets give.
  *
  * Neither function makes a call: each is one store, so neither needs a name that the DWARF
- * does not carry (see config/ddrex2p/borrowed_symbols.txt for the ones that do). */
+ * does not carry (see config/ddrex2p/borrowed_symbols.txt for the ones that do).
+ *
+ * The unit still does not promote, and it is the `.debug` side that stops it: the types
+ * block below is 0x45D where the pinned chunk has 0x4A8, short by 0x4B, and the missing
+ * material is not padding.  Retail's declaration CU carries two more anonymous array types
+ * than this file declares -- `.debug` 0x2FE (`unsigned char *[6]`, immediately before
+ * `_tag_SYS_DEMO_WORK` at 0x325) and 0x5FD (`unsigned char[256]`, before `@anon0` at 0x621)
+ * -- and nothing in the CU references either of them: a scan of the whole section finds
+ * their offsets only in the sibling chains of the DIEs ahead of them.  The pair a first
+ * reading named (`.debug` 0x6E8, 0x70C = `char[16]`, `unsigned char[8]`) is the pair the
+ * anonymous member struct below already produces.  What declaration the original file wrote
+ * for those two types is not known; every construct tried so far (unused structs, `extern`
+ * declarations, typedefs, unused locals and statics, array parameters, a never-called
+ * inline, five compiler builds) leaves the block at 0x45D.  See
+ * .superpowers/sdd/2026-10-15-m3-promotion-loop/reports/draft-finish-report.md. */
 
 struct _tag_SYS_DEMO_WORK {
     int mode;
