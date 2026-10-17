@@ -259,6 +259,48 @@ def test_vu0_and_missing_split_and_overlay_flags(tmp_path):
     assert "missing-splits" in row2["flags"]
 
 
+def test_128bit_gpr_operation_blocks_but_quadword_assignment_does_not(tmp_path):
+    """`eye_filter.c` ranked #1 as "scalar" because the signal only knew VU0.
+
+    MWCC has no 128-bit operators, so a ``pxor`` cannot come from C -- but ``lq``/``sq``
+    and ``pcpyld`` can: they are what legal ``u_long128`` assignment and constant
+    materialisation compile to (``eye_filter.c``'s own ``sepia`` is the in-tree proof).
+    """
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lq         $4, 0x0($9)",
+        "    pxor       $4, $4, $7",
+        "    sq         $4, 0x0($8)",
+        "    por        $3, $3, $7",
+        "    jr         $31",
+    ]))
+    row = _analyze(tmp_path, tu, [fn], {})
+    assert "128-bit-gpr" in row["flags"]
+    assert row["blocked"] is True
+    assert row["quad_functions"] == 1 and row["quad_ops"] == ["por", "pxor"]
+    assert "MWCC has no 128-bit operators" in row["reasons"][0]
+    assert "no VU0" in " ".join(row["good"])  # a separate class from the VU0 signal
+
+    # The expressible subset alone must not block: a unit using `u_long128` as a value.
+    tu2 = FakeTU("C:\\x\\src\\X\\fake2.c", [])
+    fn2 = FakeFunction("g", 0x10, 0x40)
+    _write_split(tmp_path, "g", "\n".join([
+        "glabel g",
+        "    dsll32     $4, $6, 0",
+        "    or         $4, $6, $4",
+        "    pcpyld     $7, $4, $4",
+        "    lq         $3, 0x0($5)",
+        "    sq         $3, 0x0($4)",
+        "    pref       0x0, 0x0($5)",
+        "    jr         $31",
+    ]))
+    row2 = _analyze(tmp_path, tu2, [fn2], {})
+    assert row2["flags"] == [] and row2["blocked"] is False
+    assert row2["quad_ops"] == [] and "no 128-bit GPR ops" in " ".join(row2["good"])
+
+
 def test_split_only_callee_blocks_as_an_unresolvable_target(tmp_path):
     """A split is not a ledger record: compile.py still has no address for the name."""
     tu = FakeTU("C:\\x\\src\\X\\fake.c", [])

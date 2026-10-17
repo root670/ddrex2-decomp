@@ -180,6 +180,23 @@ evidence, not by taste. Where that forces space, use **blank lines** — a comme
 twenty-line gap is padding pretending to be documentation. The statement lines must not move; what
 fills the space between them is your choice.
 
+**A better answer than padding when the file must carry more than the statements.** A `#line N`
+directive makes the line that *follows* it number `N`, so statements land on retail's line
+numbers directly and the blank-line dance disappears: the file can hold a header comment, an
+`#include`, a type block or a `#define` between two statements without forty empty lines
+standing in for them.  Measured on UnitC's `AM/s573/doll/dexport.c`, whose statements are at
+lines 61–105 while its type closure is 1,111 lines over 28 headers — the generated headers are
+the only way to declare `SaveData` (0x1FF50 B) and `g_game_w` (0xACDC4) without moving the
+statements, and the emitted `.line` numbers stayed retail's.  Two rules come with it:
+
+- the directive numbers the *next* line, so the statement after it must be the one retail puts
+  on `N`; put it immediately before that statement, not before a block of declarations;
+- **a `for` loop's increment and test carry the line of the body's closing brace**, not the
+  `for`'s own line.  Measured on a probe: `for (n = 0; n < 4; n++) { … }` with the `}` on line 9
+  records the `n++` and the test on line 9.  So when the line a `#line` must reach is a loop's,
+  it is the brace's line that has to be right, and both of UnitC's candidate units are only
+  explicable with that rule.
+
 ## House rules that keep the gates honest
 
 - Gates are pins, not opinions: `config/ddrex2p/checksums.txt` holds both, and a gate that lacks its
@@ -221,6 +238,7 @@ not a puzzle: record it and take another unit.
 | **VU0 units** (`.vutext`) | MWCC sinks the epilogue, so the last inline-asm statement takes the `jr` delay slot where retail fills it from the operation that follows |
 | **shape conflicts** | a unit needing two mutually exclusive C shapes: the reconstruction that fixed `.line` scheduled six words differently and left `.text` short, so both could not be had. Record the conflict; never pick a winner and call it promoted |
 | **unresolvable callees** | a call target the promotion path cannot relocate, failing at `cc` *before* any comparison. Two sub-cases, and they must not be confused: the target is an **overlay** function — undefined in the link, listed in `undefined_syms_auto.txt`, outside every declared segment, deferred by design — or the target **is placed by the link** (present in the generated `build/SLUS_*.ld`) yet absent from the ledger `compile.py` reads, which is a lookup bug rather than a class. The screen must test *placeability*, not the existence of a name: `net_sys_connect` ranked second on a call to a named-but-unplaceable overlay function, and three further candidates were blocked the same way. |
+| **128-bit GPR operations** | the unit's split carries an EE 128-bit GPR **operation** (`pxor`, `pand`, `paddw`, …), and MWCC PS2 has **no 128-bit operators**, so no C expression emits one. Measured with the retail compilers under wibo (`-c -lang c -O3 -g`, and `-lang c++`): `a ^ b`, `a & b`, `a \| b`, `a + b`, `a - b`, `a * b`, `~a`, `a ^= b` on `u_long128`/`unsigned __int128` are rejected by **all five installed builds** with `Error: illegal data size` — for parameters, locals, globals and pointer dereferences alike — and `u_long128 a;` without a typedef fails the same way. What 128-bit C *does* give is assignment (`lq`/`sq`) and constant materialisation (`lui`/`ori`/`dsll32`/`or`/`pcpyld`), which is exactly how retail builds `Cr`, `Cb` and `ex`. The only construct that produced a `pxor` was MWCC's inline-asm extension (`asm { pxor a, a, ex }`) — assembly, not C, so it is a probe rather than a promotion. Found on `eyetoy/eye_filter.c`, whose `negaposi` is `pxor $4,$4,$7`/`pxor $3,$3,$7` over `lq`/`sq` values, while its neighbour `sepia` in the same unit uses only the expressible subset. The screen flags it as `128-bit-gpr` and must **not** match `lq`/`sq`/`pcpyld` (`sepia` is the in-tree proof that legal C emits them) nor `pref` (a prefetch hint). |
 
 **What the loop lacks:** a way to ask *which C construct* emits a given missing DIE. That is manual
 probing today and it is where most of a hard unit's cycles go. Everything else the loop needs exists.

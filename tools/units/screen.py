@@ -5,6 +5,8 @@
 that has actually cost time:
 
 * few functions, scalar code, no VU0 (``.vutext`` has its own blocker);
+* no EE 128-bit GPR operations -- MWCC PS2 has no 128-bit operators, so a unit whose split
+  carries ``pxor``/``pand``/``paddw``/... is unwritable in C (the 128-bit blocker class);
 * no large unreferenced file-scope tables (the ``mes_*`` debug-order class);
 * calls absent or already named in ``config/ddrex2p/borrowed_symbols.txt``;
 * plenty of DWARF line records, because ``.line`` punishes guesswork hardest.
@@ -19,15 +21,16 @@ rather than called) and callees in no ledger at all (``func_001C43E8``, ``func_0
 ``func_0012CD70``).  The screen sees the same operand text splat wrote, so the check costs one
 pass over the splits it already reads and no compiler.
 
-The four units that failed for shape reasons -- ``el_mes.c``/the ``mes_*`` siblings,
-``AM/s573/doll/vu0.c``, ``sys_demo.c`` and ``lang.c`` -- are the screen's acceptance test:
-a class it cannot see is reported as unseen rather than silently scored.
+The units that failed for shape reasons -- ``el_mes.c``/the ``mes_*`` siblings,
+``AM/s573/doll/vu0.c``, ``sys_demo.c``, ``lang.c`` and ``eyetoy/eye_filter.c`` (ranked #1 before
+this signal existed) -- are the screen's acceptance test: a class it cannot see is reported as
+unseen rather than silently scored.
 
 Everything is measured from the repository, never compiled:
 
 * ``config/ddrex2p/cus.json`` -- the unit list, function counts and source paths;
 * ``orig/SLUS_211.74``'s DWARF via ``tools/oracle/dwarf1.py`` -- types, globals, line tables;
-* ``asm/nonmatchings/main/*.s`` -- calls, address operands, VU0/FPU instructions;
+* ``asm/nonmatchings/main/*.s`` -- calls, address operands, VU0/FPU/128-bit-GPR instructions;
 * ``config/ddrex2p/symbol_addrs.txt``, ``borrowed_symbols.txt`` and ``unplaced_symbols.txt``
   -- name resolution, in the same order ``compile.py`` applies them.
 
@@ -84,6 +87,30 @@ _ENCODED_ADDR_RE = re.compile(r"^(?:func|D)_([0-9A-Fa-f]{8})$")
 #: always present in such a function.
 _VU0_RE = re.compile(r"\b(lqc2|sqc2|qmtc2|qmfc2|cfc2|ctc2|vmove|vadd|vsub|vmul|vmad|"
                      r"vmax|vmini|vabs|vdiv|vsqrt|vrsqrt|vwaitq|vnop|vcallms|vcall)\b")
+
+#: EE 128-bit GPR ("quadword") *operations*.  This is ``docs/unit-work.md``'s 128-bit blocker
+#: class: MWCC PS2 has no 128-bit operators, so **no C expression emits one of these** -- only
+#: inline asm does, and that is a probe rather than a promotion.  Measured with the retail
+#: compilers: ``^ & | + - * ~ ^=`` on ``u_long128`` is rejected by all five installed builds
+#: with ``Error: illegal data size``, for parameters, locals, globals and dereferences alike.
+#:
+#: Deliberately absent, and the reason this signal is not just "starts with p":
+#:
+#: * ``lq``, ``sq`` and ``pcpyld`` are what *legal* ``u_long128`` C compiles to (assignment
+#:   and constant materialisation).  ``eyetoy/eye_filter.c`` proves it in the tree: its
+#:   neighbour ``sepia`` is expressible in C and contains ``pcpyld`` and ``sq``.
+#: * ``pref`` is a prefetch hint, not a 128-bit operation.
+#: * ``lqc2``/``sqc2``/``qmtc2``/``qmfc2`` are the VU0 signal's, not this one's.
+_GPR128_RE = re.compile(
+    r"\b(pxor|pand|por|pnor|"
+    r"paddb|paddh|paddw|paddsb|paddsh|paddsw|paddub|padduh|padduw|"
+    r"psubb|psubh|psubw|psubsb|psubsh|psubsw|psubub|psubuh|psubuw|"
+    r"pcgtb|pcgth|pcgtw|pceqb|pceqh|pceqw|pmaxh|pmaxw|pminh|pminw|pabsh|pabsw|"
+    r"psllh|psllw|psllvw|psrlh|psrlw|psrlvw|psrah|psraw|psravw|"
+    r"ppacb|ppacw|ppach|pextlb|pextlh|pextlw|pextub|pextuh|pextuw|"
+    r"pexch|pexcw|pexeh|pexew|pcpyh|pcpyud|prot3w|pinth|pinteh|plzcw|"
+    r"pmulth|pmultw|pmultuw|phmadh|phmsbh|pmaddh|pmaddw|pmadduw|pmsubh|pmsubw|"
+    r"pmfhl|pmfhi|pmflo|pmthi|pmtlo|qfsrv)\b")
 
 #: FPU work is not wrong, but "scalar code" in the selection rule means you are less likely to
 #: fight the scheduler over a vector/FPU expression shape.
@@ -434,6 +461,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
     line_counts: list[int] = []
     vu_functions = 0
     fp_functions = 0
+    quad_functions = 0
+    quad_ops: "collections.Counter[str]" = collections.Counter()
     split_missing = 0
     calls = collections.Counter()
     unresolvable: list[dict] = []
@@ -451,6 +480,10 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
             vu_functions += 1
         if _FPU_RE.search(text):
             fp_functions += 1
+        quad = _GPR128_RE.findall(text)
+        if quad:
+            quad_functions += 1
+            quad_ops.update(quad)
         calls.update(classify_calls(text, unit_functions=unit_functions, unit_lo=unit_lo,
                                     unit_hi=unit_hi, by_name=by_name, by_addr=by_addr,
                                     borrowed_names=borrowed_names,
@@ -496,6 +529,13 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         flags.append("vu0")
         reasons.append(f"{vu_functions} function(s) use VU0 macro-mode operations "
                        "(the .vutext blocker, inferred; section names are stripped)")
+    if quad_functions:
+        flags.append("128-bit-gpr")
+        shown_ops = ", ".join(sorted(quad_ops))
+        reasons.append(f"{quad_functions} function(s) use EE 128-bit GPR operations "
+                       f"({shown_ops}): MWCC has no 128-bit operators, so no C expression "
+                       "produces them (the 128-bit blocker class; inline asm is the only "
+                       "route, and that is a probe rather than a promotion)")
     if unreferenced_arrays:
         flags.append("unreferenced-arrays")
         shown = ", ".join(f"{type_text(dwarf, c)} @0x{c.off:X}"
@@ -525,9 +565,10 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         reasons.append(f"{len(unresolvable)} branch/call target(s) the promotion path cannot "
                        f"resolve: " + "; ".join(shown))
 
-    blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "library",
-                           "unreferenced-arrays", "large-tables", "unreferenced-tables",
-                           "array-die-order", "unresolvable-callees"} for flag in flags)
+    blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "128-bit-gpr",
+                           "library", "unreferenced-arrays", "large-tables",
+                           "unreferenced-tables", "array-die-order",
+                           "unresolvable-callees"} for flag in flags)
 
     score = score_unit(functions=n, statements=statements, calls=calls,
                        fp_functions=fp_functions, arrays=len(arrays),
@@ -543,6 +584,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         "no array/table risk" if not arrays and not tables else
         f"{len(arrays)} array DIE(s), {len(tables)} file-scope table(s), all referenced",
         "no VU0" if not vu_functions else f"{vu_functions} VU0 function(s)",
+        "no 128-bit GPR ops" if not quad_functions
+        else f"{quad_functions} 128-bit GPR function(s)",
         "scalar" if not fp_functions else f"{fp_functions} FPU function(s)",
         f"declared {declared} function(s) in cus.json",
     ]
@@ -563,6 +606,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         "large_tables": [t["name"] for t in large_tables],
         "unreferenced_tables": [t["name"] for t in unreferenced_tables],
         "vu_functions": vu_functions,
+        "quad_functions": quad_functions,
+        "quad_ops": sorted(quad_ops),
         "fp_functions": fp_functions,
         "split_missing": split_missing,
         "calls": dict(calls),
@@ -612,7 +657,8 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                          "declared_functions": info["functions"], "functions": 0,
                          "statements": 0, "lines_per_function": 0.0, "arrays": 0,
                          "unreferenced_arrays": [], "tables": [], "large_tables": [],
-                         "unreferenced_tables": [], "vu_functions": 0, "fp_functions": 0,
+                         "unreferenced_tables": [], "vu_functions": 0, "quad_functions": 0,
+                         "quad_ops": [], "fp_functions": 0,
                          "split_missing": 0, "calls": {}, "unresolvable": [],
                          "flags": ["missing-dwarf"],
                          "blocked": True, "score": 0.0,

@@ -8,12 +8,13 @@ python3 tools/units/screen.py --all --top 60   # the blocked rows, with reasons
 ```
 
 The rule this implements is `docs/unit-work.md`'s "Pick a unit by shape, not by size": few
-functions, scalar code, no VU0, no large/unreferenced file-scope tables, calls that already
-have names, and plenty of DWARF line records.  Four units failed on exactly those shapes and
-cost 4½ hours between them, so the screen's first job is to make those classes visible before
-anyone writes C.  It reads `config/ddrex2p/cus.json`, `orig/SLUS_211.74`'s DWARF,
-`config/ddrex2p/symbol_addrs.txt`, `borrowed_symbols.txt`, `unplaced_symbols.txt` and the
-splits under `asm/nonmatchings/main/`; it never compiles or links anything.
+functions, scalar code, no VU0, no EE 128-bit GPR operations, no large/unreferenced file-scope
+tables, calls that already have names, and plenty of DWARF line records.  Five units failed on
+exactly those shapes and cost 5½ hours between them, so the screen's first job is to make those
+classes visible before anyone writes C.  It reads `config/ddrex2p/cus.json`,
+`orig/SLUS_211.74`'s DWARF, `config/ddrex2p/symbol_addrs.txt`, `borrowed_symbols.txt`,
+`unplaced_symbols.txt` and the splits under `asm/nonmatchings/main/`; it never compiles or links
+anything.
 
 **Second revision: a name is not a placeable name.**  The first ranking treated a call as fine
 when its target merely *carried a name*, and ranked `network/net_sys/net_sys_connect.c` second
@@ -26,10 +27,25 @@ else fails at `cc`, before any comparison.  The screen now scans every split's b
 sub-cases are the **overlay boundary** (outside every declared segment; deferred by design) and
 the **lookup gap** (a split the link places but `symbol_addrs.txt` lacks; a lookup bug).
 
-Of 249 translation units, 1 is promoted (`sys/sys_scf.c`), **6 are unblocked candidates**, and
-242 are blocked (the categories below overlap): 67 overlay units have no retail split in this
-target, 1 is a library object, 142 carry at least one unresolvable target, and the remainder
-carry one of the shape classes.
+**Third revision: `scalar` meant "no VU0", and that was not enough.**  The screen ranked
+`eyetoy/eye_filter.c` #1 on the shape rule, and the unit turned out to be **unwritable in C at
+all**: its `negaposi` is an EE 128-bit GPR xor (`pxor $4,$4,$7` / `pxor $3,$3,$7` over values
+moved with `lq`/`sq`), and MWCC PS2 has **no 128-bit operators** — all five installed builds
+reject `^ & | + - * ~ ^=` on `u_long128` with `Error: illegal data size`, for parameters,
+locals, globals and dereferences alike.  `docs/unit-work.md`'s blocker table now records the
+class and the compiler's own error text.  The screen reads each split for the 128-bit
+*operations* and blocks on any (`128-bit-gpr`); the ranking below was regenerated with it.
+
+The matching set is not "every `p…` mnemonic": `lq`, `sq` and `pcpyld` are what **legal**
+`u_long128` C compiles to (assignment, and constant materialisation), and `eye_filter.c` proves
+it in the tree — its neighbour `sepia` is expressible in C and contains `pcpyld` and `sq`.
+Matching those would block every unit that merely moves 128-bit values.  `pref` is a prefetch
+hint, and `lqc2`/`sqc2`/`qmtc2`/`qmfc2` stay the VU0 signal's.
+
+Of 249 translation units, 1 is promoted (`sys/sys_scf.c`), **5 are unblocked candidates**, and
+243 are blocked (the categories below overlap): 67 overlay units have no retail split in this
+target, 1 is a library object, 142 carry at least one unresolvable target, 1 carries EE 128-bit
+GPR operations, and the remainder carry one of the other shape classes.
 
 ## Ranking
 
@@ -42,12 +58,15 @@ weights without losing the evidence.
 
 | rank | unit | score | functions | line records | why expected easy |
 |---:|---|---:|---:|---:|---|
-| 1 | `eyetoy/eye_filter.c` | 106.0 | 2 | 44 | 2 functions; 44 line records (22.0/function); no calls; no array/table risk; no VU0; scalar; declared 2 function(s) in cus.json |
-| 2 | `network/net_game/net_game_help.c` | 94.0 | 2 | 47 | 2 functions; 47 line records (23.5/function); calls: 0 borrowed, 12 named, 0 internal; no array/table risk; no VU0; scalar; declared 2 function(s) in cus.json |
-| 3 | `AM/s573/play/p_anime.c` | 73.2 | 5 | 239 | 5 functions; 239 line records (47.8/function); calls: 0 borrowed, 14 named, 0 internal; 39 array DIE(s), 1 file-scope table(s), all referenced; no VU0; scalar; declared 5 function(s) in cus.json |
-| 4 | `network/net_inter.c` | 61.9 | 7 | 42 | 7 functions; 42 line records (6.0/function); calls: 0 borrowed, 10 named, 0 internal; 5 array DIE(s), 0 file-scope table(s), all referenced; no VU0; scalar; declared 7 function(s) in cus.json |
-| 5 | `AM/s573/doll/ps1lib.c` | 50.4 | 8 | 129 | 8 functions; 129 line records (16.1/function); calls: 9 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; 5 FPU function(s); declared 8 function(s) in cus.json |
-| 6 | `AM/s573/doll/motion2.c` | 42.3 | 8 | 346 | 8 functions; 346 line records (43.2/function); calls: 3 borrowed, 20 named, 32 internal; 12 array DIE(s), 0 file-scope table(s), all referenced; no VU0; 2 FPU function(s); declared 8 function(s) in cus.json |
+| 1 | `network/net_game/net_game_help.c` | 94.0 | 2 | 47 | 2 functions; 47 line records (23.5/function); calls: 0 borrowed, 12 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; scalar; declared 2 function(s) in cus.json |
+| 2 | `AM/s573/play/p_anime.c` | 73.2 | 5 | 239 | 5 functions; 239 line records (47.8/function); calls: 0 borrowed, 14 named, 0 internal; 39 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 5 function(s) in cus.json |
+| 3 | `network/net_inter.c` | 61.9 | 7 | 42 | 7 functions; 42 line records (6.0/function); calls: 0 borrowed, 10 named, 0 internal; 5 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 7 function(s) in cus.json |
+| 4 | `AM/s573/doll/ps1lib.c` | 50.4 | 8 | 129 | 8 functions; 129 line records (16.1/function); calls: 9 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 5 FPU function(s); declared 8 function(s) in cus.json |
+| 5 | `AM/s573/doll/motion2.c` | 42.3 | 8 | 346 | 8 functions; 346 line records (43.2/function); calls: 3 borrowed, 20 named, 32 internal; 12 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 2 FPU function(s); declared 8 function(s) in cus.json |
+
+`eyetoy/eye_filter.c` — the previous ranking's #1, at 106.0 — is now row 6, `[blocked]
+flags=128-bit-gpr`: `1 function(s) use EE 128-bit GPR operations (pxor)`.  Like `vu0` and the
+`mes_*` classes it is a *block*, not a score term, so it never reaches the candidate list.
 
 `calls: 0 borrowed, 12 named, ...` means every call target already carries a `symbol_addrs`
 record, so no name has to be imported mid-unit.  Distinct unresolvable targets are not a
@@ -56,14 +75,15 @@ the target's name, its address, and which ledger gap it is.
 
 ### The top three, in one line each
 
-* `eyetoy/eye_filter.c` — two functions, **no calls at all**, no array or file-scope-table
-  shape, 44 statement lines: the closest thing to `sys_scf.c`'s shape in the tree.
 * `network/net_game/net_game_help.c` — two functions, twelve already-named calls, 47 statement
   lines, no array or table shape; it took candidate #2's place once the callee signal moved
-  `net_sys_connect` down.
+  `net_sys_connect` down, and is now rank 1.
 * `AM/s573/play/p_anime.c` — five functions, 239 statement lines, fourteen named calls, one
   referenced file-scope table; more functions than the calibration unit, but every name it
   calls is placeable today.
+* `network/net_inter.c` — seven functions, ten named calls, 42 statement lines (6.0 per
+  function, the thinnest line evidence in the top three); promoted from rank 4 as the two
+  units above it in the previous list were blocked.
 
 The first unit that did promote (`sys_scf.c`) scores **97.5** on the same formula (2
 functions, 4 line records per function, one borrowed call), which is the calibration the
@@ -90,10 +110,13 @@ warning nor a `placeholder` count survives; a name without an address is a block
 
 Across the tree the signal moves **68 candidates from unblocked to blocked** (the previous
 recorded ranking listed 62 unblocked; the tree has since grown to 74 under the old rule, and the
-new rule leaves 6).  Of the flagged targets, 141 are overlay-boundary addresses and 1,146 are
+callee rule left 6 — the 128-bit revision below takes that to 5).  Of the flagged targets, 141 are overlay-boundary addresses and 1,146 are
 in-segment lookup gaps, spread over 142 units.
 
-## Validation: the four shape failures
+## Validation: the four earlier shape failures
+
+The 128-bit class is the fifth, and has its own section below because it moved a candidate;
+these four were the state before it.
 
 The screen is only useful if it also sees the classes that cost the 4½ hours.  It does:
 
@@ -109,8 +132,43 @@ are `data-only` with 84/83/73/73 `unreferenced-tables`; `net_auth_mes_e.c`,
 `net_cnf_mes_e.c`, `net_router_mes_e.c`, `net_dnas_mes_e.c` and `workout_message.c` carry the
 table/array-order flags.
 
+## Validation: the 128-bit class
+
+The previous #1 was the unit that made this signal necessary, so it is also its acceptance test.
+Measured before and after the change on the same tree (`eyetoy/eye_filter.c` is the only unit
+whose split carries any matched operation):
+
+| unit | before | after | flags | reason printed by the screen |
+|---|---|---|---|---|
+| `eyetoy/eye_filter.c` | rank 1, score 106.0, unblocked | row 6, `blocked` | `128-bit-gpr` | `1 function(s) use EE 128-bit GPR operations (pxor): MWCC has no 128-bit operators, so no C expression produces them (the 128-bit blocker class; inline asm is the only route, and that is a probe rather than a promotion)` |
+| `network/net_game/net_game_help.c` | rank 2, 94.0 | rank 1, 94.0 | *(none)* | — |
+| `AM/s573/play/p_anime.c` | rank 3, 73.2 | rank 2, 73.2 | *(none)* | — |
+| `network/net_inter.c` | rank 4, 61.9 | rank 3, 61.9 | *(none)* | — |
+| `AM/s573/doll/ps1lib.c` | rank 5, 50.4 | rank 4, 50.4 | *(none)* | — |
+| `AM/s573/doll/motion2.c` | rank 6, 42.3 | rank 5, 42.3 | *(none)* | — |
+
+Exactly **one** unit moved from unblocked to blocked, and no unit moved the other way.  The
+counts go from 6 candidates to 5, and from 242 blocked to 243.  The five survivors' scores and
+`good` reasons are unchanged apart from the new `no 128-bit GPR ops` term, which is the
+evidence that the signal did not leak into units that merely move 128-bit values: `sepia`, in
+the blocked unit itself, compiles from C and contains `pcpyld` and `sq`.
+
 ## What the signal cannot see
 
+* **A 128-bit value assembled from the expressible subset.**  `lq`, `sq` and `pcpyld` are
+  deliberately not matched, so a unit that only moves 128-bit values looks clean — see the
+  block above for why matching them would be worse.  The signal sees the *operations*, not the
+  data flow: a unit whose stored value needs an operation the compiler lacks is only caught if
+  the operation itself appears.
+* **Whether the unit has a CU at all.**  The signal is per DWARF translation unit, and 84 of
+  the 85 splits in this tree that carry these opcodes belong to functions the DWARF does not
+  describe (engine and overlay code, already blocked as `overlay`/`missing-dwarf`).  The
+  attribution gap is structural: an opcode in a split with no function DIE cannot be charged to
+  a unit, so the flag would be silent if such a unit ever became a candidate.
+* **Opcodes outside the list.**  The set is the EE `p…`/`qfsrv` operation families, cross-checked
+  against every split in this disc (the 40 mnemonics actually present are all matched except the
+  three excluded ones).  An operation that appears in no split here and is missing from the list
+  would slip; the reverse error is the cheap one, as above.
 * **Indirect calls and computed targets.**  `jalr $3` and `jr $3` name no symbol, so a unit whose
   only foreign dependency is a call through a register — a function pointer loaded out of a data
   table, a `switch` jump table rendered as `jr` — looks clean.  `NetRouterMain` was caught only
@@ -149,6 +207,17 @@ blocked list as the overlay, VU0 and `mes_*` classes, with the target's name and
 printed, so a reader can overrule it in seconds — and if the name really is placeable, the
 `symbol_addrs` check passes and the flag disappears on the next run.  The one known false
 positive today is the transient one above: a lookup gap that the ledger fix closes.
+
+For the 128-bit signal the bias runs the other way on purpose, and the false positive has a
+named shape.  Matching `lq`/`sq`/`pcpyld` would have blocked **every** unit that moves a
+`u_long128` value — starting with `sepia`, the C-writable half of the very unit the class was
+found on — so those three are excluded and the cost is a false *negative*: a unit that only
+assigns 128-bit values is ranked as clean.  What is matched is the operation set, and a false
+positive there means an opcode that MWCC can in fact emit from C; the screen has no way to
+prove the negative without compiling, so the list is evidence-driven (the compiler probes in
+`docs/unit-work.md`) and printed per row with the opcodes it matched, which is what a reader
+needs to overrule it.  Measured today the class has no false positive at all: across 4,491
+splits in 249 units, exactly one unit matches, and it is the unit that cannot be written.
 
 ## What I would add next if this proves too coarse
 
