@@ -351,6 +351,7 @@ def _contiguous(runs) -> bool:
     return all(ordered[i][0] + ordered[i][1] == ordered[i + 1][0]
                for i in range(len(ordered) - 1))
 
+
 def _split_extent(tu: Tu, manifests: Manifests, root=REPO_ROOT) -> tuple[int, int]:
     """Return the address range occupied by the splits a promotion removes.
 
@@ -392,6 +393,7 @@ def _all_nops(data: bytes) -> bool:
     """Whether ``data`` is whole-word MIPS ``nop`` padding."""
     return len(data) % 4 == 0 and all(data[offset:offset + 4] == b"\0\0\0\0"
                                        for offset in range(0, len(data), 4))
+
 
 def _uncovered(size: int, spans) -> list[tuple[int, int]]:
     """The ``[start, end)`` runs of ``size`` that no ``(offset, length)`` span covers."""
