@@ -117,51 +117,17 @@ struct g_game_w {   // size 0xACDC4
     /* 0xAB536 */ unsigned char dancer_id[3];         // 0x3
     /* 0xAB539 */ // 0x3 bytes padding
     /* 0xAB53C */ struct {   // size 0x184
-        /* 0x000 */ struct {   // size 0x10
-            /* 0x000 */ union {   // size 0x4
+        /* 0x000, 0x080, 0x100 */ struct {   // size 0x10
+            /* 0x000, 0x004 */ union {   // size 0x4
                 /* 0x000 */ int id;                               // 0x4
                 /* 0x000 */ float fd;                             // 0x4
-            } x0;
-            /* 0x004 */ union {   // size 0x4
-                /* 0x000 */ int id;                               // 0x4
-                /* 0x000 */ float fd;                             // 0x4
-            } y0;
+            } x0, y0;                             // 0x4 each
             /* 0x008 */ unsigned int z0;                      // 0x4
             /* 0x00C */ unsigned char r0;                     // 0x1
             /* 0x00D */ unsigned char g0;                     // 0x1
             /* 0x00E */ unsigned char b0;                     // 0x1
             /* 0x00F */ unsigned char a0;                     // 0x1
-        } line_a[8];
-        /* 0x080 */ struct {   // size 0x10
-            /* 0x000 */ union {   // size 0x4
-                /* 0x000 */ int id;                               // 0x4
-                /* 0x000 */ float fd;                             // 0x4
-            } x0;
-            /* 0x004 */ union {   // size 0x4
-                /* 0x000 */ int id;                               // 0x4
-                /* 0x000 */ float fd;                             // 0x4
-            } y0;
-            /* 0x008 */ unsigned int z0;                      // 0x4
-            /* 0x00C */ unsigned char r0;                     // 0x1
-            /* 0x00D */ unsigned char g0;                     // 0x1
-            /* 0x00E */ unsigned char b0;                     // 0x1
-            /* 0x00F */ unsigned char a0;                     // 0x1
-        } line_b[8];
-        /* 0x100 */ struct {   // size 0x10
-            /* 0x000 */ union {   // size 0x4
-                /* 0x000 */ int id;                               // 0x4
-                /* 0x000 */ float fd;                             // 0x4
-            } x0;
-            /* 0x004 */ union {   // size 0x4
-                /* 0x000 */ int id;                               // 0x4
-                /* 0x000 */ float fd;                             // 0x4
-            } y0;
-            /* 0x008 */ unsigned int z0;                      // 0x4
-            /* 0x00C */ unsigned char r0;                     // 0x1
-            /* 0x00D */ unsigned char g0;                     // 0x1
-            /* 0x00E */ unsigned char b0;                     // 0x1
-            /* 0x00F */ unsigned char a0;                     // 0x1
-        } line_c[8];
+        } line_a[8], line_b[8], line_c[8];        // 0x80 each
         /* 0x180 */ int num;                              // 0x4
     } line_data[16];
     /* 0xACD7C */ int line_speed;                     // 0x4

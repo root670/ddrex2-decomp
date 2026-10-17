@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_dancemaster_dmm_mess_c_H
 #define DDR_UNIT_src_CS_dancemaster_dmm_mess_c_H
@@ -14,51 +17,43 @@
 #include "types/play_mode.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (21) */
+/* anonymous types (20) */
 
 /* anon_0_131 -- @anon0, 0xC bytes, dmm_mess.c (DIE 0x23F1D7) */
-struct anon_0_131 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char disp_flag;              // 0x1
     /* 0x001 */ unsigned char pad[3];                 // 0x3
     /* 0x004 */ int tex_id;                           // 0x4
     /* 0x008 */ int a;                                // 0x4
-};
-
-/* anon_1_131 -- @anon1, 0x8 bytes, dmm_mess.c (DIE 0x23F2A3) */
-struct anon_1_131 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
+} anon_0_131;
 
 /* anon_2_131 -- @anon2, 0x1C bytes, dmm_mess.c (DIE 0x23F384) */
-struct anon_2_131 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ unsigned short note[10];              // 0x14
     /* 0x014 */ unsigned short total_notes;           // 0x2
     /* 0x016 */ unsigned short total_combo;           // 0x2
     /* 0x018 */ unsigned int align;                   // 0x4
-};
+} anon_2_131;
 
 /* anon_3_131 -- @anon3, 0x10 bytes, dmm_mess.c (DIE 0x23F45C) */
-struct anon_3_131 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int x;                                // 0x4
     /* 0x004 */ int y;                                // 0x4
     /* 0x008 */ int pri;                              // 0x4
     /* 0x00C */ int br;                               // 0x4
-};
+} anon_3_131;
 
 /* anon_4_131 -- @anon4, 0x14 bytes, dmm_mess.c (DIE 0x23F64E) */
-struct anon_4_131 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ int disp_flag;                        // 0x4
     /* 0x004 */ float timer;                          // 0x4
     /* 0x008 */ float x;                              // 0x4
     /* 0x00C */ float y;                              // 0x4
     /* 0x010 */ int a;                                // 0x4
-};
+} anon_4_131;
 
 /* anon_5_131 -- @anon5, 0x28 bytes, dmm_mess.c (DIE 0x23F757) */
-struct anon_5_131 {   // size 0x28
+typedef struct {   // size 0x28
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ float timer;                          // 0x4
     /* 0x008 */ float ox;                             // 0x4
@@ -69,26 +64,26 @@ struct anon_5_131 {   // size 0x28
     /* 0x01C */ float spdy;                           // 0x4
     /* 0x020 */ int all_clear;                        // 0x4
     /* 0x024 */ int all_perfect;                      // 0x4
-};
+} anon_5_131;
 
 /* anon_6_131 -- @anon6, 0x10 bytes, dmm_mess.c (DIE 0x23FA81) */
-struct anon_6_131 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int type;                             // 0x4
     /* 0x004 */ float spd;                            // 0x4
     /* 0x008 */ float a;                              // 0x4
     /* 0x00C */ int z;                                // 0x4
-};
+} anon_6_131;
 
 /* anon_7_131 -- @anon7, 0x10 bytes, dmm_mess.c (DIE 0x23FB43) */
-struct anon_7_131 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int dx;                               // 0x4
     /* 0x004 */ int dy;                               // 0x4
     /* 0x008 */ int decide;                           // 0x4
     /* 0x00C */ int cancel;                           // 0x4
-};
+} anon_7_131;
 
 /* anon_16_131 -- @anon16, 0x14 bytes, dmm_mess.c (DIE 0x242822) */
-struct anon_16_131 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ unsigned char cone_state[8];          // 0x8
     /* 0x008 */ unsigned char state;                  // 0x1
     /* 0x009 */ unsigned char perfect;                // 0x1
@@ -97,10 +92,10 @@ struct anon_16_131 {   // size 0x14
     /* 0x00E */ unsigned short clear_count;           // 0x2
     /* 0x010 */ unsigned short first_clear_count;     // 0x2
     /* 0x012 */ unsigned short first_clear_time;      // 0x2
-};
+} anon_16_131;
 
 /* anon_19_131 -- @anon19, 0x1300 bytes, dmm_mess.c (DIE 0x242C65) */
-struct anon_19_131 {   // size 0x1300
+typedef struct {   // size 0x1300
     /* 0x000 */ unsigned char evboot[24];             // 0x18
     /* 0x018 */ unsigned char is_savedata;            // 0x1
     /* 0x019 */ signed char max_area;                 // 0x1
@@ -111,11 +106,11 @@ struct anon_19_131 {   // size 0x1300
     /* 0x038 */ unsigned int all_clear_count;         // 0x4
     /* 0x03C */ unsigned int all_play_time;           // 0x4
     /* 0x040 */ int route[200];                       // 0x320
-    /* 0x360 */ struct anon_16_131 subject[200];      // 0xFA0
-};
+    /* 0x360 */ anon_16_131 subject[200];             // 0xFA0
+} anon_19_131;
 
 /* anon_12_131 -- @anon12, 0x38 bytes, dmm_mess.c (DIE 0x241E63) */
-struct anon_12_131 {   // size 0x38
+typedef struct {   // size 0x38
     /* 0x000 */ int disp_win;                         // 0x4
     /* 0x004 */ int msg_id;                           // 0x4
     /* 0x008 */ int step;                             // 0x4
@@ -130,10 +125,10 @@ struct anon_12_131 {   // size 0x38
     /* 0x02C */ int yesno_step;                       // 0x4
     /* 0x030 */ int ok_step;                          // 0x4
     /* 0x034 */ int is_done_ok;                       // 0x4
-};
+} anon_12_131;
 
 /* anon_15_131 -- @anon15, 0x1F0 bytes, dmm_mess.c (DIE 0x24250E) */
-struct anon_15_131 {   // size 0x1F0
+typedef struct {   // size 0x1F0
     /* 0x000 */ unsigned short total_notes;           // 0x2
     /* 0x002 */ unsigned short total_combo;           // 0x2
     /* 0x004 */ unsigned short dance_level;           // 0x2
@@ -155,30 +150,30 @@ struct anon_15_131 {   // size 0x1F0
     /* 0x1E6 */ // 0x2 bytes padding
     /* 0x1E8 */ unsigned int score;                   // 0x4
     /* 0x1EC */ unsigned int align;                   // 0x4
-};
+} anon_15_131;
 
 /* anon_9_131 -- @anon9, 0x4 bytes, dmm_mess.c (DIE 0x241019) */
-struct anon_9_131 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ int cursor;                           // 0x4
-};
+} anon_9_131;
 
 /* anon_17_131 -- @anon17, 0x10 bytes, dmm_mess.c (DIE 0x2429EF) */
-struct anon_17_131 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int type;                             // 0x4
     /* 0x004 */ int count;                            // 0x4
     /* 0x008 */ int x;                                // 0x4
     /* 0x00C */ int y;                                // 0x4
-};
+} anon_17_131;
 
 /* anon_10_131 -- @anon10, 0xC bytes, dmm_mess.c (DIE 0x241608) */
-struct anon_10_131 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int no;                               // 0x4
     /* 0x004 */ int contents_id;                      // 0x4
     /* 0x008 */ int (*func)();                        // 0x4
-};
+} anon_10_131;
 
 /* anon_11_131 -- @anon11, 0x1AC bytes, dmm_mess.c (DIE 0x24188E) */
-struct anon_11_131 {   // size 0x1AC
+typedef struct {   // size 0x1AC
     /* 0x000 */ int event_flag;                       // 0x4
     /* 0x004 */ int cur_no;                           // 0x4
     /* 0x008 */ int num;                              // 0x4
@@ -193,36 +188,36 @@ struct anon_11_131 {   // size 0x1AC
     /* 0x029 */ unsigned char fade_out_flag;          // 0x1
     /* 0x02A */ unsigned char shop_info_flag;         // 0x1
     /* 0x02B */ char pad;                             // 0x1
-    /* 0x02C */ struct anon_10_131 exe_w[32];         // 0x180
-};
+    /* 0x02C */ anon_10_131 exe_w[32];                // 0x180
+} anon_11_131;
 
 /* anon_14_131 -- @anon14, 0x14 bytes, dmm_mess.c (DIE 0x242418) */
-struct anon_14_131 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ int flag;                             // 0x4
     /* 0x004 */ int step;                             // 0x4
     /* 0x008 */ int step_s;                           // 0x4
     /* 0x00C */ int shop_mode_flag;                   // 0x4
     /* 0x010 */ int yesno;                            // 0x4
-};
+} anon_14_131;
 
 /* anon_13_131 -- @anon13, 0x10 bytes, dmm_mess.c (DIE 0x2420AF) */
-struct anon_13_131 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int kind;                             // 0x4
     /* 0x004 */ int step;                             // 0x4
     /* 0x008 */ int count;                            // 0x4
     /* 0x00C */ signed char dir[2];                   // 0x2
     /* 0x00E */ signed char pading[2];                // 0x2
-};
+} anon_13_131;
 
 /* anon_18_131 -- @anon18, 0xC bytes, dmm_mess.c (DIE 0x242BB2) */
-struct anon_18_131 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int sbj_id;                           // 0x4
     /* 0x004 */ unsigned int bar_start;               // 0x4
     /* 0x008 */ unsigned int bar_end;                 // 0x4
-};
+} anon_18_131;
 
 /* anon_20_131 -- @anon20, 0x28 bytes, dmm_mess.c (DIE 0x242EC8) */
-struct anon_20_131 {   // size 0x28
+typedef struct {   // size 0x28
     /* 0x000 */ int disp_flag;                        // 0x4
     /* 0x004 */ int sbj_no;                           // 0x4
     /* 0x008 */ int state;                            // 0x4
@@ -233,10 +228,10 @@ struct anon_20_131 {   // size 0x28
     /* 0x01C */ int g;                                // 0x4
     /* 0x020 */ int b;                                // 0x4
     /* 0x024 */ int a;                                // 0x4
-};
+} anon_20_131;
 
 /* anon_8_131 -- @anon8, 0x3D7C bytes, dmm_mess.c (DIE 0x23FBE6) */
-struct anon_8_131 {   // size 0x3D7C
+typedef struct {   // size 0x3D7C
     /* 0x000 */ unsigned char *free_mem_addr;         // 0x4
     /* 0x004 */ unsigned char *tex_bind_addr;         // 0x4
     /* 0x008 */ unsigned char *mess_data_addr;        // 0x4
@@ -275,22 +270,22 @@ struct anon_8_131 {   // size 0x3D7C
     /* 0x168 */ int max_bar[76];                      // 0x130
     /* 0x298 */ float zoom;                           // 0x4
     /* 0x29C */ float timer;                          // 0x4
-    /* 0x2A0 */ struct anon_19_131 swap_save_data;    // 0x1300
-    /* 0x15A0 */ struct anon_12_131 mc_w;             // 0x38
-    /* 0x15D8 */ struct anon_3_131 button_disp_w;     // 0x10
-    /* 0x15E8 */ struct anon_5_131 record_w;          // 0x28
-    /* 0x1610 */ struct anon_6_131 fade_env;          // 0x10
+    /* 0x2A0 */ anon_19_131 swap_save_data;           // 0x1300
+    /* 0x15A0 */ anon_12_131 mc_w;                    // 0x38
+    /* 0x15D8 */ anon_3_131 button_disp_w;            // 0x10
+    /* 0x15E8 */ anon_5_131 record_w;                 // 0x28
+    /* 0x1610 */ anon_6_131 fade_env;                 // 0x10
     /* 0x1620 */ int total_record[4];                 // 0x10
-    /* 0x1630 */ struct anon_2_131 preres[2];         // 0x38
-    /* 0x1668 */ struct anon_15_131 result[2];        // 0x3E0
+    /* 0x1630 */ anon_2_131 preres[2];                // 0x38
+    /* 0x1668 */ anon_15_131 result[2];               // 0x3E0
     /* 0x1A48 */ unsigned short cur_note[2];          // 0x4
     /* 0x1A4C */ short old_point[2];                  // 0x4
     /* 0x1A50 */ unsigned int subj_opt;               // 0x4
-    /* 0x1A54 */ struct anon_9_131 style_menu;        // 0x4
-    /* 0x1A58 */ struct anon_7_131 pad_w;             // 0x10
-    /* 0x1A68 */ struct anon_17_131 move_w[6];        // 0x60
-    /* 0x1AC8 */ struct anon_11_131 ev_w;             // 0x1AC
-    /* 0x1C74 */ struct anon_14_131 qmenu_w;          // 0x14
+    /* 0x1A54 */ anon_9_131 style_menu;               // 0x4
+    /* 0x1A58 */ anon_7_131 pad_w;                    // 0x10
+    /* 0x1A68 */ anon_17_131 move_w[6];               // 0x60
+    /* 0x1AC8 */ anon_11_131 ev_w;                    // 0x1AC
+    /* 0x1C74 */ anon_14_131 qmenu_w;                 // 0x14
     /* 0x1C88 */ unsigned char is_chart_disp;         // 0x1
     /* 0x1C89 */ unsigned char is_cursor_disp;        // 0x1
     /* 0x1C8A */ unsigned char is_grid_disp;          // 0x1
@@ -309,11 +304,11 @@ struct anon_8_131 {   // size 0x3D7C
     /* 0x1CBC */ int world_movey;                     // 0x4
     /* 0x1CC0 */ int world_posx_max[2];               // 0x8
     /* 0x1CC8 */ int world_posy_max[2];               // 0x8
-    /* 0x1CD0 */ struct anon_13_131 worldw;           // 0x10
-    /* 0x1CE0 */ struct anon_18_131 cha_sbj_info_w;   // 0xC
-    /* 0x1CEC */ struct anon_18_131 sel_sbj_info_w[8];  // 0x60
-    /* 0x1D4C */ struct anon_20_131 panel_disp_w[200];  // 0x1F40
-    /* 0x3C8C */ struct anon_0_131 cone_disp_w[8];    // 0x60
+    /* 0x1CD0 */ anon_13_131 worldw;                  // 0x10
+    /* 0x1CE0 */ anon_18_131 cha_sbj_info_w;          // 0xC
+    /* 0x1CEC */ anon_18_131 sel_sbj_info_w[8];       // 0x60
+    /* 0x1D4C */ anon_20_131 panel_disp_w[200];       // 0x1F40
+    /* 0x3C8C */ anon_0_131 cone_disp_w[8];           // 0x60
     /* 0x3CEC */ unsigned int cur_track;              // 0x4
     /* 0x3CF0 */ unsigned int reserve_track;          // 0x4
     /* 0x3CF4 */ int track_delay_time;                // 0x4
@@ -353,13 +348,13 @@ struct anon_8_131 {   // size 0x3D7C
     /* 0x3D48 */ int gauge_sub;                       // 0x4
     /* 0x3D4C */ int strictness;                      // 0x4
     /* 0x3D50 */ int game_time;                       // 0x4
-    /* 0x3D54 */ struct anon_4_131 blind_w;           // 0x14
+    /* 0x3D54 */ anon_4_131 blind_w;                  // 0x14
     /* 0x3D68 */ int result_state;                    // 0x4
     /* 0x3D6C */ int result_cnt;                      // 0x4
     /* 0x3D70 */ int total_result_cnt;                // 0x4
     /* 0x3D74 */ int result_mask_cnt;                 // 0x4
     /* 0x3D78 */ int dummy;                           // 0x4
-};
+} anon_8_131;
 
 
 /* variables (5) */

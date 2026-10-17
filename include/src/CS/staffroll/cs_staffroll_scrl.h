@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_staffroll_cs_staffroll_scrl_c_H
 #define DDR_UNIT_src_CS_staffroll_cs_staffroll_scrl_c_H
@@ -13,7 +16,7 @@
 /* anonymous types (8) */
 
 /* anon_0_190 -- @anon0, 0x78 bytes, cs_staffroll_scrl.c (DIE 0x3588B5) */
-struct anon_0_190 {   // size 0x78
+typedef struct {   // size 0x78
     /* 0x000 */ float timer;                          // 0x4
     /* 0x004 */ float topPos;                         // 0x4
     /* 0x008 */ float startStrPos;                    // 0x4
@@ -41,10 +44,10 @@ struct anon_0_190 {   // size 0x78
     /* 0x074 */ int disp_mov : 1;                     // bits 1..1
     /* 0x074 */ int disp_roll : 1;                    // bits 2..2
     /* 0x074 */ int disp_padding : 29;                // bits 3..31
-};
+} anon_0_190;
 
 /* anon_1_190 -- @anon1, 0x48 bytes, cs_staffroll_scrl.c (DIE 0x358CD2) */
-struct anon_1_190 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -65,7 +68,7 @@ struct anon_1_190 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_1_190;
 
 /* anon_x358f78_190 -- @enum, 0x1 bytes, cs_staffroll_scrl.c (DIE 0x358F78) */
 enum anon_x358f78_190 {   // size 0x1
@@ -74,15 +77,15 @@ enum anon_x358f78_190 {   // size 0x1
 };
 
 /* anon_3_190 -- @anon3, 0x4 bytes, cs_staffroll_scrl.c (DIE 0x35921A) */
-union anon_3_190 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_3_190;
 
 /* anon_2_190 -- @anon2, 0x24 bytes, cs_staffroll_scrl.c (DIE 0x359025) */
-struct anon_2_190 {   // size 0x24
-    /* 0x000 */ union anon_3_190 x0;                  // 0x4
-    /* 0x004 */ union anon_3_190 y0;                  // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_3_190 x0;                        // 0x4
+    /* 0x004 */ anon_3_190 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -93,7 +96,7 @@ struct anon_2_190 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_2_190;
 
 /* anon_x3591b9_190 -- @enum, 0x1 bytes, cs_staffroll_scrl.c (DIE 0x3591B9) */
 enum anon_x3591b9_190 {   // size 0x1
@@ -103,11 +106,11 @@ enum anon_x3591b9_190 {   // size 0x1
 };
 
 /* anon_4_190 -- @anon4, 0x30 bytes, cs_staffroll_scrl.c (DIE 0x359277) */
-struct anon_4_190 {   // size 0x30
-    /* 0x000 */ union anon_3_190 x0;                  // 0x4
-    /* 0x004 */ union anon_3_190 y0;                  // 0x4
-    /* 0x008 */ union anon_3_190 x1;                  // 0x4
-    /* 0x00C */ union anon_3_190 y1;                  // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_3_190 x0;                        // 0x4
+    /* 0x004 */ anon_3_190 y0;                        // 0x4
+    /* 0x008 */ anon_3_190 x1;                        // 0x4
+    /* 0x00C */ anon_3_190 y1;                        // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -119,23 +122,23 @@ struct anon_4_190 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_4_190;
 
 /* anon_5_190 -- @anon5, 0x8 bytes, cs_staffroll_scrl.c (DIE 0x35946C) */
-struct anon_5_190 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ char *str;                            // 0x4
     /* 0x004 */ int comm;                             // 0x4
-};
+} anon_5_190;
 
 
 /* variables (9) */
 static float scrstr_spctable[11];                                /* @0x008005D0 size 0x2C */
-static struct anon_5_190 scrstr_data[294];                       /* @0x00800600 size 0x930 */
+static anon_5_190 scrstr_data[294];                              /* @0x00800600 size 0x930 */
 static unsigned char isreInitStep;                               /* @0x002DE5EC size 0x1 */
 static unsigned char isreMainStep;                               /* @0x002DE5F0 size 0x1 */
 static float fsreScrollSpd;                                      /* @0x002DE5F4 size 0x4 */
 void (*csStaffRollScrlDrawFunc[10])(float, unsigned char *);     /* @0x00800F30 size 0x28 */
-struct anon_0_190 *ll_pstf;                                      /* @0x002DE5F8 size 0x4 */
+anon_0_190 *ll_pstf;                                             /* @0x002DE5F8 size 0x4 */
 enum anon_x3591b9_190 SRE_SCRL_STEP;                             /* not allocated size 0x1 */
 enum anon_x358f78_190 SRE_FONT_READ_STEP;                        /* not allocated size 0x1 */
 
@@ -150,8 +153,8 @@ void *csStaffRollScrlDrawFunc_Title_E(float pos_y, unsigned char *str); /* 0x007
 void *csStaffRollScrlDrawFunc_Title_A(float pos_y, unsigned char *str); /* 0x007FFC20-0x007FFC74 lines 610-620 */
 void *csStaffRollScrlDrawFunc_Title_C(float pos_y, unsigned char *str); /* 0x007FFC80-0x007FFCD4 lines 596-606 */
 void *csStaffRollScrlDrawFunc_License(float pos_y, unsigned char *str); /* 0x007FFCE0-0x007FFD30 lines 580-593 */
-int csStaffRollScrlAct(struct anon_0_190 *pstf);                 /* 0x007FFD30-0x007FFE74 lines 503-530 */
-int csStaffRollScrlMain(struct anon_0_190 *pstf);                /* 0x007FFE80-0x007FFFBC lines 471-488 */
+int csStaffRollScrlAct(anon_0_190 *pstf);                        /* 0x007FFD30-0x007FFE74 lines 503-530 */
+int csStaffRollScrlMain(anon_0_190 *pstf);                       /* 0x007FFE80-0x007FFFBC lines 471-488 */
 void csStaffRollScrlInit(void);                                  /* 0x007FFFC0-0x0080005C lines 410-424 */
 
 #endif /* DDR_UNIT_src_CS_staffroll_cs_staffroll_scrl_c_H */

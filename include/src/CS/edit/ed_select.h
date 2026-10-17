@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_edit_ed_select_c_H
 #define DDR_UNIT_src_CS_edit_ed_select_c_H
@@ -17,7 +20,7 @@
 /* anonymous types (29) */
 
 /* anon_0_177 -- @anon0, 0x3C bytes, ed_select.c (DIE 0x31219D) */
-struct anon_0_177 {   // size 0x3C
+typedef struct {   // size 0x3C
     /* 0x000 */ float cur_x;                          // 0x4
     /* 0x004 */ float cur_y;                          // 0x4
     /* 0x008 */ float cur_sx;                         // 0x4
@@ -35,39 +38,39 @@ struct anon_0_177 {   // size 0x3C
     /* 0x030 */ int time_h;                           // 0x4
     /* 0x034 */ int time_a;                           // 0x4
     /* 0x038 */ unsigned int flg;                     // 0x4
-};
+} anon_0_177;
 
 /* anon_1_177 -- @anon1, 0x4 bytes, ed_select.c (DIE 0x3123E5) */
-struct anon_1_177 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ short pos;                            // 0x2
     /* 0x002 */ unsigned char side;                   // 0x1
     /* 0x003 */ unsigned char dmy;                    // 0x1
-};
+} anon_1_177;
 
 /* anon_2_177 -- @anon2, 0xC bytes, ed_select.c (DIE 0x312465) */
-struct anon_2_177 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ // 0x3 bytes padding
     /* 0x004 */ int timer;                            // 0x4
     /* 0x008 */ void *item;                           // 0x4
-};
+} anon_2_177;
 
 /* anon_3_177 -- @anon3, 0x8 bytes, ed_select.c (DIE 0x31250E) */
-struct anon_3_177 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ float ct;                             // 0x4
-};
+} anon_3_177;
 
 /* anon_4_177 -- @anon4, 0x30 bytes, ed_select.c (DIE 0x312591) */
-struct anon_4_177 {   // size 0x30
+typedef struct {   // size 0x30
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ float ct;                             // 0x4
     /* 0x008 */ float ct2;                            // 0x4
     /* 0x00C */ struct _tag_cCoCursor01 curw[3];      // 0x24
-};
+} anon_4_177;
 
 /* anon_5_177 -- @anon5, 0x48 bytes, ed_select.c (DIE 0x312633) */
-struct anon_5_177 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -88,16 +91,16 @@ struct anon_5_177 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_5_177;
 
 /* anon_28_177 -- @anon28, 0x8 bytes, ed_select.c (DIE 0x317812) */
-struct anon_28_177 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int x;                                // 0x4
     /* 0x004 */ int step;                             // 0x4
-};
+} anon_28_177;
 
 /* anon_6_177 -- @anon6, 0x280 bytes, ed_select.c (DIE 0x3128B5) */
-struct anon_6_177 {   // size 0x280
+typedef struct {   // size 0x280
     /* 0x000 */ unsigned char top_step;               // 0x1
     /* 0x001 */ unsigned char init_step;              // 0x1
     /* 0x002 */ unsigned char main_step;              // 0x1
@@ -134,7 +137,7 @@ struct anon_6_177 {   // size 0x280
     /* 0x054 */ int beat_ct;                          // 0x4
     /* 0x058 */ unsigned long end_beat_ct;            // 0x8
     /* 0x060 */ unsigned long push_cont_timer;        // 0x8
-    /* 0x068 */ struct anon_1_177 area[2];            // 0x8
+    /* 0x068 */ anon_1_177 area[2];                   // 0x8
     /* 0x070 */ short area_size;                      // 0x2
     /* 0x072 */ short area_use;                       // 0x2
     /* 0x074 */ // 0x4 bytes padding
@@ -302,8 +305,8 @@ struct anon_6_177 {   // size 0x280
     /* 0x1CC */ int prev_guide_num;                   // 0x4
     /* 0x1D0 */ int fade_guide_num;                   // 0x4
     /* 0x1D4 */ int check_guide_move;                 // 0x4
-    /* 0x1D8 */ struct anon_28_177 ed_obj[2];         // 0x10
-    /* 0x1E8 */ struct anon_0_177 cur_w;              // 0x3C
+    /* 0x1D8 */ anon_28_177 ed_obj[2];                // 0x10
+    /* 0x1E8 */ anon_0_177 cur_w;                     // 0x3C
     /* 0x224 */ int sel_lv_array[5];                  // 0x14
     /* 0x238 */ int sel_lv_pos;                       // 0x4
     /* 0x23C */ int sel_lv_pos_num;                   // 0x4
@@ -323,10 +326,10 @@ struct anon_6_177 {   // size 0x280
     /* 0x274 */ int read_flag;                        // 0x4
     /* 0x278 */ int no_read_flag;                     // 0x4
     /* 0x27C */ // 0x4 bytes padding
-};
+} anon_6_177;
 
 /* anon_7_177 -- @anon7, 0x494 bytes, ed_select.c (DIE 0x314A99) */
-struct anon_7_177 {   // size 0x494
+typedef struct {   // size 0x494
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ float repcnt;                         // 0x4
     /* 0x008 */ float scr_sp;                         // 0x4
@@ -378,10 +381,10 @@ struct anon_7_177 {   // size 0x494
     /* 0x48C */ unsigned char sn_f;                   // 0x1
     /* 0x48D */ // 0x3 bytes padding
     /* 0x490 */ float sn_t;                           // 0x4
-};
+} anon_7_177;
 
 /* anon_8_177 -- @anon8, 0x48 bytes, ed_select.c (DIE 0x3151F4) */
-struct anon_8_177 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ int step_s;                           // 0x4
     /* 0x008 */ int next_step;                        // 0x4
@@ -396,47 +399,47 @@ struct anon_8_177 {   // size 0x48
     /* 0x03C */ void *banner_ow;                      // 0x4
     /* 0x040 */ void *upitem_ow;                      // 0x4
     /* 0x044 */ void *mainitem_ow;                    // 0x4
-};
-
-/* anon_9_177 -- @anon9, 0xC bytes, ed_select.c (DIE 0x315462) */
-struct anon_9_177 {   // size 0xC
-    /* 0x000 */ struct anon_10_177 *data;             // 0x4
-    /* 0x004 */ int vertex_num;                       // 0x4
-    /* 0x008 */ int flg;                              // 0x4
-};
+} anon_8_177;
 
 /* anon_15_177 -- @anon15, 0x4 bytes, ed_select.c (DIE 0x315BD2) */
-union anon_15_177 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_15_177;
 
 /* anon_10_177 -- @anon10, 0x10 bytes, ed_select.c (DIE 0x3154EE) */
-struct anon_10_177 {   // size 0x10
-    /* 0x000 */ union anon_15_177 x0;                 // 0x4
-    /* 0x004 */ union anon_15_177 y0;                 // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_15_177 x0;                       // 0x4
+    /* 0x004 */ anon_15_177 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
+} anon_10_177;
+
+/* anon_9_177 -- @anon9, 0xC bytes, ed_select.c (DIE 0x315462) */
+typedef struct {   // size 0xC
+    /* 0x000 */ anon_10_177 *data;                    // 0x4
+    /* 0x004 */ int vertex_num;                       // 0x4
+    /* 0x008 */ int flg;                              // 0x4
+} anon_9_177;
 
 /* anon_11_177 -- @anon11, 0x8 bytes, ed_select.c (DIE 0x3155EB) */
-struct anon_11_177 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ float ct;                             // 0x4
-};
+} anon_11_177;
 
 /* anon_12_177 -- @anon12, 0x4 bytes, ed_select.c (DIE 0x31566F) */
-struct anon_12_177 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ int step;                             // 0x4
-};
+} anon_12_177;
 
 /* anon_13_177 -- @anon13, 0x1C bytes, ed_select.c (DIE 0x3156B0) */
-struct anon_13_177 {   // size 0x1C
-    /* 0x000 */ union anon_15_177 x0;                 // 0x4
-    /* 0x004 */ union anon_15_177 y0;                 // 0x4
+typedef struct {   // size 0x1C
+    /* 0x000 */ anon_15_177 x0;                       // 0x4
+    /* 0x004 */ anon_15_177 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -445,12 +448,12 @@ struct anon_13_177 {   // size 0x1C
     /* 0x016 */ unsigned char b0;                     // 0x1
     /* 0x017 */ unsigned char a0;                     // 0x1
     /* 0x018 */ int flg;                              // 0x4
-};
+} anon_13_177;
 
 /* anon_14_177 -- @anon14, 0x24 bytes, ed_select.c (DIE 0x315853) */
-struct anon_14_177 {   // size 0x24
-    /* 0x000 */ union anon_15_177 x0;                 // 0x4
-    /* 0x004 */ union anon_15_177 y0;                 // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_15_177 x0;                       // 0x4
+    /* 0x004 */ anon_15_177 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -461,14 +464,14 @@ struct anon_14_177 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_14_177;
 
 /* anon_16_177 -- @anon16, 0x30 bytes, ed_select.c (DIE 0x315C9C) */
-struct anon_16_177 {   // size 0x30
-    /* 0x000 */ union anon_15_177 x0;                 // 0x4
-    /* 0x004 */ union anon_15_177 y0;                 // 0x4
-    /* 0x008 */ union anon_15_177 x1;                 // 0x4
-    /* 0x00C */ union anon_15_177 y1;                 // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_15_177 x0;                       // 0x4
+    /* 0x004 */ anon_15_177 y0;                       // 0x4
+    /* 0x008 */ anon_15_177 x1;                       // 0x4
+    /* 0x00C */ anon_15_177 y1;                       // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -480,18 +483,18 @@ struct anon_16_177 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_16_177;
 
 /* anon_17_177 -- @anon17, 0x8 bytes, ed_select.c (DIE 0x315EDA) */
-struct anon_17_177 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned char n;                      // 0x1
     /* 0x001 */ unsigned char cur[2];                 // 0x2
     /* 0x003 */ // 0x1 bytes padding
     /* 0x004 */ unsigned char **str;                  // 0x4
-};
+} anon_17_177;
 
 /* anon_20_177 -- @anon20, 0x90 bytes, ed_select.c (DIE 0x31668F) */
-struct anon_20_177 {   // size 0x90
+typedef struct {   // size 0x90
     /* 0x000 */ void *loadaddr;                       // 0x4
     /* 0x004 */ int doll_p_counter;                   // 0x4
     /* 0x008 */ unsigned char max;                    // 0x1
@@ -512,19 +515,19 @@ struct anon_20_177 {   // size 0x90
     /* 0x070 */ float eye_p[4];                       // 0x10
     /* 0x080 */ void *fpanel;                         // 0x4
     /* 0x084 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_20_177;
 
 /* anon_23_177 -- @anon23, 0xC bytes, ed_select.c (DIE 0x316DAC) */
-struct anon_23_177 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ unsigned char max;                    // 0x1
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ void *item;                           // 0x4
     /* 0x008 */ int timer;                            // 0x4
-};
+} anon_23_177;
 
 /* anon_27_177 -- @anon27, 0x1C bytes, ed_select.c (DIE 0x317566) */
-struct anon_27_177 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ unsigned char end_num;                // 0x1
     /* 0x001 */ unsigned char decide;                 // 0x1
     /* 0x002 */ unsigned char cancel;                 // 0x1
@@ -535,21 +538,21 @@ struct anon_27_177 {   // size 0x1C
     /* 0x010 */ int timer;                            // 0x4
     /* 0x014 */ void *item;                           // 0x4
     /* 0x018 */ void *entry;                          // 0x4
-};
+} anon_27_177;
 
 /* anon_19_177 -- @anon19, 0x70 bytes, ed_select.c (DIE 0x31647A) */
-struct anon_19_177 {   // size 0x70
+typedef struct {   // size 0x70
     /* 0x000 */ int timer;                            // 0x4
     /* 0x004 */ unsigned char cur[2];                 // 0x2
     /* 0x006 */ unsigned char auto_f[2];              // 0x2
     /* 0x008 */ float repcnt[2];                      // 0x8
     /* 0x010 */ void *item;                           // 0x4
     /* 0x014 */ void *win;                            // 0x4
-    /* 0x018 */ struct anon_17_177 one[11];           // 0x58
-};
+    /* 0x018 */ anon_17_177 one[11];                  // 0x58
+} anon_19_177;
 
 /* anon_24_177 -- @anon24, 0x34 bytes, ed_select.c (DIE 0x316E76) */
-struct anon_24_177 {   // size 0x34
+typedef struct {   // size 0x34
     /* 0x000 */ int value_ct[8];                      // 0x20
     /* 0x020 */ int score;                            // 0x4
     /* 0x024 */ int bonus;                            // 0x4
@@ -558,10 +561,10 @@ struct anon_24_177 {   // size 0x34
     /* 0x02E */ unsigned char is_fcombo;              // 0x1
     /* 0x02F */ unsigned char is_newrec;              // 0x1
     /* 0x030 */ int pnt;                              // 0x4
-};
+} anon_24_177;
 
 /* anon_25_177 -- @anon25, 0xA0 bytes, ed_select.c (DIE 0x3170DD) */
-struct anon_25_177 {   // size 0xA0
+typedef struct {   // size 0xA0
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ void *base;                           // 0x4
     /* 0x008 */ void *value;                          // 0x4
@@ -577,11 +580,11 @@ struct anon_25_177 {   // size 0xA0
     /* 0x033 */ unsigned char cheer;                  // 0x1
     /* 0x034 */ unsigned char vo_pid;                 // 0x1
     /* 0x035 */ // 0x3 bytes padding
-    /* 0x038 */ struct anon_24_177 eva[2];            // 0x68
-};
+    /* 0x038 */ anon_24_177 eva[2];                   // 0x68
+} anon_25_177;
 
 /* anon_18_177 -- @anon18, 0x7E0 bytes, ed_select.c (DIE 0x316036) */
-struct anon_18_177 {   // size 0x7E0
+typedef struct {   // size 0x7E0
     /* 0x000 */ float wsm[4][4];                      // 0x40
     /* 0x040 */ unsigned char step;                   // 0x1
     /* 0x041 */ unsigned char step_s;                 // 0x1
@@ -604,61 +607,61 @@ struct anon_18_177 {   // size 0x7E0
     /* 0x068 */ unsigned int btn_obj_id;              // 0x4
     /* 0x06C */ unsigned char *str_addr;              // 0x4
     /* 0x070 */ unsigned char str_buf[256];           // 0x100
-    /* 0x170 */ struct anon_20_177 doll;              // 0x90
-    /* 0x200 */ struct anon_2_177 eyetoy;             // 0xC
-    /* 0x20C */ struct anon_23_177 style;             // 0xC
-    /* 0x218 */ struct anon_27_177 chara;             // 0x1C
-    /* 0x234 */ struct anon_7_177 music;              // 0x494
-    /* 0x6C8 */ struct anon_19_177 option;            // 0x70
-    /* 0x738 */ struct anon_25_177 result;            // 0xA0
+    /* 0x170 */ anon_20_177 doll;                     // 0x90
+    /* 0x200 */ anon_2_177 eyetoy;                    // 0xC
+    /* 0x20C */ anon_23_177 style;                    // 0xC
+    /* 0x218 */ anon_27_177 chara;                    // 0x1C
+    /* 0x234 */ anon_7_177 music;                     // 0x494
+    /* 0x6C8 */ anon_19_177 option;                   // 0x70
+    /* 0x738 */ anon_25_177 result;                   // 0xA0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_18_177;
 
 /* anon_21_177 -- @anon21, 0x8 bytes, ed_select.c (DIE 0x316B57) */
-struct anon_21_177 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ short x;                              // 0x2
     /* 0x002 */ short y;                              // 0x2
     /* 0x004 */ short w;                              // 0x2
     /* 0x006 */ short h;                              // 0x2
-};
+} anon_21_177;
 
 /* anon_22_177 -- @anon22, 0x4 bytes, ed_select.c (DIE 0x316D13) */
-struct anon_22_177 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char r;                      // 0x1
     /* 0x001 */ unsigned char g;                      // 0x1
     /* 0x002 */ unsigned char b;                      // 0x1
     /* 0x003 */ unsigned char cd;                     // 0x1
-};
+} anon_22_177;
 
 /* anon_26_177 -- @anon26, 0x10 bytes, ed_select.c (DIE 0x3173A9) */
-struct anon_26_177 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int (*appr)(void *);                  // 0x4
     /* 0x004 */ int (*exec)(void *);                  // 0x4
     /* 0x008 */ int (*disap)(void *);                 // 0x4
     /* 0x00C */ int (*disp)(void *);                  // 0x4
-};
+} anon_26_177;
 
 
 /* variables (15) */
-static struct anon_8_177 *sw;                                    /* @0x002DDE24 size 0x4 */
+static anon_8_177 *sw;                                           /* @0x002DDE24 size 0x4 */
 static int diff_table[5];                                        /* @0x002C1E10 size 0x14 */
 static int mess_table[4];                                        /* @0x002C1E30 size 0x10 */
-struct anon_26_177 edit_sel_leftbase_objf;                       /* @0x002C1E40 size 0x10 */
-struct anon_26_177 edit_sel_footmark_objf;                       /* @0x002C1E50 size 0x10 */
-struct anon_26_177 edit_sel_upitem_objf;                         /* @0x002C1E60 size 0x10 */
-struct anon_26_177 edit_sel_mainitem_objf;                       /* @0x002C1E70 size 0x10 */
-struct anon_26_177 fp_ms_objf[];                                 /* @0x002BEA80 */
+anon_26_177 edit_sel_leftbase_objf;                              /* @0x002C1E40 size 0x10 */
+anon_26_177 edit_sel_footmark_objf;                              /* @0x002C1E50 size 0x10 */
+anon_26_177 edit_sel_upitem_objf;                                /* @0x002C1E60 size 0x10 */
+anon_26_177 edit_sel_mainitem_objf;                              /* @0x002C1E70 size 0x10 */
+anon_26_177 fp_ms_objf[];                                        /* @0x002BEA80 */
 unsigned int edit_joy_rep;                                       /* @0x002DE400 size 0x4 */
 unsigned int edit_joy_trg;                                       /* @0x002DE408 size 0x4 */
-struct anon_7_177 *msw;                                          /* @0x002DE52C size 0x4 */
-struct anon_18_177 *fpw;                                         /* @0x002DE540 size 0x4 */
-static struct anon_8_177 ed_sel_w;                               /* @0x007235C0 size 0x48 */
+anon_7_177 *msw;                                                 /* @0x002DE52C size 0x4 */
+anon_18_177 *fpw;                                                /* @0x002DE540 size 0x4 */
+static anon_8_177 ed_sel_w;                                      /* @0x007235C0 size 0x48 */
 static short font_anime_pos_y;                                   /* not allocated size 0x2 */
 static short font_anime_pos_x;                                   /* not allocated size 0x2 */
 
 /* functions defined (23) */
 static int edit_sel_mainitem_disp(void *w);                      /* 0x0028ABC0-0x0028AD98 lines 987-1030 */
-static void edit_sel_disp_item_sub(struct anon_4_177 *miw);      /* 0x0028ADA0-0x0028B560 lines 893-984 */
+static void edit_sel_disp_item_sub(anon_4_177 *miw);             /* 0x0028ADA0-0x0028B560 lines 893-984 */
 static void edit_sel_disp_winbar(float x, float y);              /* 0x0028B560-0x0028B6E0 lines 864-890 */
 static int edit_sel_mainitem_dsap(void *w);                      /* 0x0028B6E0-0x0028B728 lines 848-854 */
 static int edit_sel_mainitem_exec(void *w);                      /* 0x0028B730-0x0028B820 lines 824-843 */

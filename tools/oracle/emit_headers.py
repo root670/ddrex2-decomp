@@ -24,9 +24,16 @@ are.  DWARF names them `@anon0..24`; that numbering is *per unit*, so `@anon0` i
 `@anon0` in `onimode.c` are different types wearing one synthetic name (25 names, 21 of them
 with more than one layout).  `@` is not a legal C identifier either.  So an anonymous type
 keeps its own unit: a use becomes `anon_<N>_<unit>`, and the definition is emitted in that
-unit's header and nowhere else.  A *named* type whose layout contains one spells that member
-out inline instead -- the layout digest, checked across every unit that declares the type, is
-what makes that faithful -- because a per-unit tag must not leak into a shared header.
+unit's header and nowhere else -- as a **typedef of an unnamed aggregate**, because that is
+the only spelling the compiler records as `@anonN`: `struct anon_0_109 { ... };` would put the
+invented tag in the DIE, while `typedef struct { ... } anon_0_109;` leaves the aggregate
+unnamed (DWARF 1 has no typedef DIE, so the alias never reaches the debug information).
+A *named* type whose layout contains one spells that member out inline instead -- the layout
+digest, checked across every unit that declares the type, is what makes that faithful --
+because a per-unit tag must not leak into a shared header.  Where several *contiguous*
+members hold one anonymous type, that header declares them in one declaration
+(`struct { ... } line_a[8], line_b[8], line_c[8];`), which is one DIE; spelling the type out
+per member would declare a distinct type per member and a DIE for each.
 
 `include/**` is committed and generated: `./ddr oracle` regenerates it, and
 `tests/oracle/test_emit_headers.py` checks every header compiles as C under the *original*
@@ -252,7 +259,7 @@ def _enum_lines(die, tag, indent):
     return lines
 
 
-def definition(dw, die, tag, tagger, inline_anonymous=False, indent=""):
+def definition(dw, die, tag, tagger, inline_anonymous=False, indent="", typedef=False):
     """A C definition of one aggregate, as lines.
 
     The layout is the vendored renderer's: member offsets in hex, a member's size or its bit
@@ -262,22 +269,32 @@ def definition(dw, die, tag, tagger, inline_anonymous=False, indent=""):
     An anonymous member is `inline_anonymous`'s business: a shared header spells it out,
     because a per-unit tag cannot travel; a unit's own header names it instead, so that
     every use of one type inside that unit stays the same type.
+
+    `typedef` is how a unit names a type MWCC's DWARF has no name for.  A `struct <tag>`
+    would put the invented tag in the DIE; `typedef struct { ... } <tag>;` leaves the
+    aggregate itself unnamed, which is the spelling the compiler records as `@anonN` --
+    DWARF 1 has no typedef DIE, so the alias is invisible to the debug information.
     """
     if die.tag == TAG_enumeration_type:
         return _enum_lines(die, tag or die.name or "", indent)
     kind = _kind(dw, die)
     size = die.attrs.get(AT_byte_size, 0)
-    lines = [f"{indent}{kind}{' ' + tag if tag else ''} {{   // size 0x{size:x}"]
+    head = f"{indent}{kind}{' ' + tag if tag else ''} {{   // size 0x{size:x}"
+    if typedef:
+        head = f"{indent}typedef {kind} {{   // size 0x{size:x}"
+    lines = [head]
     ind = indent + "    "
     cursor = 0
     members = 0
-    for child in die.children:
+    kids = [c for c in die.children if c.tag in (TAG_member, TAG_inheritance)]
+    index = 0
+    while index < len(kids):
+        child = kids[index]
+        index += 1
         if child.tag == TAG_inheritance:
             raise NotSpellable(
                 f"{die.name or hex(die.off)}: C has no base classes, so the inheritance "
                 f"'{child.attrs.get(AT_name, '')}' records would be lost silently")
-        if child.tag != TAG_member:
-            continue
         members += 1
         offset = member_offset(child)
         tree = dw.type_of(child) or VOID
@@ -286,15 +303,42 @@ def definition(dw, die, tag, tagger, inline_anonymous=False, indent=""):
             lines.append(_gap(ind, cursor, offset, dw.align_of(tree)))
         core = innermost(tree)
         nested = core[2] if len(core) > 2 and isinstance(core[2], Die) else None
-        if inline_anonymous and nested is not None and nested.tag in AGGREGATES \
-                and anonymous(nested):
-            # `struct { ... } hc_work[8];` is the only spelling a shared header has.
+        shareable = (inline_anonymous and nested is not None and nested.tag in AGGREGATES
+                     and anonymous(nested))
+        # One anonymous type held by several *contiguous* members is one declaration with
+        # several declarators in C -- `struct { ... } line_a, line_b, line_c;` -- and one
+        # DIE.  Spelling the definition out per member would declare a distinct type per
+        # member, which is what retail's single `@anonN` for all three refutes.
+        run = [child]
+        if shareable and offset is not None and size_of is not None:
+            while index < len(kids):
+                follower = kids[index]
+                if follower.tag != TAG_member:
+                    break
+                f_offset, f_tree = member_offset(follower), dw.type_of(follower) or VOID
+                f_size = dw.sizeof(f_tree)
+                if f_offset is None or f_size is None or f_offset != offset + size_of:
+                    break
+                f_core = innermost(f_tree)
+                f_nested = (f_core[2]
+                            if len(f_core) > 2 and isinstance(f_core[2], Die) else None)
+                if f_nested is not nested:
+                    break
+                run.append(follower)
+                index += 1
+                members += 1
+                offset, size_of, tree = f_offset, f_size, f_tree
+        if shareable:
             inline = definition(dw, nested, None, tagger,
                                 inline_anonymous=inline_anonymous, indent=ind)
-            tail = declare(_core_to(tree, ("base", "", None)), child.name or "").strip()
-            inline[-1] = inline[-1].replace("};", f"}} {tail};")
-            inline[0] = (f"{ind}/* 0x{offset if offset is not None else 0:03x} */ "
-                         + inline[0].lstrip())
+            tails = [declare(_core_to(dw.type_of(member) or VOID, ("base", "", None)),
+                             member.name or "").strip() for member in run]
+            inline[-1] = inline[-1].replace("};", f"}} {', '.join(tails)};")
+            spots = ", ".join(f"0x{member_offset(member) or 0:03x}" for member in run)
+            note = "0x%x each" % dw.sizeof(dw.type_of(run[0]) or VOID) if len(run) > 1 else ""
+            inline[0] = (f"{ind}/* {spots} */ " + inline[0].lstrip()).rstrip()
+            if note:
+                inline[-1] += " " * max(1, 48 - len(inline[-1])) + f"  // {note}"
             lines.extend(inline)
         else:
             text = decl(dw, tree, child.name or "", tagger)
@@ -313,7 +357,9 @@ def definition(dw, die, tag, tagger, inline_anonymous=False, indent=""):
         lines.append(f"{ind}// no data members")
     elif kind != "union" and size > cursor:
         lines.append(_gap(ind, cursor, size, dw.align_of(("base", "", die))))
-    lines.append(f"{indent}}};")
+    lines.append(f"{indent}}}{' ' + tag if typedef and tag else ''};")
+    if typedef and not tag:
+        raise NotSpellable(f"DIE 0x{die.off:x}: a typedef needs the name the C will use")
     return lines
 
 
@@ -436,8 +482,22 @@ class Unit:
         return f"anon_{stem}_{self.index}"
 
     def specifier(self, die):
-        """`struct <tag>` for a use: this unit's tag, or the shared name."""
-        return f"{_kind(self.dw, die)} {self.tag(die) if anonymous(die) else die.name}"
+        """A use of this unit's own anonymous type: the alias its header typedefs.
+
+        Not `struct <tag>`: the unit header declares the type as a `typedef` of an
+        *unnamed* aggregate, which is the only spelling MWCC records as `@anonN` (DWARF 1
+        has no typedef DIE, so the alias itself never reaches the debug information).  A
+        named type still needs its keyword, because the shared header defines a tag.
+
+        An enumeration keeps its tag: the compiler names an unnamed one `@enum` in DWARF
+        whatever it is called in C, and `enum <tag>` is the spelling this tree already had
+        for them.
+        """
+        if die.tag == TAG_enumeration_type:
+            return f"enum {self.tag(die) if anonymous(die) else die.name}"
+        if anonymous(die):
+            return self.tag(die)
+        return f"{_kind(self.dw, die)} {die.name}"
 
     def owns(self, die):
         """Whether this unit declared `die` (its anonymous types, and no other unit's)."""
@@ -446,10 +506,13 @@ class Unit:
     def definitions(self):
         """This unit's anonymous types as `[(tag, DIE)]`, dependencies first.
 
-        A member held by value needs its type complete before it, and one type held by value
-        inside itself is not something C can express, so the order is a plain dependency
-        walk.  Collisions are checked on the way: one tag over two layouts would be exactly
-        the silent mix-up `anon_<N>_<unit>` exists to prevent.
+        The order matters twice.  A member held by value needs its type complete before it,
+        and one type held by value inside itself is not something C can express.  And a use
+        is an *alias* (`anon_<N>_<unit>` is a typedef of an aggregate that has no name), so
+        a member that only points at another of these types still needs that alias declared
+        first -- C wants the name, not the complete type.  Collisions are checked on the way:
+        one tag over two layouts would be exactly the silent mix-up `anon_<N>_<unit>` exists
+        to prevent.
         """
         own = collections.OrderedDict()
         for die in unit_types(self.dw).get(self.tu, []):
@@ -465,7 +528,7 @@ class Unit:
             if die.off in done:
                 return
             done.add(die.off)
-            for dependency in _by_value(self.dw, die):
+            for dependency in _members(self.dw, die, deep=True):
                 if dependency.off not in done and self.owns(dependency) \
                         and anonymous(dependency):
                     visit(dependency)
@@ -602,6 +665,30 @@ def _index_text(names, elf):
         + ["", f"#endif /* {g} */"]) + "\n"
 
 
+def _supplied_anonymous(dw, named):
+    """The anonymous aggregates the shared named-type headers already spell inline.
+
+    A named type's header spells an anonymous member out where it sits (`struct { ... }
+    hc_work[8];`), because a per-unit tag cannot travel between units -- so a unit header
+    that declared that same type again would put a second DIE in the unit's debug block for
+    one type.  Retail's has one.  The walk follows the named types a shared header includes,
+    since those inline theirs too.
+    """
+    out, seen = set(), set()
+    stack = list(named.values())
+    while stack:
+        die = stack.pop()
+        if die.off in seen:
+            continue
+        seen.add(die.off)
+        for mention in _members(dw, die, deep=True):
+            if anonymous(mention):
+                out.add(mention.off)
+            else:
+                stack.append(mention)
+    return out
+
+
 def _unit_header(dw, tu):
     """`include/src/<unit>.h`: what it includes, its own types, its globals, its functions."""
     unit = Unit(dw, tu)
@@ -632,6 +719,24 @@ def _unit_header(dw, tu):
             f"({_declared_by(strangers[0])}), which its own header cannot name: an anonymous "
             f"type belongs to the unit that declares it, and this one is another unit's")
 
+    # What this header has to declare, and what the shared headers already declare for it.
+    # A supplied type stays out (it is one DIE in retail's block, spelled inline inside the
+    # named type that holds it); anything else -- a root with no named container, or a type
+    # the unit's own globals and prototypes name -- is declared here, as a typedef of an
+    # *unnamed* aggregate so MWCC records the `@anonN` name retail has.
+    supplied = _supplied_anonymous(dw, named)
+    needed = {d.off for d in used}
+    keep, stack = set(), [die for _tag, die in definitions
+                          if die.off not in supplied or die.off in needed]
+    while stack:
+        die = stack.pop()
+        if die.off in keep:
+            continue
+        keep.add(die.off)
+        stack.extend(d for d in _members(dw, die, deep=True)
+                     if anonymous(d) and unit.owns(d))
+    own = [(tag, die) for tag, die in definitions if die.off in keep]
+
     g = _guard("DDR", "UNIT", emit_cus.relpath(tu.name), "H")
     pcs = [(cu.attrs[AT_low_pc], cu.attrs[AT_high_pc]) for cu in tu.cus
            if AT_low_pc in cu.attrs]
@@ -648,21 +753,24 @@ def _unit_header(dw, tu):
     lines += [" * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex",
               " *",
               " * C mode: a use is `struct <tag> *`, and the named types this unit needs are",
-              " * included from include/types/.  `@anonN` is this unit's own numbering, so it",
-              " * is named here (`anon_<N>_<unit>`) and nowhere else.",
+              " * included from include/types/.  `@anonN` is this unit's own numbering, so an",
+              " * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a",
+              " * typedef of an *unnamed* aggregate, which is the spelling the compiler",
+              " * records back as `@anonN`.  A named type's anonymous member is spelled",
+              " * inline in the shared header that defines it, and is not declared again.",
               " */",
               f"#ifndef {g}",
               f"#define {g}"]
     if named:
         lines.append("")
         lines += [f'#include "{TYPES_DIR}/{name}.h"' for name in sorted(named)]
-    if definitions:
-        lines += ["", f"/* anonymous types ({len(definitions)}) */"]
-        for tag, die in definitions:
+    if own:
+        lines += ["", f"/* anonymous types ({len(own)}) */"]
+        for tag, die in own:
             lines += ["",
                       f"/* {tag} -- {die.name}, 0x{die.attrs.get(AT_byte_size, 0):x} "
                       f"bytes, {_declared_by(die)} */"]
-            lines += definition(dw, die, tag, unit.specifier)
+            lines += definition(dw, die, tag, unit.specifier, typedef=True)
         lines.append("")
 
     globals_, references = [], []
@@ -833,9 +941,12 @@ so `struct <tag>` is the only spelling the evidence offers.
 
 An anonymous type keeps its unit.  DWARF names them `@anon0..24`, and that numbering is
 per-unit -- `@anon0` in `les.c` and `@anon0` in `onimode.c` are different types -- so a use
-becomes `anon_<N>_<unit index>` and the definition is emitted in that unit's own header and
-nowhere else.  A named type whose layout contains one spells that member out inline; the
-layout digest, compared across every declaration, is what makes that faithful.
+becomes `anon_<N>_<unit>` and the definition is emitted in that unit's own header and
+nowhere else, as a typedef of an unnamed aggregate (the compiler records that back as
+`@anonN`; a tag of our own would land in the DIE).  A named type whose layout contains one
+spells that member out inline, and spells contiguous members that share it in one
+declaration, so the layout digest compared across every declaration stays faithful and one
+anonymous type stays one DIE.
 
 Check a header the way the compiler does, not with a host `cc`:
 

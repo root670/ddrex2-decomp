@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_net_c_H
 #define DDR_UNIT_src_network_net_c_H
@@ -15,92 +18,46 @@
 #include "types/g_game_w.h"
 #include "types/sockaddr_in.h"
 
-/* anonymous types (11) */
+/* anonymous types (5) */
 
 /* anon_0_42 -- @anon0, 0x10 bytes, net.c (DIE 0x6DA2D) */
-struct anon_0_42 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int ip_addr;                          // 0x4
     /* 0x008 */ int netmask;                          // 0x4
     /* 0x00C */ int broadcast;                        // 0x4
-};
-
-/* anon_1_42 -- @anon1, 0x14 bytes, net.c (DIE 0x6E77A) */
-struct anon_1_42 {   // size 0x14
-    /* 0x000 */ int state;                            // 0x4
-    /* 0x004 */ int music_count;                      // 0x4
-    /* 0x008 */ int dir;                              // 0x4
-    /* 0x00C */ int effect_count;                     // 0x4
-    /* 0x010 */ int id;                               // 0x4
-};
-
-/* anon_2_42 -- @anon2, 0x10 bytes, net.c (DIE 0x6E948) */
-struct anon_2_42 {   // size 0x10
-    /* 0x000 */ int rtv;                              // 0x4
-    /* 0x004 */ int ip_addr;                          // 0x4
-    /* 0x008 */ int netmask;                          // 0x4
-    /* 0x00C */ int broadcast;                        // 0x4
-};
-
-/* anon_3_42 -- @anon3, 0x1048 bytes, net.c (DIE 0x6F151) */
-struct anon_3_42 {   // size 0x1048
-    /* 0x000 */ unsigned int P[18];                   // 0x48
-    /* 0x048 */ unsigned int S[4][256];               // 0x1000
-};
-
-/* anon_4_42 -- @anon4, 0x4 bytes, net.c (DIE 0x70F7C) */
-struct anon_4_42 {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-};
+} anon_0_42;
 
 /* anon_6_42 -- @anon6, 0x4 bytes, net.c (DIE 0x717B2) */
-struct anon_6_42 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char s_b1;                   // 0x1
     /* 0x001 */ unsigned char s_b2;                   // 0x1
     /* 0x002 */ unsigned char s_b3;                   // 0x1
     /* 0x003 */ unsigned char s_b4;                   // 0x1
-};
+} anon_6_42;
 
 /* anon_8_42 -- @anon8, 0x4 bytes, net.c (DIE 0x71E5B) */
-struct anon_8_42 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short s_w1;                  // 0x2
     /* 0x002 */ unsigned short s_w2;                  // 0x2
-};
-
-/* anon_5_42 -- @anon5, 0x4 bytes, net.c (DIE 0x71726) */
-union anon_5_42 {   // size 0x4
-    /* 0x000 */ struct anon_6_42 S_un_b;              // 0x4
-    /* 0x000 */ struct anon_8_42 S_un_w;              // 0x4
-    /* 0x000 */ unsigned int S_addr;                  // 0x4
-};
+} anon_8_42;
 
 /* anon_9_42 -- @anon9, 0x4 bytes, net.c (DIE 0x73EFA) */
-union anon_9_42 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_9_42;
 
 /* anon_10_42 -- @anon10, 0x10 bytes, net.c (DIE 0x74761) */
-struct anon_10_42 {   // size 0x10
-    /* 0x000 */ union anon_9_42 x0;                   // 0x4
-    /* 0x004 */ union anon_9_42 y0;                   // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_9_42 x0;                         // 0x4
+    /* 0x004 */ anon_9_42 y0;                         // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
-
-/* anon_7_42 -- @anon7, 0x184 bytes, net.c (DIE 0x71C49) */
-struct anon_7_42 {   // size 0x184
-    /* 0x000 */ struct anon_10_42 line_a[8];          // 0x80
-    /* 0x080 */ struct anon_10_42 line_b[8];          // 0x80
-    /* 0x100 */ struct anon_10_42 line_c[8];          // 0x80
-    /* 0x180 */ int num;                              // 0x4
-};
+} anon_10_42;
 
 
 /* variables (9) */

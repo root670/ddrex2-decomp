@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_sound_fft_sd_fft_c_H
 #define DDR_UNIT_src_sound_fft_sd_fft_c_H
@@ -13,7 +16,7 @@
 /* anonymous types (2) */
 
 /* anon_0_31 -- @anon0, 0x4C60 bytes, sd_fft.c (DIE 0x45D50) */
-struct anon_0_31 {   // size 0x4C60
+typedef struct {   // size 0x4C60
     /* 0x000 */ int sdwork[256];                      // 0x400
     /* 0x400 */ float window_table[512];              // 0x800
     /* 0xC00 */ float sdtable[1024];                  // 0x1000
@@ -23,19 +26,19 @@ struct anon_0_31 {   // size 0x4C60
     /* 0x4038 */ short pcmdata_left[532];             // 0x428
     /* 0x4460 */ float fftdata_right[256];            // 0x400
     /* 0x4860 */ float fftdata_left[256];             // 0x400
-};
+} anon_0_31;
 
 /* anon_1_31 -- @anon1, 0xC bytes, sd_fft.c (DIE 0x45F2C) */
-struct anon_1_31 {   // size 0xC
-    /* 0x000 */ struct anon_0_31 *fft_ope_work;       // 0x4
+typedef struct {   // size 0xC
+    /* 0x000 */ anon_0_31 *fft_ope_work;              // 0x4
     /* 0x004 */ int set_flg;                          // 0x4
     /* 0x008 */ int use_flg;                          // 0x4
-};
+} anon_1_31;
 
 
 /* variables (2) */
-struct anon_1_31 *p_fft_work;                                    /* @0x002DD9A4 size 0x4 */
-static struct anon_1_31 fft_work;                                /* @0x007126D0 size 0xC */
+anon_1_31 *p_fft_work;                                           /* @0x002DD9A4 size 0x4 */
+static anon_1_31 fft_work;                                       /* @0x007126D0 size 0xC */
 
 /* functions defined (17) */
 static void SdMakewt(int nw, int *p_work, float *p_table);       /* 0x001D08B0-0x001D09EC lines 798-823 */
@@ -45,7 +48,7 @@ static void SdCftmdl(int n, int l, float *data, float *w);       /* 0x001D12F0-0
 static void SdCft1st(int n, float *data, float *p_table);        /* 0x001D1760-0x001D1A78 lines 353-454 */
 static void SdCftbsub(int n, float *data, float *p_table);       /* 0x001D1A80-0x001D1C34 lines 305-351 */
 void SdFFTCore(void);                                            /* 0x001D1C40-0x001D2024 lines 159-227 */
-int SdFFTInit(struct anon_0_31 *addr);                           /* 0x001D2030-0x001D20EC lines 130-150 */
+int SdFFTInit(anon_0_31 *addr);                                  /* 0x001D2030-0x001D20EC lines 130-150 */
 int SdGetFFTStart(void);                                         /* 0x001D20F0-0x001D20FC lines 122-123 */
 void SdSetFFTEnd(void);                                          /* 0x001D2100-0x001D210C lines 115-116 */
 void SdSetFFTStart(void);                                        /* 0x001D2110-0x001D2120 lines 109-110 */

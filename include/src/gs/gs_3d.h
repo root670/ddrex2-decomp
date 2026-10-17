@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_gs_gs_3d_c_H
 #define DDR_UNIT_src_gs_gs_3d_c_H
@@ -13,7 +16,7 @@
 /* anonymous types (2) */
 
 /* anon_0_22 -- @anon0, 0x10 bytes, gs_3d.c (DIE 0x31C8C) */
-union anon_0_22 {   // size 0x10
+typedef union {   // size 0x10
     /* 0x000 */ unsigned __int128 ul128;              // 0x10
     /* 0x000 */ unsigned long ul64[2];                // 0x10
     /* 0x000 */ unsigned int ui32[4];                 // 0x10
@@ -21,10 +24,10 @@ union anon_0_22 {   // size 0x10
     /* 0x000 */ float f32[4];                         // 0x10
     /* 0x000 */ float fv[4];                          // 0x10
     /* 0x000 */ int iv[4];                            // 0x10
-};
+} anon_0_22;
 
 /* anon_1_22 -- @anon1, 0x320 bytes, gs_3d.c (DIE 0x31E99) */
-struct anon_1_22 {   // size 0x320
+typedef struct {   // size 0x320
     /* 0x000 */ float cam_p[4];                       // 0x10
     /* 0x010 */ float eye_p[4];                       // 0x10
     /* 0x020 */ float cam_zd[4];                      // 0x10
@@ -54,13 +57,13 @@ struct anon_1_22 {   // size 0x320
     /* 0x30C */ float (*tp)[4];                       // 0x4
     /* 0x310 */ float (*cp)[4];                       // 0x4
     /* 0x314 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_1_22;
 
 
 /* variables (3) */
-struct anon_1_22 *gs3d;                                          /* @0x002DD998 size 0x4 */
+anon_1_22 *gs3d;                                                 /* @0x002DD998 size 0x4 */
 static int vnt_vbuf_size[3];                                     /* @0x002D1680 size 0xC */
-static struct anon_1_22 gs3dwork;                                /* @0x007122E0 size 0x320 */
+static anon_1_22 gs3dwork;                                       /* @0x007122E0 size 0x320 */
 
 /* functions defined (15) */
 float dist3d(float *v);                                          /* 0x001CC700-0x001CC728 lines 298-299 */

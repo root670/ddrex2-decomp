@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_net_grf_c_H
 #define DDR_UNIT_src_network_net_grf_c_H
@@ -13,19 +16,19 @@
 /* anonymous types (2) */
 
 /* anon_1_45 -- @anon1, 0x4 bytes, net_grf.c (DIE 0x85255) */
-union anon_1_45 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_1_45;
 
 /* anon_0_45 -- @anon0, 0x34 bytes, net_grf.c (DIE 0x84F7F) */
-struct anon_0_45 {   // size 0x34
-    /* 0x000 */ union anon_1_45 x0;                   // 0x4
-    /* 0x004 */ union anon_1_45 y0;                   // 0x4
-    /* 0x008 */ union anon_1_45 x1;                   // 0x4
-    /* 0x00C */ union anon_1_45 y1;                   // 0x4
-    /* 0x010 */ union anon_1_45 x2;                   // 0x4
-    /* 0x014 */ union anon_1_45 y2;                   // 0x4
+typedef struct {   // size 0x34
+    /* 0x000 */ anon_1_45 x0;                         // 0x4
+    /* 0x004 */ anon_1_45 y0;                         // 0x4
+    /* 0x008 */ anon_1_45 x1;                         // 0x4
+    /* 0x00C */ anon_1_45 y1;                         // 0x4
+    /* 0x010 */ anon_1_45 x2;                         // 0x4
+    /* 0x014 */ anon_1_45 y2;                         // 0x4
     /* 0x018 */ unsigned int z0;                      // 0x4
     /* 0x01C */ unsigned int z1;                      // 0x4
     /* 0x020 */ unsigned int z2;                      // 0x4
@@ -42,7 +45,7 @@ struct anon_0_45 {   // size 0x34
     /* 0x02E */ unsigned char b2;                     // 0x1
     /* 0x02F */ unsigned char a2;                     // 0x1
     /* 0x030 */ int flg;                              // 0x4
-};
+} anon_0_45;
 
 
 /* variables (1) */

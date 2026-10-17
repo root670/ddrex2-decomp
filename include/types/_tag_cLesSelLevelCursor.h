@@ -20,46 +20,22 @@ struct _tag_cLesSelLevelCursor {   // size 0xA0
     /* 0x004 */ int pcount;                           // 0x4
     /* 0x008 */ int pcounter;                         // 0x4
     /* 0x00C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x010 */ struct {   // size 0x10
+    /* 0x010, 0x020, 0x030 */ struct {   // size 0x10
         /* 0x000 */ float vx;                             // 0x4
         /* 0x004 */ float vy;                             // 0x4
         /* 0x008 */ float vz;                             // 0x4
         /* 0x00C */ float vw;                             // 0x4
-    } pos;
-    /* 0x020 */ struct {   // size 0x10
-        /* 0x000 */ float vx;                             // 0x4
-        /* 0x004 */ float vy;                             // 0x4
-        /* 0x008 */ float vz;                             // 0x4
-        /* 0x00C */ float vw;                             // 0x4
-    } npos;
-    /* 0x030 */ struct {   // size 0x10
-        /* 0x000 */ float vx;                             // 0x4
-        /* 0x004 */ float vy;                             // 0x4
-        /* 0x008 */ float vz;                             // 0x4
-        /* 0x00C */ float vw;                             // 0x4
-    } ipos;
+    } pos, npos, ipos;                            // 0x10 each
     /* 0x040 */ int amode;                            // 0x4
     /* 0x044 */ int acount;                           // 0x4
     /* 0x048 */ int acounter;                         // 0x4
     /* 0x04C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x050 */ struct {   // size 0x10
+    /* 0x050, 0x060, 0x070 */ struct {   // size 0x10
         /* 0x000 */ float vx;                             // 0x4
         /* 0x004 */ float vy;                             // 0x4
         /* 0x008 */ float vz;                             // 0x4
         /* 0x00C */ float vw;                             // 0x4
-    } angle;
-    /* 0x060 */ struct {   // size 0x10
-        /* 0x000 */ float vx;                             // 0x4
-        /* 0x004 */ float vy;                             // 0x4
-        /* 0x008 */ float vz;                             // 0x4
-        /* 0x00C */ float vw;                             // 0x4
-    } nangle;
-    /* 0x070 */ struct {   // size 0x10
-        /* 0x000 */ float vx;                             // 0x4
-        /* 0x004 */ float vy;                             // 0x4
-        /* 0x008 */ float vz;                             // 0x4
-        /* 0x00C */ float vw;                             // 0x4
-    } iangle;
+    } angle, nangle, iangle;                      // 0x10 each
     /* 0x080 */ int step;                             // 0x4
     /* 0x084 */ int can_select;                       // 0x4
     /* 0x088 */ int bright;                           // 0x4

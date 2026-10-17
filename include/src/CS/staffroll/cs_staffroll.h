@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_staffroll_cs_staffroll_c_H
 #define DDR_UNIT_src_CS_staffroll_cs_staffroll_c_H
@@ -20,7 +23,7 @@ enum anon_x34cde8_186 {   // size 0x1
 };
 
 /* anon_0_186 -- @anon0, 0x78 bytes, cs_staffroll.c (DIE 0x34CE52) */
-struct anon_0_186 {   // size 0x78
+typedef struct {   // size 0x78
     /* 0x000 */ float timer;                          // 0x4
     /* 0x004 */ float topPos;                         // 0x4
     /* 0x008 */ float startStrPos;                    // 0x4
@@ -48,7 +51,7 @@ struct anon_0_186 {   // size 0x78
     /* 0x074 */ int disp_mov : 1;                     // bits 1..1
     /* 0x074 */ int disp_roll : 1;                    // bits 2..2
     /* 0x074 */ int disp_padding : 29;                // bits 3..31
-};
+} anon_0_186;
 
 /* anon_x34d26f_186 -- @enum, 0x1 bytes, cs_staffroll.c (DIE 0x34D26F) */
 enum anon_x34d26f_186 {   // size 0x1
@@ -64,19 +67,19 @@ enum anon_x34d26f_186 {   // size 0x1
 };
 
 /* anon_1_186 -- @anon1, 0x8 bytes, cs_staffroll.c (DIE 0x34D375) */
-struct anon_1_186 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned long number : 16;            // bits 0..15
     /* 0x000 */ unsigned long sector : 24;            // bits 16..39
     /* 0x000 */ unsigned long size : 24;              // bits 40..63
-};
+} anon_1_186;
 
 
 /* variables (7) */
 static int isreMainStep;                                         /* @0x002DE59C size 0x4 */
 static int isreReadStep;                                         /* @0x002DE5A0 size 0x4 */
 static int isreSdReadStep;                                       /* @0x002DE5A4 size 0x4 */
-struct anon_0_186 g_staffroll;                                   /* @0x00807D60 size 0x78 */
-struct anon_1_186 sound_bin[];                                   /* @0x002DD418 */
+anon_0_186 g_staffroll;                                          /* @0x00807D60 size 0x78 */
+anon_1_186 sound_bin[];                                          /* @0x002DD418 */
 enum anon_x34d26f_186 SRE_SDREAD_STEP;                           /* not allocated size 0x1 */
 enum anon_x34cde8_186 SRE_BINREAD_STEP;                          /* not allocated size 0x1 */
 

@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_libstr3_c_H
 #define DDR_UNIT_libstr3_c_H
@@ -17,19 +20,19 @@
 /* anonymous types (2) */
 
 /* anon_0_38 -- @anon0, 0xC bytes, libstr3.c (DIE 0x5D2AE) */
-struct anon_0_38 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int Sect;                             // 0x4
     /* 0x004 */ int Size;                             // 0x4
     /* 0x008 */ int Adrs;                             // 0x4
-};
+} anon_0_38;
 
 /* anon_1_38 -- @anon1, 0x4 bytes, libstr3.c (DIE 0x5D964) */
-struct anon_1_38 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char trycount;               // 0x1
     /* 0x001 */ unsigned char spindlctrl;             // 0x1
     /* 0x002 */ unsigned char datapattern;            // 0x1
     /* 0x003 */ unsigned char pad;                    // 0x1
-};
+} anon_1_38;
 
 
 /* variables (16) */
@@ -44,9 +47,9 @@ int SdStr3EeReading;                                             /* @0x002DE4E8 
 int SdStr3EeReadStat;                                            /* @0x002DE4F0 size 0x4 */
 int SdStr3EeReadBreak;                                           /* @0x002DE4E4 size 0x4 */
 struct _sif_client_data sdstr3_sifbd;                            /* @0x00712C80 size 0x28 */
-struct anon_1_38 sdstr3_cdrmode;                                 /* @0x002DE4F8 size 0x4 */
+anon_1_38 sdstr3_cdrmode;                                        /* @0x002DE4F8 size 0x4 */
 int SdStr3EeReadThId;                                            /* @0x002DE4F4 size 0x4 */
-struct anon_0_38 SdStr3EeRead;                                   /* @0x00712CA8 size 0xC */
+anon_0_38 SdStr3EeRead;                                          /* @0x00712CA8 size 0xC */
 void *_gp;                                                       /* @0x002E20F0 size 0x4 */
 char ThStackER[4096];                                            /* @0x00712CC0 size 0x1000 */
 

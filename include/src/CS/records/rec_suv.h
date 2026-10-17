@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_records_rec_suv_c_H
 #define DDR_UNIT_src_CS_records_rec_suv_c_H
@@ -15,24 +18,24 @@
 /* anonymous types (8) */
 
 /* anon_0_139 -- @anon0, 0xC bytes, rec_suv.c (DIE 0x25B995) */
-struct anon_0_139 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char mode;                   // 0x1
     /* 0x002 */ unsigned char call;                   // 0x1
     /* 0x003 */ unsigned char pad;                    // 0x1
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ float x;                              // 0x4
-};
+} anon_0_139;
 
 /* anon_6_139 -- @anon6, 0x8 bytes, rec_suv.c (DIE 0x25C4D5) */
-struct anon_6_139 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int address;                 // 0x4
     /* 0x004 */ unsigned short link_num;              // 0x2
     /* 0x006 */ unsigned short tex_num;               // 0x2
-};
+} anon_6_139;
 
 /* anon_1_139 -- @anon1, 0x504 bytes, rec_suv.c (DIE 0x25BA73) */
-struct anon_1_139 {   // size 0x504
+typedef struct {   // size 0x504
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char step_s;                 // 0x1
     /* 0x002 */ unsigned char mode;                   // 0x1
@@ -52,8 +55,8 @@ struct anon_1_139 {   // size 0x504
     /* 0x028 */ int m_num;                            // 0x4
     /* 0x02C */ float star_t;                         // 0x4
     /* 0x030 */ float scr_y;                          // 0x4
-    /* 0x034 */ struct anon_6_139 title_info[80];     // 0x280
-    /* 0x2B4 */ struct anon_0_139 xmove[40];          // 0x1E0
+    /* 0x034 */ anon_6_139 title_info[80];            // 0x280
+    /* 0x2B4 */ anon_0_139 xmove[40];                 // 0x1E0
     /* 0x494 */ float scr_t;                          // 0x4
     /* 0x498 */ unsigned char er_step;                // 0x1
     /* 0x499 */ unsigned char yn_cur;                 // 0x1
@@ -63,10 +66,10 @@ struct anon_1_139 {   // size 0x504
     /* 0x49E */ // 0x2 bytes padding
     /* 0x4A0 */ struct _tag_cCoCursor01 cur_w;        // 0xC
     /* 0x4AC */ void *obj_p[22];                      // 0x58
-};
+} anon_1_139;
 
 /* anon_2_139 -- @anon2, 0x48 bytes, rec_suv.c (DIE 0x25BE79) */
-struct anon_2_139 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -87,18 +90,18 @@ struct anon_2_139 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_2_139;
 
 /* anon_4_139 -- @anon4, 0x4 bytes, rec_suv.c (DIE 0x25C2D7) */
-union anon_4_139 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_4_139;
 
 /* anon_3_139 -- @anon3, 0x24 bytes, rec_suv.c (DIE 0x25C143) */
-struct anon_3_139 {   // size 0x24
-    /* 0x000 */ union anon_4_139 x0;                  // 0x4
-    /* 0x004 */ union anon_4_139 y0;                  // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_4_139 x0;                        // 0x4
+    /* 0x004 */ anon_4_139 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -109,36 +112,36 @@ struct anon_3_139 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_3_139;
 
 /* anon_5_139 -- @anon5, 0x10 bytes, rec_suv.c (DIE 0x25C334) */
-struct anon_5_139 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ float alpha;                          // 0x4
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ int iw;                               // 0x4
     /* 0x00C */ float fw;                             // 0x4
-};
+} anon_5_139;
 
 /* anon_7_139 -- @anon7, 0x8 bytes, rec_suv.c (DIE 0x25C561) */
-struct anon_7_139 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int time;                    // 0x4
     /* 0x004 */ int stage;                            // 0x4
-};
+} anon_7_139;
 
 
 /* variables (2) */
-static struct anon_7_139 dummy_data[9];                          /* @0x002BF870 size 0x48 */
-struct anon_1_139 *rw;                                           /* @0x002DDFB4 size 0x4 */
+static anon_7_139 dummy_data[9];                                 /* @0x002BF870 size 0x48 */
+anon_1_139 *rw;                                                  /* @0x002DDFB4 size 0x4 */
 
 /* functions defined (9) */
 static void rec_suv_time_disp(float x, float y, int val, unsigned char alpha); /* 0x00259F10-0x0025A23C lines 329-389 */
 static void rec_suv_item_disp_sub(float x, float y, unsigned char kind); /* 0x0025A240-0x0025A454 lines 280-320 */
-int Rec_Suv_BoolDelete(struct anon_1_139 *rw);                   /* 0x0025A460-0x0025A480 lines 270-272 */
+int Rec_Suv_BoolDelete(anon_1_139 *rw);                          /* 0x0025A460-0x0025A480 lines 270-272 */
 int RCObj_suv_item_disp(void);                                   /* 0x0025A480-0x0025A5B4 lines 224-262 */
 int RCObj_suv_item_disap(void *wp);                              /* 0x0025A5C0-0x0025A68C lines 193-221 */
 int RCObj_suv_item_apper(void *wp);                              /* 0x0025A690-0x0025A77C lines 162-190 */
-void Rec_Suv_Delete(struct anon_1_139 *rw);                      /* 0x0025A780-0x0025A7A0 lines 152-156 */
+void Rec_Suv_Delete(anon_1_139 *rw);                             /* 0x0025A780-0x0025A7A0 lines 152-156 */
 void Rec_Suv_DetailDisp(void *wp);                               /* 0x0025A7A0-0x0025A970 lines 121-145 */
-unsigned char Rec_Suv(struct anon_1_139 *rw);                    /* 0x0025A970-0x0025AB38 lines 48-116 */
+unsigned char Rec_Suv(anon_1_139 *rw);                           /* 0x0025A970-0x0025AB38 lines 48-116 */
 
 #endif /* DDR_UNIT_src_CS_records_rec_suv_c_H */

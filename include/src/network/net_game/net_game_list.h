@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_net_game_net_game_list_c_H
 #define DDR_UNIT_src_network_net_game_net_game_list_c_H
@@ -15,50 +18,21 @@
 #include "types/_NSV_USER_FILE_WORK.h"
 #include "types/_NS_NET_INFO_W.h"
 
-/* anonymous types (6) */
-
-/* anon_0_57 -- @anon0, 0x8 bytes, net_game_list.c (DIE 0xD5703) */
-struct anon_0_57 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
-
-/* anon_1_57 -- @anon1, 0x1048 bytes, net_game_list.c (DIE 0xD59F1) */
-struct anon_1_57 {   // size 0x1048
-    /* 0x000 */ unsigned int P[18];                   // 0x48
-    /* 0x048 */ unsigned int S[4][256];               // 0x1000
-};
+/* anonymous types (2) */
 
 /* anon_3_57 -- @anon3, 0x4 bytes, net_game_list.c (DIE 0xDA381) */
-struct anon_3_57 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char s_b1;                   // 0x1
     /* 0x001 */ unsigned char s_b2;                   // 0x1
     /* 0x002 */ unsigned char s_b3;                   // 0x1
     /* 0x003 */ unsigned char s_b4;                   // 0x1
-};
+} anon_3_57;
 
 /* anon_4_57 -- @anon4, 0x4 bytes, net_game_list.c (DIE 0xDA99A) */
-struct anon_4_57 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short s_w1;                  // 0x2
     /* 0x002 */ unsigned short s_w2;                  // 0x2
-};
-
-/* anon_2_57 -- @anon2, 0x4 bytes, net_game_list.c (DIE 0xDA13A) */
-union anon_2_57 {   // size 0x4
-    /* 0x000 */ struct anon_3_57 S_un_b;              // 0x4
-    /* 0x000 */ struct anon_4_57 S_un_w;              // 0x4
-    /* 0x000 */ unsigned int S_addr;                  // 0x4
-};
-
-/* anon_5_57 -- @anon5, 0x10 bytes, net_game_list.c (DIE 0xDC3AD) */
-struct anon_5_57 {   // size 0x10
-    /* 0x000 */ int rtv;                              // 0x4
-    /* 0x004 */ int ip_addr;                          // 0x4
-    /* 0x008 */ int netmask;                          // 0x4
-    /* 0x00C */ int broadcast;                        // 0x4
-};
+} anon_4_57;
 
 
 /* variables (1) */

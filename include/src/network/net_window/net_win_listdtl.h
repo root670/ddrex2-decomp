@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_net_window_net_win_listdtl_c_H
 #define DDR_UNIT_src_network_net_window_net_win_listdtl_c_H
@@ -20,15 +23,15 @@
 /* anonymous types (4) */
 
 /* anon_0_142 -- @anon0, 0x8 bytes, net_win_listdtl.c (DIE 0x2608F7) */
-struct anon_0_142 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ short x;                              // 0x2
     /* 0x002 */ short y;                              // 0x2
     /* 0x004 */ short w;                              // 0x2
     /* 0x006 */ short h;                              // 0x2
-};
+} anon_0_142;
 
 /* anon_1_142 -- @anon1, 0x48 bytes, net_win_listdtl.c (DIE 0x26110E) */
-struct anon_1_142 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -49,20 +52,20 @@ struct anon_1_142 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_1_142;
 
 /* anon_2_142 -- @anon2, 0x4 bytes, net_win_listdtl.c (DIE 0x2615CA) */
-union anon_2_142 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_2_142;
 
 /* anon_3_142 -- @anon3, 0x30 bytes, net_win_listdtl.c (DIE 0x2618E0) */
-struct anon_3_142 {   // size 0x30
-    /* 0x000 */ union anon_2_142 x0;                  // 0x4
-    /* 0x004 */ union anon_2_142 y0;                  // 0x4
-    /* 0x008 */ union anon_2_142 x1;                  // 0x4
-    /* 0x00C */ union anon_2_142 y1;                  // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_2_142 x0;                        // 0x4
+    /* 0x004 */ anon_2_142 y0;                        // 0x4
+    /* 0x008 */ anon_2_142 x1;                        // 0x4
+    /* 0x00C */ anon_2_142 y1;                        // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -74,7 +77,7 @@ struct anon_3_142 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_3_142;
 
 
 /* variables (7) */

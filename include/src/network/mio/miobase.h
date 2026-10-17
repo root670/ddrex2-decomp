@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_mio_miobase_c_H
 #define DDR_UNIT_src_network_mio_miobase_c_H
@@ -13,20 +16,14 @@
 #include "types/_mio_message.h"
 #include "types/_mio_system.h"
 
-/* anonymous types (2) */
+/* anonymous types (1) */
 
 /* anon_0_116 -- @anon0, 0x58 bytes, miobase.c (DIE 0x20614E) */
-struct anon_0_116 {   // size 0x58
+typedef struct {   // size 0x58
     /* 0x000 */ unsigned int state[4];                // 0x10
     /* 0x010 */ unsigned int count[2];                // 0x8
     /* 0x018 */ unsigned char buffer[64];             // 0x40
-};
-
-/* anon_1_116 -- @anon1, 0x1048 bytes, miobase.c (DIE 0x2063D6) */
-struct anon_1_116 {   // size 0x1048
-    /* 0x000 */ unsigned int P[18];                   // 0x48
-    /* 0x048 */ unsigned int S[4][256];               // 0x1000
-};
+} anon_0_116;
 
 
 /* variables (1) */

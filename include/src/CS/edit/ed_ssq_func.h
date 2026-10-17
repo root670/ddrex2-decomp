@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_edit_ed_ssq_func_c_H
 #define DDR_UNIT_src_CS_edit_ed_ssq_func_c_H
@@ -17,44 +20,44 @@
 /* anonymous types (5) */
 
 /* anon_3_173 -- @anon3, 0x8 bytes, ed_ssq_func.c (DIE 0x3055C8) */
-struct anon_3_173 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int beat_count;                       // 0x4
     /* 0x004 */ int music_count;                      // 0x4
-};
+} anon_3_173;
 
 /* anon_2_173 -- @anon2, 0x3C4 bytes, ed_ssq_func.c (DIE 0x305545) */
-struct anon_2_173 {   // size 0x3C4
+typedef struct {   // size 0x3C4
     /* 0x000 */ int num;                              // 0x4
-    /* 0x004 */ struct anon_3_173 val[80];            // 0x280
+    /* 0x004 */ anon_3_173 val[80];                   // 0x280
     /* 0x284 */ float bpm[80];                        // 0x140
-};
+} anon_2_173;
 
 /* anon_4_173 -- @anon4, 0xC bytes, ed_ssq_func.c (DIE 0x305680) */
-struct anon_4_173 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int beat_count;                       // 0x4
     /* 0x004 */ int music_count;                      // 0x4
     /* 0x008 */ int note_kind;                        // 0x4
-};
+} anon_4_173;
 
 /* anon_1_173 -- @anon1, 0x64 bytes, ed_ssq_func.c (DIE 0x3053AB) */
-struct anon_1_173 {   // size 0x64
+typedef struct {   // size 0x64
     /* 0x000 */ int num;                              // 0x4
-    /* 0x004 */ struct anon_4_173 val[8];             // 0x60
-};
+    /* 0x004 */ anon_4_173 val[8];                    // 0x60
+} anon_1_173;
 
 /* anon_0_173 -- @anon0, 0x434 bytes, ed_ssq_func.c (DIE 0x3052BC) */
-struct anon_0_173 {   // size 0x434
+typedef struct {   // size 0x434
     /* 0x000 */ int *ssq_addr;                        // 0x4
     /* 0x004 */ unsigned char *edit_seq_addr;         // 0x4
     /* 0x008 */ unsigned char *edit_freeze_addr;      // 0x4
-    /* 0x00C */ struct anon_2_173 timing;             // 0x3C4
-    /* 0x3D0 */ struct anon_1_173 sp_note;            // 0x64
-};
+    /* 0x00C */ anon_2_173 timing;                    // 0x3C4
+    /* 0x3D0 */ anon_1_173 sp_note;                   // 0x64
+} anon_0_173;
 
 
 /* variables (2) */
-static struct anon_0_173 *p_ssq_info_work;                       /* @0x002DDE18 size 0x4 */
-static struct anon_0_173 ssq_info_work;                          /* @0x00723150 size 0x434 */
+static anon_0_173 *p_ssq_info_work;                              /* @0x002DDE18 size 0x4 */
+static anon_0_173 ssq_info_work;                                 /* @0x00723150 size 0x434 */
 
 /* functions defined (11) */
 int get_ssq_timing_music_count(int index);                       /* 0x00287DF0-0x00287E04 lines 418-419 */

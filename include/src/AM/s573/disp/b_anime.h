@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_AM_s573_disp_b_anime_c_H
 #define DDR_UNIT_src_AM_s573_disp_b_anime_c_H
@@ -17,27 +20,10 @@
 #include "types/marker_anime_db.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (11) */
-
-/* anon_0_10 -- @anon0, 0x14 bytes, b_anime.c (DIE 0x1350F) */
-struct anon_0_10 {   // size 0x14
-    /* 0x000 */ int state;                            // 0x4
-    /* 0x004 */ int music_count;                      // 0x4
-    /* 0x008 */ int dir;                              // 0x4
-    /* 0x00C */ int effect_count;                     // 0x4
-    /* 0x010 */ int id;                               // 0x4
-};
-
-/* anon_1_10 -- @anon1, 0x8 bytes, b_anime.c (DIE 0x13671) */
-struct anon_1_10 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
+/* anonymous types (7) */
 
 /* anon_2_10 -- @anon2, 0x48 bytes, b_anime.c (DIE 0x1372C) */
-struct anon_2_10 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -58,18 +44,18 @@ struct anon_2_10 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_2_10;
 
 /* anon_5_10 -- @anon5, 0x4 bytes, b_anime.c (DIE 0x14A97) */
-union anon_5_10 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_5_10;
 
 /* anon_3_10 -- @anon3, 0x24 bytes, b_anime.c (DIE 0x14651) */
-struct anon_3_10 {   // size 0x24
-    /* 0x000 */ union anon_5_10 x0;                   // 0x4
-    /* 0x004 */ union anon_5_10 y0;                   // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_5_10 x0;                         // 0x4
+    /* 0x004 */ anon_5_10 y0;                         // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -80,43 +66,43 @@ struct anon_3_10 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_3_10;
 
 /* anon_4_10 -- @anon4, 0x18 bytes, b_anime.c (DIE 0x14877) */
-struct anon_4_10 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ unsigned long freeze_bit[2];          // 0x10
     /* 0x010 */ unsigned long onoff;                  // 0x8
-};
+} anon_4_10;
 
 /* anon_6_10 -- @anon6, 0x10 bytes, b_anime.c (DIE 0x14BF2) */
-struct anon_6_10 {   // size 0x10
-    /* 0x000 */ union anon_5_10 x0;                   // 0x4
-    /* 0x004 */ union anon_5_10 y0;                   // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_5_10 x0;                         // 0x4
+    /* 0x004 */ anon_5_10 y0;                         // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
+} anon_6_10;
 
 /* anon_7_10 -- @anon7, 0x10 bytes, b_anime.c (DIE 0x14DCF) */
-struct anon_7_10 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ float x;                              // 0x4
     /* 0x004 */ float y;                              // 0x4
     /* 0x008 */ float scale;                          // 0x4
     /* 0x00C */ float pad;                            // 0x4
-};
+} anon_7_10;
 
 /* anon_8_10 -- @anon8, 0x68 bytes, b_anime.c (DIE 0x14FDE) */
-struct anon_8_10 {   // size 0x68
-    /* 0x000 */ union anon_5_10 x0;                   // 0x4
-    /* 0x004 */ union anon_5_10 y0;                   // 0x4
-    /* 0x008 */ union anon_5_10 x1;                   // 0x4
-    /* 0x00C */ union anon_5_10 y1;                   // 0x4
-    /* 0x010 */ union anon_5_10 x2;                   // 0x4
-    /* 0x014 */ union anon_5_10 y2;                   // 0x4
-    /* 0x018 */ union anon_5_10 x3;                   // 0x4
-    /* 0x01C */ union anon_5_10 y3;                   // 0x4
+typedef struct {   // size 0x68
+    /* 0x000 */ anon_5_10 x0;                         // 0x4
+    /* 0x004 */ anon_5_10 y0;                         // 0x4
+    /* 0x008 */ anon_5_10 x1;                         // 0x4
+    /* 0x00C */ anon_5_10 y1;                         // 0x4
+    /* 0x010 */ anon_5_10 x2;                         // 0x4
+    /* 0x014 */ anon_5_10 y2;                         // 0x4
+    /* 0x018 */ anon_5_10 x3;                         // 0x4
+    /* 0x01C */ anon_5_10 y3;                         // 0x4
     /* 0x020 */ unsigned int z0;                      // 0x4
     /* 0x024 */ unsigned int z1;                      // 0x4
     /* 0x028 */ unsigned int z2;                      // 0x4
@@ -138,23 +124,7 @@ struct anon_8_10 {   // size 0x68
     /* 0x062 */ unsigned char b0;                     // 0x1
     /* 0x063 */ unsigned char a0;                     // 0x1
     /* 0x064 */ int flg;                              // 0x4
-};
-
-/* anon_9_10 -- @anon9, 0x4 bytes, b_anime.c (DIE 0x1571C) */
-struct anon_9_10 {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-};
-
-/* anon_10_10 -- @anon10, 0x184 bytes, b_anime.c (DIE 0x15C04) */
-struct anon_10_10 {   // size 0x184
-    /* 0x000 */ struct anon_6_10 line_a[8];           // 0x80
-    /* 0x080 */ struct anon_6_10 line_b[8];           // 0x80
-    /* 0x100 */ struct anon_6_10 line_c[8];           // 0x80
-    /* 0x180 */ int num;                              // 0x4
-};
+} anon_8_10;
 
 
 /* variables (13) */
@@ -163,11 +133,11 @@ static struct anime_obj_work *bap;                               /* @0x002DD948 
 static int marker_anime_tex_tab[7];                              /* @0x002D0A60 size 0x1C */
 static int marker_anime_posx_tab[8];                             /* @0x002D0A80 size 0x20 */
 static int marker_anime_posy_tab[8];                             /* @0x002D0AA0 size 0x20 */
-static struct anon_7_10 frz_eff_info[8];                         /* @0x002D0AC0 size 0x80 */
-struct anon_4_10 *few;                                           /* @0x002DE494 size 0x4 */
+static anon_7_10 frz_eff_info[8];                                /* @0x002D0AC0 size 0x80 */
+anon_4_10 *few;                                                  /* @0x002DE494 size 0x4 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
-struct anon_4_10 frz_eff_w;                                      /* @0x0070FD30 size 0x18 */
+anon_4_10 frz_eff_w;                                             /* @0x0070FD30 size 0x18 */
 struct marker_anime_db *map;                                     /* @0x002DE498 size 0x4 */
 struct marker_anime_db marker_anime_w;                           /* @0x0070FD50 size 0x20 */
 struct anime_obj_work back_anime_w;                              /* @0x0070FD70 size 0x120 */

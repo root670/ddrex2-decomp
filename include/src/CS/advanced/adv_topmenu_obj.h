@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_advanced_adv_topmenu_obj_c_H
 #define DDR_UNIT_src_CS_advanced_adv_topmenu_obj_c_H
@@ -17,10 +20,10 @@
 #include "types/_tag_cCoCursor01.h"
 #include "types/g_game_w.h"
 
-/* anonymous types (25) */
+/* anonymous types (22) */
 
 /* anon_0_147 -- @anon0, 0x1C bytes, adv_topmenu_obj.c (DIE 0x271E22) */
-struct anon_0_147 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ unsigned char end_num;                // 0x1
     /* 0x001 */ unsigned char decide;                 // 0x1
     /* 0x002 */ unsigned char cancel;                 // 0x1
@@ -31,10 +34,10 @@ struct anon_0_147 {   // size 0x1C
     /* 0x010 */ int timer;                            // 0x4
     /* 0x014 */ void *item;                           // 0x4
     /* 0x018 */ void *entry;                          // 0x4
-};
+} anon_0_147;
 
 /* anon_1_147 -- @anon1, 0x38 bytes, adv_topmenu_obj.c (DIE 0x272041) */
-struct anon_1_147 {   // size 0x38
+typedef struct {   // size 0x38
     /* 0x000 */ int t;                                // 0x4
     /* 0x004 */ int t_max;                            // 0x4
     /* 0x008 */ float x;                              // 0x4
@@ -54,25 +57,25 @@ struct anon_1_147 {   // size 0x38
     /* 0x02E */ // 0x2 bytes padding
     /* 0x030 */ int anime_timer;                      // 0x4
     /* 0x034 */ int anime_frame;                      // 0x4
-};
+} anon_1_147;
 
 /* anon_2_147 -- @anon2, 0xC bytes, adv_topmenu_obj.c (DIE 0x2722B6) */
-struct anon_2_147 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int alpha;                            // 0x4
     /* 0x004 */ int step;                             // 0x4
     /* 0x008 */ int step_old;                         // 0x4
-};
+} anon_2_147;
 
 /* anon_3_147 -- @anon3, 0xC bytes, adv_topmenu_obj.c (DIE 0x2726B6) */
-struct anon_3_147 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ // 0x3 bytes padding
     /* 0x004 */ int timer;                            // 0x4
     /* 0x008 */ void *item;                           // 0x4
-};
+} anon_3_147;
 
 /* anon_17_147 -- @anon17, 0x90 bytes, adv_topmenu_obj.c (DIE 0x277021) */
-struct anon_17_147 {   // size 0x90
+typedef struct {   // size 0x90
     /* 0x000 */ void *loadaddr;                       // 0x4
     /* 0x004 */ int doll_p_counter;                   // 0x4
     /* 0x008 */ unsigned char max;                    // 0x1
@@ -93,19 +96,19 @@ struct anon_17_147 {   // size 0x90
     /* 0x070 */ float eye_p[4];                       // 0x10
     /* 0x080 */ void *fpanel;                         // 0x4
     /* 0x084 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_17_147;
 
 /* anon_21_147 -- @anon21, 0xC bytes, adv_topmenu_obj.c (DIE 0x277AEA) */
-struct anon_21_147 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ unsigned char max;                    // 0x1
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ void *item;                           // 0x4
     /* 0x008 */ int timer;                            // 0x4
-};
+} anon_21_147;
 
 /* anon_5_147 -- @anon5, 0x494 bytes, adv_topmenu_obj.c (DIE 0x272F9B) */
-struct anon_5_147 {   // size 0x494
+typedef struct {   // size 0x494
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ float repcnt;                         // 0x4
     /* 0x008 */ float scr_sp;                         // 0x4
@@ -157,29 +160,29 @@ struct anon_5_147 {   // size 0x494
     /* 0x48C */ unsigned char sn_f;                   // 0x1
     /* 0x48D */ // 0x3 bytes padding
     /* 0x490 */ float sn_t;                           // 0x4
-};
+} anon_5_147;
 
 /* anon_14_147 -- @anon14, 0x8 bytes, adv_topmenu_obj.c (DIE 0x2768A0) */
-struct anon_14_147 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned char n;                      // 0x1
     /* 0x001 */ unsigned char cur[2];                 // 0x2
     /* 0x003 */ // 0x1 bytes padding
     /* 0x004 */ unsigned char **str;                  // 0x4
-};
+} anon_14_147;
 
 /* anon_18_147 -- @anon18, 0x70 bytes, adv_topmenu_obj.c (DIE 0x2772A7) */
-struct anon_18_147 {   // size 0x70
+typedef struct {   // size 0x70
     /* 0x000 */ int timer;                            // 0x4
     /* 0x004 */ unsigned char cur[2];                 // 0x2
     /* 0x006 */ unsigned char auto_f[2];              // 0x2
     /* 0x008 */ float repcnt[2];                      // 0x8
     /* 0x010 */ void *item;                           // 0x4
     /* 0x014 */ void *win;                            // 0x4
-    /* 0x018 */ struct anon_14_147 one[11];           // 0x58
-};
+    /* 0x018 */ anon_14_147 one[11];                  // 0x58
+} anon_18_147;
 
 /* anon_22_147 -- @anon22, 0x34 bytes, adv_topmenu_obj.c (DIE 0x2783F1) */
-struct anon_22_147 {   // size 0x34
+typedef struct {   // size 0x34
     /* 0x000 */ int value_ct[8];                      // 0x20
     /* 0x020 */ int score;                            // 0x4
     /* 0x024 */ int bonus;                            // 0x4
@@ -188,10 +191,10 @@ struct anon_22_147 {   // size 0x34
     /* 0x02E */ unsigned char is_fcombo;              // 0x1
     /* 0x02F */ unsigned char is_newrec;              // 0x1
     /* 0x030 */ int pnt;                              // 0x4
-};
+} anon_22_147;
 
 /* anon_24_147 -- @anon24, 0xA0 bytes, adv_topmenu_obj.c (DIE 0x2789DE) */
-struct anon_24_147 {   // size 0xA0
+typedef struct {   // size 0xA0
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ void *base;                           // 0x4
     /* 0x008 */ void *value;                          // 0x4
@@ -207,11 +210,11 @@ struct anon_24_147 {   // size 0xA0
     /* 0x033 */ unsigned char cheer;                  // 0x1
     /* 0x034 */ unsigned char vo_pid;                 // 0x1
     /* 0x035 */ // 0x3 bytes padding
-    /* 0x038 */ struct anon_22_147 eva[2];            // 0x68
-};
+    /* 0x038 */ anon_22_147 eva[2];                   // 0x68
+} anon_24_147;
 
 /* anon_4_147 -- @anon4, 0x7E0 bytes, adv_topmenu_obj.c (DIE 0x27273B) */
-struct anon_4_147 {   // size 0x7E0
+typedef struct {   // size 0x7E0
     /* 0x000 */ float wsm[4][4];                      // 0x40
     /* 0x040 */ unsigned char step;                   // 0x1
     /* 0x041 */ unsigned char step_s;                 // 0x1
@@ -234,26 +237,18 @@ struct anon_4_147 {   // size 0x7E0
     /* 0x068 */ unsigned int btn_obj_id;              // 0x4
     /* 0x06C */ unsigned char *str_addr;              // 0x4
     /* 0x070 */ unsigned char str_buf[256];           // 0x100
-    /* 0x170 */ struct anon_17_147 doll;              // 0x90
-    /* 0x200 */ struct anon_3_147 eyetoy;             // 0xC
-    /* 0x20C */ struct anon_21_147 style;             // 0xC
-    /* 0x218 */ struct anon_0_147 chara;              // 0x1C
-    /* 0x234 */ struct anon_5_147 music;              // 0x494
-    /* 0x6C8 */ struct anon_18_147 option;            // 0x70
-    /* 0x738 */ struct anon_24_147 result;            // 0xA0
+    /* 0x170 */ anon_17_147 doll;                     // 0x90
+    /* 0x200 */ anon_3_147 eyetoy;                    // 0xC
+    /* 0x20C */ anon_21_147 style;                    // 0xC
+    /* 0x218 */ anon_0_147 chara;                     // 0x1C
+    /* 0x234 */ anon_5_147 music;                     // 0x494
+    /* 0x6C8 */ anon_18_147 option;                   // 0x70
+    /* 0x738 */ anon_24_147 result;                   // 0xA0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-};
-
-/* anon_6_147 -- @anon6, 0x4 bytes, adv_topmenu_obj.c (DIE 0x2736D2) */
-struct anon_6_147 {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-};
+} anon_4_147;
 
 /* anon_7_147 -- @anon7, 0x48 bytes, adv_topmenu_obj.c (DIE 0x273786) */
-struct anon_7_147 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -274,10 +269,10 @@ struct anon_7_147 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_7_147;
 
 /* anon_8_147 -- @anon8, 0x178 bytes, adv_topmenu_obj.c (DIE 0x273A2C) */
-struct anon_8_147 {   // size 0x178
+typedef struct {   // size 0x178
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char step_s;                 // 0x1
     /* 0x002 */ unsigned char cursor;                 // 0x1
@@ -305,60 +300,62 @@ struct anon_8_147 {   // size 0x178
     /* 0x140 */ int timer;                            // 0x4
     /* 0x144 */ struct _tag_cCoCursor01 cur_w;        // 0xC
     /* 0x150 */ struct _COM_SCROLLBAR_WORK sb;        // 0x28
-};
+} anon_8_147;
 
 /* anon_10_147 -- @anon10, 0x4 bytes, adv_topmenu_obj.c (DIE 0x275B2F) */
-union anon_10_147 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_10_147;
 
 /* anon_15_147 -- @anon15, 0x10 bytes, adv_topmenu_obj.c (DIE 0x276990) */
-struct anon_15_147 {   // size 0x10
-    /* 0x000 */ union anon_10_147 x0;                 // 0x4
-    /* 0x004 */ union anon_10_147 y0;                 // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_10_147 x0;                       // 0x4
+    /* 0x004 */ anon_10_147 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
+} anon_15_147;
 
-/* anon_9_147 -- @anon9, 0x184 bytes, adv_topmenu_obj.c (DIE 0x274173) */
-struct anon_9_147 {   // size 0x184
-    /* 0x000 */ struct anon_15_147 line_a[8];         // 0x80
-    /* 0x080 */ struct anon_15_147 line_b[8];         // 0x80
-    /* 0x100 */ struct anon_15_147 line_c[8];         // 0x80
-    /* 0x180 */ int num;                              // 0x4
-};
+/* anon_19_147 -- @anon19, 0x18 bytes, adv_topmenu_obj.c (DIE 0x277498) */
+typedef struct {   // size 0x18
+    /* 0x000 */ int btn;                              // 0x4
+    /* 0x004 */ float btn_cx;                         // 0x4
+    /* 0x008 */ float btn_cy;                         // 0x4
+    /* 0x00C */ int ex;                               // 0x4
+    /* 0x010 */ float ex_x;                           // 0x4
+    /* 0x014 */ float ex_cy;                          // 0x4
+} anon_19_147;
 
 /* anon_11_147 -- @anon11, 0x18 bytes, adv_topmenu_obj.c (DIE 0x2764FC) */
-struct anon_11_147 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char fp_step;                // 0x1
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ float dx;                             // 0x4
     /* 0x008 */ float dy;                             // 0x4
     /* 0x00C */ float t;                              // 0x4
-    /* 0x010 */ struct anon_19_147 *info[2];          // 0x8
-};
+    /* 0x010 */ anon_19_147 *info[2];                 // 0x8
+} anon_11_147;
 
 /* anon_12_147 -- @anon12, 0x10 bytes, adv_topmenu_obj.c (DIE 0x2765E0) */
-struct anon_12_147 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ unsigned char max;                    // 0x1
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ void *name;                           // 0x4
     /* 0x008 */ void *item;                           // 0x4
     /* 0x00C */ int timer;                            // 0x4
-};
+} anon_12_147;
 
 /* anon_13_147 -- @anon13, 0x30 bytes, adv_topmenu_obj.c (DIE 0x2766AA) */
-struct anon_13_147 {   // size 0x30
-    /* 0x000 */ union anon_10_147 x0;                 // 0x4
-    /* 0x004 */ union anon_10_147 y0;                 // 0x4
-    /* 0x008 */ union anon_10_147 x1;                 // 0x4
-    /* 0x00C */ union anon_10_147 y1;                 // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_10_147 x0;                       // 0x4
+    /* 0x004 */ anon_10_147 y0;                       // 0x4
+    /* 0x008 */ anon_10_147 x1;                       // 0x4
+    /* 0x00C */ anon_10_147 y1;                       // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -370,10 +367,10 @@ struct anon_13_147 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_13_147;
 
 /* anon_16_147 -- @anon16, 0x70 bytes, adv_topmenu_obj.c (DIE 0x276AD5) */
-struct anon_16_147 {   // size 0x70
+typedef struct {   // size 0x70
     /* 0x000 */ int mode;                             // 0x4
     /* 0x004 */ unsigned char step;                   // 0x1
     /* 0x005 */ unsigned char step_s;                 // 0x1
@@ -407,56 +404,37 @@ struct anon_16_147 {   // size 0x70
     /* 0x060 */ void *music_item[2];                  // 0x8
     /* 0x068 */ void *order_item;                     // 0x4
     /* 0x06C */ int timer;                            // 0x4
-};
-
-/* anon_19_147 -- @anon19, 0x18 bytes, adv_topmenu_obj.c (DIE 0x277498) */
-struct anon_19_147 {   // size 0x18
-    /* 0x000 */ int btn;                              // 0x4
-    /* 0x004 */ float btn_cx;                         // 0x4
-    /* 0x008 */ float btn_cy;                         // 0x4
-    /* 0x00C */ int ex;                               // 0x4
-    /* 0x010 */ float ex_x;                           // 0x4
-    /* 0x014 */ float ex_cy;                          // 0x4
-};
-
-/* anon_20_147 -- @anon20, 0x14 bytes, adv_topmenu_obj.c (DIE 0x2776C6) */
-struct anon_20_147 {   // size 0x14
-    /* 0x000 */ int state;                            // 0x4
-    /* 0x004 */ int music_count;                      // 0x4
-    /* 0x008 */ int dir;                              // 0x4
-    /* 0x00C */ int effect_count;                     // 0x4
-    /* 0x010 */ int id;                               // 0x4
-};
+} anon_16_147;
 
 /* anon_23_147 -- @anon23, 0x10 bytes, adv_topmenu_obj.c (DIE 0x278901) */
-struct anon_23_147 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int (*appr)(void *);                  // 0x4
     /* 0x004 */ int (*exec)(void *);                  // 0x4
     /* 0x008 */ int (*disap)(void *);                 // 0x4
     /* 0x00C */ int (*disp)(void *);                  // 0x4
-};
+} anon_23_147;
 
 
 /* variables (19) */
-struct anon_12_147 *adv_meter_wp;                                /* @0x002DDD74 size 0x4 */
-struct anon_12_147 *adv_diff_wp;                                 /* @0x002DDD78 size 0x4 */
-struct anon_23_147 advanced_top_objf;                            /* @0x002BFF20 size 0x10 */
-struct anon_23_147 advanced_button_objf;                         /* @0x002BFF30 size 0x10 */
-static struct anon_19_147 advanced_btn_info[4];                  /* @0x002BFF90 size 0x60 */
-struct anon_23_147 advanced_meter_objf;                          /* @0x002BFFF0 size 0x10 */
-struct anon_23_147 advanced_difficulty_objf;                     /* @0x002C0000 size 0x10 */
-struct anon_23_147 advanced_name_objf;                           /* @0x002C0010 size 0x10 */
-struct anon_23_147 adv_display_objf[2];                          /* @0x002C0080 size 0x20 */
-struct anon_4_147 *fpw;                                          /* @0x002DE540 size 0x4 */
+anon_12_147 *adv_meter_wp;                                       /* @0x002DDD74 size 0x4 */
+anon_12_147 *adv_diff_wp;                                        /* @0x002DDD78 size 0x4 */
+anon_23_147 advanced_top_objf;                                   /* @0x002BFF20 size 0x10 */
+anon_23_147 advanced_button_objf;                                /* @0x002BFF30 size 0x10 */
+static anon_19_147 advanced_btn_info[4];                         /* @0x002BFF90 size 0x60 */
+anon_23_147 advanced_meter_objf;                                 /* @0x002BFFF0 size 0x10 */
+anon_23_147 advanced_difficulty_objf;                            /* @0x002C0000 size 0x10 */
+anon_23_147 advanced_name_objf;                                  /* @0x002C0010 size 0x10 */
+anon_23_147 adv_display_objf[2];                                 /* @0x002C0080 size 0x20 */
+anon_4_147 *fpw;                                                 /* @0x002DE540 size 0x4 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
-struct anon_23_147 fp_objf[];                                    /* @0x002BBD80 */
-struct anon_17_147 *dw;                                          /* @0x002DE534 size 0x4 */
-struct anon_23_147 fp_fpanel_objf;                               /* @0x002BE770 size 0x10 */
+anon_23_147 fp_objf[];                                           /* @0x002BBD80 */
+anon_17_147 *dw;                                                 /* @0x002DE534 size 0x4 */
+anon_23_147 fp_fpanel_objf;                                      /* @0x002BE770 size 0x10 */
 struct _ADVANCED_MODE_W *advwp;                                  /* @0x002DDDC0 size 0x4 */
-struct anon_8_147 *endless_wp;                                   /* @0x002DDDA8 size 0x4 */
-struct anon_16_147 *nstop_wp;                                    /* @0x002DDDD4 size 0x4 */
-struct anon_12_147 adv_difficulty_w;                             /* @0x00722050 size 0x10 */
-struct anon_12_147 adv_meter_w;                                  /* @0x00722060 size 0x10 */
+anon_8_147 *endless_wp;                                          /* @0x002DDDA8 size 0x4 */
+anon_16_147 *nstop_wp;                                           /* @0x002DDDD4 size 0x4 */
+anon_12_147 adv_difficulty_w;                                    /* @0x00722050 size 0x10 */
+anon_12_147 adv_meter_w;                                         /* @0x00722060 size 0x10 */
 
 /* functions defined (37) */
 static int adv_ds_display_disp(void *w);                         /* 0x0025F3E0-0x0025F670 lines 1760-1799 */

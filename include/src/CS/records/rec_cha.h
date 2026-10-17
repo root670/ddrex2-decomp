@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_records_rec_cha_c_H
 #define DDR_UNIT_src_CS_records_rec_cha_c_H
@@ -16,24 +19,24 @@
 /* anonymous types (8) */
 
 /* anon_7_246 -- @anon7, 0x8 bytes, rec_cha.c (DIE 0x483AC9) */
-struct anon_7_246 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int address;                 // 0x4
     /* 0x004 */ unsigned short link_num;              // 0x2
     /* 0x006 */ unsigned short tex_num;               // 0x2
-};
+} anon_7_246;
 
 /* anon_2_246 -- @anon2, 0xC bytes, rec_cha.c (DIE 0x483175) */
-struct anon_2_246 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char mode;                   // 0x1
     /* 0x002 */ unsigned char call;                   // 0x1
     /* 0x003 */ unsigned char pad;                    // 0x1
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ float x;                              // 0x4
-};
+} anon_2_246;
 
 /* anon_0_246 -- @anon0, 0x504 bytes, rec_cha.c (DIE 0x482AED) */
-struct anon_0_246 {   // size 0x504
+typedef struct {   // size 0x504
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char step_s;                 // 0x1
     /* 0x002 */ unsigned char mode;                   // 0x1
@@ -53,8 +56,8 @@ struct anon_0_246 {   // size 0x504
     /* 0x028 */ int m_num;                            // 0x4
     /* 0x02C */ float star_t;                         // 0x4
     /* 0x030 */ float scr_y;                          // 0x4
-    /* 0x034 */ struct anon_7_246 title_info[80];     // 0x280
-    /* 0x2B4 */ struct anon_2_246 xmove[40];          // 0x1E0
+    /* 0x034 */ anon_7_246 title_info[80];            // 0x280
+    /* 0x2B4 */ anon_2_246 xmove[40];                 // 0x1E0
     /* 0x494 */ float scr_t;                          // 0x4
     /* 0x498 */ unsigned char er_step;                // 0x1
     /* 0x499 */ unsigned char yn_cur;                 // 0x1
@@ -64,10 +67,10 @@ struct anon_0_246 {   // size 0x504
     /* 0x49E */ // 0x2 bytes padding
     /* 0x4A0 */ struct _tag_cCoCursor01 cur_w;        // 0xC
     /* 0x4AC */ void *obj_p[22];                      // 0x58
-};
+} anon_0_246;
 
 /* anon_1_246 -- @anon1, 0x48 bytes, rec_cha.c (DIE 0x482EF3) */
-struct anon_1_246 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -88,18 +91,18 @@ struct anon_1_246 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_1_246;
 
 /* anon_4_246 -- @anon4, 0x4 bytes, rec_cha.c (DIE 0x48368D) */
-union anon_4_246 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_4_246;
 
 /* anon_3_246 -- @anon3, 0x24 bytes, rec_cha.c (DIE 0x483277) */
-struct anon_3_246 {   // size 0x24
-    /* 0x000 */ union anon_4_246 x0;                  // 0x4
-    /* 0x004 */ union anon_4_246 y0;                  // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_4_246 x0;                        // 0x4
+    /* 0x004 */ anon_4_246 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -110,41 +113,41 @@ struct anon_3_246 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_3_246;
 
 /* anon_5_246 -- @anon5, 0x5C bytes, rec_cha.c (DIE 0x4836EA) */
-struct anon_5_246 {   // size 0x5C
+typedef struct {   // size 0x5C
     /* 0x000 */ struct _tag_cDDR8OniRecord1 dt_n;     // 0x28
     /* 0x028 */ struct _tag_cDDR8OniRecord1 dt_d;     // 0x28
     /* 0x050 */ struct _tag_cDDR8OniRecord1 *ori_n;   // 0x4
     /* 0x054 */ struct _tag_cDDR8OniRecord1 *ori_d;   // 0x4
     /* 0x058 */ int course;                           // 0x4
-};
+} anon_5_246;
 
 /* anon_6_246 -- @anon6, 0x10 bytes, rec_cha.c (DIE 0x4837E4) */
-struct anon_6_246 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ float alpha;                          // 0x4
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ int iw;                               // 0x4
     /* 0x00C */ float fw;                             // 0x4
-};
+} anon_6_246;
 
 
 /* variables (1) */
-struct anon_0_246 *rw;                                           /* @0x002DDFB4 size 0x4 */
+anon_0_246 *rw;                                                  /* @0x002DDFB4 size 0x4 */
 
 /* functions defined (12) */
-static void rec_cha_item_disp_sub(struct anon_5_246 *rd, float x, float y, unsigned char erase_bri); /* 0x007F6F90-0x007F74EC lines 1009-1123 */
-static void rec_cha_init(struct anon_0_246 *rw);                 /* 0x007F74F0-0x007F7508 lines 931-993 */
-int Rec_Cha_BoolDelete(struct anon_0_246 *rw);                   /* 0x007F7510-0x007F75A0 lines 903-911 */
+static void rec_cha_item_disp_sub(anon_5_246 *rd, float x, float y, unsigned char erase_bri); /* 0x007F6F90-0x007F74EC lines 1009-1123 */
+static void rec_cha_init(anon_0_246 *rw);                        /* 0x007F74F0-0x007F7508 lines 931-993 */
+int Rec_Cha_BoolDelete(anon_0_246 *rw);                          /* 0x007F7510-0x007F75A0 lines 903-911 */
 int RCObj_cha_obj_disp(void);                                    /* 0x007F75A0-0x007F78A8 lines 824-894 */
 int RCObj_cha_obj_disap(void *wp);                               /* 0x007F78B0-0x007F7A3C lines 780-821 */
 int RCObj_cha_obj_apper(void *wp);                               /* 0x007F7A40-0x007F7BB4 lines 733-777 */
 int RCObj_cha_item_disp(void *wp);                               /* 0x007F7BC0-0x007F7F04 lines 412-499 */
 int RCObj_cha_item_disap(void *wp);                              /* 0x007F7F10-0x007F8010 lines 379-409 */
 int RCObj_cha_item_apper(void *wp);                              /* 0x007F8010-0x007F8118 lines 345-376 */
-void Rec_Cha_Delete(struct anon_0_246 *rw);                      /* 0x007F8120-0x007F81EC lines 319-339 */
+void Rec_Cha_Delete(anon_0_246 *rw);                             /* 0x007F8120-0x007F81EC lines 319-339 */
 void Rec_Cha_DetailDisp(void *wp);                               /* 0x007F81F0-0x007F8940 lines 225-313 */
-unsigned char Rec_Cha(struct anon_0_246 *rw);                    /* 0x007F8940-0x007F8EBC lines 51-220 */
+unsigned char Rec_Cha(anon_0_246 *rw);                           /* 0x007F8940-0x007F8EBC lines 51-220 */
 
 #endif /* DDR_UNIT_src_CS_records_rec_cha_c_H */

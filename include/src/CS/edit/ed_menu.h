@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_edit_ed_menu_c_H
 #define DDR_UNIT_src_CS_edit_ed_menu_c_H
@@ -16,7 +19,7 @@
 /* anonymous types (13) */
 
 /* anon_0_176 -- @anon0, 0x3C bytes, ed_menu.c (DIE 0x30D859) */
-struct anon_0_176 {   // size 0x3C
+typedef struct {   // size 0x3C
     /* 0x000 */ float cur_x;                          // 0x4
     /* 0x004 */ float cur_y;                          // 0x4
     /* 0x008 */ float cur_sx;                         // 0x4
@@ -34,17 +37,17 @@ struct anon_0_176 {   // size 0x3C
     /* 0x030 */ int time_h;                           // 0x4
     /* 0x034 */ int time_a;                           // 0x4
     /* 0x038 */ unsigned int flg;                     // 0x4
-};
+} anon_0_176;
 
 /* anon_1_176 -- @anon1, 0x4 bytes, ed_menu.c (DIE 0x30DAA1) */
-struct anon_1_176 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ short pos;                            // 0x2
     /* 0x002 */ unsigned char side;                   // 0x1
     /* 0x003 */ unsigned char dmy;                    // 0x1
-};
+} anon_1_176;
 
 /* anon_2_176 -- @anon2, 0x48 bytes, ed_menu.c (DIE 0x30DB21) */
-struct anon_2_176 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -65,30 +68,30 @@ struct anon_2_176 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_2_176;
 
 /* anon_3_176 -- @anon3, 0xC bytes, ed_menu.c (DIE 0x30DDA3) */
-struct anon_3_176 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ float x;                              // 0x4
     /* 0x004 */ float y;                              // 0x4
     /* 0x008 */ float timer;                          // 0x4
-};
+} anon_3_176;
 
 /* anon_4_176 -- @anon4, 0x58 bytes, ed_menu.c (DIE 0x30DEB1) */
-struct anon_4_176 {   // size 0x58
+typedef struct {   // size 0x58
     /* 0x000 */ int step;                             // 0x4
-    /* 0x004 */ struct anon_3_176 each[6];            // 0x48
+    /* 0x004 */ anon_3_176 each[6];                   // 0x48
     /* 0x04C */ struct _tag_cCoCursor01 co_curw;      // 0xC
-};
+} anon_4_176;
 
 /* anon_12_176 -- @anon12, 0x8 bytes, ed_menu.c (DIE 0x310C62) */
-struct anon_12_176 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int x;                                // 0x4
     /* 0x004 */ int step;                             // 0x4
-};
+} anon_12_176;
 
 /* anon_5_176 -- @anon5, 0x280 bytes, ed_menu.c (DIE 0x30E126) */
-struct anon_5_176 {   // size 0x280
+typedef struct {   // size 0x280
     /* 0x000 */ unsigned char top_step;               // 0x1
     /* 0x001 */ unsigned char init_step;              // 0x1
     /* 0x002 */ unsigned char main_step;              // 0x1
@@ -125,7 +128,7 @@ struct anon_5_176 {   // size 0x280
     /* 0x054 */ int beat_ct;                          // 0x4
     /* 0x058 */ unsigned long end_beat_ct;            // 0x8
     /* 0x060 */ unsigned long push_cont_timer;        // 0x8
-    /* 0x068 */ struct anon_1_176 area[2];            // 0x8
+    /* 0x068 */ anon_1_176 area[2];                   // 0x8
     /* 0x070 */ short area_size;                      // 0x2
     /* 0x072 */ short area_use;                       // 0x2
     /* 0x074 */ // 0x4 bytes padding
@@ -293,8 +296,8 @@ struct anon_5_176 {   // size 0x280
     /* 0x1CC */ int prev_guide_num;                   // 0x4
     /* 0x1D0 */ int fade_guide_num;                   // 0x4
     /* 0x1D4 */ int check_guide_move;                 // 0x4
-    /* 0x1D8 */ struct anon_12_176 ed_obj[2];         // 0x10
-    /* 0x1E8 */ struct anon_0_176 cur_w;              // 0x3C
+    /* 0x1D8 */ anon_12_176 ed_obj[2];                // 0x10
+    /* 0x1E8 */ anon_0_176 cur_w;                     // 0x3C
     /* 0x224 */ int sel_lv_array[5];                  // 0x14
     /* 0x238 */ int sel_lv_pos;                       // 0x4
     /* 0x23C */ int sel_lv_pos_num;                   // 0x4
@@ -314,18 +317,18 @@ struct anon_5_176 {   // size 0x280
     /* 0x274 */ int read_flag;                        // 0x4
     /* 0x278 */ int no_read_flag;                     // 0x4
     /* 0x27C */ // 0x4 bytes padding
-};
+} anon_5_176;
 
 /* anon_7_176 -- @anon7, 0x4 bytes, ed_menu.c (DIE 0x3103E7) */
-union anon_7_176 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_7_176;
 
 /* anon_6_176 -- @anon6, 0x24 bytes, ed_menu.c (DIE 0x310253) */
-struct anon_6_176 {   // size 0x24
-    /* 0x000 */ union anon_7_176 x0;                  // 0x4
-    /* 0x004 */ union anon_7_176 y0;                  // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_7_176 x0;                        // 0x4
+    /* 0x004 */ anon_7_176 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -336,10 +339,10 @@ struct anon_6_176 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_6_176;
 
 /* anon_8_176 -- @anon8, 0x1C bytes, ed_menu.c (DIE 0x310468) */
-struct anon_8_176 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ int step_s;                           // 0x4
     /* 0x008 */ int next_step;                        // 0x4
@@ -347,14 +350,14 @@ struct anon_8_176 {   // size 0x1C
     /* 0x010 */ int old_mc_check;                     // 0x4
     /* 0x014 */ void *leftbase_ow;                    // 0x4
     /* 0x018 */ void *menuitem_ow;                    // 0x4
-};
+} anon_8_176;
 
 /* anon_9_176 -- @anon9, 0x30 bytes, ed_menu.c (DIE 0x310595) */
-struct anon_9_176 {   // size 0x30
-    /* 0x000 */ union anon_7_176 x0;                  // 0x4
-    /* 0x004 */ union anon_7_176 y0;                  // 0x4
-    /* 0x008 */ union anon_7_176 x1;                  // 0x4
-    /* 0x00C */ union anon_7_176 y1;                  // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_7_176 x0;                        // 0x4
+    /* 0x004 */ anon_7_176 y0;                        // 0x4
+    /* 0x008 */ anon_7_176 x1;                        // 0x4
+    /* 0x00C */ anon_7_176 y1;                        // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -366,29 +369,29 @@ struct anon_9_176 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_9_176;
 
 /* anon_10_176 -- @anon10, 0x4 bytes, ed_menu.c (DIE 0x310A3C) */
-struct anon_10_176 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ int step;                             // 0x4
-};
+} anon_10_176;
 
 /* anon_11_176 -- @anon11, 0x10 bytes, ed_menu.c (DIE 0x310AE9) */
-struct anon_11_176 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int (*appr)(void *);                  // 0x4
     /* 0x004 */ int (*exec)(void *);                  // 0x4
     /* 0x008 */ int (*disap)(void *);                 // 0x4
     /* 0x00C */ int (*disp)(void *);                  // 0x4
-};
+} anon_11_176;
 
 
 /* variables (8) */
-static struct anon_8_176 *mw;                                    /* @0x002DDE20 size 0x4 */
-struct anon_11_176 edit_menu_leftbase_objf;                      /* @0x002C1DD0 size 0x10 */
-struct anon_11_176 edit_menu_item_objf;                          /* @0x002C1DE0 size 0x10 */
+static anon_8_176 *mw;                                           /* @0x002DDE20 size 0x4 */
+anon_11_176 edit_menu_leftbase_objf;                             /* @0x002C1DD0 size 0x10 */
+anon_11_176 edit_menu_item_objf;                                 /* @0x002C1DE0 size 0x10 */
 unsigned int edit_joy_trg;                                       /* @0x002DE408 size 0x4 */
 unsigned int edit_joy_rep;                                       /* @0x002DE400 size 0x4 */
-static struct anon_8_176 ed_menu_w;                              /* @0x007235A0 size 0x1C */
+static anon_8_176 ed_menu_w;                                     /* @0x007235A0 size 0x1C */
 static short font_anime_pos_y;                                   /* not allocated size 0x2 */
 static short font_anime_pos_x;                                   /* not allocated size 0x2 */
 

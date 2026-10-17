@@ -22,18 +22,12 @@ struct anime_db {   // size 0x88
     /* 0x018 */ unsigned long *buff;                  // 0x4
     /* 0x01C */ int req_anime;                        // 0x4
     /* 0x020 */ int cur_id;                           // 0x4
-    /* 0x024 */ struct {   // size 0x8
+    /* 0x024, 0x02C */ struct {   // size 0x8
         /* 0x000 */ short x;                              // 0x2
         /* 0x002 */ short y;                              // 0x2
         /* 0x004 */ short w;                              // 0x2
         /* 0x006 */ short h;                              // 0x2
-    } prect;
-    /* 0x02C */ struct {   // size 0x8
-        /* 0x000 */ short x;                              // 0x2
-        /* 0x002 */ short y;                              // 0x2
-        /* 0x004 */ short w;                              // 0x2
-        /* 0x006 */ short h;                              // 0x2
-    } crect;
+    } prect, crect;                               // 0x8 each
     /* 0x034 */ int can_block;                        // 0x4
     /* 0x038 */ int tan_block[19];                    // 0x4C
     /* 0x084 */ // 0x4 bytes padding

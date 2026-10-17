@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_workout_workout_setting_c_H
 #define DDR_UNIT_src_CS_workout_workout_setting_c_H
@@ -15,43 +18,54 @@
 /* anonymous types (20) */
 
 /* anon_0_233 -- @anon0, 0x1C bytes, workout_setting.c (DIE 0x452A2A) */
-struct anon_0_233 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ int func_no[2];                       // 0x8
     /* 0x008 */ int func_step[2];                     // 0x8
     /* 0x010 */ int step;                             // 0x4
     /* 0x014 */ int f_back_to_workout_list;           // 0x4
     /* 0x018 */ int f_back_to_workout_menu;           // 0x4
-};
+} anon_0_233;
+
+/* anon_16_233 -- @anon16, 0x8 bytes, workout_setting.c (DIE 0x4546F5) */
+typedef struct {   // size 0x8
+    /* 0x000 */ int type;                             // 0x4
+    /* 0x004 */ int param;                            // 0x4
+} anon_16_233;
+
+/* anon_3_233 -- @anon3, 0x4 bytes, workout_setting.c (DIE 0x452DE0) */
+typedef struct {   // size 0x4
+    /* 0x000 */ anon_16_233 (*step_func)();           // 0x4
+} anon_3_233;
 
 /* anon_1_233 -- @anon1, 0xC bytes, workout_setting.c (DIE 0x452B66) */
-struct anon_1_233 {   // size 0xC
-    /* 0x000 */ struct anon_3_233 *step_array;        // 0x4
+typedef struct {   // size 0xC
+    /* 0x000 */ anon_3_233 *step_array;               // 0x4
     /* 0x004 */ void (*screen)(int);                  // 0x4
     /* 0x008 */ int step_idx;                         // 0x4
-};
+} anon_1_233;
 
 /* anon_18_233 -- @anon18, 0x4 bytes, workout_setting.c (DIE 0x4547B7) */
-struct anon_18_233 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char d[4];                   // 0x4
-};
+} anon_18_233;
 
 /* anon_17_233 -- @anon17, 0x4 bytes, workout_setting.c (DIE 0x454758) */
-union anon_17_233 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ struct anon_18_233 s;                 // 0x4
-};
+    /* 0x000 */ anon_18_233 s;                        // 0x4
+} anon_17_233;
 
 /* anon_11_233 -- @anon11, 0xC bytes, workout_setting.c (DIE 0x453D7D) */
-struct anon_11_233 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int date;                             // 0x4
     /* 0x004 */ unsigned int weight : 12;             // bits 0..11
     /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
     /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
     /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-};
+} anon_11_233;
 
 /* anon_14_233 -- @anon14, 0x12E0 bytes, workout_setting.c (DIE 0x454140) */
-struct anon_14_233 {   // size 0x12E0
+typedef struct {   // size 0x12E0
     /* 0x000 */ int weight;                           // 0x4
     /* 0x004 */ int lbs;                              // 0x4
     /* 0x008 */ int norm_type;                        // 0x4
@@ -59,39 +73,34 @@ struct anon_14_233 {   // size 0x12E0
     /* 0x010 */ int norm_calorie;                     // 0x4
     /* 0x014 */ int workout_step;                     // 0x4
     /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ struct anon_11_233 history[400];      // 0x12C0
+    /* 0x01C */ anon_11_233 history[400];             // 0x12C0
     /* 0x12DC */ int check_sum_val;                   // 0x4
-};
+} anon_14_233;
 
 /* anon_15_233 -- @anon15, 0xD40 bytes, workout_setting.c (DIE 0x4544F7) */
-struct anon_15_233 {   // size 0xD40
+typedef struct {   // size 0xD40
     /* 0x000 */ unsigned int program_calorie[24];     // 0x60
     /* 0x060 */ unsigned int program_play_count[24];  // 0x60
     /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
     /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-};
+} anon_15_233;
 
 /* anon_2_233 -- @anon2, 0x2134 bytes, workout_setting.c (DIE 0x452BFE) */
-struct anon_2_233 {   // size 0x2134
+typedef struct {   // size 0x2134
     /* 0x000 */ unsigned int uno : 8;                 // bits 0..7
     /* 0x000 */ unsigned int ino : 8;                 // bits 8..15
     /* 0x000 */ unsigned int frame_no : 8;            // bits 16..23
     /* 0x000 */ unsigned int f_passuse : 1;           // bits 24..24
     /* 0x000 */ unsigned int f_enable : 1;            // bits 25..25
     /* 0x000 */ unsigned int f_program_free : 1;      // bits 26..26
-    /* 0x004 */ union anon_17_233 userpass;           // 0x4
-    /* 0x008 */ struct anon_14_233 pwork;             // 0x12E0
-    /* 0x12E8 */ struct anon_15_233 workout_calorie_record;  // 0xD40
+    /* 0x004 */ anon_17_233 userpass;                 // 0x4
+    /* 0x008 */ anon_14_233 pwork;                    // 0x12E0
+    /* 0x12E8 */ anon_15_233 workout_calorie_record;  // 0xD40
     /* 0x2028 */ struct oni_course program_order;     // 0x10C
-};
-
-/* anon_3_233 -- @anon3, 0x4 bytes, workout_setting.c (DIE 0x452DE0) */
-struct anon_3_233 {   // size 0x4
-    /* 0x000 */ struct anon_16_233 (*step_func)();    // 0x4
-};
+} anon_2_233;
 
 /* anon_4_233 -- @anon4, 0x2C bytes, workout_setting.c (DIE 0x452E2A) */
-struct anon_4_233 {   // size 0x2C
+typedef struct {   // size 0x2C
     /* 0x000 */ int timer;                            // 0x4
     /* 0x004 */ int status;                           // 0x4
     /* 0x008 */ int weight_mask;                      // 0x4
@@ -103,10 +112,10 @@ struct anon_4_233 {   // size 0x2C
     /* 0x020 */ int cursor_alpha;                     // 0x4
     /* 0x024 */ int step;                             // 0x4
     /* 0x028 */ int func;                             // 0x4
-};
+} anon_4_233;
 
 /* anon_5_233 -- @anon5, 0x48 bytes, workout_setting.c (DIE 0x452FEF) */
-struct anon_5_233 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -127,17 +136,17 @@ struct anon_5_233 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_5_233;
 
 /* anon_6_233 -- @anon6, 0xC bytes, workout_setting.c (DIE 0x453271) */
-struct anon_6_233 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ float x;                              // 0x4
     /* 0x004 */ float y;                              // 0x4
     /* 0x008 */ int counter;                          // 0x4
-};
+} anon_6_233;
 
 /* anon_7_233 -- @anon7, 0x30 bytes, workout_setting.c (DIE 0x4532F0) */
-struct anon_7_233 {   // size 0x30
+typedef struct {   // size 0x30
     /* 0x000 */ int active;                           // 0x4
     /* 0x004 */ int play_time;                        // 0x4
     /* 0x008 */ int calorie;                          // 0x4
@@ -150,18 +159,18 @@ struct anon_7_233 {   // size 0x30
     /* 0x024 */ int workout_data_change_flag;         // 0x4
     /* 0x028 */ int workout_data_save_flag;           // 0x4
     /* 0x02C */ int music_play_count;                 // 0x4
-};
+} anon_7_233;
 
 /* anon_12_233 -- @anon12, 0x4 bytes, workout_setting.c (DIE 0x453E7A) */
-union anon_12_233 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_12_233;
 
 /* anon_8_233 -- @anon8, 0x1C bytes, workout_setting.c (DIE 0x453523) */
-struct anon_8_233 {   // size 0x1C
-    /* 0x000 */ union anon_12_233 x0;                 // 0x4
-    /* 0x004 */ union anon_12_233 y0;                 // 0x4
+typedef struct {   // size 0x1C
+    /* 0x000 */ anon_12_233 x0;                       // 0x4
+    /* 0x004 */ anon_12_233 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -170,12 +179,12 @@ struct anon_8_233 {   // size 0x1C
     /* 0x016 */ unsigned char b0;                     // 0x1
     /* 0x017 */ unsigned char a0;                     // 0x1
     /* 0x018 */ int flg;                              // 0x4
-};
+} anon_8_233;
 
 /* anon_9_233 -- @anon9, 0x24 bytes, workout_setting.c (DIE 0x453A57) */
-struct anon_9_233 {   // size 0x24
-    /* 0x000 */ union anon_12_233 x0;                 // 0x4
-    /* 0x004 */ union anon_12_233 y0;                 // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_12_233 x0;                       // 0x4
+    /* 0x004 */ anon_12_233 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -186,26 +195,26 @@ struct anon_9_233 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_9_233;
 
 /* anon_10_233 -- @anon10, 0x84 bytes, workout_setting.c (DIE 0x453BEB) */
-struct anon_10_233 {   // size 0x84
+typedef struct {   // size 0x84
     /* 0x000 */ int step;                             // 0x4
     /* 0x004 */ int result;                           // 0x4
     /* 0x008 */ int date;                             // 0x4
     /* 0x00C */ int not_first;                        // 0x4
     /* 0x010 */ int f_cancel;                         // 0x4
     /* 0x014 */ unsigned int *am_local_dec_addr;      // 0x4
-    /* 0x018 */ struct anon_7_233 player[2];          // 0x60
-    /* 0x078 */ struct anon_1_233 hstep;              // 0xC
-};
+    /* 0x018 */ anon_7_233 player[2];                 // 0x60
+    /* 0x078 */ anon_1_233 hstep;                     // 0xC
+} anon_10_233;
 
 /* anon_13_233 -- @anon13, 0x30 bytes, workout_setting.c (DIE 0x453EFE) */
-struct anon_13_233 {   // size 0x30
-    /* 0x000 */ union anon_12_233 x0;                 // 0x4
-    /* 0x004 */ union anon_12_233 y0;                 // 0x4
-    /* 0x008 */ union anon_12_233 x1;                 // 0x4
-    /* 0x00C */ union anon_12_233 y1;                 // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_12_233 x0;                       // 0x4
+    /* 0x004 */ anon_12_233 y0;                       // 0x4
+    /* 0x008 */ anon_12_233 x1;                       // 0x4
+    /* 0x00C */ anon_12_233 y1;                       // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -217,28 +226,22 @@ struct anon_13_233 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
-
-/* anon_16_233 -- @anon16, 0x8 bytes, workout_setting.c (DIE 0x4546F5) */
-struct anon_16_233 {   // size 0x8
-    /* 0x000 */ int type;                             // 0x4
-    /* 0x004 */ int param;                            // 0x4
-};
+} anon_13_233;
 
 /* anon_19_233 -- @anon19, 0x4 bytes, workout_setting.c (DIE 0x45481B) */
-struct anon_19_233 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ void (*func)(int);                    // 0x4
-};
+} anon_19_233;
 
 
 /* variables (7) */
 static int sheet_target_y[7];                                    /* @0x00801180 size 0x1C */
 static int sheet_target_h[7];                                    /* @0x008011A0 size 0x1C */
-struct anon_19_233 setting_func_list[10];                        /* @0x008011C0 size 0x28 */
-struct anon_4_233 wo_setting_work[2];                            /* @0x00801D80 size 0x58 */
-struct anon_6_233 wo_setting_sheet[7];                           /* @0x00801D00 size 0x54 */
-struct anon_0_233 wo_setting_sheet_ctrl;                         /* @0x00801D60 size 0x1C */
-struct anon_10_233 workout_work;                                 /* @0x0071D880 size 0x84 */
+anon_19_233 setting_func_list[10];                               /* @0x008011C0 size 0x28 */
+anon_4_233 wo_setting_work[2];                                   /* @0x00801D80 size 0x58 */
+anon_6_233 wo_setting_sheet[7];                                  /* @0x00801D00 size 0x54 */
+anon_0_233 wo_setting_sheet_ctrl;                                /* @0x00801D60 size 0x1C */
+anon_10_233 workout_work;                                        /* @0x0071D880 size 0x84 */
 
 /* functions defined (20) */
 static int GetKeyRepeat(int player, int key);                    /* 0x007F0080-0x007F021C lines 985-1005 */
@@ -258,8 +261,8 @@ static void wos_step_func_goal(int pno);                         /* 0x007F1B10-0
 static void wos_step_func_menu(int pno);                         /* 0x007F1CA0-0x007F1E10 lines 389-422 */
 static void wos_step_func_weight(int pno);                       /* 0x007F1E10-0x007F1FF8 lines 348-388 */
 static void wos_step_func_start_wait(int pno);                   /* 0x007F2000-0x007F2074 lines 336-346 */
-struct anon_16_233 WorkoutSetting_Term(void);                    /* 0x007F2080-0x007F2104 lines 307-329 */
-struct anon_16_233 WorkoutSetting_Main(void);                    /* 0x007F2110-0x007F2538 lines 190-305 */
-struct anon_16_233 WorkoutSetting_Init(void);                    /* 0x007F2540-0x007F25B0 lines 179-187 */
+anon_16_233 WorkoutSetting_Term(void);                           /* 0x007F2080-0x007F2104 lines 307-329 */
+anon_16_233 WorkoutSetting_Main(void);                           /* 0x007F2110-0x007F2538 lines 190-305 */
+anon_16_233 WorkoutSetting_Init(void);                           /* 0x007F2540-0x007F25B0 lines 179-187 */
 
 #endif /* DDR_UNIT_src_CS_workout_workout_setting_c_H */

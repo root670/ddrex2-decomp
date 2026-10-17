@@ -4,40 +4,35 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_workout_workout_message_c_H
 #define DDR_UNIT_src_CS_workout_workout_message_c_H
 
 #include "types/_CWS_WIN_W.h"
 
-/* anonymous types (3) */
+/* anonymous types (2) */
 
 /* anon_0_241 -- @anon0, 0x4 bytes, workout_message.c (DIE 0x46E77A) */
-struct anon_0_241 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char *message;               // 0x4
-};
+} anon_0_241;
 
 /* anon_1_241 -- @anon1, 0x4 bytes, workout_message.c (DIE 0x46E7E4) */
-struct anon_1_241 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ int step;                             // 0x4
-};
-
-/* anon_2_241 -- @anon2, 0x8 bytes, workout_message.c (DIE 0x46E9DB) */
-struct anon_2_241 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
+} anon_1_241;
 
 
 /* variables (4) */
-static struct anon_0_241 msgdata_us[26];                         /* @0x00801840 size 0x68 */
-struct anon_0_241 *msgdata_list[8];                              /* @0x008018B0 size 0x20 */
-static struct anon_0_241 *pmsgdata;                              /* @0x002DDFB0 size 0x4 */
-struct anon_1_241 msgwin[2];                                     /* @0x002DE6C8 size 0x8 */
+static anon_0_241 msgdata_us[26];                                /* @0x00801840 size 0x68 */
+anon_0_241 *msgdata_list[8];                                     /* @0x008018B0 size 0x20 */
+static anon_0_241 *pmsgdata;                                     /* @0x002DDFB0 size 0x4 */
+anon_1_241 msgwin[2];                                            /* @0x002DE6C8 size 0x8 */
 
 /* functions defined (7) */
 unsigned char *WorkoutMsgGetStr(int msg_no);                     /* 0x00800E40-0x00800E8C lines 171-174 */

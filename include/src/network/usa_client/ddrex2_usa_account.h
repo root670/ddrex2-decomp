@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_usa_client_ddrex2_usa_account_c_H
 #define DDR_UNIT_src_network_usa_client_ddrex2_usa_account_c_H
@@ -16,41 +19,28 @@
 #include "types/_ddrnet_playerselectlist.h"
 #include "types/_mio_message.h"
 
-/* anonymous types (5) */
-
-/* anon_0_201 -- @anon0, 0x1048 bytes, ddrex2_usa_account.c (DIE 0x38C1CE) */
-struct anon_0_201 {   // size 0x1048
-    /* 0x000 */ unsigned int P[18];                   // 0x48
-    /* 0x048 */ unsigned int S[4][256];               // 0x1000
-};
+/* anonymous types (3) */
 
 /* anon_2_201 -- @anon2, 0x4 bytes, ddrex2_usa_account.c (DIE 0x38C3FC) */
-struct anon_2_201 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char s_b1;                   // 0x1
     /* 0x001 */ unsigned char s_b2;                   // 0x1
     /* 0x002 */ unsigned char s_b3;                   // 0x1
     /* 0x003 */ unsigned char s_b4;                   // 0x1
-};
+} anon_2_201;
 
 /* anon_3_201 -- @anon3, 0x4 bytes, ddrex2_usa_account.c (DIE 0x38C531) */
-struct anon_3_201 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short s_w1;                  // 0x2
     /* 0x002 */ unsigned short s_w2;                  // 0x2
-};
-
-/* anon_1_201 -- @anon1, 0x4 bytes, ddrex2_usa_account.c (DIE 0x38C370) */
-union anon_1_201 {   // size 0x4
-    /* 0x000 */ struct anon_2_201 S_un_b;             // 0x4
-    /* 0x000 */ struct anon_3_201 S_un_w;             // 0x4
-    /* 0x000 */ unsigned int S_addr;                  // 0x4
-};
+} anon_3_201;
 
 /* anon_4_201 -- @anon4, 0x58 bytes, ddrex2_usa_account.c (DIE 0x38DB77) */
-struct anon_4_201 {   // size 0x58
+typedef struct {   // size 0x58
     /* 0x000 */ unsigned int state[4];                // 0x10
     /* 0x010 */ unsigned int count[2];                // 0x8
     /* 0x018 */ unsigned char buffer[64];             // 0x40
-};
+} anon_4_201;
 
 
 /* functions defined (10) */

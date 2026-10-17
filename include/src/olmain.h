@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_olmain_c_H
 #define DDR_UNIT_src_olmain_c_H
@@ -13,33 +16,6 @@
 #include "types/_tag_cOlData.h"
 #include "types/_tag_cOlModule.h"
 #include "types/_tag_cOlWork.h"
-
-/* anonymous types (3) */
-
-/* anon_0_35 -- @anon0, 0x4 bytes, olmain.c (DIE 0x54550) */
-struct anon_0_35 {   // size 0x4
-    /* 0x000 */ unsigned char trycount;               // 0x1
-    /* 0x001 */ unsigned char spindlctrl;             // 0x1
-    /* 0x002 */ unsigned char datapattern;            // 0x1
-    /* 0x003 */ unsigned char pad;                    // 0x1
-};
-
-/* anon_1_35 -- @anon1, 0x24 bytes, olmain.c (DIE 0x54603) */
-struct anon_1_35 {   // size 0x24
-    /* 0x000 */ unsigned int lsn;                     // 0x4
-    /* 0x004 */ unsigned int size;                    // 0x4
-    /* 0x008 */ char name[16];                        // 0x10
-    /* 0x018 */ unsigned char date[8];                // 0x8
-    /* 0x020 */ unsigned int flag;                    // 0x4
-};
-
-/* anon_2_35 -- @anon2, 0x8 bytes, olmain.c (DIE 0x547C6) */
-struct anon_2_35 {   // size 0x8
-    /* 0x000 */ unsigned long number : 16;            // bits 0..15
-    /* 0x000 */ unsigned long sector : 24;            // bits 16..39
-    /* 0x000 */ unsigned long size : 24;              // bits 40..63
-};
-
 
 /* variables (5) */
 static struct _tag_cOlWork *olwork;                              /* @0x002DDA70 size 0x4 */

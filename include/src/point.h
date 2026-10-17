@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_point_c_H
 #define DDR_UNIT_src_point_c_H
@@ -16,56 +19,31 @@
 #include "types/eval_w.h"
 #include "types/g_game_w.h"
 
-/* anonymous types (6) */
+/* anonymous types (3) */
 
 /* anon_0_108 -- @anon0, 0x4 bytes, point.c (DIE 0x1E3FAF) */
-union anon_0_108 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
-
-/* anon_1_108 -- @anon1, 0x4 bytes, point.c (DIE 0x1E4395) */
-struct anon_1_108 {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-};
+} anon_0_108;
 
 /* anon_2_108 -- @anon2, 0x10 bytes, point.c (DIE 0x1E446D) */
-struct anon_2_108 {   // size 0x10
-    /* 0x000 */ union anon_0_108 x0;                  // 0x4
-    /* 0x004 */ union anon_0_108 y0;                  // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_0_108 x0;                        // 0x4
+    /* 0x004 */ anon_0_108 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
-
-/* anon_3_108 -- @anon3, 0x184 bytes, point.c (DIE 0x1E4803) */
-struct anon_3_108 {   // size 0x184
-    /* 0x000 */ struct anon_2_108 line_a[8];          // 0x80
-    /* 0x080 */ struct anon_2_108 line_b[8];          // 0x80
-    /* 0x100 */ struct anon_2_108 line_c[8];          // 0x80
-    /* 0x180 */ int num;                              // 0x4
-};
-
-/* anon_4_108 -- @anon4, 0x14 bytes, point.c (DIE 0x1E6515) */
-struct anon_4_108 {   // size 0x14
-    /* 0x000 */ int state;                            // 0x4
-    /* 0x004 */ int music_count;                      // 0x4
-    /* 0x008 */ int dir;                              // 0x4
-    /* 0x00C */ int effect_count;                     // 0x4
-    /* 0x010 */ int id;                               // 0x4
-};
+} anon_2_108;
 
 /* anon_5_108 -- @anon5, 0xC bytes, point.c (DIE 0x1E6F1C) */
-struct anon_5_108 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int mode_quit_flg;                    // 0x4
     /* 0x004 */ int state;                            // 0x4
     /* 0x008 */ int renewal_record_flag;              // 0x4
-};
+} anon_5_108;
 
 
 /* variables (6) */
@@ -73,7 +51,7 @@ static struct _tag_cPointSaveWork *psw;                          /* @0x002DDC30 
 static struct _tag_cPointWork *pw;                               /* @0x002DDC34 size 0x4 */
 static int free_play_point_table[77];                            /* @0x002BEDF0 size 0x134 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
-struct anon_5_108 usr_work;                                      /* @0x00328A20 size 0xC */
+anon_5_108 usr_work;                                             /* @0x00328A20 size 0xC */
 static struct _tag_cPointWork _pw;                               /* @0x0071F8E0 size 0xA0 */
 
 /* functions defined (13) */

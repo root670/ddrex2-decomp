@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_bk_disp_bk_disp_c_H
 #define DDR_UNIT_src_CS_bk_disp_bk_disp_c_H
@@ -17,18 +20,18 @@
 #include "types/play_w.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (16) */
+/* anonymous types (10) */
 
 /* anon_0_60 -- @anon0, 0xD40 bytes, bk_disp.c (DIE 0xE698B) */
-struct anon_0_60 {   // size 0xD40
+typedef struct {   // size 0xD40
     /* 0x000 */ unsigned int program_calorie[24];     // 0x60
     /* 0x060 */ unsigned int program_play_count[24];  // 0x60
     /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
     /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-};
+} anon_0_60;
 
 /* anon_1_60 -- @anon1, 0x48 bytes, bk_disp.c (DIE 0xE6A88) */
-struct anon_1_60 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -49,10 +52,10 @@ struct anon_1_60 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_1_60;
 
 /* anon_2_60 -- @anon2, 0x14 bytes, bk_disp.c (DIE 0xE70B1) */
-struct anon_2_60 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ unsigned char cone_state[8];          // 0x8
     /* 0x008 */ unsigned char state;                  // 0x1
     /* 0x009 */ unsigned char perfect;                // 0x1
@@ -61,28 +64,19 @@ struct anon_2_60 {   // size 0x14
     /* 0x00E */ unsigned short clear_count;           // 0x2
     /* 0x010 */ unsigned short first_clear_count;     // 0x2
     /* 0x012 */ unsigned short first_clear_time;      // 0x2
-};
+} anon_2_60;
 
 /* anon_3_60 -- @anon3, 0xC bytes, bk_disp.c (DIE 0xE7333) */
-struct anon_3_60 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int date;                             // 0x4
     /* 0x004 */ unsigned int weight : 12;             // bits 0..11
     /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
     /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
     /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-};
-
-/* anon_4_60 -- @anon4, 0x14 bytes, bk_disp.c (DIE 0xE7B87) */
-struct anon_4_60 {   // size 0x14
-    /* 0x000 */ int state;                            // 0x4
-    /* 0x004 */ int music_count;                      // 0x4
-    /* 0x008 */ int dir;                              // 0x4
-    /* 0x00C */ int effect_count;                     // 0x4
-    /* 0x010 */ int id;                               // 0x4
-};
+} anon_3_60;
 
 /* anon_5_60 -- @anon5, 0x10 bytes, bk_disp.c (DIE 0xE856D) */
-union anon_5_60 {   // size 0x10
+typedef union {   // size 0x10
     /* 0x000 */ unsigned __int128 ul128;              // 0x10
     /* 0x000 */ unsigned long ul64[2];                // 0x10
     /* 0x000 */ unsigned int ui32[4];                 // 0x10
@@ -90,36 +84,21 @@ union anon_5_60 {   // size 0x10
     /* 0x000 */ float f32[4];                         // 0x10
     /* 0x000 */ float fv[4];                          // 0x10
     /* 0x000 */ int iv[4];                            // 0x10
-};
-
-/* anon_6_60 -- @anon6, 0x1300 bytes, bk_disp.c (DIE 0xE869E) */
-struct anon_6_60 {   // size 0x1300
-    /* 0x000 */ unsigned char evboot[24];             // 0x18
-    /* 0x018 */ unsigned char is_savedata;            // 0x1
-    /* 0x019 */ signed char max_area;                 // 0x1
-    /* 0x01A */ signed char disp_type;                // 0x1
-    /* 0x01B */ char pading;                          // 0x1
-    /* 0x01C */ unsigned char dancer_use_cnt[24];     // 0x18
-    /* 0x034 */ int cur_cursor;                       // 0x4
-    /* 0x038 */ unsigned int all_clear_count;         // 0x4
-    /* 0x03C */ unsigned int all_play_time;           // 0x4
-    /* 0x040 */ int route[200];                       // 0x320
-    /* 0x360 */ struct anon_2_60 subject[200];        // 0xFA0
-};
+} anon_5_60;
 
 /* anon_8_60 -- @anon8, 0x4 bytes, bk_disp.c (DIE 0xE8AF6) */
-struct anon_8_60 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char d[4];                   // 0x4
-};
+} anon_8_60;
 
 /* anon_7_60 -- @anon7, 0x4 bytes, bk_disp.c (DIE 0xE8A2C) */
-union anon_7_60 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ struct anon_8_60 s;                   // 0x4
-};
+    /* 0x000 */ anon_8_60 s;                          // 0x4
+} anon_7_60;
 
 /* anon_9_60 -- @anon9, 0x12E0 bytes, bk_disp.c (DIE 0xE8D93) */
-struct anon_9_60 {   // size 0x12E0
+typedef struct {   // size 0x12E0
     /* 0x000 */ int weight;                           // 0x4
     /* 0x004 */ int lbs;                              // 0x4
     /* 0x008 */ int norm_type;                        // 0x4
@@ -127,63 +106,26 @@ struct anon_9_60 {   // size 0x12E0
     /* 0x010 */ int norm_calorie;                     // 0x4
     /* 0x014 */ int workout_step;                     // 0x4
     /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ struct anon_3_60 history[400];        // 0x12C0
+    /* 0x01C */ anon_3_60 history[400];               // 0x12C0
     /* 0x12DC */ int check_sum_val;                   // 0x4
-};
-
-/* anon_10_60 -- @anon10, 0x2134 bytes, bk_disp.c (DIE 0xE9033) */
-struct anon_10_60 {   // size 0x2134
-    /* 0x000 */ unsigned int uno : 8;                 // bits 0..7
-    /* 0x000 */ unsigned int ino : 8;                 // bits 8..15
-    /* 0x000 */ unsigned int frame_no : 8;            // bits 16..23
-    /* 0x000 */ unsigned int f_passuse : 1;           // bits 24..24
-    /* 0x000 */ unsigned int f_enable : 1;            // bits 25..25
-    /* 0x000 */ unsigned int f_program_free : 1;      // bits 26..26
-    /* 0x004 */ union anon_7_60 userpass;             // 0x4
-    /* 0x008 */ struct anon_9_60 pwork;               // 0x12E0
-    /* 0x12E8 */ struct anon_0_60 workout_calorie_record;  // 0xD40
-    /* 0x2028 */ struct oni_course program_order;     // 0x10C
-};
+} anon_9_60;
 
 /* anon_11_60 -- @anon11, 0x4 bytes, bk_disp.c (DIE 0xE9316) */
-union anon_11_60 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
-
-/* anon_12_60 -- @anon12, 0x4 bytes, bk_disp.c (DIE 0xE958B) */
-struct anon_12_60 {   // size 0x4
-    /* 0x000 */ unsigned char game_over;              // 0x1
-    /* 0x001 */ unsigned char calorie_check;          // 0x1
-    /* 0x002 */ unsigned char pad[2];                 // 0x2
-};
+} anon_11_60;
 
 /* anon_13_60 -- @anon13, 0x10 bytes, bk_disp.c (DIE 0xE977D) */
-struct anon_13_60 {   // size 0x10
-    /* 0x000 */ union anon_11_60 x0;                  // 0x4
-    /* 0x004 */ union anon_11_60 y0;                  // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_11_60 x0;                        // 0x4
+    /* 0x004 */ anon_11_60 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
-
-/* anon_14_60 -- @anon14, 0x4 bytes, bk_disp.c (DIE 0xEB792) */
-struct anon_14_60 {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-};
-
-/* anon_15_60 -- @anon15, 0x184 bytes, bk_disp.c (DIE 0xEBCB4) */
-struct anon_15_60 {   // size 0x184
-    /* 0x000 */ struct anon_13_60 line_a[8];          // 0x80
-    /* 0x080 */ struct anon_13_60 line_b[8];          // 0x80
-    /* 0x100 */ struct anon_13_60 line_c[8];          // 0x80
-    /* 0x180 */ int num;                              // 0x4
-};
+} anon_13_60;
 
 
 /* variables (4) */

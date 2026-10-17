@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_bk_disp_bk_mv_list_c_H
 #define DDR_UNIT_src_CS_bk_disp_bk_mv_list_c_H
@@ -13,12 +16,12 @@
 /* anonymous types (1) */
 
 /* anon_0_58 -- @anon0, 0x10 bytes, bk_mv_list.c (DIE 0xDD57D) */
-struct anon_0_58 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int start;                            // 0x4
     /* 0x004 */ int ti_start;                         // 0x4
     /* 0x008 */ int ti_end;                           // 0x4
     /* 0x00C */ unsigned char **list;                 // 0x4
-};
+} anon_0_58;
 
 
 /* variables (31) */
@@ -52,6 +55,6 @@ static unsigned char *dyna3_mv_list[45];                         /* @0x002BAB90 
 static unsigned char *loo3_mv_list[47];                          /* @0x002BAC50 size 0xBC */
 static unsigned char *surv_mv_list[47];                          /* @0x002BAD10 size 0xBC */
 static unsigned char *surv3_mv_list[49];                         /* @0x002BADD0 size 0xC4 */
-struct anon_0_58 bk_mv_tbl[75];                                  /* @0x002BAEA0 size 0x4B0 */
+anon_0_58 bk_mv_tbl[75];                                         /* @0x002BAEA0 size 0x4B0 */
 
 #endif /* DDR_UNIT_src_CS_bk_disp_bk_mv_list_c_H */

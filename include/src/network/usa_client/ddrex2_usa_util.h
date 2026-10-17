@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_usa_client_ddrex2_usa_util_c_H
 #define DDR_UNIT_src_network_usa_client_ddrex2_usa_util_c_H
@@ -15,42 +18,21 @@
 #include "types/_ddrnet_con.h"
 #include "types/_mio_message.h"
 
-/* anonymous types (5) */
+/* anonymous types (2) */
 
 /* anon_1_207 -- @anon1, 0x4 bytes, ddrex2_usa_util.c (DIE 0x39EF02) */
-struct anon_1_207 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char s_b1;                   // 0x1
     /* 0x001 */ unsigned char s_b2;                   // 0x1
     /* 0x002 */ unsigned char s_b3;                   // 0x1
     /* 0x003 */ unsigned char s_b4;                   // 0x1
-};
+} anon_1_207;
 
 /* anon_2_207 -- @anon2, 0x4 bytes, ddrex2_usa_util.c (DIE 0x39F19F) */
-struct anon_2_207 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short s_w1;                  // 0x2
     /* 0x002 */ unsigned short s_w2;                  // 0x2
-};
-
-/* anon_0_207 -- @anon0, 0x4 bytes, ddrex2_usa_util.c (DIE 0x39EE52) */
-union anon_0_207 {   // size 0x4
-    /* 0x000 */ struct anon_1_207 S_un_b;             // 0x4
-    /* 0x000 */ struct anon_2_207 S_un_w;             // 0x4
-    /* 0x000 */ unsigned int S_addr;                  // 0x4
-};
-
-/* anon_3_207 -- @anon3, 0x1048 bytes, ddrex2_usa_util.c (DIE 0x3A04B0) */
-struct anon_3_207 {   // size 0x1048
-    /* 0x000 */ unsigned int P[18];                   // 0x48
-    /* 0x048 */ unsigned int S[4][256];               // 0x1000
-};
-
-/* anon_4_207 -- @anon4, 0x10 bytes, ddrex2_usa_util.c (DIE 0x3A0AEF) */
-struct anon_4_207 {   // size 0x10
-    /* 0x000 */ int rtv;                              // 0x4
-    /* 0x004 */ int ip_addr;                          // 0x4
-    /* 0x008 */ int netmask;                          // 0x4
-    /* 0x00C */ int broadcast;                        // 0x4
-};
+} anon_2_207;
 
 
 /* variables (4) */

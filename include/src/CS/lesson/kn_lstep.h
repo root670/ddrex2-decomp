@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_lesson_kn_lstep_c_H
 #define DDR_UNIT_src_CS_lesson_kn_lstep_c_H
@@ -15,7 +18,7 @@
 /* anonymous types (5) */
 
 /* anon_0_196 -- @anon0, 0x88 bytes, kn_lstep.c (DIE 0x36FC7F) */
-struct anon_0_196 {   // size 0x88
+typedef struct {   // size 0x88
     /* 0x000 */ unsigned int end_bc;                  // 0x4
     /* 0x004 */ unsigned int lesson_col[3];           // 0xC
     /* 0x010 */ int mode_chng_ct;                     // 0x4
@@ -78,10 +81,10 @@ struct anon_0_196 {   // size 0x88
     /* 0x085 */ unsigned char msg_pos;                // 0x1
     /* 0x086 */ unsigned char tmp_mem;                // 0x1
     /* 0x087 */ // 0x1 bytes padding
-};
+} anon_0_196;
 
 /* anon_1_196 -- @anon1, 0x20 bytes, kn_lstep.c (DIE 0x37063D) */
-struct anon_1_196 {   // size 0x20
+typedef struct {   // size 0x20
     /* 0x000 */ short x;                              // 0x2
     /* 0x002 */ short y;                              // 0x2
     /* 0x004 */ short base_x;                         // 0x2
@@ -94,30 +97,30 @@ struct anon_1_196 {   // size 0x20
     /* 0x014 */ int disp_flg;                         // 0x4
     /* 0x018 */ int move_flg;                         // 0x4
     /* 0x01C */ int frame;                            // 0x4
-};
+} anon_1_196;
 
 /* anon_2_196 -- @anon2, 0x8 bytes, kn_lstep.c (DIE 0x370864) */
-struct anon_2_196 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ short msg_num;                        // 0x2
     /* 0x002 */ unsigned short disp_ct;               // 0x2
     /* 0x004 */ unsigned short timer;                 // 0x2
     /* 0x006 */ unsigned char disp_flg;               // 0x1
     /* 0x007 */ char pad[1];                          // 0x1
-};
+} anon_2_196;
 
 /* anon_4_196 -- @anon4, 0x10 bytes, kn_lstep.c (DIE 0x370F13) */
-struct anon_4_196 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ float vx;                             // 0x4
     /* 0x004 */ float vy;                             // 0x4
     /* 0x008 */ float vz;                             // 0x4
     /* 0x00C */ float vw;                             // 0x4
-};
+} anon_4_196;
 
 /* anon_3_196 -- @anon3, 0x40 bytes, kn_lstep.c (DIE 0x370DB3) */
-struct anon_3_196 {   // size 0x40
-    /* 0x000 */ struct anon_4_196 offset;             // 0x10
-    /* 0x010 */ struct anon_4_196 next_ofs;           // 0x10
-    /* 0x020 */ struct anon_4_196 move;               // 0x10
+typedef struct {   // size 0x40
+    /* 0x000 */ anon_4_196 offset;                    // 0x10
+    /* 0x010 */ anon_4_196 next_ofs;                  // 0x10
+    /* 0x020 */ anon_4_196 move;                      // 0x10
     /* 0x030 */ short ang;                            // 0x2
     /* 0x032 */ short next_ang;                       // 0x2
     /* 0x034 */ short ang_deg;                        // 0x2
@@ -125,16 +128,16 @@ struct anon_3_196 {   // size 0x40
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
     /* 0x03C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_3_196;
 
 
 /* variables (9) */
-struct anon_3_196 kn_touch_w[2];                                 /* @0x007FC4E0 size 0x80 */
-struct anon_1_196 kn_fin_w;                                      /* @0x007FC4C0 size 0x20 */
-struct anon_2_196 kn_msg_w;                                      /* @0x002DE618 size 0x8 */
-struct anon_3_196 kn_foot_w[2];                                  /* @0x007FE7E0 size 0x80 */
+anon_3_196 kn_touch_w[2];                                        /* @0x007FC4E0 size 0x80 */
+anon_1_196 kn_fin_w;                                             /* @0x007FC4C0 size 0x20 */
+anon_2_196 kn_msg_w;                                             /* @0x002DE618 size 0x8 */
+anon_3_196 kn_foot_w[2];                                         /* @0x007FE7E0 size 0x80 */
 int lesson_foot_offset_tbl[9][2];                                /* @0x007FA6B0 size 0x48 */
-struct anon_0_196 kn_lesson_main_work;                           /* @0x007FE860 size 0x88 */
+anon_0_196 kn_lesson_main_work;                                  /* @0x007FE860 size 0x88 */
 struct _tag_cLesPlay *pLesPlay;                                  /* @0x002DDE84 size 0x4 */
 static short font_anime_pos_y;                                   /* not allocated size 0x2 */
 static short font_anime_pos_x;                                   /* not allocated size 0x2 */

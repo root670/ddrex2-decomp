@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_lib_eeint_tcpint_c_H
 #define DDR_UNIT_src_network_lib_eeint_tcpint_c_H
@@ -17,40 +20,40 @@
 /* anonymous types (32) */
 
 /* anon_0_112 -- @anon0, 0xC bytes, tcpint.c (DIE 0x1F7E29) */
-struct anon_0_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned int leasetime;               // 0x4
     /* 0x004 */ unsigned int t1;                      // 0x4
     /* 0x008 */ unsigned int t2;                      // 0x4
-};
+} anon_0_112;
 
 /* anon_1_112 -- @anon1, 0x6 bytes, tcpint.c (DIE 0x1F7ED0) */
-struct anon_1_112 {   // size 0x6
+typedef struct {   // size 0x6
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ short len;                            // 0x2
     /* 0x004 */ unsigned char buf[1];                 // 0x1
     /* 0x005 */ // 0x1 bytes padding
-};
+} anon_1_112;
 
 /* anon_2_112 -- @anon2, 0x8 bytes, tcpint.c (DIE 0x1F7F50) */
-struct anon_2_112 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int lease_time;              // 0x4
     /* 0x004 */ int max_retry_cnt;                    // 0x4
-};
+} anon_2_112;
 
 /* anon_3_112 -- @anon3, 0x20 bytes, tcpint.c (DIE 0x1F8008) */
-struct anon_3_112 {   // size 0x20
+typedef struct {   // size 0x20
     /* 0x000 */ unsigned char hostname[32];           // 0x20
-};
+} anon_3_112;
 
 /* anon_4_112 -- @anon4, 0x8 bytes, tcpint.c (DIE 0x1F8072) */
-struct anon_4_112 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ unsigned short dstport;               // 0x2
     /* 0x006 */ unsigned short srcport;               // 0x2
-};
+} anon_4_112;
 
 /* anon_5_112 -- @anon5, 0x10 bytes, tcpint.c (DIE 0x1F80FC) */
-struct anon_5_112 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ unsigned int youraddr;                // 0x4
@@ -60,71 +63,71 @@ struct anon_5_112 {   // size 0x10
     /* 0x00C */ unsigned char df_flag;                // 0x1
     /* 0x00D */ unsigned char buf[1];                 // 0x1
     /* 0x00E */ // 0x2 bytes padding
-};
+} anon_5_112;
 
 /* anon_6_112 -- @anon6, 0x14 bytes, tcpint.c (DIE 0x1F8209) */
-struct anon_6_112 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ unsigned int lease_time;              // 0x4
     /* 0x004 */ unsigned int ipaddr;                  // 0x4
     /* 0x008 */ unsigned int netmask;                 // 0x4
     /* 0x00C */ unsigned int bcaddr;                  // 0x4
     /* 0x010 */ int max_retry_cnt;                    // 0x4
-};
+} anon_6_112;
 
 /* anon_7_112 -- @anon7, 0x8 bytes, tcpint.c (DIE 0x1F82E3) */
-struct anon_7_112 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int dstaddr;                 // 0x4
     /* 0x004 */ unsigned int gtwayaddr;               // 0x4
-};
+} anon_7_112;
 
 /* anon_8_112 -- @anon8, 0xC bytes, tcpint.c (DIE 0x1F834C) */
-struct anon_8_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ unsigned int ipaddr;                  // 0x4
     /* 0x008 */ unsigned short dstport;               // 0x2
     /* 0x00A */ unsigned short srcport;               // 0x2
-};
+} anon_8_112;
 
 /* anon_9_112 -- @anon9, 0x108 bytes, tcpint.c (DIE 0x1F83F5) */
-struct anon_9_112 {   // size 0x108
+typedef struct {   // size 0x108
     /* 0x000 */ unsigned char domain[256];            // 0x100
     /* 0x100 */ unsigned int pr_server;               // 0x4
     /* 0x104 */ unsigned int se_server;               // 0x4
-};
+} anon_9_112;
 
 /* anon_10_112 -- @anon10, 0x108 bytes, tcpint.c (DIE 0x1F8485) */
-struct anon_10_112 {   // size 0x108
+typedef struct {   // size 0x108
     /* 0x000 */ unsigned char def_domain[256];        // 0x100
     /* 0x100 */ unsigned int prim_svr;                // 0x4
     /* 0x104 */ unsigned int sec_svr;                 // 0x4
-};
+} anon_10_112;
 
 /* anon_11_112 -- @anon11, 0xA bytes, tcpint.c (DIE 0x1F8517) */
-struct anon_11_112 {   // size 0xA
+typedef struct {   // size 0xA
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ unsigned short stat;                  // 0x2
     /* 0x004 */ unsigned short reserve;               // 0x2
     /* 0x006 */ unsigned short sendwin;               // 0x2
     /* 0x008 */ unsigned short recvwin;               // 0x2
-};
+} anon_11_112;
 
 /* anon_12_112 -- @anon12, 0x8 bytes, tcpint.c (DIE 0x1F85E3) */
-struct anon_12_112 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ short protocol;                       // 0x2
     /* 0x006 */ // 0x2 bytes padding
-};
+} anon_12_112;
 
 /* anon_13_112 -- @anon13, 0xC bytes, tcpint.c (DIE 0x1F864B) */
-struct anon_13_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ unsigned int netmask;                 // 0x4
     /* 0x008 */ unsigned int bcaddr;                  // 0x4
-};
+} anon_13_112;
 
 /* anon_14_112 -- @anon14, 0x504 bytes, tcpint.c (DIE 0x1F8877) */
-struct anon_14_112 {   // size 0x504
+typedef struct {   // size 0x504
     /* 0x000 */ short use_ipcp;                       // 0x2
     /* 0x002 */ short dialtype;                       // 0x2
     /* 0x004 */ unsigned char telephone_number[256];  // 0x100
@@ -132,52 +135,52 @@ struct anon_14_112 {   // size 0x504
     /* 0x204 */ unsigned char password[256];          // 0x100
     /* 0x304 */ unsigned char outside_number[256];    // 0x100
     /* 0x404 */ unsigned char additional_at_command[256];  // 0x100
-};
+} anon_14_112;
 
 /* anon_15_112 -- @anon15, 0x4 bytes, tcpint.c (DIE 0x1F89BC) */
-struct anon_15_112 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ short what;                           // 0x2
-};
+} anon_15_112;
 
 /* anon_16_112 -- @anon16, 0xC bytes, tcpint.c (DIE 0x1F8A1C) */
-struct anon_16_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ unsigned int netmask;                 // 0x4
     /* 0x008 */ unsigned int broadcast;               // 0x4
-};
+} anon_16_112;
 
 /* anon_17_112 -- @anon17, 0x104 bytes, tcpint.c (DIE 0x1F8AA9) */
-struct anon_17_112 {   // size 0x104
+typedef struct {   // size 0x104
     /* 0x000 */ short option;                         // 0x2
     /* 0x002 */ short optlen;                         // 0x2
     /* 0x004 */ unsigned char optval[256];            // 0x100
-};
+} anon_17_112;
 
 /* anon_18_112 -- @anon18, 0x8 bytes, tcpint.c (DIE 0x1F8B34) */
-struct anon_18_112 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ int retrans_cnt;                      // 0x4
-};
+} anon_18_112;
 
 /* anon_19_112 -- @anon19, 0xC bytes, tcpint.c (DIE 0x1F8B9F) */
-struct anon_19_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ short new_nh;                         // 0x2
     /* 0x004 */ unsigned int dstaddr;                 // 0x4
     /* 0x008 */ unsigned short dstport;               // 0x2
     /* 0x00A */ // 0x2 bytes padding
-};
+} anon_19_112;
 
 /* anon_20_112 -- @anon20, 0xC bytes, tcpint.c (DIE 0x1F8C49) */
-struct anon_20_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ unsigned int netmask;                 // 0x4
     /* 0x008 */ unsigned int broadcast;               // 0x4
-};
+} anon_20_112;
 
 /* anon_21_112 -- @anon21, 0x10 bytes, tcpint.c (DIE 0x1F8CFA) */
-struct anon_21_112 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ unsigned int youraddr;                // 0x4
@@ -187,22 +190,22 @@ struct anon_21_112 {   // size 0x10
     /* 0x00D */ unsigned char svctype;                // 0x1
     /* 0x00E */ unsigned char df_flag;                // 0x1
     /* 0x00F */ unsigned char buf[1];                 // 0x1
-};
+} anon_21_112;
 
 /* anon_22_112 -- @anon22, 0x8 bytes, tcpint.c (DIE 0x1F8E54) */
-struct anon_22_112 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned int ipaddr;                  // 0x4
     /* 0x004 */ unsigned short dstport;               // 0x2
     /* 0x006 */ unsigned short srcport;               // 0x2
-};
+} anon_22_112;
 
 /* anon_23_112 -- @anon23, 0x200 bytes, tcpint.c (DIE 0x1F8EDF) */
-struct anon_23_112 {   // size 0x200
+typedef struct {   // size 0x200
     /* 0x000 */ unsigned char host[512];              // 0x200
-};
+} anon_23_112;
 
 /* anon_24_112 -- @anon24, 0x10 bytes, tcpint.c (DIE 0x1F906D) */
-struct anon_24_112 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ unsigned int youraddr;                // 0x4
@@ -210,16 +213,16 @@ struct anon_24_112 {   // size 0x10
     /* 0x00A */ short len;                            // 0x2
     /* 0x00C */ unsigned char buf[1];                 // 0x1
     /* 0x00D */ // 0x3 bytes padding
-};
+} anon_24_112;
 
 /* anon_25_112 -- @anon25, 0xC34 bytes, tcpint.c (DIE 0x1F9138) */
-struct anon_25_112 {   // size 0xC34
+typedef struct {   // size 0xC34
     /* 0x000 */ int bufnum;                           // 0x4
     /* 0x004 */ struct dginfo buf[4];                 // 0xC30
-};
+} anon_25_112;
 
 /* anon_26_112 -- @anon26, 0x10 bytes, tcpint.c (DIE 0x1F9474) */
-struct anon_26_112 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ short len;                            // 0x2
     /* 0x004 */ unsigned short srcport;               // 0x2
@@ -227,41 +230,41 @@ struct anon_26_112 {   // size 0x10
     /* 0x008 */ unsigned int srcaddr;                 // 0x4
     /* 0x00C */ unsigned char buf[1];                 // 0x1
     /* 0x00D */ // 0x3 bytes padding
-};
+} anon_26_112;
 
 /* anon_27_112 -- @anon27, 0x6 bytes, tcpint.c (DIE 0x1F9587) */
-struct anon_27_112 {   // size 0x6
+typedef struct {   // size 0x6
     /* 0x000 */ unsigned char addr[6];                // 0x6
-};
+} anon_27_112;
 
 /* anon_28_112 -- @anon28, 0xC bytes, tcpint.c (DIE 0x1F9780) */
-struct anon_28_112 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ short len;                            // 0x2
     /* 0x004 */ unsigned int srcaddr;                 // 0x4
     /* 0x008 */ unsigned char buf[1];                 // 0x1
     /* 0x009 */ // 0x3 bytes padding
-};
+} anon_28_112;
 
 /* anon_29_112 -- @anon29, 0x104 bytes, tcpint.c (DIE 0x1F98E2) */
-struct anon_29_112 {   // size 0x104
+typedef struct {   // size 0x104
     /* 0x000 */ short optname;                        // 0x2
     /* 0x002 */ short optlen;                         // 0x2
     /* 0x004 */ unsigned char optval[256];            // 0x100
-};
+} anon_29_112;
 
 /* anon_30_112 -- @anon30, 0x100 bytes, tcpint.c (DIE 0x1F9992) */
-struct anon_30_112 {   // size 0x100
-    /* 0x000 */ struct anon_7_112 entry[32];          // 0x100
-};
+typedef struct {   // size 0x100
+    /* 0x000 */ anon_7_112 entry[32];                 // 0x100
+} anon_30_112;
 
 /* anon_31_112 -- @anon31, 0x106 bytes, tcpint.c (DIE 0x1F9AF8) */
-struct anon_31_112 {   // size 0x106
+typedef struct {   // size 0x106
     /* 0x000 */ short nh;                             // 0x2
     /* 0x002 */ short optname;                        // 0x2
     /* 0x004 */ short optlen;                         // 0x2
     /* 0x006 */ unsigned char optval[256];            // 0x100
-};
+} anon_31_112;
 
 
 /* variables (3) */

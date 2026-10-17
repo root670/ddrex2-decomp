@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_freeplay_fp_style_c_H
 #define DDR_UNIT_src_CS_freeplay_fp_style_c_H
@@ -15,18 +18,10 @@
 #include "types/g_game_w.h"
 #include "types/oni_course.h"
 
-/* anonymous types (29) */
-
-/* anon_0_73 -- @anon0, 0x4 bytes, fp_style.c (DIE 0x124246) */
-struct anon_0_73 {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-};
+/* anonymous types (23) */
 
 /* anon_1_73 -- @anon1, 0x494 bytes, fp_style.c (DIE 0x1242FA) */
-struct anon_1_73 {   // size 0x494
+typedef struct {   // size 0x494
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ float repcnt;                         // 0x4
     /* 0x008 */ float scr_sp;                         // 0x4
@@ -78,18 +73,18 @@ struct anon_1_73 {   // size 0x494
     /* 0x48C */ unsigned char sn_f;                   // 0x1
     /* 0x48D */ // 0x3 bytes padding
     /* 0x490 */ float sn_t;                           // 0x4
-};
+} anon_1_73;
 
 /* anon_2_73 -- @anon2, 0x8 bytes, fp_style.c (DIE 0x124B2F) */
-struct anon_2_73 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ short x;                              // 0x2
     /* 0x002 */ short y;                              // 0x2
     /* 0x004 */ short w;                              // 0x2
     /* 0x006 */ short h;                              // 0x2
-};
+} anon_2_73;
 
 /* anon_3_73 -- @anon3, 0x10 bytes, fp_style.c (DIE 0x125048) */
-union anon_3_73 {   // size 0x10
+typedef union {   // size 0x10
     /* 0x000 */ unsigned __int128 ul128;              // 0x10
     /* 0x000 */ unsigned long ul64[2];                // 0x10
     /* 0x000 */ unsigned int ui32[4];                 // 0x10
@@ -97,52 +92,44 @@ union anon_3_73 {   // size 0x10
     /* 0x000 */ float f32[4];                         // 0x10
     /* 0x000 */ float fv[4];                          // 0x10
     /* 0x000 */ int iv[4];                            // 0x10
-};
+} anon_3_73;
 
 /* anon_6_73 -- @anon6, 0x4 bytes, fp_style.c (DIE 0x127AF7) */
-union anon_6_73 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_6_73;
 
 /* anon_12_73 -- @anon12, 0x10 bytes, fp_style.c (DIE 0x12895D) */
-struct anon_12_73 {   // size 0x10
-    /* 0x000 */ union anon_6_73 x0;                   // 0x4
-    /* 0x004 */ union anon_6_73 y0;                   // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_6_73 x0;                         // 0x4
+    /* 0x004 */ anon_6_73 y0;                         // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
-
-/* anon_4_73 -- @anon4, 0x184 bytes, fp_style.c (DIE 0x125411) */
-struct anon_4_73 {   // size 0x184
-    /* 0x000 */ struct anon_12_73 line_a[8];          // 0x80
-    /* 0x080 */ struct anon_12_73 line_b[8];          // 0x80
-    /* 0x100 */ struct anon_12_73 line_c[8];          // 0x80
-    /* 0x180 */ int num;                              // 0x4
-};
+} anon_12_73;
 
 /* anon_5_73 -- @anon5, 0x20 bytes, fp_style.c (DIE 0x1254E3) */
-struct anon_5_73 {   // size 0x20
+typedef struct {   // size 0x20
     /* 0x000 */ float ofs[4];                         // 0x10
     /* 0x010 */ float t;                              // 0x4
     /* 0x014 */ float rot_y;                          // 0x4
     /* 0x018 */ int step;                             // 0x4
     /* 0x01C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_5_73;
 
 /* anon_7_73 -- @anon7, 0x8 bytes, fp_style.c (DIE 0x127CC5) */
-struct anon_7_73 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned char n;                      // 0x1
     /* 0x001 */ unsigned char cur[2];                 // 0x2
     /* 0x003 */ // 0x1 bytes padding
     /* 0x004 */ unsigned char **str;                  // 0x4
-};
+} anon_7_73;
 
 /* anon_9_73 -- @anon9, 0x90 bytes, fp_style.c (DIE 0x1282D7) */
-struct anon_9_73 {   // size 0x90
+typedef struct {   // size 0x90
     /* 0x000 */ void *loadaddr;                       // 0x4
     /* 0x004 */ int doll_p_counter;                   // 0x4
     /* 0x008 */ unsigned char max;                    // 0x1
@@ -163,27 +150,27 @@ struct anon_9_73 {   // size 0x90
     /* 0x070 */ float eye_p[4];                       // 0x10
     /* 0x080 */ void *fpanel;                         // 0x4
     /* 0x084 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_9_73;
 
 /* anon_13_73 -- @anon13, 0xC bytes, fp_style.c (DIE 0x128AC8) */
-struct anon_13_73 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ // 0x3 bytes padding
     /* 0x004 */ int timer;                            // 0x4
     /* 0x008 */ void *item;                           // 0x4
-};
+} anon_13_73;
 
 /* anon_14_73 -- @anon14, 0xC bytes, fp_style.c (DIE 0x128D29) */
-struct anon_14_73 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ unsigned char max;                    // 0x1
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ void *item;                           // 0x4
     /* 0x008 */ int timer;                            // 0x4
-};
+} anon_14_73;
 
 /* anon_28_73 -- @anon28, 0x1C bytes, fp_style.c (DIE 0x12B9B4) */
-struct anon_28_73 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ unsigned char end_num;                // 0x1
     /* 0x001 */ unsigned char decide;                 // 0x1
     /* 0x002 */ unsigned char cancel;                 // 0x1
@@ -194,21 +181,21 @@ struct anon_28_73 {   // size 0x1C
     /* 0x010 */ int timer;                            // 0x4
     /* 0x014 */ void *item;                           // 0x4
     /* 0x018 */ void *entry;                          // 0x4
-};
+} anon_28_73;
 
 /* anon_11_73 -- @anon11, 0x70 bytes, fp_style.c (DIE 0x12867E) */
-struct anon_11_73 {   // size 0x70
+typedef struct {   // size 0x70
     /* 0x000 */ int timer;                            // 0x4
     /* 0x004 */ unsigned char cur[2];                 // 0x2
     /* 0x006 */ unsigned char auto_f[2];              // 0x2
     /* 0x008 */ float repcnt[2];                      // 0x8
     /* 0x010 */ void *item;                           // 0x4
     /* 0x014 */ void *win;                            // 0x4
-    /* 0x018 */ struct anon_7_73 one[11];             // 0x58
-};
+    /* 0x018 */ anon_7_73 one[11];                    // 0x58
+} anon_11_73;
 
 /* anon_24_73 -- @anon24, 0x34 bytes, fp_style.c (DIE 0x12A0EB) */
-struct anon_24_73 {   // size 0x34
+typedef struct {   // size 0x34
     /* 0x000 */ int value_ct[8];                      // 0x20
     /* 0x020 */ int score;                            // 0x4
     /* 0x024 */ int bonus;                            // 0x4
@@ -217,10 +204,10 @@ struct anon_24_73 {   // size 0x34
     /* 0x02E */ unsigned char is_fcombo;              // 0x1
     /* 0x02F */ unsigned char is_newrec;              // 0x1
     /* 0x030 */ int pnt;                              // 0x4
-};
+} anon_24_73;
 
 /* anon_26_73 -- @anon26, 0xA0 bytes, fp_style.c (DIE 0x12AD2F) */
-struct anon_26_73 {   // size 0xA0
+typedef struct {   // size 0xA0
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ void *base;                           // 0x4
     /* 0x008 */ void *value;                          // 0x4
@@ -236,11 +223,11 @@ struct anon_26_73 {   // size 0xA0
     /* 0x033 */ unsigned char cheer;                  // 0x1
     /* 0x034 */ unsigned char vo_pid;                 // 0x1
     /* 0x035 */ // 0x3 bytes padding
-    /* 0x038 */ struct anon_24_73 eva[2];             // 0x68
-};
+    /* 0x038 */ anon_24_73 eva[2];                    // 0x68
+} anon_26_73;
 
 /* anon_8_73 -- @anon8, 0x7E0 bytes, fp_style.c (DIE 0x127E4A) */
-struct anon_8_73 {   // size 0x7E0
+typedef struct {   // size 0x7E0
     /* 0x000 */ float wsm[4][4];                      // 0x40
     /* 0x040 */ unsigned char step;                   // 0x1
     /* 0x041 */ unsigned char step_s;                 // 0x1
@@ -263,26 +250,26 @@ struct anon_8_73 {   // size 0x7E0
     /* 0x068 */ unsigned int btn_obj_id;              // 0x4
     /* 0x06C */ unsigned char *str_addr;              // 0x4
     /* 0x070 */ unsigned char str_buf[256];           // 0x100
-    /* 0x170 */ struct anon_9_73 doll;                // 0x90
-    /* 0x200 */ struct anon_13_73 eyetoy;             // 0xC
-    /* 0x20C */ struct anon_14_73 style;              // 0xC
-    /* 0x218 */ struct anon_28_73 chara;              // 0x1C
-    /* 0x234 */ struct anon_1_73 music;               // 0x494
-    /* 0x6C8 */ struct anon_11_73 option;             // 0x70
-    /* 0x738 */ struct anon_26_73 result;             // 0xA0
+    /* 0x170 */ anon_9_73 doll;                       // 0x90
+    /* 0x200 */ anon_13_73 eyetoy;                    // 0xC
+    /* 0x20C */ anon_14_73 style;                     // 0xC
+    /* 0x218 */ anon_28_73 chara;                     // 0x1C
+    /* 0x234 */ anon_1_73 music;                      // 0x494
+    /* 0x6C8 */ anon_11_73 option;                    // 0x70
+    /* 0x738 */ anon_26_73 result;                    // 0xA0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_8_73;
 
 /* anon_10_73 -- @anon10, 0xD40 bytes, fp_style.c (DIE 0x1285A6) */
-struct anon_10_73 {   // size 0xD40
+typedef struct {   // size 0xD40
     /* 0x000 */ unsigned int program_calorie[24];     // 0x60
     /* 0x060 */ unsigned int program_play_count[24];  // 0x60
     /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
     /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-};
+} anon_10_73;
 
 /* anon_15_73 -- @anon15, 0x14 bytes, fp_style.c (DIE 0x128E17) */
-struct anon_15_73 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ unsigned char cone_state[8];          // 0x8
     /* 0x008 */ unsigned char state;                  // 0x1
     /* 0x009 */ unsigned char perfect;                // 0x1
@@ -291,54 +278,30 @@ struct anon_15_73 {   // size 0x14
     /* 0x00E */ unsigned short clear_count;           // 0x2
     /* 0x010 */ unsigned short first_clear_count;     // 0x2
     /* 0x012 */ unsigned short first_clear_time;      // 0x2
-};
+} anon_15_73;
 
 /* anon_16_73 -- @anon16, 0xC bytes, fp_style.c (DIE 0x12912E) */
-struct anon_16_73 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int date;                             // 0x4
     /* 0x004 */ unsigned int weight : 12;             // bits 0..11
     /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
     /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
     /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-};
-
-/* anon_17_73 -- @anon17, 0x14 bytes, fp_style.c (DIE 0x1292BD) */
-struct anon_17_73 {   // size 0x14
-    /* 0x000 */ int state;                            // 0x4
-    /* 0x004 */ int music_count;                      // 0x4
-    /* 0x008 */ int dir;                              // 0x4
-    /* 0x00C */ int effect_count;                     // 0x4
-    /* 0x010 */ int id;                               // 0x4
-};
-
-/* anon_18_73 -- @anon18, 0x1300 bytes, fp_style.c (DIE 0x1294F8) */
-struct anon_18_73 {   // size 0x1300
-    /* 0x000 */ unsigned char evboot[24];             // 0x18
-    /* 0x018 */ unsigned char is_savedata;            // 0x1
-    /* 0x019 */ signed char max_area;                 // 0x1
-    /* 0x01A */ signed char disp_type;                // 0x1
-    /* 0x01B */ char pading;                          // 0x1
-    /* 0x01C */ unsigned char dancer_use_cnt[24];     // 0x18
-    /* 0x034 */ int cur_cursor;                       // 0x4
-    /* 0x038 */ unsigned int all_clear_count;         // 0x4
-    /* 0x03C */ unsigned int all_play_time;           // 0x4
-    /* 0x040 */ int route[200];                       // 0x320
-    /* 0x360 */ struct anon_15_73 subject[200];       // 0xFA0
-};
+} anon_16_73;
 
 /* anon_20_73 -- @anon20, 0x4 bytes, fp_style.c (DIE 0x129954) */
-struct anon_20_73 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char d[4];                   // 0x4
-};
+} anon_20_73;
 
 /* anon_19_73 -- @anon19, 0x4 bytes, fp_style.c (DIE 0x1298AD) */
-union anon_19_73 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ struct anon_20_73 s;                  // 0x4
-};
+    /* 0x000 */ anon_20_73 s;                         // 0x4
+} anon_19_73;
 
 /* anon_21_73 -- @anon21, 0x12E0 bytes, fp_style.c (DIE 0x129BCE) */
-struct anon_21_73 {   // size 0x12E0
+typedef struct {   // size 0x12E0
     /* 0x000 */ int weight;                           // 0x4
     /* 0x004 */ int lbs;                              // 0x4
     /* 0x008 */ int norm_type;                        // 0x4
@@ -346,63 +309,42 @@ struct anon_21_73 {   // size 0x12E0
     /* 0x010 */ int norm_calorie;                     // 0x4
     /* 0x014 */ int workout_step;                     // 0x4
     /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ struct anon_16_73 history[400];       // 0x12C0
+    /* 0x01C */ anon_16_73 history[400];              // 0x12C0
     /* 0x12DC */ int check_sum_val;                   // 0x4
-};
+} anon_21_73;
 
 /* anon_22_73 -- @anon22, 0x4 bytes, fp_style.c (DIE 0x129E4B) */
-struct anon_22_73 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char r;                      // 0x1
     /* 0x001 */ unsigned char g;                      // 0x1
     /* 0x002 */ unsigned char b;                      // 0x1
     /* 0x003 */ unsigned char cd;                     // 0x1
-};
-
-/* anon_23_73 -- @anon23, 0x2134 bytes, fp_style.c (DIE 0x129F08) */
-struct anon_23_73 {   // size 0x2134
-    /* 0x000 */ unsigned int uno : 8;                 // bits 0..7
-    /* 0x000 */ unsigned int ino : 8;                 // bits 8..15
-    /* 0x000 */ unsigned int frame_no : 8;            // bits 16..23
-    /* 0x000 */ unsigned int f_passuse : 1;           // bits 24..24
-    /* 0x000 */ unsigned int f_enable : 1;            // bits 25..25
-    /* 0x000 */ unsigned int f_program_free : 1;      // bits 26..26
-    /* 0x004 */ union anon_19_73 userpass;            // 0x4
-    /* 0x008 */ struct anon_21_73 pwork;              // 0x12E0
-    /* 0x12E8 */ struct anon_10_73 workout_calorie_record;  // 0xD40
-    /* 0x2028 */ struct oni_course program_order;     // 0x10C
-};
-
-/* anon_25_73 -- @anon25, 0x4 bytes, fp_style.c (DIE 0x12AC79) */
-struct anon_25_73 {   // size 0x4
-    /* 0x000 */ unsigned char game_over;              // 0x1
-    /* 0x001 */ unsigned char calorie_check;          // 0x1
-    /* 0x002 */ unsigned char pad[2];                 // 0x2
-};
+} anon_22_73;
 
 /* anon_27_73 -- @anon27, 0x10 bytes, fp_style.c (DIE 0x12B705) */
-struct anon_27_73 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int (*appr)(void *);                  // 0x4
     /* 0x004 */ int (*exec)(void *);                  // 0x4
     /* 0x008 */ int (*disap)(void *);                 // 0x4
     /* 0x00C */ int (*disp)(void *);                  // 0x4
-};
+} anon_27_73;
 
 
 /* variables (15) */
 unsigned char fp_style_tab[4];                                   /* @0x002DDB38 size 0x4 */
-struct anon_27_73 fp_ss_objf[2];                                 /* @0x002BBFF0 size 0x20 */
+anon_27_73 fp_ss_objf[2];                                        /* @0x002BBFF0 size 0x20 */
 static float ss_3item_xy[3][4];                                  /* @0x002BC010 size 0x30 */
 static float ss_4item_xy[4][4];                                  /* @0x002BC040 size 0x40 */
-struct anon_8_73 *fpw;                                           /* @0x002DE540 size 0x4 */
-struct anon_14_73 *stw;                                          /* @0x002DE538 size 0x4 */
+anon_8_73 *fpw;                                                  /* @0x002DE540 size 0x4 */
+anon_14_73 *stw;                                                 /* @0x002DE538 size 0x4 */
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
-struct anon_9_73 *dw;                                            /* @0x002DE534 size 0x4 */
-struct anon_27_73 fp_objf[];                                     /* @0x002BBD80 */
-struct anon_27_73 fp_fpanel_objf;                                /* @0x002BE770 size 0x10 */
+anon_9_73 *dw;                                                   /* @0x002DE534 size 0x4 */
+anon_27_73 fp_objf[];                                            /* @0x002BBD80 */
+anon_27_73 fp_fpanel_objf;                                       /* @0x002BE770 size 0x10 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
-struct anon_1_73 *msw;                                           /* @0x002DE52C size 0x4 */
-struct anon_11_73 *sow;                                          /* @0x002DE528 size 0x4 */
-struct anon_13_73 *etw;                                          /* @0x002DE53C size 0x4 */
+anon_1_73 *msw;                                                  /* @0x002DE52C size 0x4 */
+anon_11_73 *sow;                                                 /* @0x002DE528 size 0x4 */
+anon_13_73 *etw;                                                 /* @0x002DE53C size 0x4 */
 struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 size 0x1FF50 */
 
 /* functions defined (14) */

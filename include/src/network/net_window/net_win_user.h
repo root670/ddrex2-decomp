@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_net_window_net_win_user_c_H
 #define DDR_UNIT_src_network_net_window_net_win_user_c_H
@@ -17,30 +20,22 @@
 #include "types/_NSV_USER_FILE_WORK.h"
 #include "types/_net_win_user_w.h"
 
-/* anonymous types (3) */
-
-/* anon_0_96 -- @anon0, 0x8 bytes, net_win_user.c (DIE 0x1ACC0B) */
-struct anon_0_96 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
+/* anonymous types (2) */
 
 /* anon_2_96 -- @anon2, 0x4 bytes, net_win_user.c (DIE 0x1AE109) */
-union anon_2_96 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_2_96;
 
 /* anon_1_96 -- @anon1, 0x34 bytes, net_win_user.c (DIE 0x1AD65C) */
-struct anon_1_96 {   // size 0x34
-    /* 0x000 */ union anon_2_96 x0;                   // 0x4
-    /* 0x004 */ union anon_2_96 y0;                   // 0x4
-    /* 0x008 */ union anon_2_96 x1;                   // 0x4
-    /* 0x00C */ union anon_2_96 y1;                   // 0x4
-    /* 0x010 */ union anon_2_96 x2;                   // 0x4
-    /* 0x014 */ union anon_2_96 y2;                   // 0x4
+typedef struct {   // size 0x34
+    /* 0x000 */ anon_2_96 x0;                         // 0x4
+    /* 0x004 */ anon_2_96 y0;                         // 0x4
+    /* 0x008 */ anon_2_96 x1;                         // 0x4
+    /* 0x00C */ anon_2_96 y1;                         // 0x4
+    /* 0x010 */ anon_2_96 x2;                         // 0x4
+    /* 0x014 */ anon_2_96 y2;                         // 0x4
     /* 0x018 */ unsigned int z0;                      // 0x4
     /* 0x01C */ unsigned int z1;                      // 0x4
     /* 0x020 */ unsigned int z2;                      // 0x4
@@ -57,7 +52,7 @@ struct anon_1_96 {   // size 0x34
     /* 0x02E */ unsigned char b2;                     // 0x1
     /* 0x02F */ unsigned char a2;                     // 0x1
     /* 0x030 */ int flg;                              // 0x4
-};
+} anon_1_96;
 
 
 /* variables (9) */

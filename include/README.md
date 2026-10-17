@@ -15,9 +15,12 @@ so `struct <tag>` is the only spelling the evidence offers.
 
 An anonymous type keeps its unit.  DWARF names them `@anon0..24`, and that numbering is
 per-unit -- `@anon0` in `les.c` and `@anon0` in `onimode.c` are different types -- so a use
-becomes `anon_<N>_<unit index>` and the definition is emitted in that unit's own header and
-nowhere else.  A named type whose layout contains one spells that member out inline; the
-layout digest, compared across every declaration, is what makes that faithful.
+becomes `anon_<N>_<unit>` and the definition is emitted in that unit's own header and
+nowhere else, as a typedef of an unnamed aggregate (the compiler records that back as
+`@anonN`; a tag of our own would land in the DIE).  A named type whose layout contains one
+spells that member out inline, and spells contiguous members that share it in one
+declaration, so the layout digest compared across every declaration stays faithful and one
+anonymous type stays one DIE.
 
 Check a header the way the compiler does, not with a host `cc`:
 

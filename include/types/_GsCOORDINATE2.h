@@ -17,16 +17,11 @@
 
 struct _GsCOORDINATE2 {   // size 0x50
     /* 0x000 */ unsigned int flg;                     // 0x4
-    /* 0x004 */ struct {   // size 0x20
+    /* 0x004, 0x024 */ struct {   // size 0x20
         /* 0x000 */ short m[3][3];                        // 0x12
         /* 0x012 */ // 0x2 bytes padding
         /* 0x014 */ int t[3];                             // 0xC
-    } coord;
-    /* 0x024 */ struct {   // size 0x20
-        /* 0x000 */ short m[3][3];                        // 0x12
-        /* 0x012 */ // 0x2 bytes padding
-        /* 0x014 */ int t[3];                             // 0xC
-    } workm;
+    } coord, workm;                               // 0x20 each
     /* 0x044 */ struct {   // size 0x28
         /* 0x000 */ struct {   // size 0x10
             /* 0x000 */ int vx;                               // 0x4

@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_lib_bsdsock_bsdsock_c_H
 #define DDR_UNIT_src_network_lib_bsdsock_bsdsock_c_H
@@ -15,10 +18,10 @@
 #include "types/in_addr.h"
 #include "types/sockaddr.h"
 
-/* anonymous types (22) */
+/* anonymous types (21) */
 
 /* anon_0_200 -- @anon0, 0x1C bytes, bsdsock.c (DIE 0x386A66) */
-struct anon_0_200 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int his_ip;                           // 0x4
     /* 0x008 */ int my_ip;                            // 0x4
@@ -26,17 +29,17 @@ struct anon_0_200 {   // size 0x1C
     /* 0x010 */ int his_dns2;                         // 0x4
     /* 0x014 */ int my_dns1;                          // 0x4
     /* 0x018 */ int my_dns2;                          // 0x4
-};
+} anon_0_200;
 
 /* anon_1_200 -- @anon1, 0x18 bytes, bsdsock.c (DIE 0x386B7C) */
-struct anon_1_200 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ int sockfd;                           // 0x4
     /* 0x004 */ struct sockaddr serv_addr;            // 0x10
     /* 0x014 */ int addrlen;                          // 0x4
-};
+} anon_1_200;
 
 /* anon_2_200 -- @anon2, 0x51C bytes, bsdsock.c (DIE 0x386C0A) */
-struct anon_2_200 {   // size 0x51C
+typedef struct {   // size 0x51C
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ short needToInit;                     // 0x2
     /* 0x006 */ short needToDial;                     // 0x2
@@ -55,30 +58,30 @@ struct anon_2_200 {   // size 0x51C
     /* 0x21C */ char phonenumber[256];                // 0x100
     /* 0x31C */ char add_at_command[256];             // 0x100
     /* 0x41C */ char outside_number[256];             // 0x100
-};
+} anon_2_200;
 
 /* anon_3_200 -- @anon3, 0x8 bytes, bsdsock.c (DIE 0x386ECA) */
-struct anon_3_200 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ int how;                              // 0x4
-};
+} anon_3_200;
 
 /* anon_4_200 -- @anon4, 0xC bytes, bsdsock.c (DIE 0x386F27) */
-struct anon_4_200 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ int cmd;                              // 0x4
     /* 0x008 */ int argp;                             // 0x4
-};
+} anon_4_200;
 
 /* anon_5_200 -- @anon5, 0x204 bytes, bsdsock.c (DIE 0x386FA5) */
-struct anon_5_200 {   // size 0x204
+typedef struct {   // size 0x204
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ char vendor[256];                     // 0x100
     /* 0x104 */ char product[256];                    // 0x100
-};
+} anon_5_200;
 
 /* anon_6_200 -- @anon6, 0x24 bytes, bsdsock.c (DIE 0x38702F) */
-struct anon_6_200 {   // size 0x24
+typedef struct {   // size 0x24
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ unsigned int len;                     // 0x4
     /* 0x008 */ int flags;                            // 0x4
@@ -86,17 +89,17 @@ struct anon_6_200 {   // size 0x24
     /* 0x01C */ int tolen;                            // 0x4
     /* 0x020 */ char buf[1];                          // 0x1
     /* 0x021 */ // 0x3 bytes padding
-};
+} anon_6_200;
 
 /* anon_7_200 -- @anon7, 0x18 bytes, bsdsock.c (DIE 0x387113) */
-struct anon_7_200 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ struct sockaddr addr;                 // 0x10
     /* 0x014 */ int addrlen;                          // 0x4
-};
+} anon_7_200;
 
 /* anon_8_200 -- @anon8, 0x24 bytes, bsdsock.c (DIE 0x38724D) */
-struct anon_8_200 {   // size 0x24
+typedef struct {   // size 0x24
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ unsigned int len;                     // 0x4
     /* 0x008 */ int flags;                            // 0x4
@@ -104,103 +107,96 @@ struct anon_8_200 {   // size 0x24
     /* 0x01C */ int fromlen;                          // 0x4
     /* 0x020 */ char buf[1];                          // 0x1
     /* 0x021 */ // 0x3 bytes padding
-};
+} anon_8_200;
 
 /* anon_9_200 -- @anon9, 0x10 bytes, bsdsock.c (DIE 0x387480) */
-struct anon_9_200 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int ip_addr;                          // 0x4
     /* 0x008 */ int netmask;                          // 0x4
     /* 0x00C */ int broadcast;                        // 0x4
-};
+} anon_9_200;
 
 /* anon_10_200 -- @anon10, 0x10 bytes, bsdsock.c (DIE 0x38752D) */
-struct anon_10_200 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ unsigned int len;                     // 0x4
     /* 0x008 */ int flags;                            // 0x4
     /* 0x00C */ char buf[1];                          // 0x1
     /* 0x00D */ // 0x3 bytes padding
-};
+} anon_10_200;
 
 /* anon_11_200 -- @anon11, 0x10 bytes, bsdsock.c (DIE 0x38771C) */
-struct anon_11_200 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ unsigned int len;                     // 0x4
     /* 0x008 */ int flags;                            // 0x4
     /* 0x00C */ char buf[1];                          // 0x1
     /* 0x00D */ // 0x3 bytes padding
-};
+} anon_11_200;
 
 /* anon_12_200 -- @anon12, 0x18 bytes, bsdsock.c (DIE 0x3878E5) */
-struct anon_12_200 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ int s;                                // 0x4
     /* 0x004 */ struct sockaddr name;                 // 0x10
     /* 0x014 */ int namelen;                          // 0x4
-};
+} anon_12_200;
 
 /* anon_13_200 -- @anon13, 0x10C bytes, bsdsock.c (DIE 0x3879D1) */
-struct anon_13_200 {   // size 0x10C
+typedef struct {   // size 0x10C
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int pri;                              // 0x4
     /* 0x008 */ int sec;                              // 0x4
     /* 0x00C */ char domain[256];                     // 0x100
-};
+} anon_13_200;
 
 /* anon_15_200 -- @anon15, 0x4 bytes, bsdsock.c (DIE 0x387B27) */
-struct anon_15_200 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char s_b1;                   // 0x1
     /* 0x001 */ unsigned char s_b2;                   // 0x1
     /* 0x002 */ unsigned char s_b3;                   // 0x1
     /* 0x003 */ unsigned char s_b4;                   // 0x1
-};
+} anon_15_200;
 
 /* anon_17_200 -- @anon17, 0x4 bytes, bsdsock.c (DIE 0x387CA0) */
-struct anon_17_200 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short s_w1;                  // 0x2
     /* 0x002 */ unsigned short s_w2;                  // 0x2
-};
-
-/* anon_14_200 -- @anon14, 0x4 bytes, bsdsock.c (DIE 0x387A76) */
-union anon_14_200 {   // size 0x4
-    /* 0x000 */ struct anon_15_200 S_un_b;            // 0x4
-    /* 0x000 */ struct anon_17_200 S_un_w;            // 0x4
-    /* 0x000 */ unsigned int S_addr;                  // 0x4
-};
+} anon_17_200;
 
 /* anon_16_200 -- @anon16, 0x8 bytes, bsdsock.c (DIE 0x387BCB) */
-struct anon_16_200 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int dns_pri;                          // 0x4
     /* 0x004 */ int dns_sec;                          // 0x4
-};
+} anon_16_200;
 
 /* anon_18_200 -- @anon18, 0x10 bytes, bsdsock.c (DIE 0x387D4A) */
-struct anon_18_200 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int ip_addr;                          // 0x4
     /* 0x008 */ int netmask;                          // 0x4
     /* 0x00C */ int broadcast;                        // 0x4
-};
+} anon_18_200;
 
 /* anon_19_200 -- @anon19, 0x18 bytes, bsdsock.c (DIE 0x387DF8) */
-struct anon_19_200 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ int sockfd;                           // 0x4
     /* 0x004 */ struct sockaddr my_addr;              // 0x10
     /* 0x014 */ int addrlen;                          // 0x4
-};
+} anon_19_200;
 
 /* anon_20_200 -- @anon20, 0xC bytes, bsdsock.c (DIE 0x387ECD) */
-struct anon_20_200 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int domain;                           // 0x4
     /* 0x004 */ int type;                             // 0x4
     /* 0x008 */ int protocol;                         // 0x4
-};
+} anon_20_200;
 
 /* anon_21_200 -- @anon21, 0x8 bytes, bsdsock.c (DIE 0x3880B9) */
-struct anon_21_200 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int gw;                               // 0x4
-};
+} anon_21_200;
 
 
 /* variables (8) */
@@ -221,12 +217,12 @@ int ktNetDhcpGetGw(int *gw);                                     /* 0x007F2F70-0
 int ktNetDhcpGetDns(char *domain, int *pri, int *sec);           /* 0x007F3020-0x007F30FC lines 877-891 */
 int ktNetDhcpTimer(void);                                        /* 0x007F3100-0x007F318C lines 860-870 */
 int ktNetDhcpRelease(int ip);                                    /* 0x007F3190-0x007F3228 lines 843-854 */
-int ktNetDhcpRequest(struct anon_9_200 *dhcpreq);                /* 0x007F3230-0x007F32E4 lines 824-836 */
+int ktNetDhcpRequest(anon_9_200 *dhcpreq);                       /* 0x007F3230-0x007F32E4 lines 824-836 */
 int ktNetDhcpEnd(void);                                          /* 0x007F32F0-0x007F337C lines 808-817 */
 int ktNetDhcpStart(void);                                        /* 0x007F3380-0x007F340C lines 792-801 */
 int ktNetEtherEnd(void);                                         /* 0x007F3410-0x007F349C lines 759-768 */
 int ktNetEtherDown(void);                                        /* 0x007F34A0-0x007F352C lines 741-750 */
-int ktNetEtherUp(struct anon_18_200 *eth);                       /* 0x007F3530-0x007F35D8 lines 721-735 */
+int ktNetEtherUp(anon_18_200 *eth);                              /* 0x007F3530-0x007F35D8 lines 721-735 */
 int ktNetEtherStart(void);                                       /* 0x007F35E0-0x007F366C lines 706-715 */
 int ktNetAVETCPEnd(void);                                        /* 0x007F3670-0x007F3724 lines 637-651 */
 int ktNetAVETCPStart(int an986);                                 /* 0x007F3730-0x007F37F8 lines 616-631 */

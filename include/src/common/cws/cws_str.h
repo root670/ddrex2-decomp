@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_common_cws_cws_str_c_H
 #define DDR_UNIT_src_common_cws_cws_str_c_H
@@ -15,18 +18,10 @@
 #include "types/_CWS_WINS_W.h"
 #include "types/_CWS_WIN_W.h"
 
-/* anonymous types (4) */
-
-/* anon_0_62 -- @anon0, 0x8 bytes, cws_str.c (DIE 0xF0853) */
-struct anon_0_62 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
+/* anonymous types (3) */
 
 /* anon_1_62 -- @anon1, 0x48 bytes, cws_str.c (DIE 0xF0FF9) */
-struct anon_1_62 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -47,18 +42,18 @@ struct anon_1_62 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_1_62;
 
 /* anon_3_62 -- @anon3, 0x4 bytes, cws_str.c (DIE 0xF1B5F) */
-union anon_3_62 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_3_62;
 
 /* anon_2_62 -- @anon2, 0x24 bytes, cws_str.c (DIE 0xF1950) */
-struct anon_2_62 {   // size 0x24
-    /* 0x000 */ union anon_3_62 x0;                   // 0x4
-    /* 0x004 */ union anon_3_62 y0;                   // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_3_62 x0;                         // 0x4
+    /* 0x004 */ anon_3_62 y0;                         // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -69,7 +64,7 @@ struct anon_2_62 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_2_62;
 
 
 /* variables (4) */

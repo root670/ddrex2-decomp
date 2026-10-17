@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_network_usa_client_ddrex2_usa_connect_c_H
 #define DDR_UNIT_src_network_usa_client_ddrex2_usa_connect_c_H
@@ -14,34 +17,21 @@
 #include "types/_ddrnet_con.h"
 #include "types/_mio_message.h"
 
-/* anonymous types (4) */
-
-/* anon_0_203 -- @anon0, 0x1048 bytes, ddrex2_usa_connect.c (DIE 0x392308) */
-struct anon_0_203 {   // size 0x1048
-    /* 0x000 */ unsigned int P[18];                   // 0x48
-    /* 0x048 */ unsigned int S[4][256];               // 0x1000
-};
+/* anonymous types (2) */
 
 /* anon_2_203 -- @anon2, 0x4 bytes, ddrex2_usa_connect.c (DIE 0x39391F) */
-struct anon_2_203 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char s_b1;                   // 0x1
     /* 0x001 */ unsigned char s_b2;                   // 0x1
     /* 0x002 */ unsigned char s_b3;                   // 0x1
     /* 0x003 */ unsigned char s_b4;                   // 0x1
-};
+} anon_2_203;
 
 /* anon_3_203 -- @anon3, 0x4 bytes, ddrex2_usa_connect.c (DIE 0x393A54) */
-struct anon_3_203 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short s_w1;                  // 0x2
     /* 0x002 */ unsigned short s_w2;                  // 0x2
-};
-
-/* anon_1_203 -- @anon1, 0x4 bytes, ddrex2_usa_connect.c (DIE 0x393893) */
-union anon_1_203 {   // size 0x4
-    /* 0x000 */ struct anon_2_203 S_un_b;             // 0x4
-    /* 0x000 */ struct anon_3_203 S_un_w;             // 0x4
-    /* 0x000 */ unsigned int S_addr;                  // 0x4
-};
+} anon_3_203;
 
 
 /* variables (2) */

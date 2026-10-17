@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_freeplay_fp_msel_obj_c_H
 #define DDR_UNIT_src_CS_freeplay_fp_msel_obj_c_H
@@ -18,10 +21,10 @@
 #include "types/oni_course.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (45) */
+/* anonymous types (41) */
 
 /* anon_0_104 -- @anon0, 0xB8 bytes, fp_msel_obj.c (DIE 0x1D2548) */
-struct anon_0_104 {   // size 0xB8
+typedef struct {   // size 0xB8
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char step_s;                 // 0x1
     /* 0x002 */ unsigned char mode;                   // 0x1
@@ -90,28 +93,28 @@ struct anon_0_104 {   // size 0xB8
     /* 0x094 */ void *ms_display;                     // 0x4
     /* 0x098 */ unsigned short tex_no[15];            // 0x1E
     /* 0x0B6 */ // 0x2 bytes padding
-};
+} anon_0_104;
 
 /* anon_3_104 -- @anon3, 0x24 bytes, fp_msel_obj.c (DIE 0x1D316F) */
-struct anon_3_104 {   // size 0x24
+typedef struct {   // size 0x24
     /* 0x000 */ float t[2];                           // 0x8
     /* 0x008 */ float h[2];                           // 0x8
     /* 0x010 */ float alpha[2];                       // 0x8
     /* 0x018 */ float bri[2];                         // 0x8
     /* 0x020 */ unsigned char step[2];                // 0x2
     /* 0x022 */ // 0x2 bytes padding
-};
+} anon_3_104;
 
 /* anon_1_104 -- @anon1, 0x14C bytes, fp_msel_obj.c (DIE 0x1D2EF2) */
-struct anon_1_104 {   // size 0x14C
-    /* 0x000 */ struct anon_3_104 ic[9];              // 0x144
+typedef struct {   // size 0x14C
+    /* 0x000 */ anon_3_104 ic[9];                     // 0x144
     /* 0x144 */ int entry_flag;                       // 0x4
     /* 0x148 */ unsigned char entry_step;             // 0x1
     /* 0x149 */ // 0x3 bytes padding
-};
+} anon_1_104;
 
 /* anon_15_104 -- @anon15, 0x14 bytes, fp_msel_obj.c (DIE 0x1D5ACA) */
-struct anon_15_104 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ float t;                              // 0x4
     /* 0x004 */ float cy;                             // 0x4
     /* 0x008 */ float dx;                             // 0x4
@@ -119,21 +122,21 @@ struct anon_15_104 {   // size 0x14
     /* 0x010 */ unsigned short kind;                  // 0x2
     /* 0x012 */ unsigned char step;                   // 0x1
     /* 0x013 */ unsigned char off;                    // 0x1
-};
+} anon_15_104;
 
 /* anon_2_104 -- @anon2, 0x11C bytes, fp_msel_obj.c (DIE 0x1D2F80) */
-struct anon_2_104 {   // size 0x11C
-    /* 0x000 */ struct anon_15_104 one[13];           // 0x104
+typedef struct {   // size 0x11C
+    /* 0x000 */ anon_15_104 one[13];                  // 0x104
     /* 0x104 */ float star_t;                         // 0x4
     /* 0x108 */ float spe_t;                          // 0x4
     /* 0x10C */ float spe_val[2];                     // 0x8
     /* 0x114 */ int spe_ct;                           // 0x4
     /* 0x118 */ short d_num;                          // 0x2
     /* 0x11A */ // 0x2 bytes padding
-};
+} anon_2_104;
 
 /* anon_4_104 -- @anon4, 0x28 bytes, fp_msel_obj.c (DIE 0x1D39AD) */
-struct anon_4_104 {   // size 0x28
+typedef struct {   // size 0x28
     /* 0x000 */ float dy;                             // 0x4
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ float bri_t;                          // 0x4
@@ -143,10 +146,10 @@ struct anon_4_104 {   // size 0x28
     /* 0x018 */ struct music_info *mip;               // 0x4
     /* 0x01C */ unsigned short radar_max[5];          // 0xA
     /* 0x026 */ // 0x2 bytes padding
-};
+} anon_4_104;
 
 /* anon_5_104 -- @anon5, 0x3C bytes, fp_msel_obj.c (DIE 0x1D3BC9) */
-struct anon_5_104 {   // size 0x3C
+typedef struct {   // size 0x3C
     /* 0x000 */ float dy;                             // 0x4
     /* 0x004 */ float win_w;                          // 0x4
     /* 0x008 */ float win_h;                          // 0x4
@@ -159,10 +162,10 @@ struct anon_5_104 {   // size 0x3C
     /* 0x038 */ short d_num;                          // 0x2
     /* 0x03A */ unsigned char edi;                    // 0x1
     /* 0x03B */ // 0x1 bytes padding
-};
+} anon_5_104;
 
 /* anon_6_104 -- @anon6, 0x48 bytes, fp_msel_obj.c (DIE 0x1D3D5C) */
-struct anon_6_104 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -183,65 +186,65 @@ struct anon_6_104 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_6_104;
 
 /* anon_7_104 -- @anon7, 0x8 bytes, fp_msel_obj.c (DIE 0x1D4434) */
-struct anon_7_104 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ float t;                              // 0x4
     /* 0x004 */ unsigned char no;                     // 0x1
     /* 0x005 */ // 0x3 bytes padding
-};
+} anon_7_104;
 
 /* anon_8_104 -- @anon8, 0x18 bytes, fp_msel_obj.c (DIE 0x1D4D65) */
-struct anon_8_104 {   // size 0x18
+typedef struct {   // size 0x18
     /* 0x000 */ int old_msg;                          // 0x4
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ struct _CWS_WIN_W *win;               // 0x4
     /* 0x00C */ struct _tag_cCoCursor01 cur_w;        // 0xC
-};
+} anon_8_104;
 
 /* anon_9_104 -- @anon9, 0xD40 bytes, fp_msel_obj.c (DIE 0x1D4EA3) */
-struct anon_9_104 {   // size 0xD40
+typedef struct {   // size 0xD40
     /* 0x000 */ unsigned int program_calorie[24];     // 0x60
     /* 0x060 */ unsigned int program_play_count[24];  // 0x60
     /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
     /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-};
-
-/* anon_10_104 -- @anon10, 0xC bytes, fp_msel_obj.c (DIE 0x1D4F9E) */
-struct anon_10_104 {   // size 0xC
-    /* 0x000 */ struct anon_11_104 *data;             // 0x4
-    /* 0x004 */ int vertex_num;                       // 0x4
-    /* 0x008 */ int flg;                              // 0x4
-};
+} anon_9_104;
 
 /* anon_28_104 -- @anon28, 0x4 bytes, fp_msel_obj.c (DIE 0x1D6FE0) */
-union anon_28_104 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_28_104;
 
 /* anon_11_104 -- @anon11, 0x10 bytes, fp_msel_obj.c (DIE 0x1D502B) */
-struct anon_11_104 {   // size 0x10
-    /* 0x000 */ union anon_28_104 x0;                 // 0x4
-    /* 0x004 */ union anon_28_104 y0;                 // 0x4
+typedef struct {   // size 0x10
+    /* 0x000 */ anon_28_104 x0;                       // 0x4
+    /* 0x004 */ anon_28_104 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ unsigned char r0;                     // 0x1
     /* 0x00D */ unsigned char g0;                     // 0x1
     /* 0x00E */ unsigned char b0;                     // 0x1
     /* 0x00F */ unsigned char a0;                     // 0x1
-};
+} anon_11_104;
+
+/* anon_10_104 -- @anon10, 0xC bytes, fp_msel_obj.c (DIE 0x1D4F9E) */
+typedef struct {   // size 0xC
+    /* 0x000 */ anon_11_104 *data;                    // 0x4
+    /* 0x004 */ int vertex_num;                       // 0x4
+    /* 0x008 */ int flg;                              // 0x4
+} anon_10_104;
 
 /* anon_12_104 -- @anon12, 0x8 bytes, fp_msel_obj.c (DIE 0x1D52EE) */
-struct anon_12_104 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ unsigned char n;                      // 0x1
     /* 0x001 */ unsigned char cur[2];                 // 0x2
     /* 0x003 */ // 0x1 bytes padding
     /* 0x004 */ unsigned char **str;                  // 0x4
-};
+} anon_12_104;
 
 /* anon_13_104 -- @anon13, 0x14 bytes, fp_msel_obj.c (DIE 0x1D554D) */
-struct anon_13_104 {   // size 0x14
+typedef struct {   // size 0x14
     /* 0x000 */ unsigned char cone_state[8];          // 0x8
     /* 0x008 */ unsigned char state;                  // 0x1
     /* 0x009 */ unsigned char perfect;                // 0x1
@@ -250,12 +253,12 @@ struct anon_13_104 {   // size 0x14
     /* 0x00E */ unsigned short clear_count;           // 0x2
     /* 0x010 */ unsigned short first_clear_count;     // 0x2
     /* 0x012 */ unsigned short first_clear_time;      // 0x2
-};
+} anon_13_104;
 
 /* anon_14_104 -- @anon14, 0x1C bytes, fp_msel_obj.c (DIE 0x1D56D0) */
-struct anon_14_104 {   // size 0x1C
-    /* 0x000 */ union anon_28_104 x0;                 // 0x4
-    /* 0x004 */ union anon_28_104 y0;                 // 0x4
+typedef struct {   // size 0x1C
+    /* 0x000 */ anon_28_104 x0;                       // 0x4
+    /* 0x004 */ anon_28_104 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -264,10 +267,10 @@ struct anon_14_104 {   // size 0x1C
     /* 0x016 */ unsigned char b0;                     // 0x1
     /* 0x017 */ unsigned char a0;                     // 0x1
     /* 0x018 */ int flg;                              // 0x4
-};
+} anon_14_104;
 
 /* anon_16_104 -- @anon16, 0x90 bytes, fp_msel_obj.c (DIE 0x1D5BEB) */
-struct anon_16_104 {   // size 0x90
+typedef struct {   // size 0x90
     /* 0x000 */ void *loadaddr;                       // 0x4
     /* 0x004 */ int doll_p_counter;                   // 0x4
     /* 0x008 */ unsigned char max;                    // 0x1
@@ -288,10 +291,10 @@ struct anon_16_104 {   // size 0x90
     /* 0x070 */ float eye_p[4];                       // 0x10
     /* 0x080 */ void *fpanel;                         // 0x4
     /* 0x084 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_16_104;
 
 /* anon_17_104 -- @anon17, 0x1C bytes, fp_msel_obj.c (DIE 0x1D5E95) */
-struct anon_17_104 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ float t;                              // 0x4
     /* 0x004 */ float cur_t;                          // 0x4
     /* 0x008 */ unsigned char up_alpha;               // 0x1
@@ -300,47 +303,47 @@ struct anon_17_104 {   // size 0x1C
     /* 0x010 */ int dw_ta_num;                        // 0x4
     /* 0x014 */ int up_num;                           // 0x4
     /* 0x018 */ int dw_num;                           // 0x4
-};
+} anon_17_104;
 
 /* anon_18_104 -- @anon18, 0x70 bytes, fp_msel_obj.c (DIE 0x1D5FAC) */
-struct anon_18_104 {   // size 0x70
+typedef struct {   // size 0x70
     /* 0x000 */ int timer;                            // 0x4
     /* 0x004 */ unsigned char cur[2];                 // 0x2
     /* 0x006 */ unsigned char auto_f[2];              // 0x2
     /* 0x008 */ float repcnt[2];                      // 0x8
     /* 0x010 */ void *item;                           // 0x4
     /* 0x014 */ void *win;                            // 0x4
-    /* 0x018 */ struct anon_12_104 one[11];           // 0x58
-};
+    /* 0x018 */ anon_12_104 one[11];                  // 0x58
+} anon_18_104;
 
 /* anon_19_104 -- @anon19, 0xC bytes, fp_msel_obj.c (DIE 0x1D617E) */
-struct anon_19_104 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ int date;                             // 0x4
     /* 0x004 */ unsigned int weight : 12;             // bits 0..11
     /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
     /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
     /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-};
+} anon_19_104;
 
 /* anon_43_104 -- @anon43, 0xC bytes, fp_msel_obj.c (DIE 0x1DAE13) */
-struct anon_43_104 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ // 0x3 bytes padding
     /* 0x004 */ int timer;                            // 0x4
     /* 0x008 */ void *item;                           // 0x4
-};
+} anon_43_104;
 
 /* anon_25_104 -- @anon25, 0xC bytes, fp_msel_obj.c (DIE 0x1D6E1B) */
-struct anon_25_104 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char cur;                    // 0x1
     /* 0x001 */ unsigned char max;                    // 0x1
     /* 0x002 */ // 0x2 bytes padding
     /* 0x004 */ void *item;                           // 0x4
     /* 0x008 */ int timer;                            // 0x4
-};
+} anon_25_104;
 
 /* anon_41_104 -- @anon41, 0x1C bytes, fp_msel_obj.c (DIE 0x1D9CFB) */
-struct anon_41_104 {   // size 0x1C
+typedef struct {   // size 0x1C
     /* 0x000 */ unsigned char end_num;                // 0x1
     /* 0x001 */ unsigned char decide;                 // 0x1
     /* 0x002 */ unsigned char cancel;                 // 0x1
@@ -351,10 +354,10 @@ struct anon_41_104 {   // size 0x1C
     /* 0x010 */ int timer;                            // 0x4
     /* 0x014 */ void *item;                           // 0x4
     /* 0x018 */ void *entry;                          // 0x4
-};
+} anon_41_104;
 
 /* anon_32_104 -- @anon32, 0x494 bytes, fp_msel_obj.c (DIE 0x1D7997) */
-struct anon_32_104 {   // size 0x494
+typedef struct {   // size 0x494
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ float repcnt;                         // 0x4
     /* 0x008 */ float scr_sp;                         // 0x4
@@ -406,10 +409,10 @@ struct anon_32_104 {   // size 0x494
     /* 0x48C */ unsigned char sn_f;                   // 0x1
     /* 0x48D */ // 0x3 bytes padding
     /* 0x490 */ float sn_t;                           // 0x4
-};
+} anon_32_104;
 
 /* anon_35_104 -- @anon35, 0x34 bytes, fp_msel_obj.c (DIE 0x1D88D2) */
-struct anon_35_104 {   // size 0x34
+typedef struct {   // size 0x34
     /* 0x000 */ int value_ct[8];                      // 0x20
     /* 0x020 */ int score;                            // 0x4
     /* 0x024 */ int bonus;                            // 0x4
@@ -418,10 +421,10 @@ struct anon_35_104 {   // size 0x34
     /* 0x02E */ unsigned char is_fcombo;              // 0x1
     /* 0x02F */ unsigned char is_newrec;              // 0x1
     /* 0x030 */ int pnt;                              // 0x4
-};
+} anon_35_104;
 
 /* anon_39_104 -- @anon39, 0xA0 bytes, fp_msel_obj.c (DIE 0x1D95AD) */
-struct anon_39_104 {   // size 0xA0
+typedef struct {   // size 0xA0
     /* 0x000 */ float ftimer;                         // 0x4
     /* 0x004 */ void *base;                           // 0x4
     /* 0x008 */ void *value;                          // 0x4
@@ -437,11 +440,11 @@ struct anon_39_104 {   // size 0xA0
     /* 0x033 */ unsigned char cheer;                  // 0x1
     /* 0x034 */ unsigned char vo_pid;                 // 0x1
     /* 0x035 */ // 0x3 bytes padding
-    /* 0x038 */ struct anon_35_104 eva[2];            // 0x68
-};
+    /* 0x038 */ anon_35_104 eva[2];                   // 0x68
+} anon_39_104;
 
 /* anon_20_104 -- @anon20, 0x7E0 bytes, fp_msel_obj.c (DIE 0x1D62A1) */
-struct anon_20_104 {   // size 0x7E0
+typedef struct {   // size 0x7E0
     /* 0x000 */ float wsm[4][4];                      // 0x40
     /* 0x040 */ unsigned char step;                   // 0x1
     /* 0x041 */ unsigned char step_s;                 // 0x1
@@ -464,28 +467,28 @@ struct anon_20_104 {   // size 0x7E0
     /* 0x068 */ unsigned int btn_obj_id;              // 0x4
     /* 0x06C */ unsigned char *str_addr;              // 0x4
     /* 0x070 */ unsigned char str_buf[256];           // 0x100
-    /* 0x170 */ struct anon_16_104 doll;              // 0x90
-    /* 0x200 */ struct anon_43_104 eyetoy;            // 0xC
-    /* 0x20C */ struct anon_25_104 style;             // 0xC
-    /* 0x218 */ struct anon_41_104 chara;             // 0x1C
-    /* 0x234 */ struct anon_32_104 music;             // 0x494
-    /* 0x6C8 */ struct anon_18_104 option;            // 0x70
-    /* 0x738 */ struct anon_39_104 result;            // 0xA0
+    /* 0x170 */ anon_16_104 doll;                     // 0x90
+    /* 0x200 */ anon_43_104 eyetoy;                   // 0xC
+    /* 0x20C */ anon_25_104 style;                    // 0xC
+    /* 0x218 */ anon_41_104 chara;                    // 0x1C
+    /* 0x234 */ anon_32_104 music;                    // 0x494
+    /* 0x6C8 */ anon_18_104 option;                   // 0x70
+    /* 0x738 */ anon_39_104 result;                   // 0xA0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-};
+} anon_20_104;
 
 /* anon_21_104 -- @anon21, 0x8 bytes, fp_msel_obj.c (DIE 0x1D6775) */
-struct anon_21_104 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ int score;                            // 0x4
     /* 0x004 */ char rank;                            // 0x1
     /* 0x005 */ unsigned char is_fcombo;              // 0x1
     /* 0x006 */ // 0x2 bytes padding
-};
+} anon_21_104;
 
 /* anon_22_104 -- @anon22, 0x24 bytes, fp_msel_obj.c (DIE 0x1D6846) */
-struct anon_22_104 {   // size 0x24
-    /* 0x000 */ union anon_28_104 x0;                 // 0x4
-    /* 0x004 */ union anon_28_104 y0;                 // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_28_104 x0;                       // 0x4
+    /* 0x004 */ anon_28_104 y0;                       // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -496,52 +499,37 @@ struct anon_22_104 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_22_104;
 
 /* anon_23_104 -- @anon23, 0x4 bytes, fp_msel_obj.c (DIE 0x1D6A91) */
-struct anon_23_104 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char r;                      // 0x1
     /* 0x001 */ unsigned char g;                      // 0x1
     /* 0x002 */ unsigned char b;                      // 0x1
     /* 0x003 */ unsigned char cd;                     // 0x1
-};
-
-/* anon_24_104 -- @anon24, 0x1300 bytes, fp_msel_obj.c (DIE 0x1D6B74) */
-struct anon_24_104 {   // size 0x1300
-    /* 0x000 */ unsigned char evboot[24];             // 0x18
-    /* 0x018 */ unsigned char is_savedata;            // 0x1
-    /* 0x019 */ signed char max_area;                 // 0x1
-    /* 0x01A */ signed char disp_type;                // 0x1
-    /* 0x01B */ char pading;                          // 0x1
-    /* 0x01C */ unsigned char dancer_use_cnt[24];     // 0x18
-    /* 0x034 */ int cur_cursor;                       // 0x4
-    /* 0x038 */ unsigned int all_clear_count;         // 0x4
-    /* 0x03C */ unsigned int all_play_time;           // 0x4
-    /* 0x040 */ int route[200];                       // 0x320
-    /* 0x360 */ struct anon_13_104 subject[200];      // 0xFA0
-};
+} anon_23_104;
 
 /* anon_30_104 -- @anon30, 0x4 bytes, fp_msel_obj.c (DIE 0x1D722E) */
-struct anon_30_104 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned char d[4];                   // 0x4
-};
+} anon_30_104;
 
 /* anon_26_104 -- @anon26, 0x4 bytes, fp_msel_obj.c (DIE 0x1D6EE5) */
-union anon_26_104 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ struct anon_30_104 s;                 // 0x4
-};
+    /* 0x000 */ anon_30_104 s;                        // 0x4
+} anon_26_104;
 
 /* anon_27_104 -- @anon27, 0x10 bytes, fp_msel_obj.c (DIE 0x1D6F44) */
-struct anon_27_104 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ float dx;                             // 0x4
     /* 0x004 */ float dy;                             // 0x4
     /* 0x008 */ float t;                              // 0x4
     /* 0x00C */ float pad;                            // 0x4
-};
+} anon_27_104;
 
 /* anon_29_104 -- @anon29, 0x12E0 bytes, fp_msel_obj.c (DIE 0x1D70AF) */
-struct anon_29_104 {   // size 0x12E0
+typedef struct {   // size 0x12E0
     /* 0x000 */ int weight;                           // 0x4
     /* 0x004 */ int lbs;                              // 0x4
     /* 0x008 */ int norm_type;                        // 0x4
@@ -549,16 +537,16 @@ struct anon_29_104 {   // size 0x12E0
     /* 0x010 */ int norm_calorie;                     // 0x4
     /* 0x014 */ int workout_step;                     // 0x4
     /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ struct anon_19_104 history[400];      // 0x12C0
+    /* 0x01C */ anon_19_104 history[400];             // 0x12C0
     /* 0x12DC */ int check_sum_val;                   // 0x4
-};
+} anon_29_104;
 
 /* anon_31_104 -- @anon31, 0x30 bytes, fp_msel_obj.c (DIE 0x1D777D) */
-struct anon_31_104 {   // size 0x30
-    /* 0x000 */ union anon_28_104 x0;                 // 0x4
-    /* 0x004 */ union anon_28_104 y0;                 // 0x4
-    /* 0x008 */ union anon_28_104 x1;                 // 0x4
-    /* 0x00C */ union anon_28_104 y1;                 // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_28_104 x0;                       // 0x4
+    /* 0x004 */ anon_28_104 y0;                       // 0x4
+    /* 0x008 */ anon_28_104 x1;                       // 0x4
+    /* 0x00C */ anon_28_104 y1;                       // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -570,32 +558,18 @@ struct anon_31_104 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
-
-/* anon_33_104 -- @anon33, 0x2134 bytes, fp_msel_obj.c (DIE 0x1D8185) */
-struct anon_33_104 {   // size 0x2134
-    /* 0x000 */ unsigned int uno : 8;                 // bits 0..7
-    /* 0x000 */ unsigned int ino : 8;                 // bits 8..15
-    /* 0x000 */ unsigned int frame_no : 8;            // bits 16..23
-    /* 0x000 */ unsigned int f_passuse : 1;           // bits 24..24
-    /* 0x000 */ unsigned int f_enable : 1;            // bits 25..25
-    /* 0x000 */ unsigned int f_program_free : 1;      // bits 26..26
-    /* 0x004 */ union anon_26_104 userpass;           // 0x4
-    /* 0x008 */ struct anon_29_104 pwork;             // 0x12E0
-    /* 0x12E8 */ struct anon_9_104 workout_calorie_record;  // 0xD40
-    /* 0x2028 */ struct oni_course program_order;     // 0x10C
-};
+} anon_31_104;
 
 /* anon_34_104 -- @anon34, 0x68 bytes, fp_msel_obj.c (DIE 0x1D851E) */
-struct anon_34_104 {   // size 0x68
-    /* 0x000 */ union anon_28_104 x0;                 // 0x4
-    /* 0x004 */ union anon_28_104 y0;                 // 0x4
-    /* 0x008 */ union anon_28_104 x1;                 // 0x4
-    /* 0x00C */ union anon_28_104 y1;                 // 0x4
-    /* 0x010 */ union anon_28_104 x2;                 // 0x4
-    /* 0x014 */ union anon_28_104 y2;                 // 0x4
-    /* 0x018 */ union anon_28_104 x3;                 // 0x4
-    /* 0x01C */ union anon_28_104 y3;                 // 0x4
+typedef struct {   // size 0x68
+    /* 0x000 */ anon_28_104 x0;                       // 0x4
+    /* 0x004 */ anon_28_104 y0;                       // 0x4
+    /* 0x008 */ anon_28_104 x1;                       // 0x4
+    /* 0x00C */ anon_28_104 y1;                       // 0x4
+    /* 0x010 */ anon_28_104 x2;                       // 0x4
+    /* 0x014 */ anon_28_104 y2;                       // 0x4
+    /* 0x018 */ anon_28_104 x3;                       // 0x4
+    /* 0x01C */ anon_28_104 y3;                       // 0x4
     /* 0x020 */ unsigned int z0;                      // 0x4
     /* 0x024 */ unsigned int z1;                      // 0x4
     /* 0x028 */ unsigned int z2;                      // 0x4
@@ -617,37 +591,30 @@ struct anon_34_104 {   // size 0x68
     /* 0x062 */ unsigned char b0;                     // 0x1
     /* 0x063 */ unsigned char a0;                     // 0x1
     /* 0x064 */ int flg;                              // 0x4
-};
-
-/* anon_36_104 -- @anon36, 0x4 bytes, fp_msel_obj.c (DIE 0x1D8A17) */
-struct anon_36_104 {   // size 0x4
-    /* 0x000 */ unsigned char game_over;              // 0x1
-    /* 0x001 */ unsigned char calorie_check;          // 0x1
-    /* 0x002 */ unsigned char pad[2];                 // 0x2
-};
+} anon_34_104;
 
 /* anon_37_104 -- @anon37, 0x10 bytes, fp_msel_obj.c (DIE 0x1D8B81) */
-struct anon_37_104 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ float alpha;                          // 0x4
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ int iw;                               // 0x4
     /* 0x00C */ float fw;                             // 0x4
-};
+} anon_37_104;
 
 /* anon_38_104 -- @anon38, 0x10 bytes, fp_msel_obj.c (DIE 0x1D94F4) */
-struct anon_38_104 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int (*appr)(void *);                  // 0x4
     /* 0x004 */ int (*exec)(void *);                  // 0x4
     /* 0x008 */ int (*disap)(void *);                 // 0x4
     /* 0x00C */ int (*disp)(void *);                  // 0x4
-};
+} anon_38_104;
 
 /* anon_40_104 -- @anon40, 0x20 bytes, fp_msel_obj.c (DIE 0x1D996E) */
-struct anon_40_104 {   // size 0x20
-    /* 0x000 */ union anon_28_104 x0;                 // 0x4
-    /* 0x004 */ union anon_28_104 y0;                 // 0x4
-    /* 0x008 */ union anon_28_104 x1;                 // 0x4
-    /* 0x00C */ union anon_28_104 y1;                 // 0x4
+typedef struct {   // size 0x20
+    /* 0x000 */ anon_28_104 x0;                       // 0x4
+    /* 0x004 */ anon_28_104 y0;                       // 0x4
+    /* 0x008 */ anon_28_104 x1;                       // 0x4
+    /* 0x00C */ anon_28_104 y1;                       // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ unsigned char r0;                     // 0x1
@@ -655,30 +622,22 @@ struct anon_40_104 {   // size 0x20
     /* 0x01A */ unsigned char b0;                     // 0x1
     /* 0x01B */ unsigned char a0;                     // 0x1
     /* 0x01C */ int flg;                              // 0x4
-};
-
-/* anon_42_104 -- @anon42, 0x8 bytes, fp_msel_obj.c (DIE 0x1D9E5D) */
-struct anon_42_104 {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-};
+} anon_40_104;
 
 /* anon_44_104 -- @anon44, 0x8 bytes, fp_msel_obj.c (DIE 0x1DAF9B) */
-struct anon_44_104 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ short x;                              // 0x2
     /* 0x002 */ short y;                              // 0x2
     /* 0x004 */ short w;                              // 0x2
     /* 0x006 */ short h;                              // 0x2
-};
+} anon_44_104;
 
 
 /* variables (26) */
-static struct anon_23_104 fp_ms_ud_col[7];                       /* @0x002BEA50 size 0x1C */
-static struct anon_23_104 fp_ms_ud_col_edi[2];                   /* @0x002DDBF0 size 0x8 */
-static struct anon_23_104 fp_ms_spe_col[4];                      /* @0x002BEA70 size 0x10 */
-struct anon_38_104 fp_ms_objf[11];                               /* @0x002BEA80 size 0xB0 */
+static anon_23_104 fp_ms_ud_col[7];                              /* @0x002BEA50 size 0x1C */
+static anon_23_104 fp_ms_ud_col_edi[2];                          /* @0x002DDBF0 size 0x8 */
+static anon_23_104 fp_ms_spe_col[4];                             /* @0x002BEA70 size 0x10 */
+anon_38_104 fp_ms_objf[11];                                      /* @0x002BEA80 size 0xB0 */
 static unsigned char *fp_ed_mc_msg[8];                           /* @0x002BEB30 size 0x20 */
 static unsigned char fp_mc_yes[4];                               /* @0x002DDBF8 size 0x4 */
 static unsigned char fp_mc_no[3];                                /* @0x002DDBFC size 0x3 */
@@ -690,17 +649,17 @@ static int fp_radar_tab[5];                                      /* @0x002D5120 
 static unsigned short radar_test[6][5];                          /* not allocated size 0x3C */
 static float radar_pos[6][4];                                    /* @0x002BEC30 size 0x60 */
 struct tex_bind tex_bind[375];                                   /* @0x0058C390 size 0x2904 */
-struct anon_32_104 *msw;                                         /* @0x002DE52C size 0x4 */
-struct anon_20_104 *fpw;                                         /* @0x002DE540 size 0x4 */
+anon_32_104 *msw;                                                /* @0x002DE52C size 0x4 */
+anon_20_104 *fpw;                                                /* @0x002DE540 size 0x4 */
 unsigned char fp_msm_tab[];                                      /* @0x002DDB20 */
 unsigned char fp_so_def_tbl[];                                   /* @0x002BC3D0 */
-struct anon_18_104 *sow;                                         /* @0x002DE528 size 0x4 */
-struct anon_25_104 *stw;                                         /* @0x002DE538 size 0x4 */
+anon_18_104 *sow;                                                /* @0x002DE528 size 0x4 */
+anon_25_104 *stw;                                                /* @0x002DE538 size 0x4 */
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
 unsigned char fp_ms_disp_ename[360];                             /* @0x0071E4B0 size 0x168 */
 struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 size 0x1FF50 */
-struct anon_0_104 *trw;                                          /* @0x002DDDDC size 0x4 */
-struct anon_38_104 fp_objf[];                                    /* @0x002BBD80 */
+anon_0_104 *trw;                                                 /* @0x002DDDDC size 0x4 */
+anon_38_104 fp_objf[];                                           /* @0x002BBD80 */
 
 /* functions defined (39) */
 static int fp_ms_edmc_msg_disp(void *w);                         /* 0x00233C50-0x00233CF8 lines 3435-3450 */
@@ -735,7 +694,7 @@ static int fp_ms_ud_item_exec(void *w);                          /* 0x002390A0-0
 static int fp_ms_ud_item_apper(void *w);                         /* 0x00239510-0x00239720 lines 1450-1493 */
 static void fp_ms_nm_one_disp(float x0, float cy, int d_num, unsigned char kind, char best, unsigned char cur); /* 0x00239720-0x0023A2A0 lines 1151-1402 */
 static int fp_ms_lr_item_disp(void *w);                          /* 0x0023A2A0-0x0023B4AC lines 854-1145 */
-static void fp_ms_spe(struct anon_2_104 *lrw, unsigned char ini); /* 0x0023B4B0-0x0023B884 lines 792-851 */
+static void fp_ms_spe(anon_2_104 *lrw, unsigned char ini);       /* 0x0023B4B0-0x0023B884 lines 792-851 */
 static int fp_ms_lr_item_disap(void *w);                         /* 0x0023B890-0x0023BB20 lines 669-726 */
 static int fp_ms_lr_item_exec(void *w);                          /* 0x0023BB20-0x0023BBBC lines 644-665 */
 static int fp_ms_lr_item_apper2(void *w);                        /* 0x0023BBC0-0x0023BED0 lines 573-640 */

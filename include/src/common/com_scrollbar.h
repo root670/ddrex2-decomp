@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_common_com_scrollbar_c_H
 #define DDR_UNIT_src_common_com_scrollbar_c_H
@@ -15,7 +18,7 @@
 /* anonymous types (3) */
 
 /* anon_0_120 -- @anon0, 0x48 bytes, com_scrollbar.c (DIE 0x20ADBD) */
-struct anon_0_120 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -36,20 +39,20 @@ struct anon_0_120 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_0_120;
 
 /* anon_1_120 -- @anon1, 0x4 bytes, com_scrollbar.c (DIE 0x20B03F) */
-union anon_1_120 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_1_120;
 
 /* anon_2_120 -- @anon2, 0x30 bytes, com_scrollbar.c (DIE 0x20B09C) */
-struct anon_2_120 {   // size 0x30
-    /* 0x000 */ union anon_1_120 x0;                  // 0x4
-    /* 0x004 */ union anon_1_120 y0;                  // 0x4
-    /* 0x008 */ union anon_1_120 x1;                  // 0x4
-    /* 0x00C */ union anon_1_120 y1;                  // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_1_120 x0;                        // 0x4
+    /* 0x004 */ anon_1_120 y0;                        // 0x4
+    /* 0x008 */ anon_1_120 x1;                        // 0x4
+    /* 0x00C */ anon_1_120 y1;                        // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -61,7 +64,7 @@ struct anon_2_120 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_2_120;
 
 
 /* functions defined (1) */

@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_AM_s573_doll_dancer_c_H
 #define DDR_UNIT_src_AM_s573_doll_dancer_c_H
@@ -15,10 +18,10 @@
 #include "types/dancer_model_w.h"
 #include "types/dancer_motion_w.h"
 
-/* anonymous types (17) */
+/* anonymous types (12) */
 
 /* anon_0_14 -- @anon0, 0x80 bytes, dancer.c (DIE 0x1FE3E) */
-struct anon_0_14 {   // size 0x80
+typedef struct {   // size 0x80
     /* 0x000 */ struct _tag_cFilepackData tblFilepack[2];  // 0x10
     /* 0x010 */ short loadstep;                       // 0x2
     /* 0x012 */ char loadpid;                         // 0x1
@@ -49,45 +52,62 @@ struct anon_0_14 {   // size 0x80
     /* 0x06C */ int pid_bri[3];                       // 0xC
     /* 0x078 */ unsigned int vcnt;                    // 0x4
     /* 0x07C */ int common_rand;                      // 0x4
-};
+} anon_0_14;
 
 /* anon_1_14 -- @anon1, 0x10 bytes, dancer.c (DIE 0x2029D) */
-struct anon_1_14 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int vx;                               // 0x4
     /* 0x004 */ int vy;                               // 0x4
     /* 0x008 */ int vz;                               // 0x4
     /* 0x00C */ int pad;                              // 0x4
-};
+} anon_1_14;
 
 /* anon_2_14 -- @anon2, 0x2 bytes, dancer.c (DIE 0x20339) */
-struct anon_2_14 {   // size 0x2
+typedef struct {   // size 0x2
     /* 0x000 */ unsigned short offset;                // 0x2
-};
+} anon_2_14;
 
 /* anon_3_14 -- @anon3, 0x4 bytes, dancer.c (DIE 0x203A1) */
-struct anon_3_14 {   // size 0x4
+typedef struct {   // size 0x4
     /* 0x000 */ unsigned short shift_bit;             // 0x2
-    /* 0x002 */ struct anon_2_14 tbl[1];              // 0x2
-};
+    /* 0x002 */ anon_2_14 tbl[1];                     // 0x2
+} anon_3_14;
 
 /* anon_4_14 -- @anon4, 0x8 bytes, dancer.c (DIE 0x20502) */
-struct anon_4_14 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ short vx;                             // 0x2
     /* 0x002 */ short vy;                             // 0x2
     /* 0x004 */ short vz;                             // 0x2
     /* 0x006 */ short pad;                            // 0x2
-};
+} anon_4_14;
+
+/* anon_13_14 -- @anon13, 0x8 bytes, dancer.c (DIE 0x2171D) */
+typedef struct {   // size 0x8
+    /* 0x000 */ unsigned char kind;                   // 0x1
+    /* 0x001 */ unsigned char pad[3];                 // 0x3
+    /* 0x004 */ anon_3_14 data;                       // 0x4
+} anon_13_14;
+
+/* anon_14_14 -- @anon14, 0xC bytes, dancer.c (DIE 0x21835) */
+typedef struct {   // size 0xC
+    /* 0x000 */ unsigned char id;                     // 0x1
+    /* 0x001 */ unsigned char format;                 // 0x1
+    /* 0x002 */ unsigned char hastrans;               // 0x1
+    /* 0x003 */ unsigned char parent_id;              // 0x1
+    /* 0x004 */ unsigned int nbwave;                  // 0x4
+    /* 0x008 */ anon_13_14 **offset;                  // 0x4
+} anon_14_14;
 
 /* anon_5_14 -- @anon5, 0xC bytes, dancer.c (DIE 0x205E8) */
-struct anon_5_14 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned int size;                    // 0x4
     /* 0x004 */ unsigned short nbparts;               // 0x2
     /* 0x006 */ unsigned short nbframe;               // 0x2
-    /* 0x008 */ struct anon_14_14 **offset;           // 0x4
-};
+    /* 0x008 */ anon_14_14 **offset;                  // 0x4
+} anon_5_14;
 
 /* anon_6_14 -- @anon6, 0x320 bytes, dancer.c (DIE 0x20871) */
-struct anon_6_14 {   // size 0x320
+typedef struct {   // size 0x320
     /* 0x000 */ float cam_p[4];                       // 0x10
     /* 0x010 */ float eye_p[4];                       // 0x10
     /* 0x020 */ float cam_zd[4];                      // 0x10
@@ -117,17 +137,10 @@ struct anon_6_14 {   // size 0x320
     /* 0x30C */ float (*tp)[4];                       // 0x4
     /* 0x310 */ float (*cp)[4];                       // 0x4
     /* 0x314 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
-
-/* anon_7_14 -- @anon7, 0x28 bytes, dancer.c (DIE 0x20CD8) */
-struct anon_7_14 {   // size 0x28
-    /* 0x000 */ struct anon_1_14 scale;               // 0x10
-    /* 0x010 */ struct anon_4_14 rotate;              // 0x8
-    /* 0x018 */ struct anon_1_14 trans;               // 0x10
-};
+} anon_6_14;
 
 /* anon_8_14 -- @anon8, 0x10 bytes, dancer.c (DIE 0x20DAC) */
-union anon_8_14 {   // size 0x10
+typedef union {   // size 0x10
     /* 0x000 */ unsigned __int128 ul128;              // 0x10
     /* 0x000 */ unsigned long ul64[2];                // 0x10
     /* 0x000 */ unsigned int ui32[4];                 // 0x10
@@ -135,81 +148,32 @@ union anon_8_14 {   // size 0x10
     /* 0x000 */ float f32[4];                         // 0x10
     /* 0x000 */ float fv[4];                          // 0x10
     /* 0x000 */ int iv[4];                            // 0x10
-};
+} anon_8_14;
 
 /* anon_15_14 -- @anon15, 0x8 bytes, dancer.c (DIE 0x21A58) */
-struct anon_15_14 {   // size 0x8
+typedef struct {   // size 0x8
     /* 0x000 */ char *name;                           // 0x4
-    /* 0x004 */ struct anon_5_14 *offset;             // 0x4
-};
-
-/* anon_9_14 -- @anon9, 0x10 bytes, dancer.c (DIE 0x20F4E) */
-struct anon_9_14 {   // size 0x10
-    /* 0x000 */ char magic[2];                        // 0x2
-    /* 0x002 */ short nbmdt;                          // 0x2
-    /* 0x004 */ int reserve;                          // 0x4
-    /* 0x008 */ struct anon_15_14 motion[1];          // 0x8
-};
-
-/* anon_10_14 -- @anon10, 0x14 bytes, dancer.c (DIE 0x211DB) */
-struct anon_10_14 {   // size 0x14
-    /* 0x000 */ unsigned int attribute;               // 0x4
-    /* 0x004 */ struct _GsCOORDINATE2 *coord2;        // 0x4
-    /* 0x008 */ unsigned int *tmd;                    // 0x4
-    /* 0x00C */ unsigned int *packet;                 // 0x4
-    /* 0x010 */ unsigned int id;                      // 0x4
-};
+    /* 0x004 */ anon_5_14 *offset;                    // 0x4
+} anon_15_14;
 
 /* anon_11_14 -- @anon11, 0x246380 bytes, dancer.c (DIE 0x21368) */
-struct anon_11_14 {   // size 0x246380
+typedef struct {   // size 0x246380
     /* 0x000 */ struct dancer_motion_w motion_w[3];   // 0x11E8
     /* 0x11E8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
     /* 0x11F0 */ struct dancer_model_w model_w[3];    // 0x1590
     /* 0x2780 */ unsigned int mdl_data[3][45568];     // 0x85800
     /* 0x87F80 */ unsigned int mot_data[3][86784];    // 0xFE400
     /* 0x186380 */ unsigned int packet_w[3][65536];   // 0xC0000
-};
-
-/* anon_12_14 -- @anon12, 0x10 bytes, dancer.c (DIE 0x2159A) */
-struct anon_12_14 {   // size 0x10
-    /* 0x000 */ float x;                              // 0x4
-    /* 0x004 */ float y;                              // 0x4
-    /* 0x008 */ float z;                              // 0x4
-    /* 0x00C */ unsigned int disp : 1;                // bits 0..0
-};
-
-/* anon_13_14 -- @anon13, 0x8 bytes, dancer.c (DIE 0x2171D) */
-struct anon_13_14 {   // size 0x8
-    /* 0x000 */ unsigned char kind;                   // 0x1
-    /* 0x001 */ unsigned char pad[3];                 // 0x3
-    /* 0x004 */ struct anon_3_14 data;                // 0x4
-};
-
-/* anon_14_14 -- @anon14, 0xC bytes, dancer.c (DIE 0x21835) */
-struct anon_14_14 {   // size 0xC
-    /* 0x000 */ unsigned char id;                     // 0x1
-    /* 0x001 */ unsigned char format;                 // 0x1
-    /* 0x002 */ unsigned char hastrans;               // 0x1
-    /* 0x003 */ unsigned char parent_id;              // 0x1
-    /* 0x004 */ unsigned int nbwave;                  // 0x4
-    /* 0x008 */ struct anon_13_14 **offset;           // 0x4
-};
-
-/* anon_16_14 -- @anon16, 0x20 bytes, dancer.c (DIE 0x21AC4) */
-struct anon_16_14 {   // size 0x20
-    /* 0x000 */ short m[3][3];                        // 0x12
-    /* 0x012 */ // 0x2 bytes padding
-    /* 0x014 */ int t[3];                             // 0xC
-};
+} anon_11_14;
 
 
 /* variables (6) */
-struct anon_0_14 *dancer_ctrl_w;                                 /* @0x002DD94C size 0x4 */
+anon_0_14 *dancer_ctrl_w;                                        /* @0x002DD94C size 0x4 */
 static float rad[8][2];                                          /* @0x002B3430 size 0x40 */
 static short ofs[8];                                             /* @0x002B3470 size 0x10 */
-struct anon_11_14 *dancer_data_w;                                /* @0x002DE4A8 size 0x4 */
-struct anon_6_14 *gs3d;                                          /* @0x002DD998 size 0x4 */
-static struct anon_0_14 _dancer_ctrl_w;                          /* @0x0070FED0 size 0x80 */
+anon_11_14 *dancer_data_w;                                       /* @0x002DE4A8 size 0x4 */
+anon_6_14 *gs3d;                                                 /* @0x002DD998 size 0x4 */
+static anon_0_14 _dancer_ctrl_w;                                 /* @0x0070FED0 size 0x80 */
 
 /* functions defined (10) */
 void ps2dancerSetPidBright(int pid, int bright);                 /* 0x001C6740-0x001C6754 lines 470-471 */

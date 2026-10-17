@@ -4,8 +4,11 @@
  * reconstructed from DWARF 1 by tools/oracle/emit_headers.py; offsets in hex
  *
  * C mode: a use is `struct <tag> *`, and the named types this unit needs are
- * included from include/types/.  `@anonN` is this unit's own numbering, so it
- * is named here (`anon_<N>_<unit>`) and nowhere else.
+ * included from include/types/.  `@anonN` is this unit's own numbering, so an
+ * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
+ * typedef of an *unnamed* aggregate, which is the spelling the compiler
+ * records back as `@anonN`.  A named type's anonymous member is spelled
+ * inline in the shared header that defines it, and is not declared again.
  */
 #ifndef DDR_UNIT_src_CS_train_tra_chk_c_H
 #define DDR_UNIT_src_CS_train_tra_chk_c_H
@@ -13,15 +16,15 @@
 /* anonymous types (9) */
 
 /* anon_0_164 -- @anon0, 0x10 bytes, tra_chk.c (DIE 0x2F2301) */
-struct anon_0_164 {   // size 0x10
+typedef struct {   // size 0x10
     /* 0x000 */ int btn;                              // 0x4
     /* 0x004 */ float btn_cx;                         // 0x4
     /* 0x008 */ int ex;                               // 0x4
     /* 0x00C */ float ex_x;                           // 0x4
-};
+} anon_0_164;
 
 /* anon_1_164 -- @anon1, 0x48 bytes, tra_chk.c (DIE 0x2F23A3) */
-struct anon_1_164 {   // size 0x48
+typedef struct {   // size 0x48
     /* 0x000 */ unsigned long *addr;                  // 0x4
     /* 0x004 */ unsigned long *pict_addr;             // 0x4
     /* 0x008 */ unsigned long *clut_addr;             // 0x4
@@ -42,18 +45,18 @@ struct anon_1_164 {   // size 0x48
     /* 0x040 */ unsigned short cpsm;                  // 0x2
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
-};
+} anon_1_164;
 
 /* anon_3_164 -- @anon3, 0xC bytes, tra_chk.c (DIE 0x2F2779) */
-struct anon_3_164 {   // size 0xC
+typedef struct {   // size 0xC
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ // 0x3 bytes padding
     /* 0x004 */ float t;                              // 0x4
     /* 0x008 */ float dx;                             // 0x4
-};
+} anon_3_164;
 
 /* anon_2_164 -- @anon2, 0x94 bytes, tra_chk.c (DIE 0x2F2625) */
-struct anon_2_164 {   // size 0x94
+typedef struct {   // size 0x94
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ // 0x3 bytes padding
     /* 0x004 */ float alpha;                          // 0x4
@@ -62,20 +65,20 @@ struct anon_2_164 {   // size 0x94
     /* 0x010 */ float fra_h;                          // 0x4
     /* 0x014 */ float center_len;                     // 0x4
     /* 0x018 */ float bri_t;                          // 0x4
-    /* 0x01C */ struct anon_3_164 one_jd[6];          // 0x48
-    /* 0x064 */ struct anon_3_164 one_tm[4];          // 0x30
-};
+    /* 0x01C */ anon_3_164 one_jd[6];                 // 0x48
+    /* 0x064 */ anon_3_164 one_tm[4];                 // 0x30
+} anon_2_164;
 
 /* anon_6_164 -- @anon6, 0x4 bytes, tra_chk.c (DIE 0x2F2B74) */
-union anon_6_164 {   // size 0x4
+typedef union {   // size 0x4
     /* 0x000 */ int id;                               // 0x4
     /* 0x000 */ float fd;                             // 0x4
-};
+} anon_6_164;
 
 /* anon_4_164 -- @anon4, 0x1C bytes, tra_chk.c (DIE 0x2F27F6) */
-struct anon_4_164 {   // size 0x1C
-    /* 0x000 */ union anon_6_164 x0;                  // 0x4
-    /* 0x004 */ union anon_6_164 y0;                  // 0x4
+typedef struct {   // size 0x1C
+    /* 0x000 */ anon_6_164 x0;                        // 0x4
+    /* 0x004 */ anon_6_164 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -84,12 +87,12 @@ struct anon_4_164 {   // size 0x1C
     /* 0x016 */ unsigned char b0;                     // 0x1
     /* 0x017 */ unsigned char a0;                     // 0x1
     /* 0x018 */ int flg;                              // 0x4
-};
+} anon_4_164;
 
 /* anon_5_164 -- @anon5, 0x24 bytes, tra_chk.c (DIE 0x2F29BC) */
-struct anon_5_164 {   // size 0x24
-    /* 0x000 */ union anon_6_164 x0;                  // 0x4
-    /* 0x004 */ union anon_6_164 y0;                  // 0x4
+typedef struct {   // size 0x24
+    /* 0x000 */ anon_6_164 x0;                        // 0x4
+    /* 0x004 */ anon_6_164 y0;                        // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -100,14 +103,14 @@ struct anon_5_164 {   // size 0x24
     /* 0x01E */ unsigned char b0;                     // 0x1
     /* 0x01F */ unsigned char a0;                     // 0x1
     /* 0x020 */ int flg;                              // 0x4
-};
+} anon_5_164;
 
 /* anon_7_164 -- @anon7, 0x30 bytes, tra_chk.c (DIE 0x2F2BD1) */
-struct anon_7_164 {   // size 0x30
-    /* 0x000 */ union anon_6_164 x0;                  // 0x4
-    /* 0x004 */ union anon_6_164 y0;                  // 0x4
-    /* 0x008 */ union anon_6_164 x1;                  // 0x4
-    /* 0x00C */ union anon_6_164 y1;                  // 0x4
+typedef struct {   // size 0x30
+    /* 0x000 */ anon_6_164 x0;                        // 0x4
+    /* 0x004 */ anon_6_164 y0;                        // 0x4
+    /* 0x008 */ anon_6_164 x1;                        // 0x4
+    /* 0x00C */ anon_6_164 y1;                        // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -119,10 +122,10 @@ struct anon_7_164 {   // size 0x30
     /* 0x02A */ unsigned char b0;                     // 0x1
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
-};
+} anon_7_164;
 
 /* anon_8_164 -- @anon8, 0xB8 bytes, tra_chk.c (DIE 0x2F2E11) */
-struct anon_8_164 {   // size 0xB8
+typedef struct {   // size 0xB8
     /* 0x000 */ unsigned char step;                   // 0x1
     /* 0x001 */ unsigned char step_s;                 // 0x1
     /* 0x002 */ unsigned char mode;                   // 0x1
@@ -191,19 +194,19 @@ struct anon_8_164 {   // size 0xB8
     /* 0x094 */ void *ms_display;                     // 0x4
     /* 0x098 */ unsigned short tex_no[15];            // 0x1E
     /* 0x0B6 */ // 0x2 bytes padding
-};
+} anon_8_164;
 
 
 /* variables (6) */
 static float ck_jd_pos[6][2];                                    /* @0x002C0F20 size 0x30 */
 static float ck_tm_pos[4][2];                                    /* @0x002C0F50 size 0x20 */
-static struct anon_0_164 tr_btn_ck[2];                           /* @0x002C0F70 size 0x20 */
-struct anon_8_164 *trw;                                          /* @0x002DDDDC size 0x4 */
+static anon_0_164 tr_btn_ck[2];                                  /* @0x002C0F70 size 0x20 */
+anon_8_164 *trw;                                                 /* @0x002DDDDC size 0x4 */
 static short font_anime_pos_y;                                   /* not allocated size 0x2 */
 static short font_anime_pos_x;                                   /* not allocated size 0x2 */
 
 /* functions defined (8) */
-static int tr_ck_item_one_move(struct anon_3_164 *one, unsigned char mode); /* 0x00283820-0x002839D8 lines 701-739 */
+static int tr_ck_item_one_move(anon_3_164 *one, unsigned char mode); /* 0x00283820-0x002839D8 lines 701-739 */
 static void tr_ck_pad(void);                                     /* 0x002839E0-0x00283C1C lines 640-694 */
 static int tr_ck_apper(void);                                    /* 0x00283C20-0x00283D30 lines 585-617 */
 int TRObj_ck_item_disp(void *wp);                                /* 0x00283D30-0x00284688 lines 404-566 */
