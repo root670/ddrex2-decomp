@@ -27,7 +27,36 @@ A translation unit counts as promoted only when `./ddr --target ddrex2p verify -
 | `.debug` | the debug chunk the compiler emits for that unit — types, member order, visibility |
 | `.line` | the statement→address line table, i.e. **your statements must sit on retail's line numbers** |
 
-**A per-unit green is necessary but not sufficient.** Observed twice: `verify --tu` reported all three parts ok for units whose `.debug`/`.line` payload was *smaller* than the pinned layout, and the link then refused with `the code splits are not the retail N bytes`. So build the image before believing a promotion — `ninja` runs `g1` as its last edge, and that edge is what promotes a unit. And `ddr verify` on its own can report `G1 ok` against a **stale** `out/SLUS_211.74` left behind by a failed build, so treat freshness as part of the check.
+**A per-unit green is necessary but not sufficient.** Observed twice: `verify --tu` reported all
+three parts ok for units whose `.debug`/`.line` payload was *smaller* than the pinned layout, and the
+link then refused with `the code splits are not the retail N bytes`. So build the image before
+believing a promotion — `ninja` runs `g1` as its last edge, and that edge is what promotes a unit.
+And `ddr verify` on its own can report `G1 ok` against a **stale** `out/SLUS_211.74` left behind by a
+failed build, so treat freshness as part of the check.
+
+**What "the extent it replaces" means, and what the build now says about it.** A promotion is placed
+where its *splits* were, and a splat split runs from its symbol's address to the **next** symbol's
+address — so the last split of a unit usually covers bytes past the unit's last function. That
+overhang is retail's `nop` padding, and `tools/toolchain/compile.py` measures the extent from the
+split files themselves, fills the overhang from retail, and prints what it filled:
+
+```
+compile: src/sys/sys_demo.c: filled .text trailing nop padding from retail (0x8 bytes)
+```
+
+It fills **only** `nop` — in the overhang and in the inter-function gaps alike. Anything else is
+content this unit has not written, and is refused by name, chunk and byte shortfall, saying the C is
+incomplete rather than that the link is broken. `.debug` and `.line` are never padded at all:
+
+```
+compile.py: error: src/sys/sys_demo.c: the unit's types .debug is short by 0x4B bytes;
+  C is incomplete (cannot pad .debug)
+compile.py: error: src/CS/lang.c: mesGetLanguage01 .line is short by 0x1E bytes;
+  C is incomplete (cannot pad .line)
+```
+
+So the old `the code splits are not the retail N bytes` is now the *backstop* for a real
+configuration error, not the first thing a short unit produces.
 
 Inside that, the whole-image gates stay green by construction and are the safety net:
 `./ddr --target ddrex2p verify` (G1, the template ELF is `ef31c90f…c02cd`) and
@@ -106,9 +135,10 @@ score:
 | `.debug` mismatch only | types, member order, bitfield spelling or visibility differ from what the compiler recorded |
 | `.text` correct size but wrong bytes | wrong expression form, wrong flag, or wrong helper |
 | `.text` different size | the source structure differs (extra call, missing call, different control flow) |
-| `.debug` a few bytes *short* of the pinned layout | missing parameter or local DIEs — declare the parameters the DWARF records (`dwarf1.py fn`), even unused; measured once as the discriminator that proved a unit's shape |
-| `.line` short of the pinned layout | a statement the original had has no counterpart, or an inline is unwritten |
-| the link refuses with `the code splits are not the retail N bytes` | the unit's payload does not fill the extent it replaces — the strongest signal, and invisible to `verify --tu` |
+| `.debug` a few bytes *short* of the pinned layout | missing parameter or local DIEs — declare the parameters the DWARF records (`dwarf1.py fn`), even unused; measured once as the discriminator that proved a unit's shape. The build refuses it (`the unit's types .debug is short by 0xN bytes; C is incomplete`) rather than padding it |
+| `.line` short of the pinned layout | a statement the original had has no counterpart, or an inline is unwritten. Refused the same way (`<fn> .line is short by 0xN bytes; C is incomplete`) — one 10-byte record per statement, so the shortfall says how many are missing |
+| the build fills `.text` padding and says so (`filled .text trailing nop padding from retail (0xN bytes)`) | the unit's last split ran past its last function and retail's bytes there are `nop` — normal, and now handled |
+| the link refuses with `the code splits are not the retail N bytes` | a real layout error: a split that is in no object, a symbol at two addresses, a split order that is not the address order. A *short unit* no longer reaches it |
 
 When a function resists matching after the logic is right, check the line table for skipped lines
 before assuming a mistake: that is where an inline hides.
