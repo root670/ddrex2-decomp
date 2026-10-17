@@ -196,3 +196,30 @@ fills the space between them is your choice.
   `splat` or `configure.py`, and a session backstop fails a run that changes the repository.
 - Verify suite claims **at the commit** (`git archive <sha> | tar -x -C /tmp/…` and run there); this
   checkout is shared and has already produced one green build against uncommitted code.
+
+## Known blocker classes and two failure modes worth knowing
+
+Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:
+the cost was the unknowns, not the loop.
+
+Two failure modes the table above does not cover:
+
+- **A `.debug` block of the right length but the wrong bytes.** Every size message stays silent; only a
+  byte comparison sees it, and `ninja`'s `g1` edge is what catches it. Do not conclude a unit is sound
+  because the build printed no warning.
+- **A `.line` record that a conditional expression cannot produce.** The original used a *branch*: two
+  one-line `if`s reproduced retail's seven statement records exactly, where a `? :` — even split
+  across lines — never produced records 119 and 122.
+
+Blocked classes, each with a mechanism rather than a label. A unit that fails this way is a **finding**,
+not a puzzle: record it and take another unit.
+
+| class | mechanism |
+|---|---|
+| **unreferenced array DIEs** | the types block is short of DIEs describing an array type *nothing in the CU references* (`unsigned char *[6]`, `unsigned char[256]`); fifteen constructs and all five compiler builds left the block unchanged, so no C shape produces them |
+| **`mes_*` units** | `.global_variable` DIE ordering differs for large unreferenced file-scope tables, referenced statics come out reversed, and the residue is array-DIE order, which no declaration order controls |
+| **VU0 units** (`.vutext`) | MWCC sinks the epilogue, so the last inline-asm statement takes the `jr` delay slot where retail fills it from the operation that follows |
+| **shape conflicts** | a unit needing two mutually exclusive C shapes: the reconstruction that fixed `.line` scheduled six words differently and left `.text` short, so both could not be had. Record the conflict; never pick a winner and call it promoted |
+
+**What the loop lacks:** a way to ask *which C construct* emits a given missing DIE. That is manual
+probing today and it is where most of a hard unit's cycles go. Everything else the loop needs exists.
