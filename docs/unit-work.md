@@ -122,6 +122,18 @@ the split's own bytes, so the image links byte-identically no matter how little 
    has `(2.4.1.01)`), and **only `.text` can separate the rest** — `.debug`'s producer string is
    version-less. So a unit that contradicts the recorded pair is a finding worth reporting loudly.
 
+   **The flag string is half of the pair, and one unit has already contradicted it.** `p_anime.c`
+   (`AM/s573/play/p_anime.c`, candidate #12) needs `-c -lang c -O3 -opt full -g`: its two large
+   functions reach 78.15% and 88.76% of retail's words with `-opt full` and only 69.97% and 67.19%
+   without it, and the difference is mechanical — **`-opt full` is what turns a `pid`-indexed address
+   into a walking induction variable**. At `-O3` mwcc emits `mult` for `pid * 0x5428C` once per
+   iteration, no `sp+0xA0` slot for the `paw_p->db[pid]` index, and a frame 0x30 bytes smaller; with
+   `-opt full` it emits retail's `addu base, base, <size>` increment at the loop bottom and the 0xD0
+   frame. All five installed builds behave identically under `-O3` and identically under
+   `-O3 -opt full`, so this is a *flag* fact, not a *build* fact, and it is invisible on a unit with
+   no indexed address inside a loop — which is why `sys_scf.c`'s recorded pair could not show it.
+   Per-unit flags exist for exactly this; `tu_builds` carries the whole string.
+
 ## What the diff's failure modes mean
 
 The diff reports *shape*, and each shape points at a different cause. Read it as a diagnosis, not a
