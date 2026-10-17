@@ -116,6 +116,8 @@ SHT_REL = 9
 STT_SECTION, STT_FUNC = 3, 2
 SYMBOL_LINE = re.compile(
     r"^(?P<name>\S+)\s*=\s*(?P<address>0x[0-9A-Fa-f]+);\s*//\s*(?P<attrs>.*)$")
+SPLIT_ADDRESS = re.compile(
+    r"/\*\s+[0-9A-Fa-f]+\s+([0-9A-Fa-f]+)\s+[0-9A-Fa-f]{8}\s+\*/")
 
 
 class Unusable(Exception):
@@ -348,6 +350,95 @@ def _contiguous(runs) -> bool:
     ordered = sorted(runs)
     return all(ordered[i][0] + ordered[i][1] == ordered[i + 1][0]
                for i in range(len(ordered) - 1))
+
+def _split_extent(tu: Tu, manifests: Manifests, root=REPO_ROOT) -> tuple[int, int]:
+    """Return the address range occupied by the splits a promotion removes.
+
+    Splat's function split includes the trailing bytes up to the next split, which can be
+    padding outside the function's DWARF ``high_pc``.  The linker removes that whole run,
+    so a promoted object has to fill it too.
+    """
+    segment = manifests.target.geometry_required().code_segment
+    directory = pathlib.Path(root) / "asm" / "nonmatchings" / segment
+    if not directory.is_dir():
+        raise Unusable(f"{tu.file}: {directory} is missing; run the oracle and "
+                       "configure step first")
+    rows = []
+    for path in directory.glob("*.s"):
+        match = SPLIT_ADDRESS.search(path.read_text())
+        if match is None:
+            raise Unusable(f"{path} carries no split address")
+        rows.append((int(match.group(1), 16), path))
+    rows.sort()
+    addresses = [function.address for function in tu.functions]
+    positions = []
+    for address in addresses:
+        position = next((i for i, (candidate, _) in enumerate(rows)
+                         if candidate == address), None)
+        if position is None:
+            raise Unusable(f"{tu.file}: no code split at 0x{address:08X}")
+        positions.append(position)
+    first, last = min(positions), max(positions)
+    if sorted(positions) != list(range(first, last + 1)):
+        raise Unusable(f"{tu.file}: its function splits are not one contiguous run")
+    end = rows[last + 1][0] if last + 1 < len(rows) else tu.end
+    if end < tu.end:
+        raise Unusable(f"{tu.file}: split extent ends at 0x{end:08X}, before its "
+                       f"last function ends at 0x{tu.end:08X}")
+    return tu.address, end
+
+
+def _all_nops(data: bytes) -> bool:
+    """Whether ``data`` is whole-word MIPS ``nop`` padding."""
+    return len(data) % 4 == 0 and all(data[offset:offset + 4] == b"\0\0\0\0"
+                                       for offset in range(0, len(data), 4))
+
+def _uncovered(size: int, spans) -> list[tuple[int, int]]:
+    """The ``[start, end)`` runs of ``size`` that no ``(offset, length)`` span covers."""
+    runs = []
+    cursor = 0
+    for start, length in sorted(spans):
+        if start > cursor:
+            runs.append((cursor, start))
+        cursor = max(cursor, start + length)
+    if cursor < size:
+        runs.append((cursor, size))
+    return runs
+
+
+def _require_nops(data: bytes, unit: str, chunk: str) -> None:
+    """Refuse unless ``data`` is whole-word ``nop``: padding may be filled, content not."""
+    if not _all_nops(data):
+        raise Unusable(
+            f"{unit}: {chunk} is short by 0x{len(data):X} bytes; C is incomplete "
+            f"(retail's bytes there are content, not nop padding)")
+
+
+def _fill_nop_tail(known: bytes, padding: bytes, unit: str, chunk: str) -> bytes:
+    """``known`` extended with retail's ``padding`` -- only when that padding is ``nop``."""
+    _require_nops(padding, unit, chunk)
+    if padding:
+        print(f"compile: {unit}: filled {chunk} trailing nop padding from retail "
+              f"(0x{len(padding):X} bytes)", file=sys.stderr)
+    return known + padding
+
+
+def _text_extent(text: bytes, retail: bytes, spans, trailing: int, unit: str) -> bytes:
+    """``text`` with every byte no function body covers taken from retail's own padding.
+
+    ``spans`` are the ``(offset, length)`` runs the unit's function bodies occupy and
+    ``trailing`` is where its last function ends: the run from there on is the *shortfall*
+    the promotion has to fill, because the splits it displaces run to the next split's
+    address, past that function.  A byte in an inter-function gap that retail does not
+    leave ``nop`` is content this unit has not written, and is refused -- as is a shortfall
+    whose remainder is anything but ``nop``.
+    """
+    for start, end in _uncovered(len(text), spans):
+        gap = retail[start:end]
+        if start == trailing:
+            return _fill_nop_tail(text[:start], gap, unit, ".text")
+        _require_nops(gap, unit, ".text")
+    return text
 
 
 # ---------------------------------------------------------------------------
@@ -609,11 +700,11 @@ def _words(data: bytes) -> list[str]:
 
 
 def assembly(size: int, labels, debug: bytes, line: bytes) -> str:
-    """The GNU assembler source for the placed unit: pinned bytes plus the payloads.
+    """The GNU assembler source for the placed split extent and the payloads.
 
     Each function's bytes follow its label, and the layout's own inter-function padding --
     the retail image aligns them, and the gap is zeros there -- is a ``.space`` between
-    them, so the object's ``.text`` is exactly the unit's span and nothing else.
+    them.  The final ``.space`` fills any trailing split padding accepted by ``place``.
     """
     out = ["\t.text"]
     cursor = 0
@@ -656,7 +747,7 @@ class Placed:
     __slots__ = ("text", "debug", "line", "labels", "sizes")
 
     def __init__(self, text, debug, line, labels, sizes):
-        self.text = text        # the unit's span of the loadable image
+        self.text = text        # the promoted run of code splits, including its tail padding
         self.debug = debug      # the unit's .debug chunk
         self.line = line        # the unit's run of .line chunks
         self.labels = labels    # [(offset within .text, function name, bytes)]
@@ -664,7 +755,7 @@ class Placed:
 
 
 def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: str,
-          rename=None) -> tuple[bytes, list]:
+          rename=None, unit_file=None) -> tuple[bytes, list]:
     """A pinned span of ``.debug`` or ``.line``, filled from the object's own blocks.
 
     ``blocks`` is ``[(offset, pinned size, section index, label)]``, all of them offsets
@@ -681,9 +772,15 @@ def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: 
             body = retail_name_in(body, *rename)
         sizes.append((label, section, len(body), pinned))
         at = offset - base
+        owner = unit_file or tu.file
+        if len(body) < pinned:
+            shortfall = pinned - len(body)
+            raise Unusable(
+                f"{owner}: {label} {section} is short by 0x{shortfall:X} bytes; "
+                f"C is incomplete (cannot pad {section})")
         if at < 0 or at + len(body) > size:
             raise Unusable(
-                f"{label}: its {section} block is 0x{len(body):X} bytes where retail's is "
+                f"{owner}: {label} {section} is 0x{len(body):X} bytes where retail's is "
                 f"0x{pinned:X}; it does not fit the pinned chunk at 0x{offset:X}")
         out[at:at + len(body)] = body
     return bytes(out), sizes
@@ -705,47 +802,51 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
     probe.compile(staged, obj, compiler_dir, wibo, flags)
 
     mw = MWObject(obj, manifests)
-    gp = gp_value()
+    gp = gp_value(manifests.target.elf)
     groups = mw.groups(tu)
 
-    text = bytearray(tu.end - tu.address)
-    labels, sizes = [], []
+    text_start, text_end = _split_extent(tu, manifests)
+    text_size = text_end - text_start
+    text = bytearray(text_size)
+    labels, sizes, body_spans = [], [], []
     for function in tu.functions:
         body = relocate(mw.data(groups[function.name][0]),
                         mw.relocs.get(groups[function.name][0], ()),
                         lambda symbol: mw.resolve(tu, symbol), f"{function.name}.text", gp)
         if len(body) != function.size:
+            shortfall = function.size - len(body)
+            detail = (f"short by 0x{shortfall:X} bytes" if shortfall > 0
+                      else f"0x{-shortfall:X} bytes too large")
             raise Unusable(
-                f"{function.name}: the compiler emitted 0x{len(body):X} bytes where retail "
-                f"has 0x{function.size:X} at 0x{function.address:08X}; the pinned layout "
-                f"cannot hold it")
-        at = function.address - tu.address
+                f"{tu.file}: .text {function.name} is {detail}; C is incomplete")
+        at = function.address - text_start
         text[at:at + len(body)] = body
+        body_spans.append((at, len(body)))
         labels.append((at, function.name, body))
         sizes.append((function.name, ".text", len(body), function.size))
+
+    retail = elf.Elf(str(manifests.target.elf))
+    expected_text = retail.read(text_start, text_size)
+    text = bytearray(_text_extent(bytes(text), expected_text, body_spans,
+                                  tu.end - text_start, tu.file))
 
     types = manifests.cus[tu.records[0]]
     debug, debug_sizes = _fill(
         mw, tu, tu.debug_offset, tu.debug_size,
         [(types["offset"], types["size"], mw.section_named(".debug"), "the unit's types")]
         + [(f.debug_offset, f.debug_size, groups[f.name][1], f.name) for f in tu.functions],
-        gp, ".debug", (recorded, tu.name.encode()))
+        gp, ".debug", (recorded, tu.name.encode()), tu.file)
     line, line_sizes = _fill(
         mw, tu, tu.line_offset, tu.line_size,
         [(f.line_offset, f.line_size, groups[f.name][2], f.name) for f in tu.functions],
-        gp, ".line")
+        gp, ".line", unit_file=tu.file)
     return Placed(bytes(text), debug, line, labels, sizes + debug_sizes + line_sizes)
 
 
-def retail_bytes(tu: Tu, retail=RETAIL) -> dict:
-    """The unit's bytes in the retail image: its ``.text`` span, ``.debug`` and ``.line``.
-
-    The text is the *span* -- from the first function's address to the last one's end, the
-    inter-function alignment padding included, which is exactly what the build places and
-    what G2's per-unit text verdict compares.
-    """
+def retail_bytes(tu: Tu, retail=RETAIL, text_size=None) -> dict:
+    """The unit's bytes in the retail image: its replaced text extent and payloads."""
     image = elf.Elf(str(retail))
-    text = image.read(tu.address, tu.end - tu.address)
+    text = image.read(tu.address, tu.end - tu.address if text_size is None else text_size)
     spans = {}
     for section, (base, size) in ((".debug", (tu.debug_offset, tu.debug_size)),
                                   (".line", (tu.line_offset, tu.line_size))):
@@ -758,7 +859,7 @@ def retail_bytes(tu: Tu, retail=RETAIL) -> dict:
 
 def compare(tu: Tu, placed: Placed, retail=RETAIL) -> dict:
     """Per part: ``(ok, detail)`` -- what the gates would say, for the selection loop."""
-    want = retail_bytes(tu, retail)
+    want = retail_bytes(tu, retail, text_size=len(placed.text))
     mine = {"text": placed.text, "debug": placed.debug, "line": placed.line}
     out = {}
     for part, expected in want.items():
@@ -771,6 +872,8 @@ def compare(tu: Tu, placed: Placed, retail=RETAIL) -> dict:
             at = next(i for i, (a, b) in enumerate(zip(got, expected)) if a != b)
             out[part] = (False, f"{len(got)} bytes, first difference at 0x{at:X}")
     return out
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -796,11 +899,6 @@ def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
     wibo = fetch.wibo()
     placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep)
     assemble(assembly(len(placed.text), placed.labels, placed.debug, placed.line), out)
-    for label, section, emitted, pinned in placed.sizes:
-        if emitted != pinned:
-            print(f"compile: {tu.file}: {label} {section} is 0x{emitted:X} bytes, the "
-                  f"pinned layout has 0x{pinned:X}: G1 and the unit's verdict decide",
-                  file=sys.stderr)
     return placed
 
 
