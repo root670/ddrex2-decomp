@@ -36,8 +36,21 @@ the split's own bytes, so the image links byte-identically no matter how little 
 
 ## The loop
 
-1. **Pick a unit.** Start small, and prefer units whose calls are already named in
-   `config/ddrex2p/borrowed_symbols.txt` — a unit with no calls needs no library name at all.
+1. **Pick a unit by shape, not by size.** Small turned out to mean hard: the three smallest candidates
+   were a `mes_*` unit (blocked on `.debug` DIE ordering), a VU0 unit (blocked on the epilogue sinking
+   into the last inline-asm delay slot), and one whose `.text` needs an in-extent `nop` with an exacting
+   scratch-variable shape — 4½ hours of agent time between them, nothing promoted, while the first unit
+   that *did* promote took 15 minutes. Choose instead:
+
+   - few functions, **scalar** code, and **no VU0** (`.vutext` has its own section and its own blocker);
+   - **no large unreferenced file-scope tables** (the `mes_*` blocker class);
+   - calls either absent or already named in `config/ddrex2p/borrowed_symbols.txt`, so no library name
+     has to be imported mid-unit;
+   - plenty of DWARF line records, because `.line` is the gate that punishes guesswork hardest.
+
+   **Time-box it: about thirty minutes.** If it is not green by then, commit it as WIP with what you
+   learned and take the next one. A unit that resists is a finding; three hours on one is a lost
+   afternoon, and the shape list above exists so the next person avoids the class rather than the unit.
    Counts and paths come from `config/ddrex2p/cus.json`.
 
 2. **Gather the evidence** (do not guess any of it):
