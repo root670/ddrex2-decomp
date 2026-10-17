@@ -468,9 +468,7 @@ DDREX2P = Target(
     # DIE order matters (see the `.debug`-ordering blocker in the plan) the two are not the
     # same measurement.  Until that is fixed, trust the gate and treat these two rows as
     # "the pair this target promotes", not as a discriminated winner.
-    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),
-               ("src/sys/sys_demo.c", "3.0-011126", "-c -lang c -O3 -g"),
-               ("src/CS/lang.c", "3.0-011126", "-c -lang c -O3 -g")),
+    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

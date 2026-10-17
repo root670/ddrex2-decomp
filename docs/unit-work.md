@@ -27,6 +27,8 @@ A translation unit counts as promoted only when `./ddr --target ddrex2p verify -
 | `.debug` | the debug chunk the compiler emits for that unit — types, member order, visibility |
 | `.line` | the statement→address line table, i.e. **your statements must sit on retail's line numbers** |
 
+**A per-unit green is necessary but not sufficient.** Observed twice: `verify --tu` reported all three parts ok for units whose `.debug`/`.line` payload was *smaller* than the pinned layout, and the link then refused with `the code splits are not the retail N bytes`. So build the image before believing a promotion — `ninja` runs `g1` as its last edge, and that edge is what promotes a unit. And `ddr verify` on its own can report `G1 ok` against a **stale** `out/SLUS_211.74` left behind by a failed build, so treat freshness as part of the check.
+
 Inside that, the whole-image gates stay green by construction and are the safety net:
 `./ddr --target ddrex2p verify` (G1, the template ELF is `ef31c90f…c02cd`) and
 `./ddr --target ddrex2p iso` (G3, the rebuilt disc image is `70a90566…652b`). Undecompiled code is
@@ -91,6 +93,9 @@ score:
 | `.debug` mismatch only | types, member order, bitfield spelling or visibility differ from what the compiler recorded |
 | `.text` correct size but wrong bytes | wrong expression form, wrong flag, or wrong helper |
 | `.text` different size | the source structure differs (extra call, missing call, different control flow) |
+| `.debug` a few bytes *short* of the pinned layout | missing parameter or local DIEs — declare the parameters the DWARF records (`dwarf1.py fn`), even unused; measured once as the discriminator that proved a unit's shape |
+| `.line` short of the pinned layout | a statement the original had has no counterpart, or an inline is unwritten |
+| the link refuses with `the code splits are not the retail N bytes` | the unit's payload does not fill the extent it replaces — the strongest signal, and invisible to `verify --tu` |
 
 When a function resists matching after the logic is right, check the line table for skipped lines
 before assuming a mistake: that is where an inline hides.
