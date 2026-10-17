@@ -134,6 +134,15 @@ the split's own bytes, so the image links byte-identically no matter how little 
    no indexed address inside a loop — which is why `sys_scf.c`'s recorded pair could not show it.
    Per-unit flags exist for exactly this; `tu_builds` carries the whole string.
 
+   **A second trap, measured the same day: the `--compare` invocation ignores `tu_builds`.**
+   `python3 -m tools.toolchain.compile <src> <out> --compare` takes its compiler from its own
+   `--compiler` default (`fetch.REQUIRED`, 2.4-001213) and its flags from the command line, not from
+   the target descriptor — only `ninja`'s `cc` edge uses the recorded pair.  On `p_anime.c` that made
+   the unit look `2 bytes short` (and a first attempt, without `-opt full`, `0x10 short`) from nothing
+   but the wrong compiler: the 2.4 build saves the frame with `sq`/`lq` where retail has `sd`/`ld`, so
+   the "shortfall" was the frame's instruction shape.  To compare a unit by hand, pass the pair in
+   full: `--compiler 3.0-011126 -c -lang c -O3 -opt full -g`.
+
 ## What the diff's failure modes mean
 
 The diff reports *shape*, and each shape points at a different cause. Read it as a diagnosis, not a
