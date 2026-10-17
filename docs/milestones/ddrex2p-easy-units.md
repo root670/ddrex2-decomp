@@ -9,9 +9,10 @@ python3 tools/units/screen.py --all --top 60   # the blocked rows, with reasons
 
 The rule this implements is `docs/unit-work.md`'s "Pick a unit by shape, not by size": few
 functions, scalar code, no VU0, no EE 128-bit GPR operations, no large/unreferenced file-scope
-tables, calls that already have names, and plenty of DWARF line records.  Five units failed on
-exactly those shapes and cost 5½ hours between them, so the screen's first job is to make those
-classes visible before anyone writes C.  It reads `config/ddrex2p/cus.json`,
+tables, no fixed absolute address above the declared segments, calls that already have names, and
+plenty of DWARF line records.  Five units failed on exactly those shapes and cost 5½ hours
+between them, so the screen's first job is to make those classes visible before anyone writes C.
+It reads `config/ddrex2p/cus.json`,
 `orig/SLUS_211.74`'s DWARF, `config/ddrex2p/symbol_addrs.txt`, `borrowed_symbols.txt`,
 `unplaced_symbols.txt` and the splits under `asm/nonmatchings/main/`; it never compiles or links
 anything.
@@ -54,10 +55,28 @@ over 19 units whose address lies outside every declared segment (`net_sys_connec
 `NetRouterMain` is the first).  A name in *none* of the three sources is now its own refusal
 (`no record anywhere`) and no unit in this tree has one.
 
-Of 249 translation units, 1 is promoted (`sys/sys_scf.c`), **58 are unblocked candidates**, and
-190 are blocked (the categories below overlap): 67 overlay units have no retail split in this
-target, 1 is a library object, 19 carry a target outside every declared segment, 1 carries EE
-128-bit GPR operations, and the remainder carry one of the other shape classes.
+**Fifth revision: an address with no name is not a constant.**  Every signal above looks up
+*names* in a split's operands, and `net_game_help.c`'s eight operands carry none: retail's
+`0x01029FE4`, `0x0102FACC` and `0x0102FE00-14` sit above every declared segment, written
+`lui $1,(0x1030000 >> 16)` + `lw $3,-0x601C($1)` — the assembler's `lw rt, sym` expansion, `$1`
+being `at`, one pair per access — so there was nothing to look up and nothing was flagged.  A C
+*constant* is not that form: it compiles to `lui`+`ori` in an allocated register, which is why
+`NetGameHelpDisp` came out 4 bytes short of retail's with 155 of 172 words different while
+`.debug` and `.line` were *exact* in size and wrong only in values.  The screen now reads each
+split's `lui`/`ori`/`addiu` chains and their memory bases (including a branch's delay slot, where
+four splits in this tree keep their only such access) and blocks any load or store whose
+effective address is above `bss_end` (`absolute-addresses`).  Measured at `ce7a75b`: **21 of the
+57 candidates left the list**, 218 splits over 38 units carry the flag, and the ranking below is
+the regenerated one.  The class it must *not* match is measured too: the `addu`-indexed spelling
+of the same band is byte-identical to the assembler's large-displacement expansion
+(`lui at,1; addu at,ptr,at; lw rt,-0x62E0(at)` is `ptr + 0x9D20`, a struct field), which C
+reproduces — matching it would have blocked 9 more units that are writable.
+
+Of 249 translation units, **2 are promoted** (`sys/sys_scf.c` and `network/net_grf.c`), **36 are
+unblocked candidates**, and 211 are blocked (the categories below overlap): 67 overlay units have
+no retail split in this target, 1 is a library object, 19 carry a target outside every declared
+segment, 38 carry a fixed absolute address above the declared segments, 1 carries EE 128-bit GPR
+operations, and the remainder carry one of the other shape classes.
 
 ## Ranking
 
@@ -70,32 +89,34 @@ weights without losing the evidence.
 
 | rank | unit | score | functions | line records | why expected easy |
 |---:|---|---:|---:|---:|---|
-| 1 | `AM/s573/doll/dexport.c` | 98.7 | 2 | 31 | 2 functions; 31 line records (15.5/function); calls: 0 borrowed, 3 named, 0 internal; 115 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 2 function(s) in cus.json |
-| 2 | `network/net_grf.c` | 98.0 | 2 | 12 | 2 functions; 12 line records (6.0/function); calls: 0 borrowed, 0 named, 0 internal; 2 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 2 function(s) in cus.json |
-| 3 | `CS/dancemaster/dmm_chara.c` | 97.4 | 1 | 32 | 1 function; 32 line records (32.0/function); calls: 0 borrowed, 9 named, 0 internal; 80 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 1 function(s) in cus.json |
-| 4 | `common/com_scrollbar.c` | 95.0 | 1 | 80 | 1 function; 80 line records (80.0/function); calls: 0 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; 1 FPU function(s); declared 1 function(s) in cus.json |
-| 5 | `common/co_cursor.c` | 94.5 | 2 | 99 | 2 functions; 99 line records (49.5/function); calls: 1 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; 1 FPU function(s); declared 2 function(s) in cus.json |
-| 6 | `network/net_game/net_game_help.c` | 94.0 | 2 | 47 | 2 functions; 47 line records (23.5/function); calls: 0 borrowed, 12 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; scalar; declared 2 function(s) in cus.json |
-| 7 | `network/mio/md5.c` | 89.9 | 4 | 484 | 4 functions; 484 line records (121.0/function); calls: 0 borrowed, 0 named, 4 internal; 6 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 4 function(s) in cus.json |
-| 8 | `network/net_sys/net_sys_main.c` | 85.3 | 2 | 68 | 2 functions; 68 line records (34.0/function); calls: 0 borrowed, 13 named, 0 internal; 83 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 2 function(s) in cus.json |
-| 9 | `common/com_keyboard.c` | 82.8 | 3 | 207 | 3 functions; 207 line records (69.0/function); calls: 0 borrowed, 0 named, 0 internal; 11 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 1 FPU function(s); declared 3 function(s) in cus.json |
-| 10 | `AM/s573/doll/model1.c` | 77.3 | 5 | 126 | 5 functions; 126 line records (25.2/function); calls: 0 borrowed, 3 named, 4 internal; 37 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 1 FPU function(s); declared 5 function(s) in cus.json |
-| 11 | `CS/opening/openinglogo.c` | 76.9 | 4 | 64 | 4 functions; 64 line records (16.0/function); calls: 0 borrowed, 0 named, 0 internal; 4 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 1 FPU function(s); declared 4 function(s) in cus.json |
-| 12 | `AM/s573/play/p_anime.c` | 73.2 | 5 | 239 | 5 functions; 239 line records (47.8/function); calls: 0 borrowed, 14 named, 0 internal; 39 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 5 function(s) in cus.json |
-| 13 | `network/net_game/net_game_challenge.c` | 70.3 | 3 | 138 | 3 functions; 138 line records (46.0/function); calls: 0 borrowed, 18 named, 1 internal; 83 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 3 function(s) in cus.json |
-| 14 | `CS/dancemaster/dmm_mess.c` | 70.0 | 3 | 88 | 3 functions; 88 line records (29.3/function); calls: 0 borrowed, 10 named, 1 internal; 49 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 1 FPU function(s); declared 3 function(s) in cus.json |
-| 15 | `CS/shop/shop_main.c` | 66.0 | 6 | 53 | 6 functions; 53 line records (8.8/function); calls: 0 borrowed, 6 named, 0 internal; 41 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 6 function(s) in cus.json |
-| 16 | `CS/shop/shop_list.c` | 65.2 | 7 | 233 | 7 functions; 233 line records (33.3/function); calls: 0 borrowed, 3 named, 6 internal; 88 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 7 function(s) in cus.json |
-| 17 | `common/cws/cws_wins.c` | 64.8 | 7 | 133 | 7 functions; 133 line records (19.0/function); calls: 0 borrowed, 7 named, 0 internal; 12 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 7 function(s) in cus.json |
-| 18 | `network/net_sys/net_sys_logout.c` | 64.1 | 3 | 73 | 3 functions; 73 line records (24.3/function); calls: 0 borrowed, 19 named, 0 internal; 45 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 3 function(s) in cus.json |
-| 19 | `CS/shop/shop_info.c` | 63.8 | 4 | 113 | 4 functions; 113 line records (28.2/function); calls: 0 borrowed, 16 named, 2 internal; 9 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; scalar; declared 4 function(s) in cus.json |
-| 20 | `AM/s573/doll/matrix.c` | 63.6 | 5 | 41 | 5 functions; 41 line records (8.2/function); calls: 3 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; 5 FPU function(s); declared 5 function(s) in cus.json |
+| 1 | `AM/s573/doll/dexport.c` | 98.7 | 2 | 31 | 2 functions; 31 line records (15.5/function); calls: 0 borrowed, 3 named, 0 internal; 115 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 2 function(s) in cus.json |
+| 2 | `CS/dancemaster/dmm_chara.c` | 97.4 | 1 | 32 | 1 function; 32 line records (32.0/function); calls: 0 borrowed, 9 named, 0 internal; 80 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 1 function(s) in cus.json |
+| 3 | `common/com_scrollbar.c` | 95.0 | 1 | 80 | 1 function; 80 line records (80.0/function); calls: 0 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 1 function(s) in cus.json |
+| 4 | `common/co_cursor.c` | 94.5 | 2 | 99 | 2 functions; 99 line records (49.5/function); calls: 1 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 2 function(s) in cus.json |
+| 5 | `network/mio/md5.c` | 89.9 | 4 | 484 | 4 functions; 484 line records (121.0/function); calls: 0 borrowed, 0 named, 4 internal; 6 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 4 function(s) in cus.json |
+| 6 | `common/com_keyboard.c` | 82.8 | 3 | 207 | 3 functions; 207 line records (69.0/function); calls: 0 borrowed, 0 named, 0 internal; 11 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 3 function(s) in cus.json |
+| 7 | `AM/s573/doll/model1.c` | 77.3 | 5 | 126 | 5 functions; 126 line records (25.2/function); calls: 0 borrowed, 3 named, 4 internal; 37 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 5 function(s) in cus.json |
+| 8 | `CS/opening/openinglogo.c` | 76.9 | 4 | 64 | 4 functions; 64 line records (16.0/function); calls: 0 borrowed, 0 named, 0 internal; 4 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 4 function(s) in cus.json |
+| 9 | `AM/s573/play/p_anime.c` | 73.2 | 5 | 239 | 5 functions; 239 line records (47.8/function); calls: 0 borrowed, 14 named, 0 internal; 39 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 5 function(s) in cus.json |
+| 10 | `CS/dancemaster/dmm_mess.c` | 70.0 | 3 | 88 | 3 functions; 88 line records (29.3/function); calls: 0 borrowed, 10 named, 1 internal; 49 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 3 function(s) in cus.json |
+| 11 | `CS/shop/shop_main.c` | 66.0 | 6 | 53 | 6 functions; 53 line records (8.8/function); calls: 0 borrowed, 6 named, 0 internal; 41 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 6 function(s) in cus.json |
+| 12 | `CS/shop/shop_list.c` | 65.2 | 7 | 233 | 7 functions; 233 line records (33.3/function); calls: 0 borrowed, 3 named, 6 internal; 88 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 7 function(s) in cus.json |
+| 13 | `common/cws/cws_wins.c` | 64.8 | 7 | 133 | 7 functions; 133 line records (19.0/function); calls: 0 borrowed, 7 named, 0 internal; 12 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 7 function(s) in cus.json |
+| 14 | `CS/shop/shop_info.c` | 63.8 | 4 | 113 | 4 functions; 113 line records (28.2/function); calls: 0 borrowed, 16 named, 2 internal; 9 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 4 function(s) in cus.json |
+| 15 | `AM/s573/doll/matrix.c` | 63.6 | 5 | 41 | 5 functions; 41 line records (8.2/function); calls: 3 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 5 FPU function(s); declared 5 function(s) in cus.json |
+| 16 | `CS/dancemaster/dmm_mc.c` | 55.9 | 5 | 100 | 5 functions; 100 line records (20.0/function); calls: 0 borrowed, 5 named, 0 internal; 153 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 5 function(s) in cus.json |
+| 17 | `AM/s573/doll/ps1lib.c` | 50.4 | 8 | 129 | 8 functions; 129 line records (16.1/function); calls: 9 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 5 FPU function(s); declared 8 function(s) in cus.json |
+| 18 | `CS/edit/ed_ssq_func.c` | 44.9 | 11 | 140 | 11 functions; 140 line records (12.7/function); calls: 0 borrowed, 0 named, 3 internal; 5 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 11 function(s) in cus.json |
+| 19 | `CS/shop/shop_select.c` | 43.8 | 5 | 295 | 5 functions; 295 line records (59.0/function); calls: 0 borrowed, 76 named, 4 internal; 9 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 5 function(s) in cus.json |
+| 20 | `AM/s573/doll/motion2.c` | 42.3 | 8 | 346 | 8 functions; 346 line records (43.2/function); calls: 3 borrowed, 20 named, 32 internal; 12 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 2 FPU function(s); declared 8 function(s) in cus.json |
 
-The three units the link fix freed first are now ranks 1–3, and they are the ones the fix was
-found on: `AM/s573/doll/dexport.c` (blocked on `func_001BED10`),
-`network/net_grf.c` (`func_001C43E8`) and `CS/dancemaster/dmm_chara.c` (`func_00128600`,
-`func_0012CD70`).  `eyetoy/eye_filter.c` — the 128-bit unit — is not here; it is the row the
-128-bit block keeps out.
+Two of the three units the link fix freed first are still ranks 1–3 (`AM/s573/doll/dexport.c`,
+blocked on `func_001BED10`, and `CS/dancemaster/dmm_chara.c`, `func_00128600`/`func_0012CD70`);
+the third, `network/net_grf.c`, was promoted at `8d9a7bd` and left the list, which is why the
+table above has 20 rows from a 36-unit candidate list.  `eyetoy/eye_filter.c` — the 128-bit
+unit — is not here; it is the row the 128-bit block keeps out.  Neither is
+`network/net_game/net_game_help.c`, which the fifth revision blocks on its eight unnamed
+addresses; the row moved from rank 6 to the blocked list with its reason printed under `--all`.
 
 `calls: 0 borrowed, 12 named, ...` means every call target already carries a `symbol_addrs`
 record, so no name has to be imported mid-unit.  Distinct unresolvable targets are not a
@@ -107,11 +128,13 @@ the target's name, its address, and which of the two refusals it is.
 * `AM/s573/doll/dexport.c` — two functions, three already-named calls, 31 statement lines, no
   file-scope table; the unit UnitC measured to 96.2% on `ps2dancerInitHide` and blocked on one
   `nop` and a name the ledger did not carry, now rank 1.
-* `network/net_grf.c` — two functions, **no calls at all**, 12 statement lines, one referenced
-  file-scope table; the unit whose `func_001C43E8` call the link resolved all along.
 * `CS/dancemaster/dmm_chara.c` — one function, nine named calls, 32 statement lines: the
   shortest function list in the ranking, and the unit whose two absent targets
-  (`func_00128600`, `func_0012CD70`) were the fourth callee finding.
+  (`func_00128600`, `func_0012CD70`) were the fourth callee finding; it moved up one place when
+  `net_grf.c` was promoted.
+* `common/com_scrollbar.c` — one function, 80 line records (80.0 per function, the densest line
+  table in the top three), **no calls at all** and no array/table risk; its only tax is the one
+  FPU function.
 
 The first unit that did promote (`sys_scf.c`) scores **97.5** on the same formula (2
 functions, 4 line records per function, one borrowed call), which is the calibration the
@@ -197,6 +220,60 @@ Across 4,491 splits in 249 units, exactly one unit matches the operation set.  O
 tree below, the flag costs `eye_filter.c` its place in the candidate list while the link fix
 frees 53 other units around it.
 
+## Validation: the out-of-segment address class
+
+The finding is UnitF's (`unit-f-report.md`), and the acceptance test is the six units of the
+ranking the finding was made against (`78ae234`: `eyetoy/eye_filter.c` #1, `net_game_help.c` #2,
+`p_anime.c` #3, `net_inter.c` #4, `ps1lib.c` #5, `motion2.c` #6).  Measured on the regenerated
+screen, the two units that carry the class are caught, the four that do not are untouched:
+
+| unit | then | flag now | detail |
+|---|---|---|---|
+| `network/net_game/net_game_help.c` | rank 2 | `absolute-addresses` | 8 addresses in the `0x01029FD0`/`0x0102FFCC` bands, from **2 of 2** functions: `0x01030000 (NetGameHelpDisp: lw $3,-0x601C($1) -> 0x01029FE4)` — the eight fields UnitF measured |
+| `network/net_inter.c` | rank 4 | `absolute-addresses` | 1 address (`0x01029FDC`), from **7 of 7** functions |
+| `eyetoy/eye_filter.c` | rank 1 | *(none)* | carries only `128-bit-gpr`, the class that already blocked it; no address flag |
+| `AM/s573/play/p_anime.c` | rank 3 | *(none)* | `flags=[]`, still a candidate — the unit UnitF handed on as clear of the class |
+| `AM/s573/doll/ps1lib.c` | rank 5 | *(none)* | `flags=[]`, still a candidate |
+| `AM/s573/doll/motion2.c` | rank 6 | *(none)* | `flags=[]`, still a candidate |
+
+The re-run's full effect, at `ce7a75b` (where `net_grf.c` had just been promoted, so the
+starting list is 57 rather than the 58 of the ranking the finding quotes):
+
+| | before | after |
+|---|---:|---:|
+| unblocked candidates | 57 | **36** |
+| blocked units | 190 | **211** |
+| units flagged `absolute-addresses` | 0 | **38** |
+| splits flagged (of 4,491 in 249 units) | 0 | **218** |
+| distinct addresses reported | 0 | **207** |
+
+**21 units left the candidate list and none entered it** — measured as a set difference against
+the same tree with the previous `screen.py`, which is the same 21 at the 58-candidate ranking
+(58 → 37).  The flag does not disturb the scores of the units that stay: every row keeps its
+`score` and gains one `good` clause (`no fixed absolute addresses`), so the only ordering change
+is the shrink itself.  The units it moves are exactly the 21 whose only flag is this one —
+eleven `net_game_*` units (`help`, `challenge`, `data`, `list`, `logout`, `main`, `match`,
+`opt`, `prac`, `prg`, `rc`), six `net_sys_*` units (`info`, `logout`, `main`, `menu`, `new`,
+`rule`), `net_inter.c`, `net_read_data.c`, `CS/bk_disp/bk_disp_sub.c` and
+`common/co_movie.c`.  The other 17 rows the flag lands on were blocked already
+(`net_prg.c`, `net_main.c`, the five `net_win_per*` units, `net_game_vs.c`/`vs_win.c`/
+`window.c`/`menu.c`, `net_sys_lobby.c`/`user.c`/`top.c`, `net_type.c`, `net.c`,
+`title_demo.c`), which is why the candidate list shrinks by 21 and not by 38.
+
+**The one false positive this signal had is recorded, because it was measured and removed.**
+An earlier draft also matched the `addu`-indexed spelling of the same band (`lui $1,(0x1030000
+>> 16)`; `addu $1, $2, $1`; `lh $3,-0x6350($1)`) and blocked 9 more units — `fft/fft_disp.c`
+and `CS/shop/shop_obj.c` (both candidates with no other flag) plus `AM/s573/doll/dinit.c`,
+`CS/freeplay/fp_chara.c`, `fp_msel.c`, `fp_msel_obj.c`, `fp_res.c`, `CS/dancemaster/dmm_func.c`
+and `AM/s573/play/onimode.c`.  Inspecting them showed the shape is ambiguous against the
+assembler's large-displacement expansion: `lui at,1; addu at,ptr,at; lw rt,-0x62E0(at)` is
+`ptr + 0x9D20`, an ordinary struct field that C reproduces byte for byte, and the constants those
+units use (`0x10000`/`0x20000`/`0x30000`/`0xB0000`/`0xE0000`) sit *below* `loadable_vram`, where
+as absolute addresses nothing in the game's link would be.  The narrower match kept the 21 that
+are unambiguous and dropped the 9 that are not.  The three splits that use the band this way
+(`NetPadCon`, `NetReadDataGetStr`, `NetGamePrgGetWinLoseDraw`) are named under "what the signal
+cannot see" below rather than blocked on a guess.
+
 ## What the signal cannot see
 
 * **A 128-bit value assembled from the expressible subset.**  `lq`, `sq` and `pcpyld` are
@@ -244,6 +321,17 @@ frees 53 other units around it.
   array tables, but it cannot say whether a given unit's compiler table will happen to agree.
 * **Data-only units in the overlays.**  All 67 overlay units already carry `overlay`/`no retail
   split`; the screen deliberately does not pretend to rank them.
+* **The `addu`-indexed spelling of the band.**  Three splits reach the band only as
+  `lui $1,(0x1030000 >> 16)` + `addu $1, $idx, $1` + a load (`NetPadCon`,
+  `NetReadDataGetStr`, `NetGamePrgGetWinLoseDraw`).  That shape is not separable from the
+  assembler's large-displacement expansion over a register, which C reproduces, so those units
+  read as unblocked instead of being guessed at; telling the two apart needs the unit's own C.
+* **An address passed rather than dereferenced.**  `NetGameChallengeMain` materialises
+  `0x0102FFD0` into `$4` (`lui $2,(0x102FFD0 >> 16)`; `ori $4,$2,0xFFD0`) and passes it to a
+  call, never using it as a base — the same unmatchable class for the C, and not reported (that
+  unit is caught anyway, by the delay-slot store at `0x0102FFCC`).
+* **Addresses below `loadable_vram`.**  Deliberately unmatched: that is where the displacement
+  expansion lives, and nothing below the image was measured as a memory base in this tree.
 
 ### What a false positive costs
 

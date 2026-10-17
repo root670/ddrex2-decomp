@@ -201,7 +201,8 @@ def _analyze(tmp_path, tu, functions, sizes, **ledgers):
                                split_names=split_names,
                                unplaced=ledgers.get("unplaced", {}),
                                unplaced_by_addr=ledgers.get("unplaced_by_addr", {}),
-                               link_names=ledgers.get("link_names", set()))
+                               link_names=ledgers.get("link_names", set()),
+                               segments=ledgers.get("segments"))
 
 
 def _write_split(tmp_path, name, text):
@@ -301,6 +302,84 @@ def test_128bit_gpr_operation_blocks_but_quadword_assignment_does_not(tmp_path):
     row2 = _analyze(tmp_path, tu2, [fn2], {})
     assert row2["flags"] == [] and row2["blocked"] is False
     assert row2["quad_ops"] == [] and "no 128-bit GPR ops" in " ".join(row2["good"])
+
+
+def test_a_fixed_address_above_the_segments_blocks_like_net_game_help(tmp_path):
+    """`net_game_help.c` read as easy because its operands carry no *name* to look up.
+
+    Retail's fields at ``0x01029FE4``/``0x0102FACC``/``0x0102FE00-14`` reach the object as
+    ``lui $1,(0x1030000 >> 16)`` plus the low half in the access itself -- the assembler's
+    ``lw rt, sym`` expansion, one pair per access -- while a C *constant* compiles to
+    ``lui``+``ori`` (measured: 155 of 172 words differ).  The address is above every declared
+    segment, so ``borrowed_symbols.txt`` (functions only) and an out-of-segment
+    ``unplaced_symbols.txt`` record can neither of them name it.
+    """
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lui        $1, (0x1030000 >> 16)",
+        "    lw         $3, -0x601C($1)",
+        "    lui        $1, (0x1030000 >> 16)",
+        "    jr         $31",
+        "    sw         $0, -0x1F0($1)",   # the delay slot still sees the pair's constant
+    ]))
+    row = _analyze(tmp_path, tu, [fn], {}, segments=(0x100000, 0x723700))
+    assert "absolute-addresses" in row["flags"] and row["blocked"] is True
+    assert [a["address"] for a in row["addresses"]] == [0x01029FE4, 0x0102FE10]
+    assert "0x01030000" in row["reasons"][0]
+    assert row["addresses"][0]["opcode"] == "lw"
+    assert row["addresses"][0]["operand"] == "lw         $3, -0x601C($1)"
+    assert "no fixed absolute addresses" not in " ".join(row["good"])
+
+    # Inside the declared segments, and as a plain value, the same operand text is not this
+    # class: a named symbol, an in-segment constant, and a float constant stored to the stack.
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lui        $1, %hi(g_game_w)",
+        "    lw         $3, %lo(g_game_w)($1)",
+        "    lui        $2, (0x600000 >> 16)",
+        "    lw         $4, 0x0($2)",
+        "    lui        $5, (0x40000000 >> 16)",
+        "    sw         $5, 0x54($29)",
+        "    jr         $31",
+    ]))
+    row2 = _analyze(tmp_path, tu, [fn], {}, segments=(0x100000, 0x723700))
+    assert row2["flags"] == [] and row2["blocked"] is False
+    assert row2["addresses"] == []
+    assert "no fixed absolute addresses" in " ".join(row2["good"])
+
+    # Without a measured geometry there are no declared segments to be above, so the screen
+    # stays silent rather than guessing a boundary.
+    row3 = _analyze(tmp_path, tu, [fn], {})
+    assert row3["flags"] == [] and row3["addresses"] == []
+
+
+def test_a_fixed_address_split_from_its_access_is_not_paired(tmp_path):
+    """The pairing is straight-line: a register reused past a branch is not evidence.
+
+    `dmm_sys_fade.s` loads a pointer through a register that held a float constant three
+    blocks earlier; pairing those two would report an address nothing references.  The
+    ``addu`` form is the same problem and is why it is not matched: ``lui at,1; addu at,ptr,at;
+    lw rt,-0x62E0(at)`` is the assembler's large-displacement expansion (``ptr + 0x9D20``, a
+    struct field), and it is byte-identical to an ``at``-based symbol-plus-index access.
+    """
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x40)
+    _write_split(tmp_path, "f", "\n".join([
+        "glabel f",
+        "    lui        $1, (0x1030000 >> 16)",
+        "    b          .L1",
+        "    nop",
+        "  .L1:",
+        "    lw         $3, -0x601C($1)",    # another path's access, no constant here
+        "    lui        $2, (0x1030000 >> 16)",
+        "    addu       $2, $3, $2",
+        "    lw         $4, -0x62E0($2)",    # a displacement over a register, not an address
+        "    jr         $31",
+    ]))
+    row = _analyze(tmp_path, tu, [fn], {}, segments=(0x100000, 0x723700))
+    assert row["flags"] == [] and row["addresses"] == []
 
 
 def test_a_split_only_callee_resolves_because_the_link_places_it(tmp_path):

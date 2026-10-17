@@ -8,6 +8,8 @@ that has actually cost time:
 * no EE 128-bit GPR operations -- MWCC PS2 has no 128-bit operators, so a unit whose split
   carries ``pxor``/``pand``/``paddw``/... is unwritable in C (the 128-bit blocker class);
 * no large unreferenced file-scope tables (the ``mes_*`` debug-order class);
+* no fixed absolute address outside the declared segments (a split whose memory access is a
+  ``lui``+offset pair at an address no segment declares, which no C constant can reproduce);
 * calls absent or already named in ``config/ddrex2p/borrowed_symbols.txt``;
 * plenty of DWARF line records, because ``.line`` punishes guesswork hardest.
 
@@ -117,6 +119,38 @@ _GPR128_RE = re.compile(
 #: fight the scheduler over a vector/FPU expression shape.
 _FPU_RE = re.compile(r"\b(lwc1|swc1|ldc1|sdc1|madd\.s|msub\.s|add\.s|sub\.s|mul\.s|div\.s|"
                      r"cvt\.s|cvt\.w|mov\.s|neg\.s|abs\.s|sqrt\.s)\b")
+
+#: A fixed absolute address: ``lui`` of the high half, then the low half carried by the access
+#: itself (``lui $1,(0x1030000 >> 16)`` + ``lw $3,-0x601C($1)``) or materialised into the same
+#: register (``lui``+``ori``/``addiu``, which is what a *C constant* compiles to).
+#:
+#: Splat prints a numeric operand here exactly when the address has no name: a named one is
+#: written ``%hi(symbol)``/``%lo(symbol)``, and that is the callee signal's business.  So a
+#: numeric ``lui`` whose address lies outside every declared segment is a reference no ledger
+#: can spell, and the two spellings differ in bytes: retail's ``lui``+offset is a relocation
+#: pair (the assembler's ``$1``/``at``, one per access), while a C constant pools its high half
+#: in an allocated register and pairs it with ``ori`` -- measured on ``net_game_help.c``'s
+#: ``NetGameHelpDisp``, 155 of 172 words different for that reason alone.
+_LUI_RE = re.compile(r"^lui\s+(\$\d+),\s*\(?(0x[0-9A-Fa-f]+)")
+_IMM_RE = re.compile(r"^-?(?:0x[0-9A-Fa-f]+|\d+)$")
+_MEMORY_RE = re.compile(r"^(-?(?:0x[0-9A-Fa-f]+|\d+))\(\$(\d+)\)$")
+
+#: Memory operations, split by which operand is written, so a load that reuses its own base
+#: does not leave a stale constant behind.
+_LOADS = frozenset({"lb", "lbu", "lh", "lhu", "lw", "lwu", "ld", "lwl", "lwr", "ll",
+                    "lwc1", "lwc2", "ldc1", "lq"})
+_STORES = frozenset({"sb", "sh", "sw", "sd", "swl", "swr", "sc", "swc1", "swc2", "sdc1",
+                     "sq"})
+
+#: A branch, jump or call ends the straight-line run the constants are tracked over: the
+#: instruction after it belongs to another path (`dmm_sys_fade.s` reloads a *pointer* whose
+#: register held a float constant in the previous block), and ``at``/`$1` is only live for the
+#: pair that follows its ``lui``.
+_FLOW_RE = re.compile(r"^(?:j|jal|jalr|jr|b|bal|beq|bne|beqz|bnez|bgez|bgezal|bgezall|bgtz|"
+                      r"bgtzl|blez|blezl|bltz|bltzal|bltzall|bbit|bc1f|bc1fl|bc1t|bc1tl)$")
+
+#: Caller-saved registers, clobbered by any call.
+_CALLER_SAVED = tuple(f"${i}" for i in list(range(1, 16)) + [24, 25])
 
 _SYMBOL_RE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+)")
 
@@ -450,6 +484,154 @@ def find_unresolvable_references(text: str, *, unit_functions: set[str],
     return found
 
 
+def _instruction(raw: str) -> tuple[str, list[str]] | None:
+    """``(opcode, operands)`` for one split line, or ``None`` for anything else.
+
+    Splat writes one instruction per line as ``/* <rom> <va> <word> */  op  operands``; the
+    address comment is dropped, directives (``.align``, ``.L…:``) are the caller's business.
+    """
+    line = _asm_line(raw).strip()
+    if not line:
+        return None
+    match = re.match(r"^([a-z][a-z0-9._]*)\s*(.*)$", line)
+    if match is None:
+        return None
+    operands = [operand.strip() for operand in match.group(2).split(",")] if match.group(2) else []
+    return match.group(1), operands
+
+
+def _immediate(token: str) -> int | None:
+    """The value of a signed MIPS immediate operand, ``0x…`` or decimal."""
+    token = token.strip()
+    sign = -1 if token.startswith("-") else 1
+    body = token.lstrip("+-")
+    try:
+        value = int(body, 16) if body.startswith("0x") else int(body)
+    except ValueError:
+        return None
+    return sign * value
+
+
+def fixed_absolute_addresses(text: str, top: int) -> list[dict]:
+    """Fixed absolute addresses above ``top`` that one split uses as memory bases.
+
+    The signal ``docs/unit-work.md`` records as the out-of-segment address class, measured on
+    ``network/net_game/net_game_help.c``: retail's eight fields at ``0x01029FE4``,
+    ``0x0102FACC`` and ``0x0102FE00-14`` sit above every declared segment, so the oracle can
+    give them no name (``borrowed_symbols.txt`` is functions-only, and an out-of-segment
+    unplaced record is refused rather than resolved to 0), and a C *constant* cannot stand in
+    for retail's relocation -- ``lui``+``ori``/``addiu`` against ``lui``+offset.
+
+    What is matched, in the disassembly splat writes:
+
+    * ``lui $r, (0xVVVVVVVV >> 16)`` -- a numeric high half, which is also how splat spells a
+      ``lui`` of a plain immediate; ``%hi(name)`` is not matched, because that has a name;
+    * optionally chained into the same register by ``ori $r, $r, L`` (``base | L``) or
+      ``addiu $r, $r, L`` (``base + sign_extend(L)``), the C-constant spelling;
+    * then a load (``lb/lbu/lh/lhu/lw/lwu/ld/lwl/lwr/ll/lwc1/lwc2/ldc1/lq``) or a store
+      (``sb/sh/sw/sd/swl/swr/sc/swc1/swc2/sdc1/sq``) of the form ``op $x, S($r)`` whose
+      effective address ``base + S`` is still above ``top`` (the declared top, ``bss_end``).
+      The access is required to be *straight-line* — the tracked constants are dropped at every
+      label, branch, jump and call, and past a branch's delay slot — because the point of the
+      signal is the base value itself, and a register reused in a later block
+      (`dmm_sys_fade.s` loads a pointer through a register that held a float constant three
+      blocks earlier) is not evidence about this one.  The delay slot itself *is* included: it
+      runs with the constants the branch saw, and four splits in this tree (`NetGameOptInit2`,
+      `NetGameOptPortSetInit`, `NetGameChallengeMain`, `NetInterErrGetStatus`) touch the band
+      only there.
+
+    Deliberately **not** matched, each with its measurement:
+
+    * ``addu $1, $x, $1`` between the ``lui`` and the access.  That shape is the assembler's
+      expansion of a *displacement* over a register -- ``lui at,1; addu at,ptr,at;
+      lw rt,-0x62E0(at)`` is ``ptr + 0x9D20``, a struct field, not an address -- and the same
+      bytes are also what an ``at``-based symbol-plus-index access looks like, so the two are
+      not separable from the split.  Measured: 5 such constants below the image (`1`/`2`/`3`/
+      `0xB`/`0xE` << 16) across 9 units, every one of them C-writable, plus 3 splits that use
+      the band this way (`NetPadCon`, `NetReadDataGetStr`, `NetGamePrgGetWinLoseDraw`).
+    * addresses *below* the declared base.  Nothing below ``loadable_vram`` was measured as a
+      memory base in this tree (`lui $r, 0`/`0x10000` are the displacement expansion above, or
+      counters), so only the "above every declared segment" half is reported; the other half
+      would be a guess about addresses in the first megabyte.
+    """
+    const: dict[str, int | None] = {}
+    found: dict[int, dict] = {}
+    delay: dict[str, int | None] | None = None
+
+    def forget() -> None:
+        """Drop every tracked value: another path into the code, or another function."""
+        const.clear()
+
+    def record(register: str, offset: int, opcode: str, operand: str) -> None:
+        base = const.get(register)
+        if base is None:
+            return
+        address = (base + offset) & 0xFFFFFFFF
+        if address > top and address not in found:
+            found[address] = {"address": address, "base": base, "opcode": opcode,
+                              "offset": offset, "operand": operand}
+
+    for raw in text.splitlines():
+        stripped = raw.strip()
+        if stripped.startswith("."):
+            forget()  # a directive, or a ``.L…:`` label: another path into this code
+            delay = None
+            continue
+        parsed = _instruction(raw)
+        if parsed is None:
+            forget()  # unparsable: never pair a constant across it
+            delay = None
+            continue
+        # The instruction right after a branch, jump or call is its delay slot: it still runs
+        # with the constants the branch saw, and nothing after it does (``NetGameOptInit2``'s
+        # only access is the ``sb`` in ``jal``'s delay slot).  Splat writes the delay slot on
+        # its own line, indented, *after* the branch.
+        in_delay_slot = delay is not None
+        if in_delay_slot:
+            const, delay = delay, None
+        opcode, operands = parsed
+        if opcode in ("glabel", "endlabel", "nonmatching", "alabel"):
+            forget()
+            continue
+        if opcode == "lui" and len(operands) == 2:
+            match = _LUI_RE.match(_asm_line(raw).strip())
+            const[operands[0]] = int(match.group(2), 16) if match else None
+            continue
+        if opcode in ("ori", "or", "addiu", "addi", "daddiu") and len(operands) == 3:
+            dest, source, imm = operands
+            base = const.get(source)
+            value = _immediate(imm) if _IMM_RE.match(imm) else None
+            if base is None or value is None:
+                const[dest] = None
+            elif opcode in ("ori", "or"):
+                const[dest] = (base | value) & 0xFFFFFFFF
+            else:
+                half = value - 0x10000 if value >= 0x8000 else value
+                const[dest] = (base + half) & 0xFFFFFFFF
+            continue
+        if opcode in _LOADS or opcode in _STORES:
+            if len(operands) >= 2:
+                memory = _MEMORY_RE.match(operands[1])
+                if memory is not None:
+                    offset = _immediate(memory.group(1))
+                    if offset is not None:
+                        record("$" + memory.group(2), offset, opcode, _asm_line(raw).strip())
+            if opcode in _LOADS and operands:
+                const[operands[0]] = None
+            continue
+        if _FLOW_RE.match(opcode):
+            delay = dict(const)  # what the delay slot, if any, still sees
+            forget()
+            if opcode == "jal":
+                const.update({name: None for name in _CALLER_SAVED})
+            continue
+        if operands:
+            const[operands[0]] = None
+        if in_delay_slot:
+            forget()  # past the delay slot the path is the branch's, not this run's
+    return [found[address] for address in sorted(found)]
+
+
 def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: int,
                arrays: int, unresolvable: int = 0) -> float:
     """Expected-ease score: few functions dominates, then call naming, then line records.
@@ -481,7 +663,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
                  by_name, by_addr, borrowed_names, borrowed_addrs, splits: pathlib.Path,
                  split_names: set[str], unplaced: dict | None = None,
                  unplaced_by_addr: dict[int, str] | None = None,
-                 link_names: set[str] | None = None) -> dict:
+                 link_names: set[str] | None = None,
+                 segments: tuple[int, int] | None = None) -> dict:
     """Every signal for one unpromoted (or promoted) unit.  No I/O beyond its splits."""
     promoted = (REPO_ROOT / "src" / rel).exists()
     library = "/src/" not in tu.name.replace("\\", "/")
@@ -525,6 +708,9 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
     calls = collections.Counter()
     unresolvable: list[dict] = []
     unresolved_seen: set[str] = set()
+    addresses: list[dict] = []
+    address_seen: set[int] = set()
+    address_functions: set[str] = set()
     unit_functions = {f.name for f in functions if f.name}
     unit_lo = min((f.attrs[AT_low_pc] for f in functions), default=None)
     unit_hi = max((f.attrs[AT_high_pc] for f in functions), default=None)
@@ -542,6 +728,15 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         if quad:
             quad_functions += 1
             quad_ops.update(quad)
+        if segments is not None:
+            hits = fixed_absolute_addresses(text, segments[1])
+            if hits:
+                address_functions.add(f.name)
+            for hit in hits:
+                if hit["address"] in address_seen:
+                    continue
+                address_seen.add(hit["address"])
+                addresses.append({**hit, "function": f.name})
         calls.update(classify_calls(text, unit_functions=unit_functions, unit_lo=unit_lo,
                                     unit_hi=unit_hi, by_name=by_name, by_addr=by_addr,
                                     borrowed_names=borrowed_names,
@@ -623,11 +818,26 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
             shown.append(f"{ref['target']}{alias}{where}: {ref['reason']}")
         reasons.append(f"{len(unresolvable)} branch/call target(s) the promotion path cannot "
                        f"resolve: " + "; ".join(shown))
+    if addresses:
+        flags.append("absolute-addresses")
+        shown = []
+        for hit in addresses[:3]:
+            shown.append(f"0x{hit['base']:08X} ({hit['function']}: {hit['operand']} -> "
+                         f"0x{hit['address']:08X})")
+        span = ("above every declared segment" if segments is None
+                else f"above the declared segments (top 0x{segments[1]:X})")
+        reasons.append(f"{len(addresses)} fixed absolute address(es) {span}, used as a memory "
+                       f"base by {len(address_functions)} of this unit's function(s): "
+                       + "; ".join(shown) + " -- no ledger can name an address no "
+                       "segment declares, and a C constant compiles to lui+ori where retail's "
+                       "bytes are a lui+offset relocation pair (the out-of-segment class "
+                       "net_game_help.c measured)")
 
     blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "128-bit-gpr",
                            "library", "unreferenced-arrays", "large-tables",
                            "unreferenced-tables", "array-die-order",
-                           "unresolvable-callees"} for flag in flags)
+                           "unresolvable-callees",
+                           "absolute-addresses"} for flag in flags)
 
     score = score_unit(functions=n, statements=statements, calls=calls,
                        fp_functions=fp_functions, arrays=len(arrays),
@@ -645,6 +855,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         "no VU0" if not vu_functions else f"{vu_functions} VU0 function(s)",
         "no 128-bit GPR ops" if not quad_functions
         else f"{quad_functions} 128-bit GPR function(s)",
+        "no fixed absolute addresses" if not addresses
+        else f"{len(addresses)} fixed absolute address(es)",
         "scalar" if not fp_functions else f"{fp_functions} FPU function(s)",
         f"declared {declared} function(s) in cus.json",
     ]
@@ -671,6 +883,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         "split_missing": split_missing,
         "calls": dict(calls),
         "unresolvable": unresolvable,
+        "addresses": addresses,
+        "address_functions": len(address_functions),
         "flags": flags,
         "warnings": warnings,
         "blocked": blocked,
@@ -697,6 +911,11 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
     reachable = reachable_offsets(edges, roots)
     splits = root / "asm/nonmatchings/main"
     split_names = {p.stem for p in splits.glob("*.s")} if splits.is_dir() else set()
+    # The declared segments the address signal reads: the same measurement ``compile.py``'s
+    # ``Manifests`` and the gates use, and the reason an out-of-segment record is refused.
+    target = _TARGETS.get() if _TARGETS is not None else None
+    geometry = getattr(target, "geometry", None)
+    segments = (geometry.loadable_vram, geometry.bss_end) if geometry is not None else None
 
     rows = []
     seen = set()
@@ -710,7 +929,7 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                                  borrowed_names=borrowed_names, borrowed_addrs=borrowed_addrs,
                                  splits=splits, split_names=split_names,
                                  unplaced=unplaced, unplaced_by_addr=unplaced_by_addr,
-                                 link_names=link_names))
+                                 link_names=link_names, segments=segments))
     # A cus.json unit with no DWARF TU is a manifest inconsistency; surface it, never average it.
     for rel, info in units.items():
         if rel not in seen:
@@ -720,7 +939,7 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                          "unreferenced_arrays": [], "tables": [], "large_tables": [],
                          "unreferenced_tables": [], "vu_functions": 0, "quad_functions": 0,
                          "quad_ops": [], "fp_functions": 0,
-                         "split_missing": 0, "calls": {}, "unresolvable": [],
+                         "split_missing": 0, "calls": {}, "unresolvable": [], "addresses": [], "address_functions": 0,
                          "flags": ["missing-dwarf"],
                          "blocked": True, "score": 0.0,
                          "reasons": ["cus.json names this unit but the DWARF has no TU for it"],
