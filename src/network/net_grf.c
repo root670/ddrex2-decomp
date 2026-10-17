@@ -52,12 +52,12 @@ static char dancer_num[22] = {
     5, 4, 7, 6, 3, 2, 1, 0, 14, 15, 13, 12,
     10, 11, 8, 9, 23, 22, 21, 20, 19, 18,
 };
-
 static void unused_grf_types(grf_element *p) { p->flg = 1; }
 /* No function in this unit uses either aggregate, but retail's CU carries both and in this
  * order: MWCC registers a type's DIEs only from a body that uses it, so the unused helper
- * above carries them.  The table is indexed by half the dancer's id and corrected for the odd
- * half -- retail divides with a sign fixup (`bgez`/`sra`) because `/` truncates toward zero. */
+ * above is what carries them.  The table is indexed by half the dancer's id and then
+ * corrected for the odd half: retail divides with a sign fixup (`bgez`/`sra`) because `/`
+ * truncates toward zero, and the correction is 24 -- three quads of eight. */
 
 int NetGrfGetDancerIDToNumberPoint(int dancer_id)
 {
