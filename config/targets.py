@@ -190,6 +190,11 @@ class Target:
     pair measured against one retail binary says nothing about another, so a new target starts
     with an empty table and ``configure.py`` refuses to promote a source nobody has measured
     for *it*.
+
+    ``include_dirs`` is the repo-relative search path the C units are compiled with, in
+    order: where the oracle writes the generated headers this target's sources include.  It
+    is a fact of the target because the headers are rendered from *its* DWARF; the driver
+    that hands them to the compiler spells the paths, so nothing else has to know them.
     """
 
     name: str
@@ -200,6 +205,7 @@ class Target:
     image_sha256: str
     geometry: "Geometry | None" = None
     tu_builds: tuple = ()
+    include_dirs: tuple = ("include",)
 
     def __post_init__(self):
         if not isinstance(self.name, str) or not _NAME.fullmatch(self.name):
@@ -234,6 +240,14 @@ class Target:
             if entry[0] in seen:
                 raise ValueError(f"target {self.name}: tu_builds names {entry[0]!r} twice")
             seen.add(entry[0])
+        for entry in self.include_dirs:
+            if not (isinstance(entry, str) and entry
+                    and not pathlib.PurePosixPath(entry).is_absolute()):
+                raise ValueError(
+                    f"target {self.name}: include_dirs entry {entry!r} is not a repo-relative "
+                    f"directory: a target's include path is spelled from the repository root, "
+                    f"so the descriptors of two checkouts of the same tree name the same "
+                    f"headers")
 
     # -- paths, all inside the target's own config dir -----------------------
 
@@ -296,6 +310,18 @@ class Target:
     def ld_script(self) -> pathlib.Path:
         """The pinned linker script ``configure.py`` generates for this target."""
         return REPO_ROOT / "build" / f"{self.elf.name}.ld"
+
+    # -- the include search path, spelled from the repository root -----------
+
+    @property
+    def include_paths(self) -> tuple:
+        """The directories the C units include from: ``include_dirs``, repo-relative no more.
+
+        The descriptor stores them repo-relative so a diff reads them the way a reader types
+        them (see ``include_dirs``); every caller wants a path, so the join happens here and
+        once.
+        """
+        return tuple(REPO_ROOT / entry for entry in self.include_dirs)
 
     def geometry_required(self) -> Geometry:
         """The measured geometry, or a loud stop naming what has to be measured."""

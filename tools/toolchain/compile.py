@@ -909,6 +909,43 @@ def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: 
     return bytes(out), sizes
 
 
+def include_flags(target) -> list:
+    """The ``-I`` flags that put ``target``'s generated headers on the compiler's search path.
+
+    ``place`` stages the source under ``/tmp`` before compiling it, so the one directory MWCC
+    searches for a quoted ``#include`` -- the source's own -- holds a scratch copy of the C
+    and none of the headers, and ``probe._invoke`` runs the compiler with its *installation*
+    directory as the working directory.  Without these flags a unit whose types live further
+    up the type closure than its own header -- the generated headers under ``include/`` are
+    the only way a unit with low statement numbers can declare types it cannot inline without
+    moving its statements -- cannot compile at all:
+
+        #include "src/AM/s573/doll/dexport.h"
+        Error: the file 'src/AM/s573/doll/dexport.h' cannot be opened
+
+    The directories come from the target descriptor
+    (:attr:`config.targets.Target.include_paths`), never from a spelling of this driver's own,
+    and each is passed absolute the way the source and the object already are: the compiler
+    resolves a relative ``-I`` against its own working directory, which sits under the
+    toolchain symlink and is therefore not a path this tree can name.
+
+    ``-I`` cannot change codegen -- measured on this target: the compiler's ``.text`` is
+    byte-identical with and without it -- so this is the one flag the recorded pair
+    (``tu_builds``) does not have to carry.  (The generated headers' own *spelling* is not
+    free for a unit that includes them: MWCC's DWARF records offsets that follow the length of
+    the path a header was opened through, while the path itself never appears in the payload.)
+    """
+    flags = []
+    for directory in target.include_paths:
+        if not directory.is_dir():
+            raise Unusable(
+                f"{_display(directory)} is not a directory: the target's include path is "
+                f"where the oracle writes the headers a unit includes, so it has to exist "
+                f"before that unit can compile")
+        flags.append(f"-I{directory}")
+    return flags
+
+
 def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) -> Placed:
     """Compile ``tu`` and place it: the unit's bytes, as the pinned layout has them."""
     if not tu.source.is_file():
@@ -922,7 +959,8 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
                        f"{len(tu.name)}")
 
     obj = pathlib.Path(keep) if keep else BUILD / "cc" / (tu.file + ".mw.o")
-    probe.compile(staged, obj, compiler_dir, wibo, flags)
+    probe.compile(staged, obj, compiler_dir, wibo,
+                  [*flags, *include_flags(manifests.target)])
 
     mw = MWObject(obj, manifests)
     gp = gp_value(manifests.target.elf)

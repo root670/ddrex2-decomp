@@ -231,6 +231,21 @@ def test_a_new_target_can_be_the_default():
         == "probe2"
 
 
+def test_a_targets_include_path_is_spelled_from_the_repository_root():
+    """The include search path is a target fact, repo-relative in the descriptor.
+
+    The promotion compile hands these directories to the compiler (``compile.py``'s
+    ``include_flags``, one ``-I`` each), and the C units spell their includes the way the
+    generated headers are laid out under ``include/`` -- so the path is derived here, once,
+    rather than spelled by each driver that needs it.
+    """
+    assert probe_target(include_dirs=("headers", "types")).include_paths \
+        == (ROOT / "headers", ROOT / "types")
+    registered = targets.get()
+    assert registered.include_dirs == ("include",)
+    assert registered.include_paths == (ROOT / "include",)
+
+
 def test_a_duplicate_target_name_is_refused():
     """Two descriptors for one name would make every path ambiguous."""
     registry = targets.Registry(targets.get())
@@ -272,6 +287,8 @@ def test_a_descriptor_missing_a_required_field_fails_loudly():
                    dict(config_dir=pathlib.Path("config/probe")),
                    dict(tu_builds=(("src/a.c", "3.0", ""),)),
                    dict(tu_builds=(("src/a.c", "3.0", "-g"), ("src/a.c", "3.0", "-g"))),
+                   dict(include_dirs=("/include",)),
+                   dict(include_dirs=("",)),
                    dict(geometry="0x80")):
         with pytest.raises(ValueError):
             probe_target(**broken)
