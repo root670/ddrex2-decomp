@@ -487,6 +487,14 @@ DDREX2P = Target(
     # order: N of M @anonN indices permuted)`.  The row itself carries no extra field: the
     # gate re-measures the chunks on every build, and the comment is the record that a
     # human made the promotion decision.  No unit is accepted this way yet.
+    # A unit whose `.debug` chunk the opt-in order normaliser rewrote (`compile.py
+    # --normalise-debug`, `tools/toolchain/debug_normalize.py`) records it the same way,
+    # quoting `.debug DIE order normalised under --normalise-debug, byte-equal`: the
+    # normalised chunk is retail's bytes exactly, so the row's pair reproduces the unit byte
+    # for byte and the pin is unchanged.  No row carries one yet -- the recorded pair's own
+    # chunks are already byte-equal, and the step exists to measure a build whose chunk is
+    # the same DIE set in another order (see the report for `net_grf.c` under
+    # `3.0b38-030307`).
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
     # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both
     # byte-equal on `.text`, `.debug` and `.line` under `3.0-011126 -c -lang c -O3 -opt
