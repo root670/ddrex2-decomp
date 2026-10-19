@@ -482,6 +482,13 @@ DDREX2P = Target(
         image_elf_offset=0x6D261000,  # LBA 894146 in the pinned image
     ),
     # (source, compiler build, flags): measured, never inherited -- see the note above.
+    #
+    # A unit accepted under the anonymous-type DIE-order boundary (`docs/unit-work.md`,
+    # "The one recorded `.debug` deviation") must say so in a comment on its row, quoting
+    # the line `compile.py` prints: `.debug set-equal, not byte-equal (anonymous-type DIE
+    # order: N of M @anonN indices permuted)`.  The row itself carries no extra field: the
+    # gate re-measures the chunks on every build, and the comment is the record that a
+    # human made the promotion decision.  No unit is accepted this way yet.
     # `select_build.py --tu sys_scf.c` (2026-10-16, all five installed builds, every flag
     # set) is the evidence for the first line; four builds reproduce the unit and `.comment`
     # cuts the tie to three, of which this is the first.

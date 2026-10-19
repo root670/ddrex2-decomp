@@ -70,7 +70,7 @@ for _extra in (str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT / "tools"), st
 
 import elf  # noqa: E402  the vendored 32-bit little-endian MIPS reader
 from config import targets  # noqa: E402  the one place a target's facts are written down
-from toolchain import check_deps, fetch, probe  # noqa: E402
+from toolchain import check_deps, debug_set, fetch, probe  # noqa: E402
 
 #: The target a direct invocation works on when ``--target`` names none: the one the tree is
 #: configured for.  The ninja graph always names the target it was generated for, so a build
@@ -909,6 +909,94 @@ def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: 
     return bytes(out), sizes
 
 
+def _retail_chunk(image, section: str, offset: int, size: int) -> bytes:
+    """``size`` bytes of retail's ``section`` at the unit's pinned chunk ``offset``."""
+    entry = next((s for s in image.sections if s.name == section), None)
+    if entry is None:
+        raise Unusable(f"{image.path}: no {section} section")
+    return image.data[entry.offset + offset:entry.offset + offset + size]
+
+
+def _first_difference(left: bytes, right: bytes) -> int:
+    """The first byte index at which two byte strings differ (or the shorter length)."""
+    for index, (one, other) in enumerate(zip(left, right)):
+        if one != other:
+            return index
+    return min(len(left), len(right))
+
+
+def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
+                    retail_text: bytes, retail_line: bytes, retail_debug: bytes,
+                    base: int = 0) -> bytes:
+    """The four conditions, and the bytes the image should carry for this unit.
+
+    Condition 1 (``.text`` and ``.line`` byte-equal) is checked here rather than in
+    :func:`place`'s size checks because a same-size instruction difference is invisible to
+    a length test, and this is the one path that would otherwise accept it.  Condition 2
+    (retail's chunk length and DIE count) and condition 3 (the DIE multiset, with only
+    ``@anonN`` normalised) are :mod:`toolchain.debug_set`'s.  Condition 4 is every other
+    case: a missing or extra DIE, a changed member, a different tag, a different length --
+    the refusal names the first offending DIE.
+
+    On acceptance the retail chunk is returned, not the emitted one: the deviation is the
+    compiler's ``@anonN`` assignment, and keeping retail's structurally-equal bytes in the
+    image is what leaves G1 the pin.  The printed line names the boundary and the measured
+    permutation, which is the record the unit's ``tu_builds`` comment quotes.
+    """
+    if debug == retail_debug:
+        return debug
+
+    if text != retail_text:
+        at = _first_difference(text, retail_text)
+        raise Unusable(
+            f"{unit}: {debug_set.LABEL[1]} failed: .text is 0x{len(text):X} bytes against "
+            f"retail's 0x{len(retail_text):X}, first differing byte at 0x{at:X}")
+    if line != retail_line:
+        at = _first_difference(line, retail_line)
+        raise Unusable(
+            f"{unit}: {debug_set.LABEL[1]} failed: .line is 0x{len(line):X} bytes against "
+            f"retail's 0x{len(retail_line):X}, first differing byte at 0x{at:X}")
+
+    outcome = debug_set.classify(debug, retail_debug, base)
+    if not outcome.ok:
+        raise Unusable(f"{unit}: {outcome.message}")
+
+    print(f"compile: {unit}: .debug set-equal under the anonymous-type DIE-order boundary "
+          f"(0x{len(retail_debug):X} bytes, {outcome.die_count} DIEs, "
+          f"{outcome.permuted} of {outcome.anonymous} @anonN indices permuted); "
+          f".text and .line are byte-equal, retail's .debug chunk is kept in the image",
+          file=sys.stderr)
+    print(f"compile: {unit}: record in its tu_builds comment: .debug set-equal, not "
+          f"byte-equal (anonymous-type DIE order: {outcome.permuted} of "
+          f"{outcome.anonymous} @anonN indices permuted)", file=sys.stderr)
+    return retail_debug
+
+
+def _fill_debug(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int,
+                rename=None) -> tuple[bytes, list]:
+    """The unit's ``.debug`` candidate, assembled without refusing on length.
+
+    Length is a condition :func:`debug_promotion` reports (with the offending DIE), not a
+    reason to stop assembling here: a short block leaves a gap and a long one extends the
+    candidate, and both are visible to the whole-chunk comparison.  Blocks are placed at
+    the offsets retail pinned, which is what makes a DIE's position comparable.
+    """
+    bodies = []
+    for offset, pinned, index, label in blocks:
+        body = relocate(mw.data(index), mw.relocs.get(index, ()),
+                        lambda symbol: mw.resolve(tu, symbol), f"{label}.debug", gp)
+        if rename is not None:
+            body = retail_name_in(body, *rename)
+        bodies.append((offset - base, pinned, body, label))
+    end = max([size] + [at + len(body) for at, _pinned, body, _label in bodies])
+    out = bytearray(end)
+    sizes = []
+    for at, pinned, body, label in bodies:
+        out[at:at + len(body)] = body
+        sizes.append((label, ".debug", len(body), pinned))
+    return bytes(out), sizes
+
+
 def include_flags(target) -> list:
     """The ``-I`` flags that put ``target``'s generated headers on the compiler's search path.
 
@@ -979,7 +1067,8 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
             detail = (f"short by 0x{shortfall:X} bytes" if shortfall > 0
                       else f"0x{-shortfall:X} bytes too large")
             raise Unusable(
-                f"{tu.file}: .text {function.name} is {detail}; C is incomplete")
+                f"{tu.file}: {debug_set.LABEL[1]} failed: .text {function.name} is "
+                f"{detail}; C is incomplete")
         at = function.address - text_start
         text[at:at + len(body)] = body
         body_spans.append((at, len(body)))
@@ -992,15 +1081,21 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
                                   tu.end - text_start, tu.file))
 
     types = manifests.cus[tu.records[0]]
-    debug, debug_sizes = _fill(
-        mw, tu, tu.debug_offset, tu.debug_size,
-        [(types["offset"], types["size"], mw.section_named(".debug"), "the unit's types")]
-        + [(f.debug_offset, f.debug_size, groups[f.name][1], f.name) for f in tu.functions],
-        gp, ".debug", (recorded, tu.name.encode()), tu.file)
+    # `.line` first: condition 1 pairs it with `.text`, and the `.debug` policy needs both.
     line, line_sizes = _fill(
         mw, tu, tu.line_offset, tu.line_size,
         [(f.line_offset, f.line_size, groups[f.name][2], f.name) for f in tu.functions],
         gp, ".line", unit_file=tu.file)
+    debug, debug_sizes = _fill_debug(
+        mw, tu, tu.debug_offset, tu.debug_size,
+        [(types["offset"], types["size"], mw.section_named(".debug"), "the unit's types")]
+        + [(f.debug_offset, f.debug_size, groups[f.name][1], f.name) for f in tu.functions],
+        gp, (recorded, tu.name.encode()))
+    debug = debug_promotion(
+        tu.file, text=bytes(text), line=line, debug=debug, retail_text=expected_text,
+        retail_line=_retail_chunk(retail, ".line", tu.line_offset, tu.line_size),
+        retail_debug=_retail_chunk(retail, ".debug", tu.debug_offset, tu.debug_size),
+        base=tu.debug_offset)
     return Placed(bytes(text), debug, line, labels, sizes + debug_sizes + line_sizes)
 
 
