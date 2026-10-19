@@ -313,13 +313,16 @@ states, not alternative measurements of one state.
 
 ## 5. What the sample changes
 
-1. **The compiler question is settled, with one qualification.** Under the gate's recorded
-   set-equal `.debug` policy, `3.0b38-030307` at `-c -lang c -O3 -opt full -g` is the pair to
-   record as the default when a unit does not contradict it. The two already-promoted units do
-   not contradict it, and `lang.c` selects it — but `net_grf`'s b38 cells and `lang`'s pass are
-   `.debug` set-equal, so a `tu_builds` row for b38 must carry the boundary comment. If a unit
-   needs byte-equal `.debug`, use `3.0-011126` (or `3.0.1-020123`/`3.0.3-020716`) at
-   `-O3 -g`.
+1. **The compiler question is settled: one pair, and it is not b38.** The game's build is a
+   fact about the game, not a per-unit choice. Every unit whose C is believed correct
+   (`sys_scf.c`, `net_grf.c`) is byte-equal on `.text`, `.debug` and `.line` under
+   `3.0-011126 -c -lang c -O3 -g` — and under the five sibling cells from `3.0.1-020123` /
+   `3.0.3-020716` × both flag strings — so `tu_builds` records that pair for both.
+   `3.0b38-030307 -O3 -opt full -g` does not reproduce `net_grf`'s `.debug` byte-for-byte
+   (same length, 41 DIEs, set-equal only), so it cannot be the game's pair; that cell is
+   gate-passing only because `debug_promotion` keeps retail's chunk. Its wider claim rests on
+   `lang.c`, an unproven draft whose only pass is also `.debug` set-equal. Per-unit pairs
+   remain a fallback for a unit no single pair can explain, not the organizing principle.
 2. **Four branch-tip draft blobs are broken and cost compiles.** `dexport.c` on `wt-unit-c` and
    `wt-unit-l`, and `dmm_chara.c` on `wt-unit-j` and `wt-unit-k`, spell a typedef parameter as
    `struct <tag> *`; the compiler rejects the redeclaration. The UnitC/UnitL/UnitJ reports
