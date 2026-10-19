@@ -296,8 +296,8 @@ precedes the block groups:
 
 Inventory: **15 common TUs, 147 function CUs, 64 with locals, 268 local DIEs, 2 with a
 repeated local name**, both outer-first. Game sources: **1,764 function CUs with locals, 44
-with a repeated name**; 41 show the outer-first signature and 3 are name-indistinct pairs
-(`i,i`, `p,sp,p`, …) that cannot order a group. A six-block probe emits `i,h,g,f,e,d,a` under
+with a repeated name**; 40 show the outer-first signature and 4 are name-indistinct pairs
+(`i,i`, `ret,ret`, `p,sp,p`, …) that cannot order a group. A six-block probe emits `i,h,g,f,e,d,a` under
 `3.0-011126` (whole declaration sequence reversed) and `a,d,e,f,g,h,i` under `3.0b38-030307`
 (forward).
 
