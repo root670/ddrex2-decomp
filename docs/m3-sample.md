@@ -44,9 +44,12 @@ so a refusal has a text number rather than a guess. Draft sources were materiali
   `differing` counts retail-word positions whose compiled (relocated) word differs; a missing
   word counts as differing, extra compiled words are not counted (the denominator stays
   retail's).
-* **Per-part verdicts:** `ok` = byte-equal to retail; `size` = length matches retail but bytes
-  differ; `±N` = length differs by N bytes; `–` = not reached (an earlier condition refused);
-  `err` = no usable object (the compiler, the resolver, or the function lookup refused).
+* **Per-part verdicts:** `ok` = byte-equal to retail; `ok*` = gate-ok because the
+  compiler-emitted `.debug` is set-equal under the recorded DIE boundary and `debug_promotion`
+  keeps retail's chunk in the image (`.text` and `.line` are byte-equal); `size` = length
+  matches retail but bytes differ; `±N` = length differs by N bytes; `–` = not reached (an
+  earlier condition refused); `err` = no usable object (the compiler, the resolver, or the
+  function lookup refused).
 
 ## 1. Inventory
 
