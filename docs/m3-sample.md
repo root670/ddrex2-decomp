@@ -278,6 +278,39 @@ without `-opt full`.
   already established that `.comment` does not track the installed builds' codegen; it is not
   part of this tie.
 
+### 3.4 Local-DIE emission order is a compiler property, not a module boundary
+
+A function CU carries one `TAG_lexical_block` with nested scopes flattened into it, so scope
+boundaries are not in the DWARF tree. They are recoverable from a repeated local name (the
+same name cannot be declared twice in one scope) plus the line table (a function-scope local
+used early must be declared before a later block). Classifying by whether the outer group
+precedes the block groups:
+
+| sample | retail order | `3.0-011126` | `3.0b38-030307` |
+|---|---|---|---|
+| `common/com_scrollbar.c` `ComScrollBarDisp` (8 locals, 2 blocks) | `info,sp2,bar_y,bar_h,sa,dw_h,bar_y,bar_h` — outer-first | reversed, inner group first | **retail exactly** |
+| `common/cws/cws_str.c` `CwsStrDisp` (17 locals, 4 blocks) | outer prefix, then `size_w,size_h` ×4 | reverses the sequence | forward |
+| game `AM/s573/doll/model2.c` `NormCulcG3U` (8, 1 block) | `normal_top,nnum,i,flg,nmp,v,nnum,i` — outer-first | inner group first | forward |
+| game `CS/dancemaster/dmm_select.c` `dmm_disp_connect_sub` (23, 3 array pairs) | outer prefix, then the block pairs | reverses the sequence | forward |
+| `network/net_grf.c` `peerPrintf` (one group, no block) | `r,tmp,ap` | `r,tmp,ap` for source `ap,tmp,r` | `r,tmp,ap` for source `r,tmp,ap` |
+
+Inventory: **15 common TUs, 147 function CUs, 64 with locals, 268 local DIEs, 2 with a
+repeated local name**, both outer-first. Game sources: **1,764 function CUs with locals, 44
+with a repeated name**; 41 show the outer-first signature and 3 are name-indistinct pairs
+(`i,i`, `p,sp,p`, …) that cannot order a group. A six-block probe emits `i,h,g,f,e,d,a` under
+`3.0-011126` (whole declaration sequence reversed) and `a,d,e,f,g,h,i` under `3.0b38-030307`
+(forward).
+
+**Verdict:** the order difference **cuts across modules**; it tracks the compiler revision,
+not `common/`. `sys_scf`/`net_grf` cannot discriminate: `sys_scf` has no local DIEs, and
+`net_grf`'s single-group declaration order is unpinned — `ap,tmp,r` and `r,tmp,ap` give
+byte-identical `.text` under both builds, so its 3.0 byte-equality is the draft's choice of
+source order. The module-boundary reading is refuted by any game unit with distinct block
+groups in forward order; the two controls here are such units. It would be restored by a
+game unit (or a common unit) whose retail DIE order puts a block group before the outer
+group while matching `3.0-011126`'s `.text`/`.line`; none exists among the 46
+repeated-name functions.
+
 ## 4. Throughput, as recorded by the unit reports
 
 Promoted units first. Every number is copied from the named report; `not recorded` means the
