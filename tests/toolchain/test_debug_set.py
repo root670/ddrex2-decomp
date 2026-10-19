@@ -248,6 +248,34 @@ def test_acceptance_keeps_retails_chunk_and_prints_the_boundary(capsys):
     assert "tu_builds comment" in error
 
 
+class _MW:
+    relocs = {}
+
+    @staticmethod
+    def data(_index):
+        return b"\xAA\xBB"
+
+    @staticmethod
+    def resolve(_tu, _symbol):
+        return 0
+
+
+def test_a_block_length_difference_refuses_as_condition_two():
+    candidate, _sizes, mismatches = cc._fill_debug(
+        _MW(), object(), 0, 4, [(0, 4, 0, "the unit's types")], 0,
+        retail_chunk=b"\0" * 4)
+
+    assert mismatches
+    with pytest.raises(cc.Unusable) as excinfo:
+        cc.debug_promotion("src/example.c", text=b"", line=b"", debug=candidate,
+                           retail_text=b"", retail_line=b"", retail_debug=b"\0" * 4,
+                           block_mismatches=mismatches)
+
+    assert "condition 2 (.debug length and DIE count)" in str(excinfo.value)
+    assert "short by 0x2 bytes" in str(excinfo.value)
+    assert "cannot pad .debug" in str(excinfo.value)
+
+
 def test_a_text_byte_difference_refuses_as_condition_one():
     retail, emitted = _retail_and_emitted()
 
@@ -256,7 +284,7 @@ def test_a_text_byte_difference_refuses_as_condition_one():
                            retail_text=b"c0de", retail_line=b"line",
                            retail_debug=retail)
 
-    assert ".text and .line byte-equal failed" in str(excinfo.value)
+    assert "condition 1 (.text and .line byte-equal)" in str(excinfo.value)
     assert "first differing byte at 0x1" in str(excinfo.value)
 
 
@@ -268,5 +296,5 @@ def test_a_line_byte_difference_refuses_as_condition_one():
                            retail_text=b"code", retail_line=b"1ine",
                            retail_debug=retail)
 
-    assert ".text and .line byte-equal failed" in str(excinfo.value)
+    assert "condition 1 (.text and .line byte-equal)" in str(excinfo.value)
     assert ".line is 0x4 bytes" in str(excinfo.value)

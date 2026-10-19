@@ -927,7 +927,7 @@ def _first_difference(left: bytes, right: bytes) -> int:
 
 def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
                     retail_text: bytes, retail_line: bytes, retail_debug: bytes,
-                    base: int = 0) -> bytes:
+                    base: int = 0, block_mismatches=()) -> bytes:
     """The four conditions, and the bytes the image should carry for this unit.
 
     Condition 1 (``.text`` and ``.line`` byte-equal) is checked here rather than in
@@ -943,19 +943,30 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
     image is what leaves G1 the pin.  The printed line names the boundary and the measured
     permutation, which is the record the unit's ``tu_builds`` comment quotes.
     """
-    if debug == retail_debug:
+    if debug == retail_debug and not block_mismatches:
         return debug
 
     if text != retail_text:
         at = _first_difference(text, retail_text)
         raise Unusable(
-            f"{unit}: {debug_set.LABEL[1]} failed: .text is 0x{len(text):X} bytes against "
-            f"retail's 0x{len(retail_text):X}, first differing byte at 0x{at:X}")
+            f"{unit}: condition 1 ({debug_set.LABEL[1]}) failed: .text is "
+            f"0x{len(text):X} bytes against retail's 0x{len(retail_text):X}, first "
+            f"differing byte at 0x{at:X}")
     if line != retail_line:
         at = _first_difference(line, retail_line)
         raise Unusable(
-            f"{unit}: {debug_set.LABEL[1]} failed: .line is 0x{len(line):X} bytes against "
-            f"retail's 0x{len(retail_line):X}, first differing byte at 0x{at:X}")
+            f"{unit}: condition 1 ({debug_set.LABEL[1]}) failed: .line is "
+            f"0x{len(line):X} bytes against retail's 0x{len(retail_line):X}, first "
+            f"differing byte at 0x{at:X}")
+
+    if block_mismatches:
+        label, emitted, pinned, block = block_mismatches[0]
+        detail = (f"{label} .debug is short by 0x{pinned - emitted:X} bytes"
+                  if emitted < pinned else
+                  f"{label} .debug is 0x{emitted - pinned:X} bytes too large")
+        raise Unusable(f"{unit}: condition 2 ({debug_set.LABEL[2]}) failed: {detail}; "
+                       f"C is incomplete (cannot pad .debug); "
+                       f"{block.detail or 'the block differs'}")
 
     outcome = debug_set.classify(debug, retail_debug, base)
     if not outcome.ok:
@@ -973,13 +984,18 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
 
 
 def _fill_debug(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int,
-                rename=None) -> tuple[bytes, list]:
+                rename=None, retail_chunk: bytes = b"") -> tuple[bytes, list, list]:
     """The unit's ``.debug`` candidate, assembled without refusing on length.
 
     Length is a condition :func:`debug_promotion` reports (with the offending DIE), not a
     reason to stop assembling here: a short block leaves a gap and a long one extends the
     candidate, and both are visible to the whole-chunk comparison.  Blocks are placed at
     the offsets retail pinned, which is what makes a DIE's position comparable.
+
+    A block whose length is not retail's is returned as a mismatch too.  Without that, a
+    short block whose missing bytes happened to be trailing nulls could leave the *chunk*
+    the right length and the DIE count unchanged, and the whole-chunk comparison would
+    accept a block that is not retail's.
     """
     bodies = []
     for offset, pinned, index, label in blocks:
@@ -990,11 +1006,15 @@ def _fill_debug(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int,
         bodies.append((offset - base, pinned, body, label))
     end = max([size] + [at + len(body) for at, _pinned, body, _label in bodies])
     out = bytearray(end)
-    sizes = []
+    sizes, mismatches = [], []
     for at, pinned, body, label in bodies:
         out[at:at + len(body)] = body
         sizes.append((label, ".debug", len(body), pinned))
-    return bytes(out), sizes
+        if len(body) != pinned:
+            retail_block = retail_chunk[at:at + pinned]
+            mismatches.append((label, len(body), pinned,
+                               debug_set.classify(body, retail_block, at + base)))
+    return bytes(out), sizes, mismatches
 
 
 def include_flags(target) -> list:
@@ -1067,8 +1087,8 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
             detail = (f"short by 0x{shortfall:X} bytes" if shortfall > 0
                       else f"0x{-shortfall:X} bytes too large")
             raise Unusable(
-                f"{tu.file}: {debug_set.LABEL[1]} failed: .text {function.name} is "
-                f"{detail}; C is incomplete")
+                f"{tu.file}: condition 1 ({debug_set.LABEL[1]}) failed: .text "
+                f"{function.name} is {detail}; C is incomplete")
         at = function.address - text_start
         text[at:at + len(body)] = body
         body_spans.append((at, len(body)))
@@ -1086,16 +1106,17 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
         mw, tu, tu.line_offset, tu.line_size,
         [(f.line_offset, f.line_size, groups[f.name][2], f.name) for f in tu.functions],
         gp, ".line", unit_file=tu.file)
-    debug, debug_sizes = _fill_debug(
+    retail_debug = _retail_chunk(retail, ".debug", tu.debug_offset, tu.debug_size)
+    debug, debug_sizes, debug_mismatches = _fill_debug(
         mw, tu, tu.debug_offset, tu.debug_size,
         [(types["offset"], types["size"], mw.section_named(".debug"), "the unit's types")]
         + [(f.debug_offset, f.debug_size, groups[f.name][1], f.name) for f in tu.functions],
-        gp, (recorded, tu.name.encode()))
+        gp, (recorded, tu.name.encode()), retail_chunk=retail_debug)
     debug = debug_promotion(
         tu.file, text=bytes(text), line=line, debug=debug, retail_text=expected_text,
         retail_line=_retail_chunk(retail, ".line", tu.line_offset, tu.line_size),
-        retail_debug=_retail_chunk(retail, ".debug", tu.debug_offset, tu.debug_size),
-        base=tu.debug_offset)
+        retail_debug=retail_debug, base=tu.debug_offset,
+        block_mismatches=debug_mismatches)
     return Placed(bytes(text), debug, line, labels, sizes + debug_sizes + line_sizes)
 
 
