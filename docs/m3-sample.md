@@ -5,11 +5,13 @@ Target: `ddrex2p`. This is the measurement the M3 promotion loop was missing: ev
 that has C was compiled through the promotion path, under all five installed compiler builds
 and both recorded flag strings, and the day's per-unit throughput was reduced to one table.
 
-**Result in one line.** The data supports `3.0b38-030307 -c -lang c -O3 -opt full -g` as the
-default pair: it is the only pair that reproduces every unit that reproduces, and it is the
-best-or-tied cell for 8 of the 15 sampled source variants (8 of the 10 that compile far enough
-to measure). The strict gate-passing set is only 3 of 15, so the majority claim depends on the
-definition; both are stated in §3.
+**Result in one line.** Under the gate's recorded set-equal `.debug` policy, the default pair
+is `3.0b38-030307 -c -lang c -O3 -opt full -g`: it is the only pair common to every
+gate-passing unit (3 of 15) and the best-or-tied cell by text words for 8 of the 15 sampled variants
+(8 of the 10 that compile far enough to measure). The qualification matters: two of those three
+gate passes (`net_grf` and `lang`) are `.debug` **set-equal**, not byte-equal. Under strict
+byte equality there is no common pair; the largest agreeing set is `sys_scf` + `net_grf` on
+`3.0-011126`/`3.0.1-020123`/`3.0.3-020716`. §3 gives all three counts.
 
 ## Method
 
@@ -28,7 +30,8 @@ so a refusal has a text number rather than a guess. Draft sources were materiali
   path, because the CLI's `tu_named` accepts retail paths only; this changes the staging
   directory but not the compiler, flags, relocation or comparison. The two promoted units were
   also run through the literal CLI as anchors (`sys_scf.c` and `net_grf.c`; the latter's
-  `3.0b38-030307 -O3 -g` run prints `text ok`, `debug ok`, `line ok`).
+  `3.0b38-030307 -O3 -g` run prints `text ok`, `debug ok`, `line ok`, with the set-equal
+  `.debug` boundary line on stderr).
 * **Builds (all five installed):** `2.4-001213`, `3.0-011126`, `3.0.1-020123`,
   `3.0.3-020716`, `3.0b38-030307`.
 * **Flag strings (the two recorded):** `-c -lang c -O3 -g` and
@@ -98,8 +101,8 @@ flag string, and down a TU's two rows to compare the flag string. `err` cells ar
 |---|---|---|---|---|---|---|
 | `src/sys/sys_scf.c` | -O3 -g | 2/15 size/ok/ok | 0/15 ok/ok/ok | 0/15 ok/ok/ok | 0/15 ok/ok/ok | 0/15 ok/ok/ok |
 | `src/sys/sys_scf.c` | -O3 -opt full -g | 2/15 size/ok/ok | 0/15 ok/ok/ok | 0/15 ok/ok/ok | 0/15 ok/ok/ok | 0/15 ok/ok/ok |
-| `src/network/net_grf.c` | -O3 -g | 8/44 size/–/-0xA | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok/ok |
-| `src/network/net_grf.c` | -O3 -opt full -g | 8/44 size/–/-0xA | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok/ok |
+| `src/network/net_grf.c` | -O3 -g | 8/44 size/–/-0xA | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok*/ok |
+| `src/network/net_grf.c` | -O3 -opt full -g | 8/44 size/–/-0xA | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok/ok | 0/44 ok/ok*/ok |
 | `drafts/com_scrollbar.c` (m) | -O3 -g | 297/336 -16/–/– | 266/336 -24/–/– | 266/336 -24/–/– | 266/336 -24/–/– | 223/336 -24/–/– |
 | `drafts/com_scrollbar.c` (m) | -O3 -opt full -g | 297/336 -16/–/– | 265/336 -24/–/– | 265/336 -24/–/– | 265/336 -24/–/– | 132/336 size/–/– |
 | `drafts/dexport.c` (c) | -O3 -g | err | err | err | err | err |
@@ -113,7 +116,7 @@ flag string, and down a TU's two rows to compare the flag string. `err` cells ar
 | `drafts/eye_filter.c` (c) | -O3 -g | err | err | err | err | err |
 | `drafts/eye_filter.c` (c) | -O3 -opt full -g | err | err | err | err | err |
 | `drafts/lang.c` (all) | -O3 -g | 6/17 size/–/– | 14/17 -8/–/– | 13/17 -4/–/– | 13/17 -4/–/– | 13/17 -4/–/– |
-| `drafts/lang.c` (all) | -O3 -opt full -g | 6/17 size/–/– | 14/17 -8/–/– | 13/17 -4/–/– | 13/17 -4/–/– | 0/17 ok/ok/ok |
+| `drafts/lang.c` (all) | -O3 -opt full -g | 6/17 size/–/– | 14/17 -8/–/– | 13/17 -4/–/– | 13/17 -4/–/– | 0/17 ok/ok*/ok |
 | `drafts/net_game_help.c` (f) | -O3 -g | 157/179 +24/–/– | 155/179 -4/–/– | 155/179 -4/–/– | 155/179 -4/–/– | 146/179 -24/–/– |
 | `drafts/net_game_help.c` (f) | -O3 -opt full -g | 157/179 +24/–/– | 155/179 -4/–/– | 155/179 -4/–/– | 155/179 -4/–/– | 159/179 -8/–/– |
 | `drafts/net_grf.c` (g2) | -O3 -g | 8/44 size/–/-0xA | 0/44 ok/-0x333/ok | 0/44 ok/-0x333/ok | 0/44 ok/-0x333/ok | 0/44 ok/-0x333/ok |
@@ -187,31 +190,41 @@ are unaffected.
 
 Two definitions are kept separate, because they answer different questions.
 
-### 3.1 Strict gate pass: the only pairs that reproduce the unit
+### 3.1 Gate pass, and the set-equal `.debug` boundary
 
-A cell counts only when `place()` accepts the unit and `compare()` reports `.text`, `.debug`
-and `.line` all byte-equal. Exactly three of the 15 sampled sources have such a cell:
+A cell is **gate-passing** when `place()` accepts the unit and `compare()` reports `.text`,
+`.debug` and `.line` all `ok`. That set includes cells where the compiler's emitted `.debug` is
+only **set-equal**: `debug_promotion` then keeps retail's chunk in the image and prints the
+boundary line. The emitted `.debug` is byte-equal only when that line is absent. This sample
+does not re-litigate the policy; it records which passing cells use it (`ok*` in §2).
 
-| TU source | gate-passing `(build, flags)` | count |
-|---|---|---:|
-| `src/sys/sys_scf.c` | `3.0-011126`, `3.0.1-020123`, `3.0.3-020716`, `3.0b38-030307` × {`-O3 -g`, `-O3 -opt full -g`} | 8 |
-| `src/network/net_grf.c` | the same four builds × both flag strings | 8 |
-| `drafts/lang.c` | only `3.0b38-030307`, `-O3 -opt full -g` | 1 |
-| the other 12 sources | none | 0 |
+| TU source | gate-passing `(build, flags)` | emitted `.debug` |
+|---|---|---|
+| `src/sys/sys_scf.c` | `3.0-011126`, `3.0.1-020123`, `3.0.3-020716`, `3.0b38-030307` × {`-O3 -g`, `-O3 -opt full -g`} = 8 | byte-equal on all 8 |
+| `src/network/net_grf.c` | the same four builds × both flag strings = 8 | byte-equal on `3.0`/`3.0.1`/`3.0.3` (6); `3.0b38` × both is set-equal (`ok*`) |
+| `drafts/lang.c` | only `3.0b38-030307`, `-O3 -opt full -g` = 1 | set-equal (`ok*`) |
+| the other 12 sources | none | — |
 
-**The largest set of TUs sharing a best pair is therefore 3:** `sys_scf`, `net_grf`, `lang`.
-The only pair common to all three is
+**Gate-passing intersection.** The only pair common to all three units is
 
 ```
 3.0b38-030307 -c -lang c -O3 -opt full -g.
 ```
 
-That is **not a majority of the sample**: 3/15 = 20%. It is, however, 3/3 of the units that
-reproduce at all, and 3/10 of the units that compile far enough to be measured. The tie among
-the four builds on `sys_scf` and `net_grf` is closed by an *unrelated* unit: `lang.c` does not
-reproduce under `3.0-011126`, `3.0.1-020123` or `3.0.3-020716`, and it does reproduce under
-`3.0b38-030307`, so its agreement removes those three builds. `sys_scf`/`net_grf` also pass
-at `-O3 -g`, but `lang` needs `-opt full`; that half of the pair is pinned the same way.
+The largest set of TUs sharing a gate-passing pair is therefore **3** (`sys_scf`, `net_grf`,
+`lang`), **3/15 = 20%** of the sample — not a majority. It is 3/3 of the gate-passing units and
+3/10 of the units that compile far enough to measure. The tie among the four builds on
+`sys_scf` and `net_grf` is closed by an *unrelated* unit, but only through the boundary:
+`lang.c` passes under `3.0b38-030307` (with `ok*` `.debug`) and under none of the other builds;
+its boundary line reports `0 of 0 @anonN indices permuted`, so the residual is recorded as
+DIE order/spelling, not an anonymous-type permutation.
+
+**Byte-equal intersection.** There is none. `sys_scf` and `net_grf` agree on
+`3.0-011126`/`3.0.1-020123`/`3.0.3-020716` × both flag strings (6 pairs), but `lang.c` has no
+byte-equal cell. Under the strict byte-equality reading, the largest agreeing set is therefore
+**2 TUs, 6 pairs, 2/15 = 13.3%** — also not a majority. `sys_scf`/`net_grf` pass at `-O3 -g`
+too, but `lang` needs `-opt full`; the flag half is pinned by `lang`'s boundary pass and by the
+`p_anime`/`com_scrollbar` closest cells.
 
 ### 3.2 Relaxed best cell: what the data says about the build even where no unit reproduces
 
@@ -240,18 +253,21 @@ without `-opt full`.
 
 ### 3.3 Answer
 
-* **Is `3.0b38-030307` the default the data supports?** Yes as a build, and the flag half is
-  `-O3 -opt full -g`. It is the only pair in the intersection of the gate-passing sets, it is
-  the unique gate-passing cell for `lang.c`, and it is the unique closest cell (fewest differing
-  words) for `com_scrollbar`, `p_anime.c` and `p_anime_walk.c`.
-* **On which TUs do unrelated agreements pin it?** `src/sys/sys_scf.c`, `src/network/net_grf.c`
-  and `drafts/lang.c` — three unrelated units (a 2-function system init, a 2-function network
-  lookup/printf shim, and a 1-function language clamp). The first two narrow the build to four;
-  `lang.c` narrows it to `3.0b38-030307` and, with `p_anime.c`'s and `com_scrollbar.c`'s
-  `-opt full` cells, pins the flag.
-* **Is the agreeing set the majority?** Under the strict gate, no: 3/15 (20%). Under the
-  relaxed best-cell count, yes, but barely: 8/15 (53.3%), or 8/10 (80%) of the measurable
-  sources. Both numbers are given so the claim cannot be read as stronger than the evidence.
+* **Is `3.0b38-030307` the default the data supports?** Under the gate's recorded set-equal
+  `.debug` policy, yes: `3.0b38-030307 -c -lang c -O3 -opt full -g` is the only pair common to
+  every gate-passing unit, the unique gate-passing cell for `lang.c`, and the unique closest
+  cell (fewest differing words) for `com_scrollbar`, `p_anime.c` and `p_anime_walk.c`. Under a
+  strict byte-equal `.debug` rule, **no**: `net_grf`'s b38 cells and `lang`'s only pass are
+  `ok*`, so the supported builds are `3.0-011126`/`3.0.1-020123`/`3.0.3-020716`, and `lang`
+  remains without a byte-equal cell. The distinction is the recorded DIE boundary, not a
+  codegen difference.
+* **On which TUs do unrelated agreements pin it?** `sys_scf` and `net_grf` pin the build set
+  `{3.0-011126, 3.0.1-020123, 3.0.3-020716}` on byte-equal `.debug`; `lang.c` selects
+  `3.0b38-030307` + `-opt full` through the set-equal gate. `p_anime` and `com_scrollbar`
+  independently select the same b38+full cell as their closest text match (not gate passes).
+* **Is the agreeing set the majority?** Gate-passing: 3/15 = 20%, no. Byte-equal: 2/15 =
+  13.3%, no. Relaxed best-cell: 8/15 = 53.3% (8/10 measurable), a bare majority. The three
+  definitions are stated so the claim cannot be read as stronger than the evidence.
 * One known non-codegen mismatch stays on the record: `3.0b38` writes
   `MW MIPS C Compiler (3.0.0)` in `.comment`, retail writes `(2.4.1.01)`. The flag sweep
   already established that `.comment` does not track the installed builds' codegen; it is not
@@ -294,10 +310,13 @@ states, not alternative measurements of one state.
 
 ## 5. What the sample changes
 
-1. **The compiler question is settled for this target.** `3.0b38-030307` at
-   `-c -lang c -O3 -opt full -g` is the pair to record as the default when a unit does not
-   contradict it. The two already-promoted units do not contradict it (they tie with three
-   other builds), and `lang.c` positively selects it.
+1. **The compiler question is settled, with one qualification.** Under the gate's recorded
+   set-equal `.debug` policy, `3.0b38-030307` at `-c -lang c -O3 -opt full -g` is the pair to
+   record as the default when a unit does not contradict it. The two already-promoted units do
+   not contradict it, and `lang.c` selects it — but `net_grf`'s b38 cells and `lang`'s pass are
+   `.debug` set-equal, so a `tu_builds` row for b38 must carry the boundary comment. If a unit
+   needs byte-equal `.debug`, use `3.0-011126` (or `3.0.1-020123`/`3.0.3-020716`) at
+   `-O3 -g`.
 2. **Four branch-tip draft blobs are broken and cost compiles.** `dexport.c` on `wt-unit-c` and
    `wt-unit-l`, and `dmm_chara.c` on `wt-unit-j` and `wt-unit-k`, spell a typedef parameter as
    `struct <tag> *`; the compiler rejects the redeclaration. The UnitC/UnitL/UnitJ reports
