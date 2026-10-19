@@ -5,13 +5,13 @@ Target: `ddrex2p`. This is the measurement the M3 promotion loop was missing: ev
 that has C was compiled through the promotion path, under all five installed compiler builds
 and both recorded flag strings, and the day's per-unit throughput was reduced to one table.
 
-**Result in one line.** Under the gate's recorded set-equal `.debug` policy, the default pair
-is `3.0b38-030307 -c -lang c -O3 -opt full -g`: it is the only pair common to every
-gate-passing unit (3 of 15) and the best-or-tied cell by text words for 8 of the 15 sampled variants
-(8 of the 10 that compile far enough to measure). The qualification matters: at that common pair, two of the three
-gate passes (`net_grf` and `lang`) are `.debug` **set-equal**, not byte-equal. Under strict
-byte equality there is no common pair; the largest agreeing set is `sys_scf` + `net_grf` on
-`3.0-011126`/`3.0.1-020123`/`3.0.3-020716`. §3 gives all three counts.
+**Result in one line.** The game's build is uniform: `3.0-011126 -c -lang c -O3 -opt full -g`
+reproduces both units whose C is believed correct (`sys_scf`, `net_grf`) byte-for-byte on
+`.text`, `.debug` and `.line`, with no per-file exception. `3.0b38-030307` is excluded by
+`net_grf`'s `.debug`, which is set-equal there, not byte-equal. The gate's set-equal policy
+still admits a wider set of *draft* passes — `3.0b38-030307 -O3 -opt full -g` is the only
+pair common to all three gate-passing units, and `lang.c` passes only there — but those are
+evidence about unfinished C, not about the shipped build. §3 keeps the three counts separate.
 
 ## Method
 
@@ -263,7 +263,9 @@ without `-opt full`.
   strict byte-equal `.debug` rule, **no**: `net_grf`'s b38 cells and `lang`'s only pass are
   `ok*`, so the supported builds are `3.0-011126`/`3.0.1-020123`/`3.0.3-020716`, and `lang`
   remains without a byte-equal cell. The distinction is the recorded DIE boundary, not a
-  codegen difference.
+  codegen difference. This is a statement about the gate's policy, not about the game: the
+  uniform pair over the units whose C is believed correct is `3.0-011126 -O3 -opt full -g`,
+  and b38 is excluded by `net_grf`'s `.debug`.
 * **On which TUs do unrelated agreements pin it?** `sys_scf` and `net_grf` pin the build set
   `{3.0-011126, 3.0.1-020123, 3.0.3-020716}` on byte-equal `.debug`; `lang.c` selects
   `3.0b38-030307` + `-opt full` through the set-equal gate. `p_anime` and `com_scrollbar`
@@ -313,16 +315,17 @@ states, not alternative measurements of one state.
 
 ## 5. What the sample changes
 
-1. **The compiler question is settled: one pair, and it is not b38.** The game's build is a
+1. **The compiler question is settled: one compiler and one flag set.** The game's build is a
    fact about the game, not a per-unit choice. Every unit whose C is believed correct
    (`sys_scf.c`, `net_grf.c`) is byte-equal on `.text`, `.debug` and `.line` under
-   `3.0-011126 -c -lang c -O3 -g` — and under the five sibling cells from `3.0.1-020123` /
-   `3.0.3-020716` × both flag strings — so `tu_builds` records that pair for both.
-   `3.0b38-030307 -O3 -opt full -g` does not reproduce `net_grf`'s `.debug` byte-for-byte
-   (same length, 41 DIEs, set-equal only), so it cannot be the game's pair; that cell is
-   gate-passing only because `debug_promotion` keeps retail's chunk. Its wider claim rests on
-   `lang.c`, an unproven draft whose only pass is also `.debug` set-equal. Per-unit pairs
-   remain a fallback for a unit no single pair can explain, not the organizing principle.
+   `3.0-011126 -c -lang c -O3 -opt full -g` — and under the sibling cells from
+   `3.0.1-020123`/`3.0.3-020716` × both flag strings — so `tu_builds` records that uniform
+   pair for both. `-opt full` is not a per-file exception: it is compatible with the code
+   that already matched and is the uniform flag set. `3.0b38-030307 -O3 -opt full -g` is
+   excluded by `net_grf`'s `.debug`: same length and DIE count (41), set-equal only, not
+   byte-equal. Its wider gate-passing claim rests on `lang.c`, an unproven draft whose only
+   pass is also `.debug` set-equal. Per-unit pairs remain a fallback for a unit no single
+   pair can explain, not the organizing principle.
 2. **Four branch-tip draft blobs are broken and cost compiles.** `dexport.c` on `wt-unit-c` and
    `wt-unit-l`, and `dmm_chara.c` on `wt-unit-j` and `wt-unit-k`, spell a typedef parameter as
    `struct <tag> *`; the compiler rejects the redeclaration. The UnitC/UnitL/UnitJ reports

@@ -421,19 +421,17 @@ def _display(path) -> str:
 #:
 #: Its ``geometry`` is a measurement of that binary -- read out of its headers with
 #: ``tools/oracle/elf.py`` and confirmed byte-for-byte against the image it is booted from
-#: (every number below is annotated with where it comes from).  ``tu_builds`` holds one pair so
-#: far, measured with ``tools/toolchain/select_build.py`` on the first promoted unit
-#: (``sys_scf.c``, whose three parts are 0x40 bytes of ``.text``, 652 of ``.debug`` and 116 of
-#: ``.line``): four 3.0 builds -- ``3.0-011126``, ``3.0.1-020123``, ``3.0.3-020716`` and
-#: ``3.0b38-030307`` -- reproduce all three under ``-c -lang c -O3 -g`` (and ``-O4 -g``), and
-#: ``2.4-001213`` is ruled out because its frame instructions differ whatever the flags
-#: (``sq``/``lq`` where retail has ``sd``/``ld``).  ``.comment`` then cuts the tie to three:
-#: retail carries ``MW MIPS C Compiler (2.4.1.01)``, ``3.0b38-030307`` writes ``(3.0.0)``, and
-#: the other three write the retail string -- though that string is *not* a version stamp,
-#: since ``2.4-001213`` writes it too and still emits different code.  The remaining three-way
-#: tie is recorded rather than resolved: any of them reproduces the unit, and only ``.text``
-#: can separate them (``.debug``'s producer string is version-less), so only a wider sample
-#: can break it -- which is Task 1's job as promotions accumulate.
+#: (every number below is annotated with where it comes from).  ``tu_builds`` records one
+#: uniform pair for both units whose C is believed correct (``sys_scf.c`` and ``net_grf.c``),
+#: measured 2026-10-19 through the promotion path over all five installed builds × both
+#: recorded flag strings: ``3.0-011126 -c -lang c -O3 -opt full -g`` reproduces both byte for
+#: byte on ``.text``/``.debug``/``.line`` (0x40/652/116 and 0xc0/1592/156 bytes).  ``-opt
+#: full`` is not a per-file exception: it is compatible with the code that already matched,
+#: so one compiler and one flag set explain every believed-correct unit.  ``3.0b38-030307``
+#: is excluded even though it takes ``net_grf``'s ``.text``/``.line`` byte-exactly -- its
+#: emitted ``.debug`` is set-equal only -- and it writes ``(3.0.0)`` in ``.comment`` where
+#: retail writes ``(2.4.1.01)``.  ``2.4-001213`` is ruled out by its frame instructions
+#: (``sq``/``lq`` where retail has ``sd``/``ld``) and by ``net_grf``'s short ``.line``.
 #: A pair measured against one retail binary says nothing about another, so this table starts
 #: empty on a new target and ``configure.py`` refuses to promote a source nobody has measured.
 #: A guessed *geometry* would be a split of one game at another game's addresses;
@@ -489,22 +487,17 @@ DDREX2P = Target(
     # order: N of M @anonN indices permuted)`.  The row itself carries no extra field: the
     # gate re-measures the chunks on every build, and the comment is the record that a
     # human made the promotion decision.  No unit is accepted this way yet.
-    # `select_build.py --tu sys_scf.c` (2026-10-16, all five installed builds, every flag
-    # set) is the evidence for the first line; four builds reproduce the unit and `.comment`
-    # cuts the tie to three, of which this is the first.
-    #
-    # The other two are the pair the *gate* accepts -- `verify --tu` reports text, debug and
-    # line ok for both, checked by the controller -- recorded as provisional because
-    # `select_build` reports "no installed compiler reproduces" them.  That disagreement is a
-    # tooling finding, not a bad unit: `select_build` compares a raw object's `.debug` while
-    # the gate compares the post-processed chunk that lands in the image, and for units whose
-    # DIE order matters (see the `.debug`-ordering blocker in the plan) the two are not the
-    # same measurement.  Until that is fixed, trust the gate and treat these two rows as
-    # "the pair this target promotes", not as a discriminated winner.
-    # `select_build.py --tu net_grf.c` (2026-10-17): three builds reproduce all three parts
-    # at `-O3 -g` (`3.0-011126`, `3.0.1-020123`, `3.0.3-020716`); this is the first.
-    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -g"),
-               ("src/network/net_grf.c", "3.0-011126", "-c -lang c -O3 -g")),
+    # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
+    # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both
+    # byte-equal on `.text`, `.debug` and `.line` under `3.0-011126 -c -lang c -O3 -opt
+    # full -g` (and under `3.0.1-020123`/`3.0.3-020716` x both flag strings).  One compiler
+    # and one flag set therefore explain every unit whose C is believed correct, so both
+    # rows carry the same pair; a per-unit pair is the fallback for a unit no single pair
+    # can explain.  `3.0b38-030307` is excluded even though `net_grf`'s `.text` and `.line`
+    # are byte-equal there: its emitted `.debug` is set-equal only (41 DIEs, 0 of 2 @anonN
+    # permuted), and `.comment` names 3.0.0 where retail names 2.4.1.01.
+    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -opt full -g"),
+               ("src/network/net_grf.c", "3.0-011126", "-c -lang c -O3 -opt full -g")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention
