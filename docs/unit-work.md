@@ -106,9 +106,14 @@ Measured on `net_grf.c`, `3.0b38-030307 -c -lang c -O3 -opt full -g`: the emitte
 `0x638`-byte chunk differs from retail's in **702** bytes, first at `+0x5D` (the
 `AT_user_def_type` of `dancer_num`, `0x00084F7F` against retail's `0x000852B2`); after
 normalisation 31 of its 41 DIEs have moved, 8 references are rewritten, and the chunk is
-retail's **byte for byte** (0 differing bytes).  Under the recorded promoted pair
-(`3.0-011126`, the same flags) the chunk is already byte-equal, so the flag is inert there:
-the promoted object's provenance does not change.
+retail's **byte for byte** (0 differing bytes).  The step is part of the **recorded pair**:
+the `tu_builds` row's fourth element is `True` for `net_grf.c`, `configure.py` puts
+`--normalise-debug` on that unit's `cc` edge, and a chunk that does not come out retail's
+bytes fails the build.  `sys_scf.c`'s row carries `False` -- under the same build its
+`652`-byte chunk is already byte-equal, so the normaliser is inert there and the flag would
+change nothing.  `3.0-011126 -c -lang c -O3 -opt full -g` still reproduces both units byte for
+byte without the normaliser; that measurement is why the strict claim is not new, only
+recorded against the build whose DIE order needed rewriting.
 
 ## The loop
 
@@ -165,9 +170,16 @@ the promoted object's provenance does not change.
    `tools/toolchain/select_build.py --tu <tu>` and add it to `tu_builds` in `config/targets.py`.
    `configure.py` refuses to promote a source nobody has measured. As of the last batch: four builds
    (`3.0-011126`, `3.0.1-020123`, `3.0.3-020716`, `3.0b38-030307`) reproduce a unit byte-for-byte at
-   `-c -lang c -O3 -g`, `.comment` cuts that to three (`3.0b38-030307` writes `(3.0.0)` where retail
-   has `(2.4.1.01)`), and **only `.text` can separate the rest** — `.debug`'s producer string is
-   version-less. So a unit that contradicts the recorded pair is a finding worth reporting loudly.
+   `-c -lang c -O3 -g`; `.comment` separates them as *provenance* (`3.0b38-030307` writes `(3.0.0)`
+   where retail has `(2.4.1.01)`), and **only `.text` can separate them as reproduction** — `.debug`'s
+   producer string is version-less.  The pair recorded today is `3.0b38-030307 -c -lang c -O3 -opt
+   full -g`, with the opt-in DIE-order normaliser on for `net_grf.c` (the row's fourth element, so
+   `configure.py` puts the flag on that unit's `cc` edge): b38 takes both promoted units'
+   `.text`/`.line` byte-exactly, `sys_scf.c`'s `.debug` is byte-equal outright, and `net_grf.c`'s
+   chunk -- the same DIE set in b38's order -- is normalised to retail's DIE order and is
+   byte-identical (see "The stronger step" above).  Neither `.comment` nor the chunk's order reaches
+   the image, so the pair is a reproduction recipe, not a claim about which build the game shipped.
+   A unit that contradicts the recorded pair is a finding worth reporting loudly.
 
    **The flag string is half of the pair, and one unit has already contradicted it.** `p_anime.c`
    (`AM/s573/play/p_anime.c`, candidate #12) needs `-c -lang c -O3 -opt full -g`: its two large

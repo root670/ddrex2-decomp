@@ -184,12 +184,16 @@ class Target:
     """One decompilation target: the binary, the image, their pins, and where its config is.
 
     ``geometry`` is that target's measured file/disc layout, or None until somebody measures it
-    (:meth:`geometry_required`).  ``tu_builds`` is ``((source, compiler build, flags), ...)``:
-    the compiler/flag pair ``tools/toolchain/select_build.py`` *measured* as reproducing a
-    promoted unit's retail ``.text``/``.debug``/``.line`` bytes.  It is per target because a
-    pair measured against one retail binary says nothing about another, so a new target starts
-    with an empty table and ``configure.py`` refuses to promote a source nobody has measured
-    for *it*.
+    (:meth:`geometry_required`).  ``tu_builds`` is
+    ``((source, compiler build, flags[, normalise]), ...)``: the compiler/flag pair
+    ``tools/toolchain/select_build.py`` *measured* as reproducing a promoted unit's retail
+    ``.text``/``.debug``/``.line`` bytes.  ``normalise`` (optional, default false) says the
+    emitted ``.debug`` chunk is retail's DIE *set* in another order and that ``compile.py
+    --normalise-debug`` is part of the pair: the step rewrites the chunk into retail's DIE
+    order and the unit is accepted only if the result is retail's bytes exactly.  It is per
+    target because a pair measured against one retail binary says nothing about another, so a
+    new target starts with an empty table and ``configure.py`` refuses to promote a source
+    nobody has measured for *it*.
 
     ``include_dirs`` is the repo-relative search path the C units are compiled with, in
     order: where the oracle writes the generated headers this target's sources include.  It
@@ -232,14 +236,18 @@ class Target:
             raise ValueError(f"target {self.name}: geometry is {self.geometry!r}, not a "
                              f"Geometry (or None, for a target nobody has measured yet)")
         seen = set()
+        rows = []
         for entry in self.tu_builds:
-            if not (isinstance(entry, tuple) and len(entry) == 3
-                    and all(isinstance(part, str) and part for part in entry)):
+            if not (isinstance(entry, tuple) and len(entry) in (3, 4)
+                    and all(isinstance(part, str) and part for part in entry[:3])
+                    and (len(entry) == 3 or isinstance(entry[3], bool))):
                 raise ValueError(f"target {self.name}: tu_builds entry {entry!r} is not "
-                                 f"(source, compiler build, flags)")
+                                 f"(source, compiler build, flags[, normalise])")
             if entry[0] in seen:
                 raise ValueError(f"target {self.name}: tu_builds names {entry[0]!r} twice")
             seen.add(entry[0])
+            rows.append(entry if len(entry) == 4 else entry + (False,))
+        object.__setattr__(self, "tu_builds", tuple(rows))
         for entry in self.include_dirs:
             if not (isinstance(entry, str) and entry
                     and not pathlib.PurePosixPath(entry).is_absolute()):
@@ -336,15 +344,16 @@ class Target:
         return self.geometry
 
     def build_pair(self, source: str):
-        """``(compiler build, flags)`` measured for ``source``, or None."""
-        for file, version, flags in self.tu_builds:
+        """``(compiler build, flags, normalise)`` measured for ``source``, or None."""
+        for file, version, flags, normalise in self.tu_builds:
             if file == source:
-                return version, flags
+                return version, flags, normalise
         return None
 
     def build_table(self) -> dict:
-        """``tu_builds`` as ``{source: (compiler build, flags)}``, for ``configure.py``."""
-        return {file: (version, flags) for file, version, flags in self.tu_builds}
+        """``tu_builds`` as ``{source: (compiler build, flags, normalise)}``, for ``configure.py``."""
+        return {file: (version, flags, normalise)
+                for file, version, flags, normalise in self.tu_builds}
 
 
 class Registry:
@@ -427,11 +436,17 @@ def _display(path) -> str:
 #: recorded flag strings: ``3.0-011126 -c -lang c -O3 -opt full -g`` reproduces both byte for
 #: byte on ``.text``/``.debug``/``.line`` (0x40/652/116 and 0xc0/1592/156 bytes).  ``-opt
 #: full`` is not a per-file exception: it is compatible with the code that already matched,
-#: so one compiler and one flag set explain every believed-correct unit.  ``3.0b38-030307``
-#: is excluded even though it takes ``net_grf``'s ``.text``/``.line`` byte-exactly -- its
-#: emitted ``.debug`` is set-equal only -- and it writes ``(3.0.0)`` in ``.comment`` where
-#: retail writes ``(2.4.1.01)``.  ``2.4-001213`` is ruled out by its frame instructions
-#: (``sq``/``lq`` where retail has ``sd``/``ld``) and by ``net_grf``'s short ``.line``.
+#: so one compiler and one flag set explain every believed-correct unit.  The pair recorded
+#: now is ``3.0b38-030307 -c -lang c -O3 -opt full -g``, with the opt-in ``.debug`` DIE-order
+#: normaliser for ``net_grf``: b38 takes both units' ``.text``/``.line`` byte-exactly,
+#: ``sys_scf``'s ``.debug`` is byte-equal outright (the normaliser is inert), and
+#: ``net_grf``'s chunk -- the same DIE set in b38's order -- is rewritten into retail's DIE
+#: order and comes out byte-identical (41 DIEs, 31 moved, 8 references rewritten).  b38
+#: writes ``(3.0.0)`` in ``.comment`` where retail writes ``(2.4.1.01)``; that string and the
+#: chunk order never reach the image (whose ``.comment`` and chunks are retail's), so the pair
+#: is a reproduction recipe, not a claim that b38 is the original compiler.  ``2.4-001213``
+#: is ruled out by its frame instructions (``sq``/``lq`` where retail has ``sd``/``ld``) and
+#: by ``net_grf``'s short ``.line``.
 #: A pair measured against one retail binary says nothing about another, so this table starts
 #: empty on a new target and ``configure.py`` refuses to promote a source nobody has measured.
 #: A guessed *geometry* would be a split of one game at another game's addresses;
@@ -487,25 +502,27 @@ DDREX2P = Target(
     # order: N of M @anonN indices permuted)`.  The row itself carries no extra field: the
     # gate re-measures the chunks on every build, and the comment is the record that a
     # human made the promotion decision.  No unit is accepted this way yet.
-    # A unit whose `.debug` chunk the opt-in order normaliser rewrote (`compile.py
-    # --normalise-debug`, `tools/toolchain/debug_normalize.py`) records it the same way,
-    # quoting `.debug DIE order normalised under --normalise-debug, byte-equal`: the
-    # normalised chunk is retail's bytes exactly, so the row's pair reproduces the unit byte
-    # for byte and the pin is unchanged.  No row carries one yet -- the recorded pair's own
-    # chunks are already byte-equal, and the step exists to measure a build whose chunk is
-    # the same DIE set in another order (see the report for `net_grf.c` under
-    # `3.0b38-030307`).
+    # A unit whose `.debug` chunk the opt-in order normaliser rewrote records it in the
+    # row's fourth element (`normalise=True`) and, in the same convention, a comment
+    # quoting the line the step prints: `.debug DIE order normalised under
+    # --normalise-debug, byte-equal`.  `configure.py` puts `--normalise-debug` on that
+    # unit's `cc` edge and the step is strict: a chunk that does not come out retail's
+    # bytes fails the build.  `net_grf.c` carries it under `3.0b38-030307`; `sys_scf.c`
+    # does not need it -- its chunk is byte-equal under that build, so the flag is inert.
+    #
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
     # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both
     # byte-equal on `.text`, `.debug` and `.line` under `3.0-011126 -c -lang c -O3 -opt
-    # full -g` (and under `3.0.1-020123`/`3.0.3-020716` x both flag strings).  One compiler
-    # and one flag set therefore explain every unit whose C is believed correct, so both
-    # rows carry the same pair; a per-unit pair is the fallback for a unit no single pair
-    # can explain.  `3.0b38-030307` is excluded even though `net_grf`'s `.text` and `.line`
-    # are byte-equal there: its emitted `.debug` is set-equal only (41 DIEs, 0 of 2 @anonN
-    # permuted), and `.comment` names 3.0.0 where retail names 2.4.1.01.
-    tu_builds=(("src/sys/sys_scf.c", "3.0-011126", "-c -lang c -O3 -opt full -g"),
-               ("src/network/net_grf.c", "3.0-011126", "-c -lang c -O3 -opt full -g")),
+    # full -g` (and under `3.0.1-020123`/`3.0.3-020716` x both flag strings); that pair
+    # reproduces both without the normaliser.  The pair recorded now is `3.0b38-030307 -c
+    # -lang c -O3 -opt full -g`: `.text`/`.line` byte-equal for both (0x40/116 and
+    # 0xc0/156 bytes), `sys_scf`'s `.debug` byte-equal (652 bytes, normaliser inert), and
+    # `net_grf`'s 1592-byte chunk normalised from b38's DIE order into retail's (41 DIEs,
+    # 31 moved, 8 references rewritten) and byte-identical.
+    tu_builds=(("src/sys/sys_scf.c", "3.0b38-030307",
+                "-c -lang c -O3 -opt full -g", False),
+               ("src/network/net_grf.c", "3.0b38-030307",
+                "-c -lang c -O3 -opt full -g", True)),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

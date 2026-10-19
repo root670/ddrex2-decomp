@@ -343,6 +343,16 @@ def test_the_registered_targets_promotions_agree_with_its_sources():
     assert {promotion.file for promotion in promoted} == present
 
 
+def test_the_cc_edge_carries_the_normaliser_only_for_units_recorded_with_it():
+    """The pair's fourth element is what puts `--normalise-debug` on the unit's `cc` edge."""
+    if not TARGET.cus.is_file():
+        pytest.skip(f"{TARGET.name}: its config is generated in Task 4")
+    promoted = {promotion.file: promotion for promotion in configure.promotions(target=TARGET)}
+    for file, _version, _flags, normalise in TARGET.tu_builds:
+        assert ("--normalise-debug" in promoted[file].flags) is normalise
+    assert promoted["src/network/net_grf.c"].flags.endswith("--normalise-debug")
+
+
 def test_load_json_stops_on_a_missing_or_broken_manifest(tmp_path):
     """A manifest that is not there, or is not JSON, is a configuration error naming the file --
     reported before anything is written, never repaired and never defaulted."""

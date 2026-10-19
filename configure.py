@@ -608,10 +608,13 @@ def _promotions(manifests=None, target=None) -> list:
             + ", ".join(sorted(set(builds) - present)))
     out = []
     segment = target.geometry_required().code_segment
-    for file, (version, flags) in sorted(builds.items()):
+    for file, (version, flags, normalise) in sorted(builds.items()):
         tu = manifests.tu_named(file)
+        command = f"--compiler {version} {flags}"
+        if normalise:
+            command += " --normalise-debug"
         out.append(Promotion(
-            file, tu.address, f"--compiler {version} {flags}",
+            file, tu.address, command,
             f"build/{file}.o", f"build/{file}.o.debug", f"build/{file}.o.line",
             f".debug_{manifests.debug_chunk_index(tu):03d}",
             [f".line_{index:03d}" for index in manifests.line_chunk_indices(tu)],

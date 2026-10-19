@@ -274,6 +274,25 @@ def test_an_unknown_target_name_fails_loudly():
 # ---------------------------------------------------------------------------
 
 
+def test_tu_builds_carries_the_normaliser_as_an_optional_fourth_element():
+    """A pair may say the unit's `.debug` needs the opt-in DIE-order normaliser.
+
+    The fourth element is a fact of the measurement, not a build setting a caller improvises:
+    ``configure.py`` puts ``--normalise-debug`` on that unit's edge and the step refuses unless
+    the rewritten chunk is retail's bytes.
+    """
+    plain = probe_target(tu_builds=(("src/a.c", "3.0", "-g"),))
+    assert plain.build_pair("src/a.c") == ("3.0", "-g", False)
+    assert plain.build_table() == {"src/a.c": ("3.0", "-g", False)}
+
+    normalised = probe_target(tu_builds=(("src/a.c", "3.0", "-g", True),))
+    assert normalised.build_pair("src/a.c") == ("3.0", "-g", True)
+    assert normalised.build_table() == {"src/a.c": ("3.0", "-g", True)}
+
+    with pytest.raises(ValueError):
+        probe_target(tu_builds=(("src/a.c", "3.0", "-g", "yes"),))
+
+
 def test_a_descriptor_missing_a_required_field_fails_loudly():
     fields = {field.name for field in dataclasses.fields(targets.Target)}
     assert {"name", "config_dir", "elf", "elf_sha256", "image", "image_sha256"} <= fields
