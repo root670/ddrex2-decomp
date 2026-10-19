@@ -292,7 +292,7 @@ precedes the block groups:
 | `common/cws/cws_str.c` `CwsStrDisp` (17 locals, 4 blocks) | outer prefix, then `size_w,size_h` ×4 | reverses the sequence | forward |
 | game `AM/s573/doll/model2.c` `NormCulcG3U` (8, 1 block) | `normal_top,nnum,i,flg,nmp,v,nnum,i` — outer-first | inner group first | forward |
 | game `CS/dancemaster/dmm_select.c` `dmm_disp_connect_sub` (23, 3 array pairs) | outer prefix, then the block pairs | reverses the sequence | forward |
-| `network/net_grf.c` `peerPrintf` (one group, no block) | `r,tmp,ap` | `r,tmp,ap` for source `ap,tmp,r` | `r,tmp,ap` for source `r,tmp,ap` |
+| `network/net_grf.c` `peerPrintf` (one group, no block) | `r,tmp,ap` | `r,tmp,ap` for source `ap,tmp,r`; type block also matches | `r,tmp,ap` for source `r,tmp,ap`, but its type block still differs (§3.4.1) |
 
 Inventory: **15 common TUs, 147 function CUs, 64 with locals, 268 local DIEs, 2 with a
 repeated local name**, both outer-first. Game sources: **1,764 function CUs with locals, 44
@@ -304,12 +304,52 @@ with a repeated name**; 40 show the outer-first signature and 4 are name-indisti
 **Verdict:** the order difference **cuts across modules**; it tracks the compiler revision,
 not `common/`. `sys_scf`/`net_grf` cannot discriminate: `sys_scf` has no local DIEs, and
 `net_grf`'s single-group declaration order is unpinned — `ap,tmp,r` and `r,tmp,ap` give
-byte-identical `.text` under both builds, so its 3.0 byte-equality is the draft's choice of
-source order. The module-boundary reading is refuted by any game unit with distinct block
+byte-identical `.text` under both builds. Its 3.0 byte-equality is the draft's choice of
+source order, and the b38 order that fixes its locals still differs in the type block
+(§3.4.1). The module-boundary reading is refuted by any game unit with distinct block
 groups in forward order; the two controls here are such units. It would be restored by a
 game unit (or a common unit) whose retail DIE order puts a block group before the outer
 group while matching `3.0-011126`'s `.text`/`.line`; none exists among the 46
 repeated-name functions.
+
+#### 3.4.1 `net_grf`'s first differing byte, decoded
+
+`net_grf`'s pinned chunk is 1592 bytes at `.debug` 0x84F08. The b38 chunk is the same
+length with the same 41 DIEs and the same type set; its first differing byte is chunk offset
+**0x5D** (absolute 0x84F65), inside the DIE that starts at chunk 0x4F (0x84F57):
+
+| property | value |
+|---|---|
+| owner DIE | `TAG_local_variable` `dancer_num`, length 0x28, sibling 0x84F7F |
+| field at 0x5D | `AT_user_def_type` (code 0x0072), 4-byte `ref` |
+| retail and `3.0-011126` | `0x000852B2` — the `array_type` at chunk 0x3AA (`char[22]`) |
+| `3.0b38-030307` | `0x00084F7F` — the `array_type` at chunk 0x77 (`char[22]`) |
+
+The array DIE is the same record in both chunks (same length 0x24, same subscript data); it
+has moved. b38 emits the type block as `dancer_num`, `char[22]`, `char[1024]`, `struct
+@anon0`, `union @anon1`; retail and 3.0 emit `dancer_num`, `struct @anon0`, `union
+@anon1`, `char[22]`, `char[1024]`. The 4-byte field differs because its target DIE moved,
+and every sibling/reference offset after it shifts with it. It is **not** an anonymous-type
+name, a file/line stamp or a type size: chunk length, DIE count, tags and all type records
+are identical.
+
+Source reordering moves the order but does not close it. With the current declaration order
+(`union`, `struct`, array, unused-static function) b38 differs in 702 bytes (3.0: 0). With
+the function locals correctly declared `r,tmp,ap`, b38's types block still differs (636
+bytes, first at 0x5D) while 3.0's differs only in the local order (68 bytes, first at
+0x4DC). Among the legal permutations of the four top-level blocks (`U<S` is required because
+the struct uses the union), b38's best is `U,A,S,F` at 171 differing bytes; 3.0 is byte-equal
+on `U,S,A,F` and `U,A,S,F`. No permutation makes b38 emit the array types after the
+aggregates. Deferring the array definition to the end changes the variable DIE's position
+(first difference 0x53) and does not help.
+
+**Consequence.** The retail object needs b38's forward local order (the 40/44 signature) and
+the 3.0 family's type-block order (arrays last), and no installed build emits both. So the
+`0x5D` difference is **not** a fixable header/source artefact; the game's compiler is a
+revision none of the five is. `sys_scf` does not narrow this: both its CUs carry no local
+DIEs at all (`sysGetDateNotation`, `sysInitScf` have parameters only), so its `.debug`
+equality is necessary but cannot discriminate DIE order; the build question rests on this
+byte and the 44 local-order discriminators together.
 
 ## 4. Throughput, as recorded by the unit reports
 
