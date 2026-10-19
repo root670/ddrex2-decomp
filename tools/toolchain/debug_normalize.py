@@ -341,16 +341,15 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0) -> Reordered:
 
     new_at, new_end, children_of = {}, {}, {}
 
-    def plan(pairs, where="the chunk"):
+    def plan(pairs):
         for our_die, retail_die in pairs:
+            where = f"the children of {_describe(retail_die, base)}"
             children_of[our_die.offset] = _pair(
-                our_die.children, retail_die.children, our_key, retail_key, base,
-                f"the children of {_describe(retail_die, base)}",
-                locator=locator(our_die.children, retail_die.children,
-                                f"the children of {_describe(retail_die, base)}"))
+                our_die.children, retail_die.children, our_key, retail_key, base, where,
+                locator=locator(our_die.children, retail_die.children, where))
             new_at[our_die.offset] = cursor[0]
             cursor[0] += our_die.length
-            plan(children_of[our_die.offset], f"the children of {_describe(our_die, base)}")
+            plan(children_of[our_die.offset])
             if our_die.children:
                 start, stop = residues[our_die.offset]
                 cursor[0] += stop - start
