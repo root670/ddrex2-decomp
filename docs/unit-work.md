@@ -76,6 +76,40 @@ On acceptance the gate prints an explicit boundary line, keeps retail's `.debug`
 image (so G1 remains the pin), and the measured permutation is recorded as a comment on the
 unit's `tu_builds` row and as a line in this section.  No unit has been accepted this way yet.
 
+### The stronger step: `--normalise-debug`, and exactly what it proves
+
+A second, **opt-in** step stops *recognising* the permutation and *rewrites* it:
+`tools/toolchain/debug_normalize.py`, reached only through `compile.py --normalise-debug`
+(off by default, so the gate's own "keep retail's bytes" treatment stays the promotion path).
+
+It parses both chunks into DWARF 1 DIE trees, pairs DIEs one-to-one at every level by
+structural signature (tag, attributes with references normalised to their target's shallow
+description, sorted child signatures), lays our records out in retail's sibling order --
+**recursively**, so a lexical block reorders its own children and not only the top level --
+recomputes every `AT_sibling` from the new layout, and rewrites every intra-chunk offset
+reference.  Which attributes carry one is enumerated from retail's whole `.debug` (118,116
+DIEs) rather than assumed: `0x0012` `AT_sibling` (recomputed positionally), `0x0072`
+`AT_user_def_type` (18,797 occurrences), `0x0142` (7), `AT_subscr_data`'s element and index
+types, `AT_mod_u_d_type`'s trailing reference, and the MW block `0x2303` (a bare reference in
+all 1,782 of its occurrences).  A reference inside the chunk that names no DIE refuses, and a
+rewritten chunk that is not retail's byte for byte refuses -- there is no tolerance and no
+partial result.
+
+**What it proves, and what it does not.** It proves the two objects differ in *emission order
+only*: the same DIEs, types, members and references, reordered.  It makes no new claim about
+the C source -- a source that reproduces retail's bytes under one build and only the byte-set
+under another is exactly the case where this step applies.  It prints that it normalised,
+with the counts the unit's record quotes, and the `--compare` line marks the part
+`[normalised: our DIE order re-emitted as retail's]`.
+
+Measured on `net_grf.c`, `3.0b38-030307 -c -lang c -O3 -opt full -g`: the emitted
+`0x638`-byte chunk differs from retail's in **702** bytes, first at `+0x5D` (the
+`AT_user_def_type` of `dancer_num`, `0x00084F7F` against retail's `0x000852B2`); after
+normalisation 31 of its 41 DIEs have moved, 8 references are rewritten, and the chunk is
+retail's **byte for byte** (0 differing bytes).  Under the recorded promoted pair
+(`3.0-011126`, the same flags) the chunk is already byte-equal, so the flag is inert there:
+the promoted object's provenance does not change.
+
 ## The loop
 
 1. **Pick a unit by shape, not by size.** Small turned out to mean hard: the three smallest candidates

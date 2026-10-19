@@ -41,6 +41,12 @@ compiles yet:
 
     python3 tools/toolchain/compile.py --syntax-only --include include probe.c
 
+``--normalise-debug`` is the opt-in third thing: on the set-equal DIE-order class it re-emits
+*our* ``.debug`` chunk in retail's DIE sequence and accepts it only when the rewritten bytes
+are retail's, byte for byte (:mod:`toolchain.debug_normalize`).  It is never silent -- it
+prints what it normalised -- and it is off by default, because the gate's own treatment
+(recognise the class, keep retail's bytes) stays the promotion path.
+
 MWCC has no parse-only mode -- ``-nocodegen`` skips the front end's own error reporting, so
 it exits 0 on a file it cannot parse -- so the check runs the ordinary compile and throws
 the object away.  What is left is the exit status and the compiler's own diagnostics.
@@ -70,7 +76,7 @@ for _extra in (str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT / "tools"), st
 
 import elf  # noqa: E402  the vendored 32-bit little-endian MIPS reader
 from config import targets  # noqa: E402  the one place a target's facts are written down
-from toolchain import check_deps, debug_set, fetch, probe  # noqa: E402
+from toolchain import check_deps, debug_normalize, debug_set, fetch, probe  # noqa: E402
 
 #: The target a direct invocation works on when ``--target`` names none: the one the tree is
 #: configured for.  The ninja graph always names the target it was generated for, so a build
@@ -884,14 +890,15 @@ def assemble(source: str, out: pathlib.Path) -> None:
 class Placed:
     """What a promoted unit contributes to the pinned build."""
 
-    __slots__ = ("text", "debug", "line", "labels", "sizes")
+    __slots__ = ("text", "debug", "line", "labels", "sizes", "normalised")
 
-    def __init__(self, text, debug, line, labels, sizes):
+    def __init__(self, text, debug, line, labels, sizes, normalised=False):
         self.text = text        # the promoted run of code splits, including its tail padding
         self.debug = debug      # the unit's .debug chunk
         self.line = line        # the unit's run of .line chunks
         self.labels = labels    # [(offset within .text, function name, bytes)]
         self.sizes = sizes      # [(function name, (block, emitted, pinned))]
+        self.normalised = normalised  # the .debug chunk came out of the order normaliser
 
 
 def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: str,
@@ -944,7 +951,7 @@ def _first_difference(left: bytes, right: bytes) -> int:
 
 def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
                     retail_text: bytes, retail_line: bytes, retail_debug: bytes,
-                    base: int = 0, block_mismatches=()) -> bytes:
+                    base: int = 0, block_mismatches=(), normalise: bool = False) -> bytes:
     """The four conditions, and the bytes the image should carry for this unit.
 
     Condition 1 (``.text`` and ``.line`` byte-equal) is checked here rather than in
@@ -959,6 +966,11 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
     compiler's ``@anonN`` assignment, and keeping retail's structurally-equal bytes in the
     image is what leaves G1 the pin.  The printed line names the boundary and the measured
     permutation, which is the record the unit's ``tu_builds`` comment quotes.
+
+    ``normalise`` is the opt-in stronger step (:mod:`toolchain.debug_normalize`): rather than
+    keeping retail's chunk, rewrite our own into retail's DIE order and accept it **only** if
+    the result is retail's bytes.  It is off unless the caller asks for it, and on acceptance
+    it prints that it normalised, with the counts the unit's record quotes.
     """
     if debug == retail_debug and not block_mismatches:
         return debug
@@ -988,6 +1000,26 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
     outcome = debug_set.classify(debug, retail_debug, base)
     if not outcome.ok:
         raise Unusable(f"{unit}: {outcome.message}")
+
+    if normalise:
+        try:
+            result = debug_normalize.normalise(debug, retail_debug, base)
+        except debug_normalize.Refusal as exc:
+            raise Unusable(f"{unit}: condition 5 (.debug DIE-order normalisation) failed: "
+                           f"{exc}")
+        if result.chunk != retail_debug:
+            at = _first_difference(result.chunk, retail_debug)
+            raise Unusable(
+                f"{unit}: condition 5 (.debug DIE-order normalisation) failed: the "
+                f"normalised chunk is 0x{len(result.chunk):X} bytes against retail's "
+                f"0x{len(retail_debug):X}, first differing byte at 0x{at:X}")
+        print(f"compile: {unit}: .debug normalised to retail's DIE order "
+              f"(0x{len(retail_debug):X} bytes, {result.dies} DIEs, {result.moved} moved, "
+              f"{result.references} references rewritten) and byte-identical to retail",
+              file=sys.stderr)
+        print(f"compile: {unit}: record in its tu_builds comment: .debug DIE order "
+              f"normalised under --normalise-debug, byte-equal", file=sys.stderr)
+        return result.chunk
 
     print(f"compile: {unit}: .debug set-equal under the anonymous-type DIE-order boundary "
           f"(0x{len(retail_debug):X} bytes, {outcome.die_count} DIEs, "
@@ -1071,7 +1103,8 @@ def include_flags(target) -> list:
     return flags
 
 
-def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) -> Placed:
+def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
+          normalise: bool = False) -> Placed:
     """Compile ``tu`` and place it: the unit's bytes, as the pinned layout has them."""
     if not tu.source.is_file():
         raise Unusable(f"{tu.source.relative_to(REPO_ROOT)} does not exist")
@@ -1124,17 +1157,18 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None) ->
         [(f.line_offset, f.line_size, groups[f.name][2], f.name) for f in tu.functions],
         gp, ".line", unit_file=tu.file)
     retail_debug = _retail_chunk(retail, ".debug", tu.debug_offset, tu.debug_size)
-    debug, debug_sizes, debug_mismatches = _fill_debug(
+    emitted_debug, debug_sizes, debug_mismatches = _fill_debug(
         mw, tu, tu.debug_offset, tu.debug_size,
         [(types["offset"], types["size"], mw.section_named(".debug"), "the unit's types")]
         + [(f.debug_offset, f.debug_size, groups[f.name][1], f.name) for f in tu.functions],
         gp, (recorded, tu.name.encode()), retail_chunk=retail_debug)
     debug = debug_promotion(
-        tu.file, text=bytes(text), line=line, debug=debug, retail_text=expected_text,
+        tu.file, text=bytes(text), line=line, debug=emitted_debug, retail_text=expected_text,
         retail_line=_retail_chunk(retail, ".line", tu.line_offset, tu.line_size),
         retail_debug=retail_debug, base=tu.debug_offset,
-        block_mismatches=debug_mismatches)
-    return Placed(bytes(text), debug, line, labels, sizes + debug_sizes + line_sizes)
+        block_mismatches=debug_mismatches, normalise=normalise)
+    return Placed(bytes(text), debug, line, labels, sizes + debug_sizes + line_sizes,
+                  normalised=normalise and emitted_debug != retail_debug)
 
 
 def retail_bytes(tu: Tu, retail=RETAIL, text_size=None) -> dict:
@@ -1185,13 +1219,13 @@ def _display(path) -> str:
 
 
 def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
-          keep=None, target=None) -> Placed:
+          keep=None, target=None, normalise: bool = False) -> Placed:
     """Everything the ``cc`` rule does: compile, place, and write ``out``."""
     target = target if target is not None else DEFAULT_TARGET
     manifests = manifests if manifests is not None else Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
-    placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep)
+    placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep, normalise=normalise)
     assemble(assembly(len(placed.text), placed.labels, placed.debug, placed.line), out)
     return placed
 
@@ -1255,6 +1289,11 @@ def _parser(with_out: bool) -> argparse.ArgumentParser:
                         help="where to keep the Metrowerks object the compiler writes")
     parser.add_argument("--compare", action="store_true",
                         help="also report each part against the retail image")
+    parser.add_argument("--normalise-debug", action="store_true",
+                        help="opt in to the .debug DIE-order normaliser: re-emit our chunk "
+                             "in retail's DIE order and accept it only if the result is "
+                             "byte-identical; without it the set-equal gate keeps retail's "
+                             "chunk (never silent: the normalisation is printed)")
     return parser
 
 
@@ -1271,13 +1310,15 @@ def main(argv=None) -> int:
         manifests = Manifests(target)
         tu = manifests.tu_named(args.source)
         placed = build(tu, args.out, flags or DEFAULT_FLAGS, args.compiler, manifests,
-                       keep=args.keep, target=target)
+                       keep=args.keep, target=target, normalise=args.normalise_debug)
         shown = _display(args.out)
         print(f"cc {tu.file} [{target.name}]: {len(placed.text):#x} bytes of .text, "
               f"{len(placed.debug):#x} of .debug, {len(placed.line):#x} of .line -> {shown}")
         if args.compare:
             for part, (ok, detail) in compare(tu, placed, target.elf).items():
-                print(f"cc {tu.file}: {part} {'ok' if ok else 'DIFFERS'} ({detail})")
+                note = (" [normalised: our DIE order re-emitted as retail's]"
+                        if part == "debug" and placed.normalised and ok else "")
+                print(f"cc {tu.file}: {part} {'ok' if ok else 'DIFFERS'} ({detail}){note}")
         return 0
     except targets.UnknownTarget as exc:
         print(f"compile.py: error: {exc}", file=sys.stderr)
