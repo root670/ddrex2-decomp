@@ -49,8 +49,8 @@ content this unit has not written, and is refused by name, chunk and byte shortf
 incomplete rather than that the link is broken. `.debug` and `.line` are never padded at all:
 
 ```
-compile.py: error: src/sys/sys_demo.c: the unit's types .debug is short by 0x4B bytes;
-  C is incomplete (cannot pad .debug)
+compile.py: error: src/sys/sys_demo.c: condition 2 (.debug length and DIE count) failed:
+  the unit's types .debug is short by 0x4B bytes; C is incomplete (cannot pad .debug)
 compile.py: error: src/CS/lang.c: mesGetLanguage01 .line is short by 0x1E bytes;
   C is incomplete (cannot pad .line)
 ```
@@ -169,7 +169,7 @@ score:
 | `.debug` mismatch only | types, member order, bitfield spelling or visibility differ from what the compiler recorded |
 | `.text` correct size but wrong bytes | wrong expression form, wrong flag, or wrong helper |
 | `.text` different size | the source structure differs (extra call, missing call, different control flow) |
-| `.debug` a few bytes *short* of the pinned layout | missing parameter or local DIEs — declare the parameters the DWARF records (`dwarf1.py fn`), even unused; measured once as the discriminator that proved a unit's shape. The build refuses it (`the unit's types .debug is short by 0xN bytes; C is incomplete`) rather than padding it |
+| `.debug` a few bytes *short* of the pinned layout | missing parameter or local DIEs — declare the parameters the DWARF records (`dwarf1.py fn`), even unused; measured once as the discriminator that proved a unit's shape. The build refuses it (`condition 2 (.debug length and DIE count) failed: the unit's types .debug is short by 0xN bytes; C is incomplete`) rather than padding it |
 | `.line` short of the pinned layout | a statement the original had has no counterpart, or an inline is unwritten. Refused the same way (`<fn> .line is short by 0xN bytes; C is incomplete`) — one 10-byte record per statement, so the shortfall says how many are missing |
 | the build fills `.text` padding and says so (`filled .text trailing nop padding from retail (0xN bytes)`) | the unit's last split ran past its last function and retail's bytes there are `nop` — normal, and now handled |
 | the link refuses with `the code splits are not the retail N bytes` | a real layout error: a split that is in no object, a symbol at two addresses, a split order that is not the address order. A *short unit* no longer reaches it |
