@@ -126,10 +126,16 @@ SYMBOL_LINE = re.compile(
     r"^(?P<name>\S+)\s*=\s*(?P<address>0x[0-9A-Fa-f]+);\s*//\s*(?P<attrs>.*)$")
 #: The global labels a generated split defines (`asm/include/macro.inc`'s macros).  The one
 #: label at an address is the same name the link knows, and `_split_symbols` binds each to the
-#: address of the instruction that follows it.
+#: address of the piece of data or instruction that follows it.
 SPLIT_LABEL = re.compile(r"^\s*(?:glabel|alabel|ehlabel|jlabel|dlabel)\s+(\S+)", re.M)
+#: A code split's per-instruction comment: splat prints the file offset, the address and the
+#: encoded word, so the *second* number is the address.
 SPLIT_ADDRESS = re.compile(
     r"/\*\s+[0-9A-Fa-f]+\s+([0-9A-Fa-f]+)\s+[0-9A-Fa-f]{8}\s+\*/")
+#: A data split's per-object comment: splat prints the address alone (``/* 00607A70 */``)
+#: before the ``.space`` that reserves the object.  That is the same address the ld gives the
+#: label, because the data section is placed at its retail address.
+DATA_ADDRESS = re.compile(r"/\*\s+([0-9A-Fa-f]+)\s+\*/")
 #: A bare assignment in a linker script -- splat's ``undefined_{syms,funcs}_auto.txt`` and
 #: the aliases ``configure.py`` writes into the ld script itself.  These are the link's other
 #: symbol source, and the ones ``symbol_addrs.txt`` does not carry.
@@ -204,11 +210,13 @@ class Manifests:
     linked into rather than against whichever config a default happens to name.
 
     Resolution follows the link, not one ledger.  The link's inputs are the split objects the
-    ld script lists (``asm/nonmatchings/<segment>/*.s``) and its ``-T`` files
-    (``undefined_{syms,funcs}_auto.txt`` and the ld script's own aliases), so a name in any of
-    them resolves here -- which is what makes a callee the oracle's DWARF never named, like
-    `func_001C43E8`, placeable.  ``symbol_addrs.txt`` adds the oracle's own addresses, and a
-    ``-T`` assignment only counts where this layout holds its address.
+    ld script lists (``asm/nonmatchings/<segment>/*.s`` for code and ``asm/data/*.s`` for the
+    data sections) and its ``-T`` files (``undefined_{syms,funcs}_auto.txt`` and the ld
+    script's own aliases), so a name in any of them resolves here -- which is what makes a
+    callee the oracle's DWARF never named, like `func_001C43E8`, placeable, and what makes an
+    object like `g_game_w` (a ``dlabel`` in `asm/data/bss.bss.s`, assigned by no ``-T``
+    line) resolve the way the link resolves it.  ``symbol_addrs.txt`` adds the oracle's own
+    addresses, and a ``-T`` assignment only counts where this layout holds its address.
 
     A name that misses all of it is refused, and the refusal says which way: an address
     outside every declared segment (an overlay window this layout does not model) is a
@@ -297,32 +305,41 @@ class Manifests:
     def _split_symbols(self):
         """``{label: address}`` for the global labels of the split objects the link places.
 
-        The ld script lists ``build/asm/nonmatchings/<segment>/*.s.o``; this reads the
-        *sources* of those same objects, so a name resolves here exactly when the link
-        resolves it.  A label is bound to the address of the instruction that follows it --
-        splat's per-instruction ``/* fileoffset address bytes */`` comment -- which is the
-        same address `configure.py` checks against the segment geometry.
+        The ld script lists ``build/asm/nonmatchings/<segment>/*.s.o`` and
+        ``build/asm/data/*.s.o``; this reads the *sources* of those same objects, so a name
+        resolves here exactly when the link resolves it.  Both kinds matter: a function's
+        label is code, and an object's label is data -- `g_game_w` is placed by
+        ``asm/data/bss.bss.s``'s ``dlabel`` and by no assignment in the ld script, which is
+        why the data half cannot be left out of "the symbols the link knows".
+
+        A label is bound to the address of the instruction or object that follows it --
+        splat's per-instruction ``/* fileoffset address bytes */`` comment, or the per-object
+        ``/* address */`` one before a data split's ``.space`` -- which is the same address
+        `configure.py` checks against the segment geometry.
         """
         geometry = getattr(self.target, "geometry", None)
         segment = getattr(geometry, "code_segment", "main")
-        directory = self.root / "asm" / "nonmatchings" / segment
-        if not directory.is_dir():
-            return {}
+        directories = ((self.root / "asm" / "nonmatchings" / segment, SPLIT_ADDRESS),
+                       (self.root / "asm" / "data", DATA_ADDRESS))
         out = {}
-        for path in sorted(directory.glob("*.s")):
-            text = path.read_text()
-            addresses = [(match.start(), int(match.group(1), 16))
-                         for match in SPLIT_ADDRESS.finditer(text)]
-            if not addresses:
+        for directory, pattern in directories:
+            if not directory.is_dir():
                 continue
-            for label in SPLIT_LABEL.finditer(text):
-                # The label belongs to the instruction after it, so the first address
-                # comment past the label is its address (a label in the directives before
-                # any instruction -- every `glabel` -- gets the first instruction's).
-                entry = next((address for position, address in addresses
-                              if position > label.start()), None)
-                if entry is not None:
-                    out.setdefault(label.group(1), entry)
+            for path in sorted(directory.glob("*.s")):
+                text = path.read_text()
+                addresses = [(match.start(), int(match.group(1), 16))
+                             for match in pattern.finditer(text)]
+                if not addresses:
+                    continue
+                for label in SPLIT_LABEL.finditer(text):
+                    # The label belongs to the instruction or object after it, so the first
+                    # address comment past the label is its address (a label in the
+                    # directives before any instruction -- every `glabel` -- gets the first
+                    # instruction's; a databin `dlabel` has none and is skipped).
+                    entry = next((address for position, address in addresses
+                                  if position > label.start()), None)
+                    if entry is not None:
+                        out.setdefault(label.group(1), entry)
         return out
 
     def _unplaced(self):

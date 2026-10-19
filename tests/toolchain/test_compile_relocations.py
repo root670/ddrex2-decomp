@@ -41,13 +41,14 @@ class Symbol:
         self.name = name
 
 
-def config_dir(tmp_path, placed=(), unplaced=(), splits=()):
+def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=()):
     """A synthetic config: only the files a `Manifests` reads have to exist.
 
     `splits` are `(name, text)` under the code segment's split directory -- the objects the
     generated ld script lists, whose global labels are the link's own symbol set.  They are
     written under `tmp_path` on purpose: `Manifests` is given `root=tmp_path`, so a test can
-    never see (or depend on) the repository's generated `asm/`.
+    never see (or depend on) the repository's generated `asm/`.  `data` are the same, under
+    `asm/data`: the data splits the link places (`g_game_w` lives in `bss.bss.s`).
     """
     (tmp_path / "cus.json").write_text(json.dumps([]))
     (tmp_path / "debug_chunks.json").write_text(json.dumps([]))
@@ -55,6 +56,10 @@ def config_dir(tmp_path, placed=(), unplaced=(), splits=()):
     (tmp_path / "unplaced_symbols.txt").write_text("".join(unplaced))
     for name, text in splits:
         path = tmp_path / "asm" / "nonmatchings" / "main" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+    for name, text in data:
+        path = tmp_path / "asm" / "data" / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
     return tmp_path
@@ -179,6 +184,71 @@ def test_a_name_with_no_record_at_all_is_refused_differently(tmp_path):
     assert "outside every declared segment" in str(outside.value)
     assert "outside every declared segment" not in str(absent.value)
     assert "neverHeardOfIt" in str(absent.value)
+
+
+def test_a_data_split_label_the_link_places_resolves(tmp_path):
+    """`g_game_w`: no split of code defines it and the ld script assigns it nowhere.
+
+    The link resolves it from the *data* split ``asm/data/bss.bss.s`` -- ``dlabel
+    g_game_w`` over ``/* 00607A70 */ .space 0x4`` -- which is one of the objects the ld
+    script lists.  That half of the link's symbol set is what a promoted unit's `%hi`/`%lo`
+    against an object resolves through, so it has to be read here too.
+    """
+    m = manifests(tmp_path, data=[("bss.bss.s", (
+        '.include "macro.inc"\n\n.section .bss, "wa"\n\n'
+        "nonmatching g_game_w, 0x4\n\ndlabel g_game_w\n"
+        "    /* 00607A70 */ .space 0x04\n"))])
+    assert m.address_of("g_game_w") == 0x607A70
+    assert m.placed["g_game_w"] == 0x607A70
+    assert "g_game_w" not in m.symbols          # the ledger is not where this came from
+
+
+def test_a_databin_label_without_an_address_is_not_invented(tmp_path):
+    """`dlabel __comment_databin` has no address comment; the link places it by `cat` only."""
+    m = manifests(tmp_path, data=[("comment.s", (
+        '.include "macro.inc"\n\n.section .comment\n\n'
+        'dlabel __comment_databin\n.incbin "build/assets/comment.databin.bin"\n'
+        "enddlabel __comment_databin\n"))])
+    assert "__comment_databin" not in m.placed
+    with pytest.raises(cc.Unusable) as refusal:
+        m.address_of("__comment_databin")
+    assert "no record at all" in str(refusal.value)
+
+
+def test_the_ledger_address_relocates_even_when_the_name_is_also_unplaced(tmp_path):
+    """`g_game_w`'s pair: the ledger says where it is, so a `lui`/`addiu` pair is not zero.
+
+    The oracle lists an object with no `AT_location` in `unplaced_symbols.txt`, and the value
+    a placement reproduces for *that record* is 0.  When the same name has an address in
+    `symbol_addrs.txt`, the ledger is the link's answer and the unplaced record must not win:
+    filling 0 would turn an otherwise byte-equal function's `lui s8,0x60` into `lui s8,0x0`.
+    """
+    m = manifests(
+        tmp_path,
+        placed=["g_game_w = 0x00607A70; // type:obj provenance:dwarf\n"],
+        unplaced=["g_game_w = 0x00000000; // type:obj provenance:dwarf "
+                  "reason:no AT_location address\n"])
+    data = struct.pack("<II", 0x3C1E0000, 0x27DE0000)     # lui s8,0 ; addiu s8,s8,0
+    relocs = [(0, cc.R_MIPS_HI16, Symbol("g_game_w")),
+              (4, cc.R_MIPS_LO16, Symbol("g_game_w"))]
+    out = cc.relocate(data, relocs, lambda symbol: m.address_of(symbol.name),
+                      "play_anime_step_inst.text", 0)
+    assert struct.unpack_from("<I", out, 0)[0] == 0x3C1E0060     # lui s8,0x60
+    assert struct.unpack_from("<I", out, 4)[0] == 0x27DE7A70     # addiu s8,s8,0x7a70
+
+
+def test_a_relocation_to_a_name_with_no_record_still_refuses(tmp_path):
+    """The widening is only to names the link itself resolves: an unknown one stays a gap."""
+    m = manifests(tmp_path, data=[("bss.bss.s", (
+        "dlabel g_game_w\n    /* 00607A70 */ .space 0x04\n"))])
+    data = struct.pack("<II", 0x3C1E0000, 0x27DE0000)
+    relocs = [(0, cc.R_MIPS_HI16, Symbol("neverHeardOfIt")),
+              (4, cc.R_MIPS_LO16, Symbol("neverHeardOfIt"))]
+    with pytest.raises(cc.Unusable) as refusal:
+        cc.relocate(data, relocs, lambda symbol: m.address_of(symbol.name),
+                    "somebody.text", 0)
+    assert "neverHeardOfIt" in str(refusal.value)
+    assert "no record at all" in str(refusal.value)
 
 
 #: The range the synthetic tests measure: the split bases above sit inside it, the overlay
