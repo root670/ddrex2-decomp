@@ -8,7 +8,7 @@ and both recorded flag strings, and the day's per-unit throughput was reduced to
 **Result in one line.** Under the gate's recorded set-equal `.debug` policy, the default pair
 is `3.0b38-030307 -c -lang c -O3 -opt full -g`: it is the only pair common to every
 gate-passing unit (3 of 15) and the best-or-tied cell by text words for 8 of the 15 sampled variants
-(8 of the 10 that compile far enough to measure). The qualification matters: two of those three
+(8 of the 10 that compile far enough to measure). The qualification matters: at that common pair, two of the three
 gate passes (`net_grf` and `lang`) are `.debug` **set-equal**, not byte-equal. Under strict
 byte equality there is no common pair; the largest agreeing set is `sys_scf` + `net_grf` on
 `3.0-011126`/`3.0.1-020123`/`3.0.3-020716`. §3 gives all three counts.
