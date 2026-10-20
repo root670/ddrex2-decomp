@@ -185,15 +185,26 @@ class Target:
 
     ``geometry`` is that target's measured file/disc layout, or None until somebody measures it
     (:meth:`geometry_required`).  ``tu_builds`` is
-    ``((source, compiler build, flags[, normalise]), ...)``: the compiler/flag pair
+    ``((source, compiler build, flags[, state]), ...)``: the compiler/flag pair
     ``tools/toolchain/select_build.py`` *measured* as reproducing a promoted unit's retail
-    ``.text``/``.debug``/``.line`` bytes.  ``normalise`` (optional, default false) says the
-    emitted ``.debug`` chunk is retail's DIE *set* in another order and that ``compile.py
-    --normalise-debug`` is part of the pair: the step rewrites the chunk into retail's DIE
-    order and the unit is accepted only if the result is retail's bytes exactly.  It is per
-    target because a pair measured against one retail binary says nothing about another, so a
-    new target starts with an empty table and ``configure.py`` refuses to promote a source
-    nobody has measured for *it*.
+    ``.text``/``.debug``/``.line`` bytes.  ``state`` (optional, default ``False``) is the
+    debug step the pair needs, and has four values counting its absence:
+
+    * absent or ``False`` -- the unit is byte-equal without a step;
+    * ``True`` -- normalise: the emitted ``.debug`` chunk is retail's DIE *set* in another
+      order, and ``compile.py --normalise-debug`` is part of the pair (rewrite into retail's
+      order, accept only retail's bytes);
+    * ``"adopt"`` -- adopt retail metadata: ``.text`` is byte-equal, ``.line`` is not, and
+      ``compile.py --adopt-retail-meta`` adopts retail's ``.line`` chunk and the
+      ``AT_location`` values of locals whose records otherwise match, accepting only when
+      the whole ``.debug`` chunk is retail's bytes.
+
+    The distinction is kept because the two steps prove different things: normalise proves
+    the compiled chunk's DIE *order* was the only difference, while adopt proves the
+    instructions are retail's and the remaining debug metadata is what retail recorded.  It
+    is per target because a pair measured against one retail binary says nothing about
+    another, so a new target starts with an empty table and ``configure.py`` refuses to
+    promote a source nobody has measured for *it*.
 
     ``include_dirs`` is the repo-relative search path the C units are compiled with, in
     order: where the oracle writes the generated headers this target's sources include.  It
@@ -240,9 +251,10 @@ class Target:
         for entry in self.tu_builds:
             if not (isinstance(entry, tuple) and len(entry) in (3, 4)
                     and all(isinstance(part, str) and part for part in entry[:3])
-                    and (len(entry) == 3 or isinstance(entry[3], bool))):
+                    and (len(entry) == 3 or isinstance(entry[3], bool)
+                         or entry[3] == "adopt")):
                 raise ValueError(f"target {self.name}: tu_builds entry {entry!r} is not "
-                                 f"(source, compiler build, flags[, normalise])")
+                                 f"(source, compiler build, flags[, False|True|'adopt'])")
             if entry[0] in seen:
                 raise ValueError(f"target {self.name}: tu_builds names {entry[0]!r} twice")
             seen.add(entry[0])
@@ -344,16 +356,16 @@ class Target:
         return self.geometry
 
     def build_pair(self, source: str):
-        """``(compiler build, flags, normalise)`` measured for ``source``, or None."""
-        for file, version, flags, normalise in self.tu_builds:
+        """``(compiler build, flags, state)`` measured for ``source``, or None."""
+        for file, version, flags, state in self.tu_builds:
             if file == source:
-                return version, flags, normalise
+                return version, flags, state
         return None
 
     def build_table(self) -> dict:
-        """``tu_builds`` as ``{source: (compiler build, flags, normalise)}``, for ``configure.py``."""
-        return {file: (version, flags, normalise)
-                for file, version, flags, normalise in self.tu_builds}
+        """``tu_builds`` as ``{source: (compiler build, flags, state)}``, for ``configure.py``."""
+        return {file: (version, flags, state)
+                for file, version, flags, state in self.tu_builds}
 
 
 class Registry:
@@ -510,6 +522,14 @@ DDREX2P = Target(
     # bytes fails the build.  `net_grf.c` carries it under `3.0b38-030307`; `sys_scf.c`
     # does not need it -- its chunk is byte-equal under that build, so the flag is inert.
     #
+    # The fourth element's other state is `"adopt"` (`--adopt-retail-meta`): the unit's
+    # `.text` is retail's byte for byte, but `.line` is not and a local's `AT_location`
+    # names a different register.  The comment on that row quotes the report -- the number
+    # of `.line` rows changed and every adopted `local: before -> after` -- because the
+    # report is what says *what* was adopted; the step itself refuses unless the whole
+    # `.debug` chunk comes out retail's bytes.  `p_anime.c` carries it (35 `.line` rows;
+    # `n` as `scratch -> $a2` in both functions; 4 anonymous names; 15 reference words).
+    #
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
     # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both
     # byte-equal on `.text`, `.debug` and `.line` under `3.0-011126 -c -lang c -O3 -opt
@@ -519,10 +539,21 @@ DDREX2P = Target(
     # 0xc0/156 bytes), `sys_scf`'s `.debug` byte-equal (652 bytes, normaliser inert), and
     # `net_grf`'s 1592-byte chunk normalised from b38's DIE order into retail's (41 DIEs,
     # 31 moved, 8 references rewritten) and byte-identical.
+    #
+    # `p_anime.c` measured 2026-10-20 under `3.0b38-030307 -c -lang c -O3 -opt full -g`:
+    # all five bodies word-exact (0x950 bytes), `.line` 35 of 248 rows off in 5 statement
+    # tables, and `.debug` the same 0x4273 bytes / 414 DIEs.  `--adopt-retail-meta` adopts
+    # retail's `.line` and `n`'s location in both large functions -- the emitted
+    # `AT_location` is MW's `scratch` (DW_OP_reg2), retail's is `$a2` (DW_OP_reg6) -- plus
+    # 4 anonymous names and 15 reference words between structurally identical DIEs; the
+    # chunk then equals retail's byte for byte.  A sixth local DIE (dmm_chara's residue)
+    # would refuse: adoption cannot change a DIE count.
     tu_builds=(("src/sys/sys_scf.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", False),
                ("src/network/net_grf.c", "3.0b38-030307",
-                "-c -lang c -O3 -opt full -g", True)),
+                "-c -lang c -O3 -opt full -g", True),
+               ("src/AM/s573/play/p_anime.c", "3.0b38-030307",
+                "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention
