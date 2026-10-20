@@ -526,11 +526,13 @@ DDREX2P = Target(
     # The fourth element's other state is `"adopt"` (`--adopt-retail-meta`): the unit's
     # `.text` is retail's byte for byte, but `.line` is not and a local's `AT_location`
     # names a different register.  The comment on that row quotes the report -- the number
-    # of `.line` rows changed and every adopted `local: before -> after` -- because the
-    # report is what says *what* was adopted; the step itself refuses unless the whole
-    # `.debug` chunk comes out retail's bytes.  `p_anime.c` carries it (10 statement
-    # lines moved, first at `.line+0x45A`: 115 -> 114; 35 rows byte-different;
-    # `n` as `scratch -> $a2` in both functions; 4 anonymous names; 15 reference words).
+    # of `.line` rows changed, or that the emitted table is not row-for-row comparable and
+    # is adopted whole, and every adopted `local: before -> after` -- because the report is
+    # what says *what* was adopted; the step itself refuses unless the whole `.debug` chunk
+    # comes out retail's bytes.  `p_anime.c` carries it (`n` as `scratch -> $a2` in both
+    # functions; 4 anonymous names; 15 reference words; the normalised source's `.line`
+    # carries 4 more records than retail's, so the tables are not row-comparable and
+    # retail's chunk is adopted whole).
     #
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
     # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both
@@ -543,14 +545,16 @@ DDREX2P = Target(
     # 31 moved, 8 references rewritten) and byte-identical.
     #
     # `p_anime.c` measured 2026-10-20 under `3.0b38-030307 -c -lang c -O3 -opt full -g`:
-    # all five bodies word-exact (0x950 bytes), `.line` 10 statement lines moved (first at
-    # `.line+0x45A`: 115 -> 114; 35 of 244 rows byte-different) in 5 statement
-    # tables, and `.debug` the same 0x4273 bytes / 414 DIEs.  `--adopt-retail-meta` adopts
-    # retail's `.line` and `n`'s location in both large functions -- the emitted
-    # `AT_location` is MW's `scratch` (DW_OP_reg2), retail's is `$a2` (DW_OP_reg6) -- plus
-    # 4 anonymous names and 15 reference words between structurally identical DIEs; the
-    # chunk then equals retail's byte for byte.  A sixth local DIE (dmm_chara's residue)
-    # would refuse: adoption cannot change a DIE count.
+    # all five bodies word-exact (0x950 bytes), and `.debug` the same 0x4273 bytes / 414
+    # DIEs.  Before the source's `#line` layout was normalised, the report named 10
+    # statement lines that moved (first at `.line+0x45A`: 115 -> 114; 35 of 244 rows
+    # byte-different); after normalisation the emitted `.line` carries 4 more records than
+    # retail's and the tables are not row-comparable, so retail's chunk is adopted whole.
+    # `--adopt-retail-meta` also adopts `n`'s location in both large functions -- the
+    # emitted `AT_location` is MW's `scratch` (DW_OP_reg2), retail's is `$a2`
+    # (DW_OP_reg6) -- plus 4 anonymous names and 15 reference words between structurally
+    # identical DIEs; the chunk then equals retail's byte for byte.  A sixth local DIE
+    # (dmm_chara's residue) would refuse: adoption cannot change a DIE count.
     tu_builds=(("src/sys/sys_scf.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", False),
                ("src/network/net_grf.c", "3.0b38-030307",
