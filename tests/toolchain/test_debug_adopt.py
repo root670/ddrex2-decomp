@@ -76,7 +76,9 @@ def test_metadata_is_adopted_and_every_value_is_reported(capsys):
 
     assert placed == retail
     error = capsys.readouterr().err
-    assert "adopted retail's .line (1 row(s) changed in 1 statement table(s))" in error
+    assert "adopted retail's .line (1 row(s) changed by statement line" in error
+    assert "first at .line+0x12: 12 -> 11" in error
+    assert "1 of 3 rows byte-different" in error
     assert "adopted AT_location n (in f): scratch -> $a2" in error
     assert "adopted anonymous name @anon0 -> @anon1" in error
     assert "byte for byte after adoption" in error
@@ -92,6 +94,8 @@ def test_the_adoption_returns_retails_line_chunk_whole():
 
     assert adopted.chunk == retail_debug
     assert adopted.line == RETAIL_LINE
+    assert adopted.line_changed == 1
+    assert adopted.first_line_row == (0, 1, 0x12, 12, 11)
     assert len(adopted.line_rows) == 1
     table, row, before, after = adopted.line_rows[0]
     assert (table, row) == (0, 1)

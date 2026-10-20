@@ -80,15 +80,19 @@ class Changed:
 class Adopted:
     """Retail's metadata, and what had to change to make it ours."""
 
-    __slots__ = ("chunk", "line", "line_rows", "line_tables", "locations", "anon_names",
+    __slots__ = ("chunk", "line", "line_rows", "line_tables", "line_total",
+                 "line_changed", "first_line_row", "locations", "anon_names",
                  "references", "dies")
 
-    def __init__(self, chunk, line, line_rows, line_tables, locations, anon_names,
-                 references, dies):
+    def __init__(self, chunk, line, line_rows, line_tables, line_total, line_changed,
+                 first_line_row, locations, anon_names, references, dies):
         self.chunk = chunk              # retail's .debug chunk, byte-equal to the proof
         self.line = line                # retail's .line chunk, adopted whole
-        self.line_rows = line_rows      # [(table, row, before, after)]
+        self.line_rows = line_rows      # [(table, row, before, after)] byte-different rows
         self.line_tables = line_tables  # sub-tables compared
+        self.line_total = line_total    # rows in the adopted chunk
+        self.line_changed = line_changed  # rows whose statement line moved, aligned
+        self.first_line_row = first_line_row  # (table, row, offset, ours, retail) or None
         self.locations = locations      # [Changed], one per adopted AT_location
         self.anon_names = anon_names    # [Changed], one per adopted @anonN name
         self.references = references    # intra-chunk reference words adopted
@@ -101,7 +105,7 @@ class Adopted:
 
 
 def _line_tables(chunk: bytes) -> list:
-    """``[(base, [(line, position, address delta), ...]), ...]`` for one ``.line`` chunk.
+    """``[(offset, base, [(line, position, address delta), ...]), ...]`` for one chunk.
 
     Retail's chunk is a run of DWARF 1 statement-list tables, each introduced by its
     ``(length, base address)`` header; the function CUs' tables are concatenated.  A chunk
@@ -123,27 +127,57 @@ def _line_tables(chunk: bytes) -> list:
                 raise Refused(f".line +0x{at:X}: a table entry runs past its table")
             rows.append(struct.unpack_from("<IHI", chunk, at))
             at += 10
-        tables.append((base, rows))
+        tables.append((offset, base, rows))
         offset += length
     return tables
 
 
 def line_changes(emitted: bytes, retail: bytes):
-    """``(changes, table count)``: rows where the emitted statement table is not retail's."""
+    """``(changes, table count, row count)``: rows where the statement table is not retail's."""
     ours = _line_tables(emitted)
     theirs = _line_tables(retail)
     if len(ours) != len(theirs):
         raise Refused(f".line holds {len(ours)} statement table(s) against retail's "
                       f"{len(theirs)}; the tables are not comparable one-for-one")
     changes = []
-    for index, ((base_a, rows_a), (base_b, rows_b)) in enumerate(zip(ours, theirs)):
+    for index, ((_, base_a, rows_a), (_, base_b, rows_b)) in enumerate(zip(ours, theirs)):
         if len(rows_a) != len(rows_b):
             raise Refused(f".line table {index} holds {len(rows_a)} rows against retail's "
                           f"{len(rows_b)}")
         for row, (one, other) in enumerate(zip(rows_a, rows_b)):
             if one != other:
                 changes.append((index, row, (base_a, one), (base_b, other)))
-    return changes, len(ours)
+    return changes, len(ours), sum(len(rows) for _offset, _base, rows in ours)
+
+
+def line_number_changes(emitted: bytes, retail: bytes):
+    """``(count, first)``: the statement lines that moved, aligned per sub-table.
+
+    A statement table can shift as a whole (the same lines against later addresses) or lose
+    and gain rows; a row-by-row byte comparison then reports the whole tail as changed.
+    Aligning the *line numbers* per table names the records whose statement line actually
+    moved: a row on our side that is not matched equal is one changed row.  ``first`` is
+    ``(table, row, offset, ours, retail)``, where ``offset`` is the row's byte position in
+    the chunk, or ``None``.
+    """
+    import difflib
+
+    ours = _line_tables(emitted)
+    theirs = _line_tables(retail)
+    count, first = 0, None
+    for index, ((offset, _base, rows_a), (_offset_b, _base_b, rows_b)) in enumerate(
+            zip(ours, theirs)):
+        left = [row[0] for row in rows_a]
+        right = [row[0] for row in rows_b]
+        matcher = difflib.SequenceMatcher(None, left, right, autojunk=False)
+        for tag, i, j, k, _l in matcher.get_opcodes():
+            if tag not in ("replace", "delete"):
+                continue
+            count += j - i
+            if first is None:
+                first = (index, i, offset + 8 + 10 * i, left[i],
+                         right[k] if k < len(right) else None)
+    return count, first
 
 
 # ---------------------------------------------------------------------------
@@ -248,8 +282,10 @@ def _key_tree(dies):
 def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"",
           retail_line: bytes = b"") -> Adopted:
     """Retail's metadata in our chunk, accepted only when the bytes are retail's."""
-    line_diff, line_table_count = line_changes(emitted_line, retail_line) \
-        if emitted_line or retail_line else ([], 0)
+    line_diff, line_table_count, line_total = line_changes(emitted_line, retail_line) \
+        if emitted_line or retail_line else ([], 0, 0)
+    line_changed, first_line_row = line_number_changes(emitted_line, retail_line) \
+        if emitted_line or retail_line else (0, None)
 
     if len(emitted) != len(retail):
         raise Refused(f".debug is 0x{len(emitted):X} bytes against retail's "
@@ -350,5 +386,6 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
         raise Refused(f"the adopted chunk is not retail's: first difference at "
                       f"+0x{at:X} (0x{out[at]:02X} against 0x{retail[at]:02X})")
 
-    return Adopted(retail, retail_line, line_diff, line_table_count, locations,
-                   anon_names, references, len(ours))
+    return Adopted(retail, retail_line, line_diff, line_table_count, line_total,
+                   line_changed, first_line_row, locations, anon_names, references,
+                   len(ours))

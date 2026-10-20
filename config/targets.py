@@ -528,7 +528,8 @@ DDREX2P = Target(
     # names a different register.  The comment on that row quotes the report -- the number
     # of `.line` rows changed and every adopted `local: before -> after` -- because the
     # report is what says *what* was adopted; the step itself refuses unless the whole
-    # `.debug` chunk comes out retail's bytes.  `p_anime.c` carries it (35 `.line` rows;
+    # `.debug` chunk comes out retail's bytes.  `p_anime.c` carries it (10 statement
+    # lines moved, first at `.line+0x45A`: 115 -> 114; 35 rows byte-different;
     # `n` as `scratch -> $a2` in both functions; 4 anonymous names; 15 reference words).
     #
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
@@ -542,7 +543,8 @@ DDREX2P = Target(
     # 31 moved, 8 references rewritten) and byte-identical.
     #
     # `p_anime.c` measured 2026-10-20 under `3.0b38-030307 -c -lang c -O3 -opt full -g`:
-    # all five bodies word-exact (0x950 bytes), `.line` 35 of 248 rows off in 5 statement
+    # all five bodies word-exact (0x950 bytes), `.line` 10 statement lines moved (first at
+    # `.line+0x45A`: 115 -> 114; 35 of 244 rows byte-different) in 5 statement
     # tables, and `.debug` the same 0x4273 bytes / 414 DIEs.  `--adopt-retail-meta` adopts
     # retail's `.line` and `n`'s location in both large functions -- the emitted
     # `AT_location` is MW's `scratch` (DW_OP_reg2), retail's is `$a2` (DW_OP_reg6) -- plus

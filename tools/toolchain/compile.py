@@ -897,16 +897,19 @@ def assemble(source: str, out: pathlib.Path) -> None:
 class Placed:
     """What a promoted unit contributes to the pinned build."""
 
-    __slots__ = ("text", "debug", "line", "labels", "sizes", "normalised", "adopted")
+    __slots__ = ("text", "debug", "line", "labels", "sizes", "normalised", "adopted",
+                 "emitted_line")
 
-    def __init__(self, text, debug, line, labels, sizes, normalised=False, adopted=False):
+    def __init__(self, text, debug, line, labels, sizes, normalised=False, adopted=False,
+                 emitted_line=None):
         self.text = text        # the promoted run of code splits, including its tail padding
         self.debug = debug      # the unit's .debug chunk
-        self.line = line        # the unit's run of .line chunks
+        self.line = line        # the unit's run of .line chunks (retail's when adopted)
         self.labels = labels    # [(offset within .text, function name, bytes)]
         self.sizes = sizes      # [(function name, (block, emitted, pinned))]
         self.normalised = normalised  # the .debug chunk came out of the order normaliser
         self.adopted = adopted  # retail's .line and AT_location values were adopted
+        self.emitted_line = line if emitted_line is None else emitted_line  # what we wrote
 
 
 def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: str,
@@ -960,7 +963,7 @@ def _first_difference(left: bytes, right: bytes) -> int:
 def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
                     retail_text: bytes, retail_line: bytes, retail_debug: bytes,
                     base: int = 0, block_mismatches=(), normalise: bool = False,
-                    adopt: bool = False) -> bytes:
+                    adopt: bool = False, allow_line: bool = False) -> bytes:
     """The four conditions, and the bytes the image should carry for this unit.
 
     Condition 1 (``.text`` and ``.line`` byte-equal) is checked here rather than in
@@ -986,6 +989,11 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
     that pass ``adopt`` print exactly that refusal -- and then retail's ``.line`` chunk and
     the ``AT_location`` values of locals whose records otherwise match are adopted.  The
     whole ``.debug`` chunk must come out retail's byte for byte, or the unit refuses.
+
+    ``allow_line`` is the measurement seam for :mod:`toolchain.line_reflow`'s normalising
+    mode: the ``.line`` half of condition 1 is skipped and the emitted chunk is returned
+    unchanged, so a caller can count the rows that would differ from retail's without
+    adopting anything.  ``.text`` is still required to be retail's.
     """
     if adopt:
         if normalise:
@@ -1010,8 +1018,14 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
             adopted = debug_adopt.adopt(debug, retail_debug, base, line, retail_line)
         except debug_adopt.Refused as exc:
             raise Unusable(f"{unit}: condition 6 (retail metadata adoption) failed: {exc}")
-        print(f"compile: {unit}: adopted retail's .line "
-              f"({len(adopted.line_rows)} row(s) changed in {adopted.line_tables} "
+        first = ""
+        if adopted.first_line_row is not None:
+            _table, _row, offset, before, after = adopted.first_line_row
+            first = (f", first at .line+0x{offset:X}: {before}"
+                     + (f" -> {after}" if after is not None else " (absent in retail)"))
+        print(f"compile: {unit}: adopted retail's .line ({adopted.line_changed} row(s) "
+              f"changed by statement line{first}; {len(adopted.line_rows)} of "
+              f"{adopted.line_total} rows byte-different in {adopted.line_tables} "
               f"statement table(s))", file=sys.stderr)
         for change in adopted.locations:
             print(f"compile: {unit}: adopted AT_location {change}", file=sys.stderr)
@@ -1035,7 +1049,7 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
             f"{unit}: condition 1 ({debug_set.LABEL[1]}) failed: .text is "
             f"0x{len(text):X} bytes against retail's 0x{len(retail_text):X}, first "
             f"differing byte at 0x{at:X}")
-    if line != retail_line:
+    if line != retail_line and not allow_line:
         at = _first_difference(line, retail_line)
         raise Unusable(
             f"{unit}: condition 1 ({debug_set.LABEL[1]}) failed: .line is "
@@ -1218,7 +1232,8 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
 
 
 def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, source: bytes,
-                  keep=None, normalise: bool = False, adopt: bool = False) -> Placed:
+                  keep=None, normalise: bool = False, adopt: bool = False,
+                  allow_line: bool = False) -> Placed:
     """Compile one spelling of the unit's source and place its bytes.
 
     :func:`place` owns the file/reflow decision; this is the promotion itself, unchanged.
@@ -1281,11 +1296,12 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
     debug = debug_promotion(
         tu.file, text=bytes(text), line=line, debug=emitted_debug, retail_text=expected_text,
         retail_line=retail_line, retail_debug=retail_debug, base=tu.debug_offset,
-        block_mismatches=debug_mismatches, normalise=normalise, adopt=adopt)
+        block_mismatches=debug_mismatches, normalise=normalise, adopt=adopt,
+        allow_line=allow_line)
     return Placed(bytes(text), debug, retail_line if adopt else line, labels,
                   sizes + debug_sizes + line_sizes,
                   normalised=normalise and emitted_debug != retail_debug,
-                  adopted=adopt)
+                  adopted=adopt, emitted_line=line)
 
 
 def retail_bytes(tu: Tu, retail=RETAIL, text_size=None) -> dict:
