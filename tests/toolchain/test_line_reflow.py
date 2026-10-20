@@ -130,21 +130,24 @@ def _unit_and_compiler():
     tu = manifests.tu_named("src/sys/sys_scf.c")
     pair = target.build_pair(tu.file)
     assert pair is not None, "sys_scf.c must stay a recorded promotion"
-    compiler, flags, normalise = pair
+    compiler, flags, state = pair
+    # The row's fourth element is `False`, `True` (normalise) or `"adopt"`; the two
+    # stronger steps are separate arguments to the promotion path.
+    normalise, adopt = state is True, state == "adopt"
     try:
         compiler_dir = fetch.compiler(compiler)
         wibo = fetch.wibo()
     except Exception as exc:                     # a checkout without the pinned toolchain
         pytest.skip(f"recorded compiler unavailable: {exc}")
     import shlex
-    return tu, manifests, compiler_dir, wibo, shlex.split(flags), normalise
+    return tu, manifests, compiler_dir, wibo, shlex.split(flags), normalise, adopt
 
 
 def test_a_recompiled_unit_is_byte_identical_after_the_rewrite(tmp_path):
     """The acceptance step itself: compile before and after through ``place``'s path."""
     from toolchain import compile as cc
 
-    tu, manifests, compiler_dir, wibo, flags, normalise = _unit_and_compiler()
+    tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
     original = tu.source.read_bytes()
     text = original.decode("latin-1")
     lines = text.split("\n")
@@ -162,9 +165,11 @@ def test_a_recompiled_unit_is_byte_identical_after_the_rewrite(tmp_path):
     assert lr.has_directives(variant) and not lr.has_directives(rewritten)
 
     before = cc._place_source(tu, manifests, compiler_dir, wibo, flags,
-                              variant.encode("latin-1"), tmp_path / "before.mw.o", normalise)
+                              variant.encode("latin-1"), tmp_path / "before.mw.o", normalise,
+                              adopt)
     after = cc._place_source(tu, manifests, compiler_dir, wibo, flags,
-                             rewritten.encode("latin-1"), tmp_path / "after.mw.o", normalise)
+                             rewritten.encode("latin-1"), tmp_path / "after.mw.o", normalise,
+                             adopt)
 
     assert before.text == after.text, "the rewrite moved .text"
     assert before.debug == after.debug, "the rewrite moved .debug"
@@ -172,7 +177,8 @@ def test_a_recompiled_unit_is_byte_identical_after_the_rewrite(tmp_path):
 
     # And the promotion path itself runs the same comparison and accepts this spelling.
     placed = cc.place(tu, manifests, compiler_dir, wibo, flags, keep=tmp_path / "placed.mw.o",
-                      normalise=normalise, source_text=variant.encode("latin-1"))
+                      normalise=normalise, adopt=adopt,
+                      source_text=variant.encode("latin-1"))
     assert (placed.text, placed.debug, placed.line) == (before.text, before.debug,
                                                         before.line)
 
@@ -181,7 +187,7 @@ def test_a_backward_unit_is_compiled_unrewritten_rather_than_refused(tmp_path, c
     """A layout the rewrite cannot express is skipped, not made a promotion failure."""
     from toolchain import compile as cc
 
-    tu, manifests, compiler_dir, wibo, flags, normalise = _unit_and_compiler()
+    tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
     original = tu.source.read_bytes()
     text = original.decode("latin-1")
     # A directive after the last statement cannot move a record, but it does move the
@@ -192,9 +198,11 @@ def test_a_backward_unit_is_compiled_unrewritten_rather_than_refused(tmp_path, c
         lr.rewrite(variant, accept_paths=(tu.name, tu.file))
 
     placed = cc.place(tu, manifests, compiler_dir, wibo, flags, keep=tmp_path / "skipped.mw.o",
-                      normalise=normalise, source_text=variant.encode("latin-1"))
+                      normalise=normalise, adopt=adopt,
+                      source_text=variant.encode("latin-1"))
 
     assert "reflow skipped" in capsys.readouterr().err
-    plain = cc._place_source(tu, manifests, compiler_dir, wibo, flags, variant.encode("latin-1"),
-                             tmp_path / "plain.mw.o", normalise)
+    plain = cc._place_source(tu, manifests, compiler_dir, wibo, flags,
+                             variant.encode("latin-1"), tmp_path / "plain.mw.o", normalise,
+                             adopt)
     assert placed.text == plain.text
