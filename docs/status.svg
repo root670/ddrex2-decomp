@@ -1,0 +1,291 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
+<title>ddrex2p translation units: 5 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 2.0% of units and 1.1% of retail code bytes are promoted.</desc>
+<rect width="800" height="610" fill="#ffffff"/>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 5 / 249 units promoted (2.0%)</text>
+<text x="24" y="52" font-size="12" fill="#57606a">41,935 / 3,757,587 retail code bytes (1.1%) &#183; one cell per translation unit &#183; hover for path, bytes and state</text>
+<text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched</text>
+<g class="module" data-module="AM">
+<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 1/18 promoted, 5.6%</text>
+<rect class="cell" data-state="untouched" x="24" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/play/onimode.c - 28,146 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/play/oni_list.c - 1,470 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/disp/b_anime.c - 19,936 bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="69" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/play/p_anime.c - 14,358 bytes - promoted</title></rect>
+<rect class="cell" data-state="untouched" x="84" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/vu0.c - 156 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/dancer.c - 8,738 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/ddata.c - 2,596 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/matrix.c - 328 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/model1.c - 9,536 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/model2.c - 11,806 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/motion1.c - 7,894 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/motion2.c - 3,161 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/ps1lib.c - 1,038 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/dcamera.c - 8,933 bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="234" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dexport.c - 26,924 bytes - partial</title></rect>
+<rect class="cell" data-state="untouched" x="249" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/dinit.c - 20,386 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="264" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/demo/title_demo.c - 17,213 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="279" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/disp/mmenu_obj.c - 4,038 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="common">
+<text x="24" y="139" font-size="12" font-weight="600" fill="#24292f">common - 0/15 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_obj.c - 5,704 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_str.c - 5,327 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_win.c - 3,742 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_wins.c - 4,012 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="84" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_win_multi.c - 6,362 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/multi_window.c - 3,484 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/com_keyboard.c - 4,171 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/obj/co_obj.c - 1,067 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/co_diap.c - 3,831 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/co_cursor.c - 1,911 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/co_button.c - 1,967 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/co_qmenu.c - 3,908 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_win_multi2.c - 5,459 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/co_movie.c - 3,320 bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="234" y="144" width="12" height="12" rx="2" fill="#bf8700"><title>src/common/com_scrollbar.c - 1,724 bytes - partial</title></rect>
+</g>
+<g class="module" data-module="CS">
+<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 2/118 promoted, 1.7%</text>
+<rect class="cell" data-state="untouched" x="24" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_e.c - 7,632 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_load.c - 162 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_j.c - 7,536 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_js.c - 6,665 bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="84" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/lang.c - 845 bytes - promoted</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/ani_load.c - 13,982 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/opening/openinglogo.c - 3,252 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_js2.c - 6,573 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info_data.c - 14,723 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cs_font.c - 3,085 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout.c - 20,066 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_disp/bk_mv_list.c - 2,776 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_disp/bk_disp_sub.c - 30,468 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_disp/bk_disp.c - 31,175 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="234" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_msel.c - 34,845 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="249" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_eyetoy.c - 25,349 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="264" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_chara.c - 37,432 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="279" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/freeplay.c - 27,878 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="294" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_style.c - 37,203 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="309" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_res.c - 41,896 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="324" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_opt.c - 44,895 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="339" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_data.c - 30,019 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="354" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_disp.c - 28,440 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="369" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_init.c - 38,272 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="384" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_main.c - 25,551 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="399" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_doll.c - 35,780 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="414" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_msel_obj.c - 38,253 bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="429" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/dancemaster/dmm_chara.c - 25,481 bytes - promoted</title></rect>
+<rect class="cell" data-state="untouched" x="444" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_hand.c - 20,476 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="459" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_init.c - 30,414 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="474" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_list.c - 17,421 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="489" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_main.c - 16,844 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="504" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_obj.c - 37,266 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="519" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_select.c - 6,151 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="534" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_disp.c - 37,479 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="549" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_func.c - 16,315 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="564" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/shop/shop_info.c - 6,149 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="579" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_mess.c - 16,553 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="594" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_mc.c - 38,556 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="609" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_nor.c - 16,625 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="624" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_suv.c - 3,317 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="639" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_cmb.c - 3,246 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="654" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_topmenu_obj.c - 29,451 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="669" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_endless_obj.c - 43,469 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="684" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_main.c - 35,160 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="699" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_nonstop_obj.c - 30,918 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="714" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_menu.c - 23,053 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="729" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_main.c - 42,283 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="744" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_msel.c - 23,447 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="759" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_func.c - 39,139 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="24" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_str.c - 1,376 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_func.c - 34,209 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_play.c - 19,179 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_res.c - 28,013 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="84" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_chk.c - 5,819 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_qmenu.c - 22,694 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_ssq_func.c - 1,469 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_calc.c - 155 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_edit.c - 24,964 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_menu.c - 13,843 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_select.c - 23,988 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit_lib/el_mes.c - 171 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit_lib/el_name.c - 23,478 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit_lib/el_disp_obj.c - 22,304 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="234" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_edit_disp.c - 14,625 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="249" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/infosel.c - 6,962 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="264" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/info.c - 43,036 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="279" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/infodoll.c - 690 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="294" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/infoshow.c - 40,903 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="309" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll.c - 2,117 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="324" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_fft.c - 19,845 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="339" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_mov.c - 3,863 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="354" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_pic.c - 4,996 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="369" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_scrl.c - 3,757 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="384" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/kn_ldisp.c - 12,531 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="399" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/les_aid.c - 5,993 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="414" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/kn_lmsg.c - 335 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="429" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/kn_lfunc.c - 21,405 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="444" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/les.c - 30,679 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="459" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/kn_lstep.c - 5,382 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="474" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/les_play.c - 41,897 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="489" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/les_sel_lv.c - 21,520 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="504" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/lesson/les_sel_sec.c - 10,338 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="519" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_event.c - 26,096 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="534" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_event_cond.c - 37,619 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="549" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_event_exe.c - 42,083 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="564" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_judge.c - 25,806 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="579" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_play.c - 27,980 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="594" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_play_course.c - 39,223 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="609" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_qmenu.c - 38,124 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="624" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_result.c - 42,572 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="639" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_select.c - 48,083 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="654" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_style.c - 41,373 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="669" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_subject.c - 1,074 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="684" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_adjust.c - 16,855 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="699" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_doll.c - 17,036 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="714" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_kconfig.c - 22,044 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="729" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_lang.c - 5,373 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="744" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_main.c - 23,323 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="759" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_mc.c - 17,698 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="24" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_menu.c - 19,735 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_win.c - 8,891 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_setting.c - 8,166 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usermanage.c - 13,444 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="84" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_user.c - 2,197 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_userlist.c - 12,164 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_useredit.c - 7,258 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usrrpass.c - 9,449 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_cursor.c - 1,688 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_menu.c - 3,345 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_message.c - 3,617 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_main.c - 16,404 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_co.c - 11,324 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_top.c - 4,641 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="234" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_hi.c - 17,830 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="249" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_cha.c - 4,321 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="264" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_end.c - 16,195 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="279" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_hand.c - 17,760 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="eyetoy">
+<text x="24" y="245" font-size="12" font-weight="600" fill="#24292f">eyetoy - 0/3 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="250" width="12" height="12" rx="2" fill="#d0d7de"><title>src/eyetoy/eye_system.c - 30,979 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="250" width="12" height="12" rx="2" fill="#d0d7de"><title>src/eyetoy/eye_ref.c - 3,923 bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="54" y="250" width="12" height="12" rx="2" fill="#bf8700"><title>src/eyetoy/eye_filter.c - 329 bytes - partial</title></rect>
+</g>
+<g class="module" data-module="fft">
+<text x="24" y="283" font-size="12" font-weight="600" fill="#24292f">fft - 0/1 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="288" width="12" height="12" rx="2" fill="#d0d7de"><title>src/fft/fft_disp.c - 31,167 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="gs">
+<text x="24" y="321" font-size="12" font-weight="600" fill="#24292f">gs - 0/2 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="326" width="12" height="12" rx="2" fill="#d0d7de"><title>src/gs/gs_3d.c - 1,954 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="326" width="12" height="12" rx="2" fill="#d0d7de"><title>src/gs/gs_vu0.c - 149 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="network">
+<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 1/82 promoted, 1.2%</text>
+<rect class="cell" data-state="untouched" x="24" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net.c - 29,169 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_main.c - 42,272 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_type.c - 15,011 bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="69" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_grf.c - 1,014 bytes - promoted</title></rect>
+<rect class="cell" data-state="untouched" x="84" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_prg.c - 34,161 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_read_data.c - 27,966 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_main.c - 42,648 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_window.c - 29,709 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_opt.c - 29,393 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_logout.c - 14,283 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_menu.c - 16,326 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_match.c - 29,283 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_data.c - 17,617 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_prac.c - 14,357 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="234" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_list.c - 29,175 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="249" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_cnf/net_cnf_mes_e.c - 2,294 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="264" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_any.c - 3,540 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="279" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_menu.c - 4,032 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="294" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_main.c - 27,855 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="309" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_menu.c - 14,277 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="324" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_new.c - 29,773 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="339" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_top.c - 28,740 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="354" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_user.c - 29,244 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="369" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_rule.c - 14,436 bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="384" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_sys/net_sys_connect.c - 14,102 bytes - partial</title></rect>
+<rect class="cell" data-state="untouched" x="399" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_info.c - 15,674 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="414" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_logout.c - 14,274 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="429" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_suser.c - 7,556 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="444" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_tab.c - 5,514 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="459" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_watch.c - 3,857 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="474" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_search.c - 22,667 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="489" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_item.c - 4,656 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="504" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_user.c - 8,151 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="519" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_dnas/net_dnas_mes_e.c - 1,487 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="534" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_rcname.c - 4,321 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="549" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_play/net_play_main.c - 28,713 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="564" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_vs.c - 44,049 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="579" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_lobby.c - 28,776 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="594" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/lib/eeint/tcpint.c - 8,368 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="609" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/mio/blowfish.c - 475 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="624" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/mio/md5.c - 476 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="639" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/mio/miobase.c - 1,503 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="654" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_auth/net_auth_mes_e.c - 3,369 bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="669" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_game/net_game_help.c - 94 bytes - partial</title></rect>
+<rect class="cell" data-state="untouched" x="684" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_bar.c - 4,144 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="699" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_auth/net_auth_errmes_e.c - 955 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="714" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_slby.c - 4,062 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="729" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_inter.c - 3,281 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="744" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_listbk.c - 4,953 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="759" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_listsel.c - 4,996 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="24" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_listdtl2.c - 4,839 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_listdtl.c - 6,220 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_listdtl3.c - 4,821 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_infoboard.c - 3,658 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="84" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_rc.c - 14,994 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_challenge.c - 29,243 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_infosel.c - 3,836 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_rccssel.c - 6,301 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="144" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_vs_win.c - 19,711 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_prg.c - 28,972 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_base.c - 4,542 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_peruser.c - 7,286 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perhead.c - 4,109 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="219" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perpoint.c - 4,016 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="234" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perrank.c - 4,162 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="249" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perstats.c - 3,890 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="264" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_dhead.c - 4,717 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="279" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_dpoint.c - 4,720 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="294" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/lib/bsdsock/bsdsock.c - 6,883 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="309" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_account.c - 11,330 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="324" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_challenge.c - 2,687 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="339" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_connect.c - 11,122 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="354" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_gate.c - 2,466 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="369" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_id.c - 6,213 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="384" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_lobby.c - 5,835 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="399" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_util.c - 14,999 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="414" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_auth/net_auth_main.c - 46,316 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="429" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_cnf/net_cnf_main.c - 31,269 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="444" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_dnas/net_dnas_ave.c - 4,181 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="459" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_dnas/net_dnas_main.c - 17,169 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="474" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_router/net_router_main.c - 15,670 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="489" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_router/net_router_mes_e.c - 593 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="sound">
+<text x="24" y="412" font-size="12" font-weight="600" fill="#24292f">sound - 0/4 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/vxdecode/decode.c - 993 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/vxdecode/dectbl.c - 1,077 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/vxdecode/get4bit.c - 367 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/fft/sd_fft.c - 1,042 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="sys">
+<text x="24" y="450" font-size="12" font-weight="600" fill="#24292f">sys - 1/2 promoted, 50.0%</text>
+<rect class="cell" data-state="promoted" x="24" y="455" width="12" height="12" rx="2" fill="#2da44e"><title>src/sys/sys_scf.c - 237 bytes - promoted</title></rect>
+<rect class="cell" data-state="partial" x="39" y="455" width="12" height="12" rx="2" fill="#bf8700"><title>src/sys/sys_demo.c - 1,192 bytes - partial</title></rect>
+</g>
+<g class="module" data-module="(external)">
+<text x="24" y="488" font-size="12" font-weight="600" fill="#24292f">(external) - 0/1 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="493" width="12" height="12" rx="2" fill="#d0d7de"><title>libstr3.c - 3,585 bytes - untouched</title></rect>
+</g>
+<g class="module" data-module="(root)">
+<text x="24" y="526" font-size="12" font-weight="600" fill="#24292f">(root) - 0/3 promoted, 0.0%</text>
+<rect class="cell" data-state="untouched" x="24" y="531" width="12" height="12" rx="2" fill="#d0d7de"><title>src/music_all.c - 405 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="39" y="531" width="12" height="12" rx="2" fill="#d0d7de"><title>src/olmain.c - 1,880 bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="531" width="12" height="12" rx="2" fill="#d0d7de"><title>src/point.c - 14,551 bytes - untouched</title></rect>
+</g>
+<g transform="translate(0 580)" class="legend"><rect x="24" y="0" width="12" height="12" rx="2" fill="#2da44e" stroke="#8c959f" stroke-width="0.5"/><text x="42" y="10" font-size="12" fill="#24292f">promoted</text><rect x="148" y="0" width="12" height="12" rx="2" fill="#bf8700" stroke="#8c959f" stroke-width="0.5"/><text x="166" y="10" font-size="12" fill="#24292f">partial</text><rect x="272" y="0" width="12" height="12" rx="2" fill="#d0d7de" stroke="#8c959f" stroke-width="0.5"/><text x="290" y="10" font-size="12" fill="#24292f">untouched</text></g>
+</svg>

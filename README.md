@@ -35,6 +35,35 @@ and planned in [`docs/superpowers/plans/2026-10-16-ddrex2-preview-retarget.md`](
 (the earlier skeleton plan kept it historical record); the working contract — the rules, the loop, and
 why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before editing anything.
 
+## Progress
+
+<!-- status:start -->
+
+**Overall: 5 / 249 translation units promoted (2.0%); 41,935 / 3,757,587 retail code bytes (1.1%).**
+
+Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
+
+Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python3 tools/units/status.py --target ddrex2p`; `python3 tools/units/status.py --check` fails when either is stale.  The heatmap has one cell per translation unit, grouped by module; hover a cell for its path, bytes and state.
+
+| module | units | promoted | bytes | promoted bytes | units % | bytes % |
+|---|---:|---:|---:|---:|---:|---:|
+| `AM` | 18 | 1 | 186,657 | 14,358 | 5.6% | 7.7% |
+| `common` | 15 | 0 | 55,989 | 0 | 0.0% | 0.0% |
+| `CS` | 118 | 2 | 2,317,293 | 26,326 | 1.7% | 1.1% |
+| `eyetoy` | 3 | 0 | 35,231 | 0 | 0.0% | 0.0% |
+| `fft` | 1 | 0 | 31,167 | 0 | 0.0% | 0.0% |
+| `gs` | 2 | 0 | 2,103 | 0 | 0.0% | 0.0% |
+| `network` | 82 | 1 | 1,103,818 | 1,014 | 1.2% | 0.1% |
+| `sound` | 4 | 0 | 3,479 | 0 | 0.0% | 0.0% |
+| `sys` | 2 | 1 | 1,429 | 237 | 50.0% | 16.6% |
+| `(external)` | 1 | 0 | 3,585 | 0 | 0.0% | 0.0% |
+| `(root)` | 3 | 0 | 16,836 | 0 | 0.0% | 0.0% |
+| **total** | **249** | **5** | **3,757,587** | **41,935** | **2.0%** | **1.1%** |
+
+Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
+
+<!-- status:end -->
+
 ## The gates
 
 Every claim about this repository is one of three machine-checkable digests.  Each gate checks its
