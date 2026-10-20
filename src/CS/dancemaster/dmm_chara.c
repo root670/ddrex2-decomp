@@ -50,16 +50,16 @@
  *    is the line retail gives the surviving branch at 0x124.
  */
 
-/* * Reconstructed from orig/SLUS_211.74: the DWARF 1 records for this file (rendered into
- * include/src/CS/dancemaster/dmm_chara.h) and the function's split under
- * asm/nonmatchings/main/.  The statement lines are evidence, so the file uses `#line` to
- * put every statement on retail's own line.
- */
+                                                                                          
+                                                                         
+                                                                                         
+                                            
+   
 #include "src/CS/dancemaster/dmm_chara.h"
 
-/* g_game_w.last_data_addr: 0x00607A70 + 0xAB4E8.  Retail reaches it with the plain
- * %hi/%lo pair, and a field offset that large is one the promotion path cannot read
- * back out of an object, so the address is named directly instead. */
+                                                                                   
+                                                                                    
+                                                                      
 #define DMM_LAST_DATA (*(unsigned char **)0x6B2F58)
 
 anon_7_109 *dmm_get_work(void);
@@ -72,9 +72,9 @@ int dmm_freeplay_step(void);
 void dmm_freeplay_chara_finish(int *id_1, int *id_2);
 void dmm_set_step(int step);
 
-/* The case-0 body: retail's statement list gives it one line, and its pointer is live
- * across two calls, so it is an inlined function -- an inlined body's statements all take
- * the call's line, and its locals carry no DIE in the caller. */
+                                                                                      
+                                                                                          
+                                                                 
 static inline void dmm_chara_work_init(anon_7_109 *work) {
     anon_7_109 *w = dmm_get_work();
     DMM_LAST_DATA = (unsigned char *)0xFC29D0;
@@ -85,7 +85,7 @@ static inline void dmm_chara_work_init(anon_7_109 *work) {
     func_0012CD70(DMM_LAST_DATA);
 }
 
-/* The case-10 body: same shape, one line, pointer live across a call. */
+                                                                         
 static inline void dmm_chara_finish(void) {
     anon_7_109 *w = dmm_get_work();
     dmm_freeplay_chara_finish(&w->dancer[0], &w->dancer[1]);
