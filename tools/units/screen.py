@@ -7,11 +7,19 @@ that has actually cost time:
 * few functions, scalar code, no VU0 (``.vutext`` has its own blocker);
 * no EE 128-bit GPR operations -- MWCC PS2 has no 128-bit operators, so a unit whose split
   carries ``pxor``/``pand``/``paddw``/... is unwritable in C (the 128-bit blocker class);
-* no large unreferenced file-scope tables (the ``mes_*`` debug-order class);
 * no fixed absolute address outside the declared segments (a split whose memory access is a
   ``lui``+offset pair at an address no segment declares, which no C constant can reproduce);
 * calls absent or already named in ``config/ddrex2p/borrowed_symbols.txt``;
-* plenty of DWARF line records, because ``.line`` punishes guesswork hardest.
+* plenty of DWARF line records, because ``.line`` punishes guesswork hardest;
+* little ``.text`` in absolute terms, and no single enormous function, because a unit is
+  replicated instruction by instruction however few functions it declares.
+
+Promoted units (a ``src/`` source *and* a ``tu_builds`` row) are not candidates and are
+dropped from every printed row.  Risks that only change ``.debug`` -- the ``mes_*`` table and
+array-DIE order, unreferenced file-scope tables -- are warnings, not blockers: under
+``--adopt-retail-meta`` a byte-identical ``.text`` lets the pipeline drop our extra records,
+adopt retail's DIE order and locations, and substitute retail's ``.line``.  A *missing* record
+retail has is still refused, which is why an unreferenced array DIE stays a blocker.
 
 It also refuses a unit whose split disassembly names a branch/call/address target the promotion
 path cannot resolve.  That is the link's symbol set, not one ledger (``compile.py``,
@@ -73,9 +81,17 @@ from demangle import cdecl  # noqa: E402
 #: A file-scope array at least this large is the ``mes_*`` shape in ``docs/unit-work.md``.
 LARGE_TABLE_BYTES = 256
 
-#: More than this many file-scope array variables means the compiler's array-DIE order matters
-#: (``lang.c`` has nine); one or two are ordinary data.
+#: More than this many file-scope array variables means the compiler's array-DIE order differs
+#: (``lang.c`` has nine); one or two are ordinary data.  Debug-only since ``--adopt-retail-meta``.
 ARRAY_ORDER_TABLES = 2
+
+#: Size weights, in score points per KiB.  ``TOTAL_TEXT_WEIGHT`` charges the whole unit, so a
+#: wide unit does not hide; ``LARGEST_TEXT_WEIGHT`` charges only the part of the largest
+#: function above the free allowance.  One enormous function was previously ranked as easy
+#: because the old score counted *functions*, not bytes.
+TOTAL_TEXT_WEIGHT = 0.5
+LARGEST_TEXT_WEIGHT = 3.0
+LARGEST_TEXT_FREE_KIB = 1.0
 
 #: Direct control-flow targets.  ``jalr`` is indirect and carries no name the screen can
 #: resolve; computed targets have the same limitation.
@@ -158,6 +174,13 @@ _SYMBOL_RE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+)")
 #: aliases ``configure.py`` writes into the ld script.  The link's other symbol source, and
 #: the same line ``compile.py``'s ``LINK_ASSIGN`` reads.
 _LINK_ASSIGN_RE = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
+
+#: Splat's block header, with the size when it printed one: ``nonmatching func_0011CEF0, 0xA8``.
+#: A size-less block (data blobs and a handful of early splits) is measured one instruction at
+#: a time instead; the instruction line is ``/* 1D0F0 0011CEF0 F0FFBD27 */  addiu ...``.
+_NONMATCHING_RE = re.compile(r"^nonmatching\s+(\S+)(?:\s*,\s*(0x[0-9A-Fa-f]+))?\s*$")
+_INSN_LINE_RE = re.compile(r"/\*\s*[0-9A-Fa-f]+\s+[0-9A-Fa-f]{8}\s+[0-9A-Fa-f]{8}\s*\*/")
+_BLOCK_END_RE = re.compile(r"^(?:endlabel|enddlabel)\b")
 
 try:  # the registry is part of this tree; a tree without it is a loud failure elsewhere
     from config.targets import TARGETS as _TARGETS  # noqa: E402
@@ -267,6 +290,58 @@ def source_path(source: str) -> str:
         return posix[len("src/"):]
     # Library objects (``C:\work2\ktps2\cd\libstr3.c``) are recorded by base name in cus.json.
     return posix.rsplit("/", 1)[-1]
+
+
+def promotion_sources(tu_builds) -> set[str]:
+    """``tu_builds`` entries as ``source_path``-relative keys (``sys/sys_scf.c``).
+
+    The registry records ``src/sys/sys_scf.c``; the DWARF and ``cus.json`` use the same path
+    without its leading ``src/``.  Normalising here keeps one spelling for the membership test.
+    """
+    sources = set()
+    for entry in tu_builds or ():
+        source = pathlib.PurePosixPath(str(entry[0]).replace("\\", "/"))
+        if source.parts[:1] == ("src",):
+            source = pathlib.PurePosixPath(*source.parts[1:])
+        sources.add(str(source))
+    return sources
+
+
+def is_promoted(rel: str, tu_builds, root: pathlib.Path = REPO_ROOT) -> bool:
+    """A promoted TU has both a committed ``src/`` source and a ``tu_builds`` row.
+
+    Neither alone is a promotion: a source with no build row is a half-landed unit (warned
+    about, not excluded), and a row with no source cannot be built.  Requiring both is the
+    cutover rule the pipeline's own gates use.
+    """
+    return (root / "src" / rel).exists() and rel in promotion_sources(tu_builds)
+
+
+def split_text_sizes(text: str) -> dict[str, int]:
+    """Bytes of each ``nonmatching`` block in one split, keyed by block name.
+
+    The size is the number splat printed on the block's ``nonmatching`` line; only when it is
+    absent does the fallback count four bytes per instruction line in that block.  A split can
+    carry data blocks after its function (``func_00106328.s`` ends with ``D_001063D0``), so the
+    blocks are kept separate rather than summed.
+    """
+    blocks: list[dict] = []
+    current: dict | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        match = _NONMATCHING_RE.match(stripped)
+        if match:
+            current = {"name": match.group(1),
+                       "size": int(match.group(2), 16) if match.group(2) else None,
+                       "instructions": 0}
+            blocks.append(current)
+            continue
+        if current is not None and current["size"] is None and _INSN_LINE_RE.search(line):
+            current["instructions"] += 1
+        if _BLOCK_END_RE.match(stripped):
+            current = None
+    return {b["name"]: b["size"] if b["size"] is not None else b["instructions"] * 4
+            for b in blocks}
 
 
 def load_units(cus_path: pathlib.Path) -> "collections.OrderedDict[str, dict]":
@@ -633,13 +708,19 @@ def fixed_absolute_addresses(text: str, top: int) -> list[dict]:
 
 
 def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: int,
-               arrays: int, unresolvable: int = 0) -> float:
-    """Expected-ease score: few functions dominates, then call naming, then line records.
+               arrays: int, unresolvable: int = 0, text_bytes: int = 0,
+               largest_function_bytes: int = 0) -> float:
+    """Expected-ease score: few functions dominates, then size, then calls and line records.
 
     It is a tie-break among unblocked units, not a claim of certainty; every term is printed
     beside the unit as a reason.  The line-record term is a reward, not a gate: a unit with
     many statements gives ``.line`` evidence to follow, which is why the selection rule asks
     for it.
+
+    The size terms are what stop a one-function unit from ranking as easy when that function
+    is enormous: ``-0.5`` per KiB of the unit's whole ``.text``, and ``-3.0`` per KiB of the
+    largest function above a free 1 KiB.  Both are measured from the split's ``nonmatching``
+    line, so they are the bytes to be replicated, not the declared function count.
     """
     lines_per_function = (statements / functions) if functions else 0.0
     score = 100.0
@@ -650,6 +731,9 @@ def score_unit(*, functions: int, statements: int, calls: dict, fp_functions: in
     score -= 0.5 * min(calls.get("borrowed", 0), 20)
     score -= 3.0 * fp_functions
     score -= 0.02 * arrays
+    score -= TOTAL_TEXT_WEIGHT * (text_bytes / 1024.0)
+    score -= LARGEST_TEXT_WEIGHT * max(
+        0.0, largest_function_bytes / 1024.0 - LARGEST_TEXT_FREE_KIB)
     score += min(10.0, lines_per_function)
     if statements >= 20:
         score += 2.0
@@ -664,9 +748,11 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
                  split_names: set[str], unplaced: dict | None = None,
                  unplaced_by_addr: dict[int, str] | None = None,
                  link_names: set[str] | None = None,
-                 segments: tuple[int, int] | None = None) -> dict:
+                 segments: tuple[int, int] | None = None,
+                 tu_builds=()) -> dict:
     """Every signal for one unpromoted (or promoted) unit.  No I/O beyond its splits."""
-    promoted = (REPO_ROOT / "src" / rel).exists()
+    promoted = is_promoted(rel, tu_builds)
+    source_without_build = (REPO_ROOT / "src" / rel).exists() and not promoted
     library = "/src/" not in tu.name.replace("\\", "/")
     functions = [f for f in tu.functions() if AT_low_pc in f.attrs]
     arrays = [c for c in tu.decl.children if c.tag == TAG_array_type]
@@ -700,6 +786,7 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
 
     # Splits carry the calls and the instruction mix.
     line_counts: list[int] = []
+    function_sizes: list[tuple[str, int]] = []
     vu_functions = 0
     fp_functions = 0
     quad_functions = 0
@@ -720,6 +807,12 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
             split_missing += 1
             continue
         text = path.read_text()
+        lo, hi = f.attrs[AT_low_pc], f.attrs[AT_high_pc]
+        sizes = split_text_sizes(text)
+        size = sizes.get(f.name)
+        # A split whose block header carries no name (or no size) falls back to the DWARF
+        # function extent, which is the same bytes without trusting a block match.
+        function_sizes.append((f.name, size if size is not None else hi - lo))
         if _VU0_RE.search(text):
             vu_functions += 1
         if _FPU_RE.search(text):
@@ -755,7 +848,9 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         lo, hi = f.attrs[AT_low_pc], f.attrs[AT_high_pc]
         line_counts.append(sum(1 for addr, line in dwarf.line_table(f.cu)
                                if line and lo <= addr < hi))
-
+    text_bytes = sum(size for _, size in function_sizes)
+    largest_name, largest_bytes = max(function_sizes, key=lambda pair: pair[1],
+                                      default=(None, 0))
     n = len(functions)
     statements = sum(line_counts)
     lines_per_function = (statements / n) if n else 0.0
@@ -794,21 +889,30 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         flags.append("unreferenced-arrays")
         shown = ", ".join(f"{type_text(dwarf, c)} @0x{c.off:X}"
                           for c in unreferenced_arrays[:3])
-        reasons.append(f"{len(unreferenced_arrays)} array DIE(s) nothing references: {shown}")
+        reasons.append(f"{len(unreferenced_arrays)} array DIE(s) nothing references: {shown}"
+                       " -- retail has DIEs no C shape emits, and adoption can only drop our "
+                       "extra records, not fabricate a missing one, so .text cannot recover it")
     if large_tables:
         flags.append("large-tables")
         shown = ", ".join(f"{t['name']} ({t['size']} B)" for t in large_tables[:3])
-        reasons.append(f"{len(large_tables)} large file-scope table(s) (the mes_* "
-                       f"debug-order class): {shown}")
+        warnings.append(f"{len(large_tables)} large file-scope table(s) (the mes_* "
+                        f"debug-order class): {shown} -- .debug-only; adoption re-emits the "
+                        "DIE order, drops our extra records and substitutes retail's .line "
+                        "once .text is byte-identical")
     if unreferenced_tables:
         flags.append("unreferenced-tables")
         shown = ", ".join(t["name"] for t in unreferenced_tables[:3])
-        reasons.append(f"{len(unreferenced_tables)} file-scope table(s) no function references "
-                       f"(mes_* debug-order class): {shown}")
+        warnings.append(f"{len(unreferenced_tables)} file-scope table(s) no function references "
+                        f"(mes_* debug-order class): {shown} -- .debug-only under adoption")
     if len(tables) >= ARRAY_ORDER_TABLES and len(arrays) >= ARRAY_ORDER_TABLES:
         flags.append("array-die-order")
-        reasons.append(f"{len(tables)} array tables / {len(arrays)} array DIEs: "
-                       "array-DIE order is compiler-table order, not declaration order")
+        warnings.append(f"{len(tables)} array tables / {len(arrays)} array DIEs: "
+                        "array-DIE order is compiler-table order, not declaration order -- "
+                        ".debug-only; adoption normalises retail's DIE order")
+    if source_without_build:
+        flags.append("source-unbuilt")
+        warnings.append("src/ holds this unit's source but tu_builds has no row for it: not "
+                        "promoted, and configure cannot build it")
     if unresolvable:
         flags.append("unresolvable-callees")
         shown = []
@@ -833,15 +937,18 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
                        "bytes are a lui+offset relocation pair (the out-of-segment class "
                        "net_game_help.c measured)")
 
+    # Blockers are the risks that change .text (or stop the unit compiling).  The array/table
+    # classes are deliberately absent: they only differ in .debug, and --adopt-retail-meta
+    # replaces retail's DIE order, locations and .line once .text is byte-identical.
     blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "128-bit-gpr",
-                           "library", "unreferenced-arrays", "large-tables",
-                           "unreferenced-tables", "array-die-order",
+                           "library", "unreferenced-arrays",
                            "unresolvable-callees",
                            "absolute-addresses"} for flag in flags)
 
     score = score_unit(functions=n, statements=statements, calls=calls,
                        fp_functions=fp_functions, arrays=len(arrays),
-                       unresolvable=len(unresolvable))
+                       unresolvable=len(unresolvable),
+                       text_bytes=text_bytes, largest_function_bytes=largest_bytes)
 
     good = [
         f"{n} function{'s' if n != 1 else ''}",
@@ -857,6 +964,8 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         else f"{quad_functions} 128-bit GPR function(s)",
         "no fixed absolute addresses" if not addresses
         else f"{len(addresses)} fixed absolute address(es)",
+        f"{text_bytes} B .text"
+        + (f", largest {largest_name} {largest_bytes} B" if largest_name else ""),
         "scalar" if not fp_functions else f"{fp_functions} FPU function(s)",
         f"declared {declared} function(s) in cus.json",
     ]
@@ -865,10 +974,14 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         "file": rel,
         "overlay": tu.overlay,
         "promoted": promoted,
+        "source_without_build": source_without_build,
         "declared_functions": declared,
         "functions": n,
         "statements": statements,
         "lines_per_function": round(lines_per_function, 2),
+        "text_bytes": text_bytes,
+        "largest_function": largest_name,
+        "largest_function_bytes": largest_bytes,
         "arrays": len(arrays),
         "unreferenced_arrays": [
             {"offset": c.off, "type": type_text(dwarf, c)} for c in unreferenced_arrays],
@@ -916,6 +1029,7 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
     target = _TARGETS.get() if _TARGETS is not None else None
     geometry = getattr(target, "geometry", None)
     segments = (geometry.loadable_vram, geometry.bss_end) if geometry is not None else None
+    tu_builds = getattr(target, "tu_builds", ())
 
     rows = []
     seen = set()
@@ -929,10 +1043,11 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                                  borrowed_names=borrowed_names, borrowed_addrs=borrowed_addrs,
                                  splits=splits, split_names=split_names,
                                  unplaced=unplaced, unplaced_by_addr=unplaced_by_addr,
-                                 link_names=link_names, segments=segments))
+                                 link_names=link_names, segments=segments,
+                                 tu_builds=tu_builds))
     # A cus.json unit with no DWARF TU is a manifest inconsistency; surface it, never average it.
     for rel, info in units.items():
-        if rel not in seen:
+        if rel not in seen and not is_promoted(rel, tu_builds):
             rows.append({"file": rel, "overlay": "?", "promoted": False,
                          "declared_functions": info["functions"], "functions": 0,
                          "statements": 0, "lines_per_function": 0.0, "arrays": 0,
@@ -945,10 +1060,12 @@ def screen(elf: pathlib.Path, root: pathlib.Path = REPO_ROOT) -> list[dict]:
                          "reasons": ["cus.json names this unit but the DWARF has no TU for it"],
                          "good": []})
 
-    # Promoted units are not candidates; blocked units follow the candidates so a reader can
-    # see what was excluded and why.
-    rows.sort(key=lambda r: (r["promoted"], r["blocked"], -r["score"], r["functions"],
-                             r["file"]))
+    # Promoted units have a src/ source and a tu_builds row; they are not candidates, and
+    # excluding them here keeps every output (table, markdown, --json) consistent.
+    rows = [row for row in rows if not row["promoted"]]
+
+    # Blocked units follow the candidates so a reader can see what was excluded and why.
+    rows.sort(key=lambda r: (r["blocked"], -r["score"], r["functions"], r["file"]))
     return rows
 
 
@@ -977,11 +1094,13 @@ def format_table(rows: list[dict], *, all_rows: bool, limit: int | None) -> str:
 
 def format_markdown(rows: list[dict], limit: int = 20) -> str:
     candidates = [r for r in rows if not r["promoted"] and not r["blocked"]][:limit]
-    lines = ["| rank | unit | score | functions | line records | why expected easy |",
-             "|---:|---|---:|---:|---:|---|"]
+    lines = ["| rank | unit | score | functions | .text bytes | largest fn | line records | "
+             "why expected easy |",
+             "|---:|---|---:|---:|---:|---|---:|---|"]
     for i, row in enumerate(candidates, 1):
         why = "; ".join(row["good"])
         lines.append(f"| {i} | `{row['file']}` | {row['score']:.1f} | {row['functions']} | "
+                     f"{row.get('text_bytes', 0)} | {row.get('largest_function_bytes', 0)} | "
                      f"{row['statements']} | {why} |")
     return "\n".join(lines)
 

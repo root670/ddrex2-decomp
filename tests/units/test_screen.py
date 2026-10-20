@@ -185,14 +185,14 @@ def test_classify_calls_counts_a_borrowed_address_without_the_name():
 # --------------------------------------------------------------------------- block flags
 
 
-def _analyze(tmp_path, tu, functions, sizes, **ledgers):
+def _analyze(tmp_path, tu, functions, sizes, rel="X/fake.c", tu_builds=(), **ledgers):
     dwarf = FakeDwarf(sizes)
     edges, roots = screen.build_reference_graph(
         {d.off: d for d in tu.decl.children})
     reach = screen.reachable_offsets(edges, roots)
     tu.set_functions(functions)
     split_names = {p.stem for p in tmp_path.glob("*.s")}
-    return screen.analyze_unit(dwarf, "X/fake.c", tu, units={},
+    return screen.analyze_unit(dwarf, rel, tu, units={},
                                reachable=reach,
                                by_name=ledgers.get("by_name", {}),
                                by_addr=ledgers.get("by_addr", {}),
@@ -202,7 +202,8 @@ def _analyze(tmp_path, tu, functions, sizes, **ledgers):
                                unplaced=ledgers.get("unplaced", {}),
                                unplaced_by_addr=ledgers.get("unplaced_by_addr", {}),
                                link_names=ledgers.get("link_names", set()),
-                               segments=ledgers.get("segments"))
+                               segments=ledgers.get("segments"),
+                               tu_builds=tu_builds)
 
 
 def _write_split(tmp_path, name, text):
@@ -223,7 +224,8 @@ def test_unreferenced_array_die_blocks_like_sys_demo(tmp_path):
     assert "unsigned char [256]" in row["reasons"][0]
 
 
-def test_large_and_unreferenced_tables_block_like_mes_units(tmp_path):
+def test_large_and_unreferenced_tables_warn_like_mes_units_but_do_not_block(tmp_path):
+    """The mes_* class is .debug-only: adoption re-emits DIE order and substitutes .line."""
     array = FakeDie(0x200, ARRAY, {}, tree=("array", 179, ("ptr", ("base", "unsigned char", 3))))
     table = FakeDie(0x300, GLOBAL_VAR, {USER_DEF_TYPE: 0x200},
                     name="el_message_str_e", tree=array.tree)
@@ -232,10 +234,12 @@ def test_large_and_unreferenced_tables_block_like_mes_units(tmp_path):
     _write_split(tmp_path, "f", "glabel f\n    jr $31\n")
     row = _analyze(tmp_path, tu, [fn], {array.tree: 716})
     assert {"large-tables", "unreferenced-tables"} <= set(row["flags"])
-    assert "716 B" in " ".join(row["reasons"])
+    assert "716 B" in " ".join(row["warnings"])
+    assert row["blocked"] is False
+    assert row["reasons"] == []
 
 
-def test_many_array_tables_block_for_array_die_order(tmp_path):
+def test_many_array_tables_warn_for_array_die_order_but_do_not_block(tmp_path):
     arrays, tables = [], []
     for i in range(3):
         tree = ("array", 6, ("ptr", ("base", "unsigned char", 3)))
@@ -247,7 +251,9 @@ def test_many_array_tables_block_for_array_die_order(tmp_path):
     tu = FakeTU("C:\\x\\src\\X\\fake.c", tables + arrays)
     _write_split(tmp_path, "f", "glabel f\n    jr $31\n")
     row = _analyze(tmp_path, tu, [fn], {})
-    assert "array-die-order" in row["flags"] and row["blocked"] is True
+    assert "array-die-order" in row["flags"]
+    assert row["blocked"] is False
+    assert any(".debug-only" in warning for warning in row["warnings"])
 
 
 def test_vu0_and_missing_split_and_overlay_flags(tmp_path):
@@ -560,3 +566,78 @@ def test_format_markdown_ranks_only_candidates():
         "functions": 1, "statements": 4, "good": ["1 function"]}
     text = screen.format_markdown([make("ok.c", False, 10.0), make("no.c", True, 99.0)])
     assert "ok.c" in text and "no.c" not in text
+
+
+def test_split_text_sizes_reads_the_nonmatching_size_then_instructions(tmp_path):
+    sized = "\n".join([
+        ".include \"macro.inc\"",
+        "nonmatching f, 0x40",
+        "glabel f",
+        "    /* 0000 00100000 00000000 */  nop",
+        "endlabel f",
+        "nonmatching D_0000",
+        "dlabel D_0000",
+        "    /* 0004 00100004 12345678 */  .word 0x12345678",
+        "enddlabel f",
+    ])
+    assert screen.split_text_sizes(sized) == {"f": 0x40, "D_0000": 4}
+
+    # A size-less block is measured one instruction line at a time: four bytes each.
+    unsized = "\n".join([
+        "nonmatching g",
+        "    /* 0000 00100000 00000000 */  nop",
+        "    /* 0004 00100004 00000000 */  nop",
+        "    /* 0008 00100008 00000000 */  nop",
+        "endlabel g",
+    ])
+    assert screen.split_text_sizes(unsized) == {"g": 12}
+
+
+def test_a_large_function_is_penalised_and_recorded(tmp_path):
+    tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
+    fn = FakeFunction("f", 0x10, 0x60)
+    small = "\n".join(["nonmatching f, 0x10", "glabel f", "    jr $31", "endlabel f"])
+    _write_split(tmp_path, "f", small)
+    small_row = _analyze(tmp_path, tu, [fn], {})
+
+    big = "\n".join(["nonmatching f, 0x1000", "glabel f", "    jr $31", "endlabel f"])
+    _write_split(tmp_path, "f", big)
+    big_row = _analyze(tmp_path, tu, [fn], {})
+
+    assert small_row["text_bytes"] == 0x10 and small_row["largest_function"] == "f"
+    assert big_row["text_bytes"] == 0x1000
+    assert big_row["largest_function_bytes"] == 0x1000
+    assert any("largest f 4096 B" in reason for reason in big_row["good"])
+    # -0.5/KiB total and -3.0/KiB of the largest function above 1 KiB: 2 + 9 = 11 points.
+    assert small_row["score"] - big_row["score"] > 10.5
+
+
+def test_promoted_unit_needs_both_a_src_source_and_a_tu_builds_row():
+    builds = (("src/CS/lang.c", "3.0b38-030307", "-g"),)
+    assert screen.promotion_sources(builds) == {"CS/lang.c"}
+    assert screen.is_promoted("CS/lang.c", builds) is True
+    assert screen.is_promoted("CS/lang.c", ()) is False          # source alone
+    assert screen.is_promoted("X/not_a_source.c", builds) is False  # row alone
+
+
+def test_promoted_and_source_without_build_are_distinguished(tmp_path):
+    fn = FakeFunction("f", 0x10, 0x20)
+    _write_split(tmp_path, "f", "glabel f\n    jr $31\n")
+    tu = FakeTU("C:\\work2\\usaex2\\src\\CS\\lang.c", [])
+    row = _analyze(tmp_path, tu, [fn], {}, rel="CS/lang.c",
+                   tu_builds=(("src/CS/lang.c", "3.0b38-030307", "-g"),))
+    assert row["promoted"] is True and row["source_without_build"] is False
+
+    # The source without its row is a half-landed promotion: visible and warned, not excluded.
+    row2 = _analyze(tmp_path, tu, [fn], {}, rel="CS/lang.c")
+    assert row2["promoted"] is False and row2["source_without_build"] is True
+    assert "source-unbuilt" in row2["flags"]
+    assert any("tu_builds has no row" in warning for warning in row2["warnings"])
+
+
+def test_promoted_rows_are_dropped_even_from_the_all_list():
+    promoted = {"file": "CS/lang.c", "promoted": True, "blocked": False,
+                "flags": [], "functions": 1, "statements": 4, "score": 99.0,
+                "reasons": [], "warnings": [], "good": []}
+    text = screen.format_table([promoted], all_rows=True, limit=None)
+    assert text == "(no units matched)"

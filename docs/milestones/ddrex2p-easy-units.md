@@ -8,9 +8,10 @@ python3 tools/units/screen.py --all --top 60   # the blocked rows, with reasons
 ```
 
 The rule this implements is `docs/unit-work.md`'s "Pick a unit by shape, not by size": few
-functions, scalar code, no VU0, no EE 128-bit GPR operations, no large/unreferenced file-scope
-tables, no fixed absolute address above the declared segments, calls that already have names, and
-plenty of DWARF line records.  Five units failed on exactly those shapes and cost 5½ hours
+functions, scalar code, no VU0, no EE 128-bit GPR operations, no fixed absolute address above the declared
+segments, calls that already have names, plenty of DWARF line records, and little absolute
+`.text` (no single enormous function).  The large/unreferenced-table classes are now warnings:
+`--adopt-retail-meta` handles `.debug`-only differences once `.text` is byte-identical.  Five units failed on exactly those shapes and cost 5½ hours
 between them, so the screen's first job is to make those classes visible before anyone writes C.
 It reads `config/ddrex2p/cus.json`,
 `orig/SLUS_211.74`'s DWARF, `config/ddrex2p/symbol_addrs.txt`, `borrowed_symbols.txt`,
@@ -72,74 +73,134 @@ of the same band is byte-identical to the assembler's large-displacement expansi
 (`lui at,1; addu at,ptr,at; lw rt,-0x62E0(at)` is `ptr + 0x9D20`, a struct field), which C
 reproduces — matching it would have blocked 9 more units that are writable.
 
-Of 249 translation units, **2 are promoted** (`sys/sys_scf.c` and `network/net_grf.c`), **36 are
-unblocked candidates**, and 211 are blocked (the categories below overlap): 67 overlay units have
-no retail split in this target, 1 is a library object, 19 carry a target outside every declared
-segment, 38 carry a fixed absolute address above the declared segments, 1 carries EE 128-bit GPR
-operations, and the remainder carry one of the other shape classes.
+**Sixth revision: promotion-aware, `.debug`-only risks demoted, size scored.**  Three changes
+follow the adoption pipeline (`compile.py --adopt-retail-meta`).  First, a unit is **excluded**
+from every row -- candidates, `--all` and `--json` -- when it has both a committed `src/<unit>`
+source and a `tu_builds` row.  Five are in that state: `sys/sys_scf.c`, `network/net_grf.c`,
+`AM/s573/play/p_anime.c`, `CS/lang.c` and `CS/dancemaster/dmm_chara.c`.  A source without a row
+is a half-landed promotion and stays listed with a `source-unbuilt` warning; a row without a
+source cannot build and is not promoted either.
+
+Second, the array/table shape classes moved from blockers to warnings.  Adoption requires
+`.text` to be byte-identical, then proves retail's `.debug` and `.line` chunk: it normalises
+retail's DIE order, adopts retail's `AT_location` values and `.line`, drops *our* extra DIEs and
+adopts attributes retail carries.  So `large-tables`, `unreferenced-tables` and
+`array-die-order` no longer say a unit is unpromotable -- they say its `.debug` will need
+adoption.  `unreferenced-arrays` stays a blocker: those are DIEs *retail has and we do not*, and
+adoption refuses to fabricate a missing record.  The `.text`-shaped blockers are unchanged:
+VU0, 128-bit GPR operations, out-of-segment fixed addresses, unresolvable callees (the overlay
+boundary included), overlay units and missing splits.
+
+Third, size is now scored.  A unit is replicated instruction by instruction, so counting
+functions alone ranked one 4 KiB function as easier than three small ones.  The screen reads
+each split's `nonmatching` line for its byte size (falling back to one instruction line = 4
+bytes when splat printed no size, and to the DWARF function extent if the block name does not
+match) and records the unit's total `.text` and its largest function.  The score terms are
+exactly `-0.5` per KiB of total `.text` and `-3.0` per KiB of the largest function above a free
+1 KiB; both are printed in every row, and the `.text`/largest columns are below.
+
+Of 249 translation units, **5 are promoted** and excluded outright, **105 are unblocked
+candidates**, and **139 are blocked** (the categories overlap): 67 overlay units have no retail
+split in this target, 66 have missing splits (mostly the same overlays), 38 carry a fixed
+absolute address above the declared segments, 19 carry a call/branch target outside every
+declared segment, 16 carry unreferenced array DIEs, 10 are data-only, 3 carry VU0, 1 carries EE
+128-bit GPR operations and 1 is a library object.  The demoted table classes are now warnings on
+candidates too: 120 units carry `array-die-order`, 71 `unreferenced-tables` and 57
+`large-tables`, and none of them blocks.
 
 ## Ranking
 
 Scores are a tie-break among unblocked units, not a probability.  `score = 100 - 6·(functions-1)
-- 25·unresolvable targets - calls/name penalties - FPU tax - 0.02·array DIEs +
-min(10, line records per function)`, with a +2 bonus at 20 statements.  The unresolvable term is
-a courtesy for the printed order, not the mechanism: such a unit is `blocked` and never reaches
-the candidate list.  Every term is printed in the last column, so a reader can disagree with the
-weights without losing the evidence.
+- 25·unresolvable targets - 2·placeholder calls - 1·named calls - 0.5·borrowed calls -
+3·FPU functions - 0.02·array DIEs - 0.5·(total .text KiB) - 3.0·max(0, largest function KiB -
+1) + min(10, line records per function)`, with a +2 bonus at 20 statements.  The unresolvable
+term is a courtesy for the printed order, not the mechanism: such a unit is `blocked` and never
+reaches the candidate list.  The array term is a tie-break; the demoted table warnings do not
+enter the score.  Every term is printed in the last column, so a reader can disagree with the
+weights without losing the evidence.  The size columns are the split's `nonmatching` bytes:
+`-0.5/KiB` charges the unit's whole `.text`, and `-3.0/KiB` charges only the largest function's
+bytes above 1 KiB.
 
-| rank | unit | score | functions | line records | why expected easy |
-|---:|---|---:|---:|---:|---|
-| 1 | `AM/s573/doll/dexport.c` | 98.7 | 2 | 31 | 2 functions; 31 line records (15.5/function); calls: 0 borrowed, 3 named, 0 internal; 115 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 2 function(s) in cus.json |
-| 2 | `CS/dancemaster/dmm_chara.c` | 97.4 | 1 | 32 | 1 function; 32 line records (32.0/function); calls: 0 borrowed, 9 named, 0 internal; 80 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 1 function(s) in cus.json |
-| 3 | `common/com_scrollbar.c` | 95.0 | 1 | 80 | 1 function; 80 line records (80.0/function); calls: 0 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 1 function(s) in cus.json |
-| 4 | `common/co_cursor.c` | 94.5 | 2 | 99 | 2 functions; 99 line records (49.5/function); calls: 1 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 2 function(s) in cus.json |
-| 5 | `network/mio/md5.c` | 89.9 | 4 | 484 | 4 functions; 484 line records (121.0/function); calls: 0 borrowed, 0 named, 4 internal; 6 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 4 function(s) in cus.json |
-| 6 | `common/com_keyboard.c` | 82.8 | 3 | 207 | 3 functions; 207 line records (69.0/function); calls: 0 borrowed, 0 named, 0 internal; 11 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 3 function(s) in cus.json |
-| 7 | `AM/s573/doll/model1.c` | 77.3 | 5 | 126 | 5 functions; 126 line records (25.2/function); calls: 0 borrowed, 3 named, 4 internal; 37 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 5 function(s) in cus.json |
-| 8 | `CS/opening/openinglogo.c` | 76.9 | 4 | 64 | 4 functions; 64 line records (16.0/function); calls: 0 borrowed, 0 named, 0 internal; 4 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 4 function(s) in cus.json |
-| 9 | `AM/s573/play/p_anime.c` | 73.2 | 5 | 239 | 5 functions; 239 line records (47.8/function); calls: 0 borrowed, 14 named, 0 internal; 39 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 5 function(s) in cus.json |
-| 10 | `CS/dancemaster/dmm_mess.c` | 70.0 | 3 | 88 | 3 functions; 88 line records (29.3/function); calls: 0 borrowed, 10 named, 1 internal; 49 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 3 function(s) in cus.json |
-| 11 | `CS/shop/shop_main.c` | 66.0 | 6 | 53 | 6 functions; 53 line records (8.8/function); calls: 0 borrowed, 6 named, 0 internal; 41 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 6 function(s) in cus.json |
-| 12 | `CS/shop/shop_list.c` | 65.2 | 7 | 233 | 7 functions; 233 line records (33.3/function); calls: 0 borrowed, 3 named, 6 internal; 88 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 7 function(s) in cus.json |
-| 13 | `common/cws/cws_wins.c` | 64.8 | 7 | 133 | 7 functions; 133 line records (19.0/function); calls: 0 borrowed, 7 named, 0 internal; 12 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 7 function(s) in cus.json |
-| 14 | `CS/shop/shop_info.c` | 63.8 | 4 | 113 | 4 functions; 113 line records (28.2/function); calls: 0 borrowed, 16 named, 2 internal; 9 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 4 function(s) in cus.json |
-| 15 | `AM/s573/doll/matrix.c` | 63.6 | 5 | 41 | 5 functions; 41 line records (8.2/function); calls: 3 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 5 FPU function(s); declared 5 function(s) in cus.json |
-| 16 | `CS/dancemaster/dmm_mc.c` | 55.9 | 5 | 100 | 5 functions; 100 line records (20.0/function); calls: 0 borrowed, 5 named, 0 internal; 153 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 5 function(s) in cus.json |
-| 17 | `AM/s573/doll/ps1lib.c` | 50.4 | 8 | 129 | 8 functions; 129 line records (16.1/function); calls: 9 borrowed, 0 named, 0 internal; 4 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 5 FPU function(s); declared 8 function(s) in cus.json |
-| 18 | `CS/edit/ed_ssq_func.c` | 44.9 | 11 | 140 | 11 functions; 140 line records (12.7/function); calls: 0 borrowed, 0 named, 3 internal; 5 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1 FPU function(s); declared 11 function(s) in cus.json |
-| 19 | `CS/shop/shop_select.c` | 43.8 | 5 | 295 | 5 functions; 295 line records (59.0/function); calls: 0 borrowed, 76 named, 4 internal; 9 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; scalar; declared 5 function(s) in cus.json |
-| 20 | `AM/s573/doll/motion2.c` | 42.3 | 8 | 346 | 8 functions; 346 line records (43.2/function); calls: 3 borrowed, 20 named, 32 internal; 12 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 2 FPU function(s); declared 8 function(s) in cus.json |
+| rank | unit | score | functions | .text bytes | largest fn | line records | why expected easy |
+|---:|---|---:|---:|---:|---|---:|---|
+| 1 | `CS/edit_lib/el_mes.c` | 106.0 | 1 | 56 | 56 | 8 | 1 function; 8 line records (8.0/function); calls: 0 borrowed, 0 named, 0 internal; 1 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 56 B .text, largest el_get_message_str 56 B; scalar; declared 1 function(s) in cus.json |
+| 2 | `network/net_dnas/net_dnas_mes_e.c` | 103.5 | 2 | 424 | 368 | 40 | 2 functions; 40 line records (20.0/function); calls: 0 borrowed, 0 named, 0 internal; 12 array DIE(s), 10 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 424 B .text, largest ndmesMakeDNASErrorMessage 368 B; scalar; declared 2 function(s) in cus.json |
+| 3 | `network/mio/blowfish.c` | 99.5 | 3 | 816 | 456 | 82 | 3 functions; 82 line records (27.3/function); calls: 0 borrowed, 0 named, 2 internal; 6 array DIE(s), 2 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 816 B .text, largest Blowfish_Init 456 B; scalar; declared 3 function(s) in cus.json |
+| 4 | `sound/vxdecode/decode.c` | 98.7 | 3 | 1244 | 1188 | 145 | 3 functions; 145 line records (48.3/function); no calls; 9 array DIE(s), 9 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1244 B .text, largest decodeVAG 1188 B; scalar; declared 3 function(s) in cus.json |
+| 5 | `AM/s573/doll/dexport.c` | 98.5 | 2 | 456 | 344 | 31 | 2 functions; 31 line records (15.5/function); calls: 0 borrowed, 3 named, 0 internal; 115 array DIE(s), 0 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 456 B .text, largest ps2dancerGetDollList 344 B; scalar; declared 2 function(s) in cus.json |
+| 6 | `CS/bk_load.c` | 96.9 | 2 | 116 | 64 | 14 | 2 functions; 14 line records (7.0/function); calls: 0 borrowed, 0 named, 0 internal; 1 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 116 B .text, largest sysSetMusicBk 64 B; scalar; declared 2 function(s) in cus.json |
+| 7 | `music_all.c` | 95.8 | 3 | 296 | 152 | 24 | 3 functions; 24 line records (8.0/function); calls: 0 borrowed, 0 named, 0 internal; 1 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 296 B .text, largest GetMusicData_by_base_name 152 B; scalar; declared 3 function(s) in cus.json |
+| 8 | `CS/train/tra_str.c` | 95.5 | 3 | 464 | 324 | 35 | 3 functions; 35 line records (11.7/function); calls: 0 borrowed, 1 named, 0 internal; 15 array DIE(s), 14 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 464 B .text, largest Tr_bar_digit_disp 324 B; 1 FPU function(s); declared 3 function(s) in cus.json |
+| 9 | `common/co_cursor.c` | 93.8 | 2 | 1140 | 1084 | 99 | 2 functions; 99 line records (49.5/function); calls: 1 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1140 B .text, largest co_cursor01_disp 1084 B; 1 FPU function(s); declared 2 function(s) in cus.json |
+| 10 | `network/net_auth/net_auth_errmes_e.c` | 93.4 | 3 | 672 | 248 | 87 | 3 functions; 87 line records (29.0/function); calls: 0 borrowed, 0 named, 0 internal; 12 array DIE(s), 9 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 672 B .text, largest namesMakeAuthMessage 248 B; scalar; declared 3 function(s) in cus.json |
+| 11 | `common/com_scrollbar.c` | 93.4 | 1 | 1344 | 1344 | 80 | 1 function; 80 line records (80.0/function); calls: 0 borrowed, 0 named, 0 internal; no array/table risk; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1344 B .text, largest ComScrollBarDisp 1344 B; 1 FPU function(s); declared 1 function(s) in cus.json |
+| 12 | `network/net_cnf/net_cnf_mes_e.c` | 90.1 | 3 | 80 | 56 | 8 | 3 functions; 8 line records (2.7/function); no calls; 26 array DIE(s), 26 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 80 B .text, largest ncmesGetMessageTable 56 B; scalar; declared 3 function(s) in cus.json |
+| 13 | `network/net_auth/net_auth_mes_e.c` | 89.8 | 3 | 80 | 56 | 8 | 3 functions; 8 line records (2.7/function); no calls; 39 array DIE(s), 39 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 80 B .text, largest namesGetMessageTable 56 B; scalar; declared 3 function(s) in cus.json |
+| 14 | `network/net_window/net_win_infoboard.c` | 84.5 | 4 | 196 | 104 | 15 | 4 functions; 15 line records (3.8/function); calls: 0 borrowed, 1 named, 0 internal; 9 array DIE(s), 4 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 196 B .text, largest NetWin_Infoboard 104 B; scalar; declared 4 function(s) in cus.json |
+| 15 | `network/net_window/net_win_any.c` | 83.6 | 5 | 500 | 144 | 45 | 5 functions; 45 line records (9.0/function); calls: 0 borrowed, 3 named, 0 internal; 8 array DIE(s), 3 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 500 B .text, largest NetWin_AnyInit 144 B; scalar; declared 5 function(s) in cus.json |
+| 16 | `CS/ani_load.c` | 81.6 | 4 | 224 | 104 | 22 | 4 functions; 22 line records (5.5/function); calls: 0 borrowed, 1 named, 0 internal; 39 array DIE(s), 2 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 224 B .text, largest sysReadAnimeWait2 104 B; scalar; declared 4 function(s) in cus.json |
+| 17 | `common/co_button.c` | 79.3 | 2 | 1152 | 576 | 142 | 2 functions; 142 line records (71.0/function); calls: 0 borrowed, 0 named, 0 internal; 8 array DIE(s), 2 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1152 B .text, largest co_button_explain_disp 576 B; 2 FPU function(s); declared 2 function(s) in cus.json |
+| 18 | `common/com_keyboard.c` | 78.2 | 3 | 2640 | 2136 | 207 | 3 functions; 207 line records (69.0/function); calls: 0 borrowed, 0 named, 0 internal; 11 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 2640 B .text, largest ComKeyBoardDisp 2136 B; 1 FPU function(s); declared 3 function(s) in cus.json |
+| 19 | `network/net_window/net_win_listbk.c` | 77.7 | 5 | 1668 | 1472 | 114 | 5 functions; 114 line records (22.8/function); calls: 0 borrowed, 1 named, 0 internal; 11 array DIE(s), 4 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 1668 B .text, largest CwsWin_ListbkDisp 1472 B; 1 FPU function(s); declared 5 function(s) in cus.json |
+| 20 | `network/mio/md5.c` | 77.6 | 4 | 5128 | 4376 | 484 | 4 functions; 484 line records (121.0/function); calls: 0 borrowed, 0 named, 4 internal; 6 array DIE(s), 1 file-scope table(s), all referenced; no VU0; no 128-bit GPR ops; no fixed absolute addresses; 5128 B .text, largest MD5Transform 4376 B; scalar; declared 4 function(s) in cus.json |
 
-Two of the three units the link fix freed first are still ranks 1–3 (`AM/s573/doll/dexport.c`,
-blocked on `func_001BED10`, and `CS/dancemaster/dmm_chara.c`, `func_00128600`/`func_0012CD70`);
-the third, `network/net_grf.c`, was promoted at `8d9a7bd` and left the list, which is why the
-table above has 20 rows from a 36-unit candidate list.  `eyetoy/eye_filter.c` — the 128-bit
-unit — is not here; it is the row the 128-bit block keeps out.  Neither is
-`network/net_game/net_game_help.c`, which the fifth revision blocks on its eight unnamed
-addresses; the row moved from rank 6 to the blocked list with its reason printed under `--all`.
+### What moved
 
-`calls: 0 borrowed, 12 named, ...` means every call target already carries a `symbol_addrs`
-record, so no name has to be imported mid-unit.  Distinct unresolvable targets are not a
-scoring term a reader has to weigh: a unit with any is blocked and printed under `--all` with
-the target's name, its address, and which of the two refusals it is.
+Eight of the new top ten were blocked by exactly the demoted `.debug` classes before this
+revision: `el_mes.c`, `net_dnas_mes_e.c`, `bk_load.c`, `music_all.c` (large or unreferenced
+tables), `blowfish.c`, `decode.c`, `net_auth_errmes_e.c` and `tra_str.c` (array-DIE order).
+The other two, `dexport.c` and `co_cursor.c`, were already candidates and moved 1→5 and 4→9 as
+the entrants and the size term displaced them.
 
-### The top three, in one line each
+| old rank | unit | now | cause |
+|---:|---|---|---|
+| 1 | `AM/s573/doll/dexport.c` | 5 (98.5) | entrants; `-0.2` size |
+| 2 | `CS/dancemaster/dmm_chara.c` | **excluded** | promoted (`tu_builds` row) |
+| 3 | `common/com_scrollbar.c` | 11 (93.4) | entrants; `-1.6` size |
+| 4 | `common/co_cursor.c` | 9 (93.8) | entrants; `-0.6` size |
+| 5 | `network/mio/md5.c` | 20 (77.6) | entrants; `-12.4` size (4,376 B function) |
+| 6 | `common/com_keyboard.c` | 18 (78.2) | entrants; `-4.6` size (2,136 B function) |
+| 7 | `AM/s573/doll/model1.c` | 21 (76.7) | entrants; size |
+| 8 | `CS/opening/openinglogo.c` | 22 (76.6) | entrants; size |
+| 9 | `AM/s573/play/p_anime.c` | **excluded** | promoted (`tu_builds` row) |
+| 10 | `CS/dancemaster/dmm_mess.c` | 27 (69.4) | entrants; size |
+| 11–20 | (all ten remaining) | 30, 34, 33, 36, 35, 43, 49, 54, 55, 57 | entrants; size |
 
-* `AM/s573/doll/dexport.c` — two functions, three already-named calls, 31 statement lines, no
-  file-scope table; the unit UnitC measured to 96.2% on `ps2dancerInitHide` and blocked on one
-  `nop` and a name the ledger did not carry, now rank 1.
-* `CS/dancemaster/dmm_chara.c` — one function, nine named calls, 32 statement lines: the
-  shortest function list in the ranking, and the unit whose two absent targets
-  (`func_00128600`, `func_0012CD70`) were the fourth callee finding; it moved up one place when
-  `net_grf.c` was promoted.
-* `common/com_scrollbar.c` — one function, 80 line records (80.0 per function, the densest line
-  table in the top three), **no calls at all** and no array/table risk; its only tax is the one
-  FPU function.
+`network/mio/md5.c` is the size signal's clearest case: it has four functions and, before this
+revision, ranked 5th (89.9); its `MD5Transform` is 4,376 B, so the two size terms cost it 12.4
+points and it falls to 20th.  `common/com_keyboard.c` pays 4.6 points for its 2,136 B display
+function.  The units that did *not* grow keep their old score minus only their size term:
+`dexport.c`'s 456 B costs 0.2 points, `co_cursor.c`'s 1,140 B costs 0.6.
 
-The first unit that did promote (`sys_scf.c`) scores **97.5** on the same formula (2
-functions, 4 line records per function, one borrowed call), which is the calibration the
-weights were set against: the top candidates are the units whose measured shape is at least
-as clean as the one that worked.
+## Blocked rows (`--all`, regenerated)
+
+`python3 tools/units/screen.py --all --top 60` prints all 139 blocked rows with every reason.
+The classes (overlapping) are: `overlay` 67, `missing-splits` 66, `absolute-addresses` 38,
+`unresolvable-callees` 19, `unreferenced-arrays` 16, `data-only` 10, `vu0` 3, `128-bit-gpr` 1,
+`library` 1.  The highest-scoring blocked rows are:
+
+| unit | flags |
+|---|---|
+| `eyetoy/eye_filter.c` | `128-bit-gpr` |
+| `AM/s573/play/oni_list.c` | `data-only`, `large-tables`, `unreferenced-tables` |
+| `CS/dancemaster/dmm_subject.c` | `overlay`, `data-only`, `large-tables`, `unreferenced-tables` |
+| `CS/lesson/kn_lmsg.c` | `overlay`, `data-only`, table warnings |
+| `sound/vxdecode/get4bit.c` | `data-only`, table warnings |
+| `network/usa_client/ddrex2_usa_id.c` | `overlay`, `missing-splits` |
+| `sound/vxdecode/dectbl.c` | `data-only`, table warnings |
+| `AM/s573/doll/vu0.c` | `vu0` |
+| `gs/gs_vu0.c` | `vu0` |
+| `CS/bk_disp/bk_mv_list.c` | `data-only`, table warnings |
+| `CS/cmes_js2.c`, `CS/cmes_js.c`, `CS/cmes_j.c`, `CS/cmes_e.c` | `data-only`, table warnings |
+| `CS/option/opt_doll.c` | `overlay`, `missing-splits` |
+| `CS/edit/ed_calc.c`, `sys/sys_demo.c` | `unreferenced-arrays` |
+| `CS/option/opt_lang.c` | `overlay`, `missing-splits` |
+| `network/net_game/net_game_help.c` | `absolute-addresses` |
+| `CS/option/opt_adjust.c` | `overlay`, `missing-splits` |
+
+Note what is *not* on this list any more: `CS/edit_lib/el_mes.c` and the `net_*_mes_e.c`
+units, whose table warnings were the old blocker.  Their `.text` shape is what the ranking now
+measures.
 
 ## Validation: the callee failures, before and after the link fix
 
@@ -156,8 +217,9 @@ catch, but the class split in two, and only one half was real:
 | 1 | `eyetoy/eye_filter.c` | `128-bit-gpr` | `1 function(s) use EE 128-bit GPR operations (pxor) ...` | unblocked then; blocked now, on the 128-bit class, not on a name |
 
 The same split shows up on `CS/edit_lib/el_mes.c`: its one call names `func_00192F30`, a
-split-only name, so the `unresolvable-callees` reason is gone and only the `large-tables`
-reason remains.
+split-only name, so the `unresolvable-callees` reason is gone -- and since the sixth revision
+its single large table is a `.debug` warning, not a blocker, which is why it leads the current
+ranking.
 
 ### The link fix's payoff, measured
 
@@ -187,15 +249,16 @@ The screen is only useful if it also sees the classes that cost the 4½ hours.  
 
 | unit | flags | reason printed by the screen | matches the recorded failure |
 |---|---|---|---|
-| `sys/sys_demo.c` | `unreferenced-arrays` | `2 array DIE(s) nothing references: unsigned char *[6] @0x2FE, unsigned char [256] @0x5FD` | exactly the two DIEs and offsets recorded in `1accb6e`; 75 B shortfall |
-| `CS/lang.c` | `unreferenced-tables`, `array-die-order` | `8 file-scope table(s) no function references ...; 9 array tables / 9 array DIEs: array-DIE order is compiler-table order, not declaration order` | `e1a9748`'s two independent `.debug` mismatches: variable order and the nine array DIEs |
-| `CS/edit_lib/el_mes.c` | `large-tables`, `unresolvable-callees` | `1 large file-scope table(s) (the mes_* debug-order class): el_message_str_e (716 B)`; `func_00192F30 ... no symbol_addrs record` | the `mes_*` table class plus the unnamed helper in `unit-a-report.md` |
+| `sys/sys_demo.c` | `unreferenced-arrays` | `2 array DIE(s) nothing references: unsigned char *[6] @0x2FE, unsigned char [256] @0x5FD -- ... adoption can only drop our extra records, not fabricate a missing one` | exactly the two DIEs and offsets recorded in `1accb6e`; 75 B shortfall; still a blocker, because retail has records we do not |
+| `CS/lang.c` | **excluded** | promoted: the source and a `tu_builds` row both exist | `e1a9748`'s two independent `.debug` mismatches: variable order and the nine array DIEs; adoption now supplies retail's DIE order |
+| `CS/edit_lib/el_mes.c` | `large-tables` (warning) | `1 large file-scope table(s) (the mes_* debug-order class): el_message_str_e (716 B) -- .debug-only ...` | the `mes_*` table class; the unnamed helper in `unit-a-report.md` now resolves through the link, and the table is adoption's work, not the C's |
 | `AM/s573/doll/vu0.c` | `vu0` | `3 function(s) use VU0 macro-mode operations (the .vutext blocker, inferred; section names are stripped)` | the VU0 unit; its splits open with `lqc2`/`ctc2`/`vmulax` |
 
-The `mes_*` siblings are caught too: `CS/cmes_e.c`, `cmes_j.c`, `cmes_js.c` and `cmes_js2.c`
-are `data-only` with 84/83/73/73 `unreferenced-tables`; `net_auth_mes_e.c`,
-`net_cnf_mes_e.c`, `net_router_mes_e.c`, `net_dnas_mes_e.c` and `workout_message.c` carry the
-table/array-order flags.
+The `mes_*` siblings are still caught: `CS/cmes_e.c`, `cmes_j.c`, `cmes_js.c` and `cmes_js2.c`
+are `data-only` with 84/83/73/73 table warnings.  `net_auth_mes_e.c`, `net_cnf_mes_e.c` and
+`net_dnas_mes_e.c` are now **candidates** -- their table/array-order flags are warnings -- while
+`net_router_mes_e.c` and `workout_message.c` remain blocked by `overlay`/`missing-splits`,
+which is a `.text` placement fact rather than a metadata one.
 
 ## Validation: the 128-bit class
 
@@ -319,6 +382,12 @@ cannot see" below rather than blocked on a guess.
   whether the original statements can be recovered from them is not modelled.
 * **The exact array-DIE order.**  The screen flags the class when a unit carries ≥2 file-scope
   array tables, but it cannot say whether a given unit's compiler table will happen to agree.
+  Since the sixth revision this is a warning rather than a blocker: adoption normalises the
+  order when `.text` is byte-identical.
+* **The shape of a large function, only its size.**  `largest fn` reads the split's
+  `nonmatching` bytes; two functions of the same size can be very different work (a flat
+  memcpy loop against a branch-heavy state machine).  The score charges bytes, not basic
+  blocks, and a split without a size falls back to instruction count or the DWARF extent.
 * **Data-only units in the overlays.**  All 67 overlay units already carry `overlay`/`no retail
   split`; the screen deliberately does not pretend to rank them.
 * **The `addu`-indexed spelling of the band.**  Three splits reach the band only as
@@ -338,8 +407,9 @@ cannot see" below rather than blocked on a guess.
 The signal is deliberately biased toward blocking, because the two errors are not symmetric.  A
 false negative costs an agent its whole box (the unit never reaches a comparison, as happened
 four times in a row).  A false positive costs one line in `--all`: the unit sinks to the same
-blocked list as the overlay, VU0 and `mes_*` classes, with the target's name and address
-printed, so a reader can overrule it in seconds.  The one false positive this signal ever had
+blocked list as the overlay and VU0 classes, with the target's name and address printed, so a
+reader can overrule it in seconds.  The demoted `mes_*` classes are no longer on that list:
+they print under `risk:` and cost at most a named `.debug` adoption step.  The one false positive this signal ever had
 (the transient lookup gap above) is gone with the fix that closed it: the screen now reads the
 same three sources `compile.py` does, and the 19 units still flagged are all the overlay
 boundary, which is a refusal by design rather than an error.
@@ -366,9 +436,12 @@ splits in 249 units, exactly one unit matches, and it is the unit that cannot be
    what the candidate C would produce once compiled.
 4. **Statement-gap histogram**: line records per function plus the largest line gap, because a
    large gap is where an inline hides.
-5. **Indirect-target recovery**: read the `%hi`/`%lo` pair that feeds a `jalr` register when it
+5. **Size per function, not only the maximum**: a statement-gap and branch-count histogram
+   would tell a 2 KiB straight-line function from a 2 KiB state machine; the current term
+   charges both alike.
+6. **Indirect-target recovery**: read the `%hi`/`%lo` pair that feeds a `jalr` register when it
    is in the same basic block, so the `NetRouterMain` case is caught structurally rather than
    only because splat happened to render the pointer itself.
-6. **Make the thresholds measured rather than chosen** (`LARGE_TABLE_BYTES = 256`,
+7. **Make the thresholds measured rather than chosen** (`LARGE_TABLE_BYTES = 256`,
    `ARRAY_ORDER_TABLES = 2`, the 25-point unresolvable term): once a few screened units are
    promoted, fit the weights against observed time-to-green.
