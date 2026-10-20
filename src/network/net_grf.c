@@ -21,7 +21,7 @@
 typedef union {
     int id;
     float fd;
-} grf_coord;                        /* DWARF @anon1, size 0x4 */
+} grf_coord;                                                    
 
 typedef struct {
     grf_coord x0;
@@ -46,14 +46,14 @@ typedef struct {
     unsigned char b2;
     unsigned char a2;
     int flg;
-} grf_element;                      /* DWARF @anon0, size 0x34 */
+} grf_element;                                                   
 
 static char dancer_num[22] = {
     5, 4, 7, 6, 3, 2, 1, 0, 14, 15, 13, 12,
     10, 11, 8, 9, 23, 22, 21, 20, 19, 18,
 };
 static void unused_grf_types(grf_element *p) { p->flg = 1; }
-/* No function in this unit uses either aggregate, but retail's CU carries both and in this
+/*! No function in this unit uses either aggregate, but retail's CU carries both and in this
  * order: MWCC registers a type's DIEs only from a body that uses it, so the unused helper
  * above is what carries them.  The table is indexed by half the dancer's id and then
  * corrected for the odd half: retail divides with a sign fixup (`bgez`/`sra`) because `/`
@@ -64,8 +64,8 @@ int NetGrfGetDancerIDToNumberPoint(int dancer_id)
     return dancer_num[dancer_id / 2] + (dancer_id % 2) * 24;
 }
 
-/* The shim hands its buffer, the format and the first vararg slot to the anonymous
- * formatting helper its split calls: no DWARF name, no ledger record, so the call is implicit */
+                                                                                   
+                                                                                                 
 int peerPrintf(char *format, ...) {
     char *ap;
     char tmp[1024];
@@ -73,7 +73,7 @@ int peerPrintf(char *format, ...) {
     ap = (char *)__builtin_next_arg(format) - ((__builtin_args_info(2) >= 8) ? 0 : (8 - __builtin_args_info(2)) * 8);
     r = func_001C43E8(tmp, format, ap);
 
-    /* `__builtin_next_arg` is the stack frame's register-save area end and
+    /*! `__builtin_next_arg` is the stack frame's register-save area end and
      * `__builtin_args_info(2)` is this function's count of named arguments, so the
      * subtraction lands `ap` on the first slot the caller's varargs were saved in. */
     return r;
