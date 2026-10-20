@@ -20,8 +20,7 @@ void freeze_eff_on(void);
 void back_anime_set_anime(int id, int anime_id, int anime_ct);
 
 void play_anime_init(void) {
-    struct play_anime_db *db;
-    paw_p = &play_anime_w;
+    struct play_anime_db *db; paw_p = &play_anime_w;
     paw_p->mode = 0;
 
     db = &paw_p->db[0];
@@ -40,8 +39,7 @@ void play_anime_set_inst_mode(void) {
 }
 
 void play_anime_step_inst(void) {
-    int pid; struct play_anime_db *db; struct play_w *play_w; int counter; struct sequence *note;
-    int ct; int pre_ct; int end; int hold_flag; int n; int anime_id; int sub_id; int nct;
+    int pid; struct play_anime_db *db; struct play_w *play_w; int counter; struct sequence *note; int ct; int pre_ct; int end; int hold_flag; int n; int anime_id; int sub_id; int nct;
     int inp; int step_id; struct note_status *note_status; int id; int anime_ct;
     for (pid = 0; pid < 2; pid++) {
         db = &paw_p->db[pid];
@@ -60,8 +58,7 @@ void play_anime_step_inst(void) {
             }
             if (note->kind >= 0) {
                 if ((note->beat_count >> 10) >= ct) break;
-            }
-            n++; note++; }
+            } n++; note++; }
         db->note_id = n;
         if (play_w->beat_counter < 0x3000) {
             hold_flag = 0;
@@ -100,8 +97,7 @@ void play_anime_step_inst(void) {
                 for (inp = 7; inp >= 0; inp--) {
                     if (note_status->state[inp] == 1 || note_status->state[inp] == 4) {
                         step_id += 1 << inp;
-                    }
-                }
+                    } }
                 if (0 < step_id && step_id < 11) {
                     anime_id = anime_id_tbl[step_id];
                     if (db->anime_id != anime_id || db->sub_id == 1) {
@@ -139,8 +135,7 @@ void play_anime_step(void) {
     int pid_total = 0;
     struct play_anime_db *db; struct play_w *play_w; int counter; struct sequence *note; int ct; int pre_ct; int end; int n;
     int anime_id; int sub_id; int nct; int inp; int step_id;
-    struct note_status *note_status; int freeze_len; int id; int anime_ct;
-    for (pid = 0; pid < 2; pid++) {
+    struct note_status *note_status; int freeze_len; int id; int anime_ct; for (pid = 0; pid < 2; pid++) {
         db = &paw_p->db[pid];
         play_w = &g_game_w.player[pid].play_work;
         counter = play_w->beat_counter + 0x400;
@@ -166,11 +161,9 @@ void play_anime_step(void) {
             if (note->kind >= 0) {
                 if ((note->beat_count >> 10) >= ct) break; }
             n++; note++;
-        }
-        db->note_id = n;
+        } db->note_id = n;
         anime_id = 0;
-        sub_id = 0;
-        if (db->frz_end_cnt) {
+        sub_id = 0; if (db->frz_end_cnt) {
             if (db->frz_end_cnt <= (play_w->beat_counter >> 10)) {
                 db->frz_end_cnt = 0;
                 db->frz_step = 1;
@@ -216,15 +209,13 @@ void play_anime_step(void) {
                                 if (db->sub_id == 1) {
                                     db->frz_step = 2;
                                 }
-                                sub_id = 2;
-                            } else if (db->sub_id == 0 || db->sub_id == 2) {
+                                sub_id = 2; } else if (db->sub_id == 0 || db->sub_id == 2) {
                                 sub_id = 2;
                                 if (db->frz_end_cnt) db->frz_step = 2;
                             }
                         }
                     }
-                }
-                if (db->frz_step) {
+                } if (db->frz_step) {
                     db->frz_step--;
                 }
             } else {
@@ -234,8 +225,7 @@ void play_anime_step(void) {
                     if (db->frz_end_cnt) db->frz_step = 0;
                 }
             }
-            db->anime_id = anime_id;
-            db->sub_id = sub_id;
+            db->anime_id = anime_id; db->sub_id = sub_id;
         }
         db->pre_counter = counter; freeze_eff_off();
         id = 0;
@@ -255,8 +245,7 @@ void play_anime_step(void) {
         if (db->sub_id == 1) {
             db->bak_anime_flag = 1;
         } else {
-            db->bak_anime_flag = 0;
-        }
+            db->bak_anime_flag = 0; }
         marker_anime_set_ct(pid, anime_ct);
     }
 }
