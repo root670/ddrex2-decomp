@@ -2,8 +2,7 @@
 """status.py -- generated progress table and heatmap for the translation units.
 
 The unit list is the target's own manifest (``config/<target>/cus.json``): every record whose
-``kind`` is ``tu`` is one row, and its ``file``/``size`` are the path a source must occupy and
-the retail code bytes the unit owns.  A unit is in exactly one state:
+``kind`` is ``tu`` is one row.  A unit is in exactly one state:
 
 * **promoted** -- a source exists at its path, a ``tu_builds`` row records the compiler pair,
   and ``ddr verify --tu`` is green.  The gate is the definition, not a corroboration: a
@@ -12,6 +11,22 @@ the retail code bytes the unit owns.  A unit is in exactly one state:
   or a source exists on some branch without a ``tu_builds`` row.  A row whose source or gate
   is missing is partial too: the attempt is visible, the proof is not.
 * **untouched** -- none of the above.
+
+Completion is reported three ways, because a unit is a coarse denominator (one unit ranges
+from 8 bytes to 2.4 KB):
+
+* **translation units** -- the 249 rows of the manifest;
+* **functions** -- the code splits' ``nonmatching <fn>, 0xNN`` declarations (one function per
+  line);
+* **code bytes** -- the sum of those declarations' sizes.  This is code the decompilation has
+  to reproduce as C: debug information and data are not in it.  A promoted unit's bytes are
+  its pinned ``.text`` span (``max(high_pc) - min(low_pc)`` over its DWARF function records),
+  which is the span ``ddr verify --tu`` compares.
+
+The split bytes are attributed to a module only where the retail debug manifest names the
+function's start address (its ``low_pc``); a named function with no compile unit is
+``(library)`` (the SDK symbols), and an unnamed ``func_*`` with no compile unit is
+``(unattributed)``.  Nothing is assigned by guessing.
 
 The states are rendered twice from the same data: a Markdown table in ``README.md`` between
 ``<!-- status:start -->`` and ``<!-- status:end -->`` (the markers are inserted on the first
@@ -40,9 +55,11 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import subprocess
 import sys
-from dataclasses import dataclass
+from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import Iterable, NamedTuple
 from xml.sax.saxutils import escape
 
@@ -60,6 +77,10 @@ PROMOTED = "promoted"
 PARTIAL = "partial"
 UNTOUCHED = "untouched"
 
+#: The two buckets for split code no compile unit claims.
+LIBRARY = "(library)"
+UNATTRIBUTED = "(unattributed)"
+
 #: Plain hex, no gradients or CSS variables: GitHub's SVG sanitizer keeps them as written.
 COLOURS = {
     PROMOTED: "#2da44e",
@@ -70,30 +91,79 @@ INK = "#24292f"
 MUTED = "#57606a"
 PANEL = "#ffffff"
 
+#: MWCC aligns each function to 16 bytes; a compiled unit's ``.text`` is therefore the sum
+#: of its function spans rounded up, not the low-to-high span (which stops at the last byte).
+FUNCTION_ALIGNMENT = 16
+
+#: ``nonmatching <fn>, 0xNN`` -- splat's declaration of one function's code size.
+NONMATCHING = re.compile(r"^[ \t]*nonmatching[ \t]+([^,\s]+),[ \t]*(0x[0-9A-Fa-f]+)[ \t]*$",
+                         re.MULTILINE)
+#: The first instruction comment, ``/* fileoffset address bytes */``.
+SPLIT_ADDRESS = re.compile(r"/\*\s*[0-9A-Fa-f]+\s+([0-9A-Fa-f]{8})\s+[0-9A-Fa-f]+\s*\*/")
+
 
 class Unit(NamedTuple):
     """One ``kind: tu`` record, as the manifest spells it."""
 
     file: str
+    size: int        # the CU record's size; not the completion denominator (that is code)
+
+
+class Split(NamedTuple):
+    """One sized split function: its retail address, code size and symbol name."""
+
+    address: int
     size: int
+    name: str
+
+
+@dataclass(frozen=True)
+class CodeFact:
+    """Function count and code bytes."""
+
+    functions: int = 0
+    code_bytes: int = 0
+
+    def __add__(self, other: "CodeFact") -> "CodeFact":
+        return CodeFact(self.functions + other.functions,
+                        self.code_bytes + other.code_bytes)
+
+
+@dataclass(frozen=True)
+class Code:
+    """The completion denominator and the per-unit numerator facts."""
+
+    splits: CodeFact
+    by_module: dict = field(default_factory=dict)
+    functions_by_file: dict = field(default_factory=dict)
+    bytes_by_file: dict = field(default_factory=dict)
+
+    def fact_of(self, module: str) -> CodeFact:
+        return self.by_module.get(module, CodeFact())
 
 
 @dataclass(frozen=True)
 class Totals:
-    """Completion over units and over the retail code bytes they own."""
+    """Completion over units, functions and code bytes."""
 
     units: int
-    bytes: int
     promoted_units: int
-    promoted_bytes: int
+    functions: int
+    promoted_functions: int
+    code_bytes: int
+    promoted_code_bytes: int
 
     @property
     def unit_percent(self) -> float:
         return percent(self.promoted_units, self.units)
 
     @property
-    def byte_percent(self) -> float:
-        return percent(self.promoted_bytes, self.bytes)
+    def function_percent(self) -> float:
+        return percent(self.promoted_functions, self.functions)
+
+    @property
+    def code_percent(self) -> float:
+        return percent(self.promoted_code_bytes, self.code_bytes)
 
 
 def percent(part: int, total: int) -> float:
@@ -101,19 +171,104 @@ def percent(part: int, total: int) -> float:
     return 0.0 if not total else 100.0 * part / total
 
 
-def load_units(cus_path: pathlib.Path) -> list[Unit]:
-    """Every translation unit record, in manifest order."""
+# ---------------------------------------------------------------------------
+# manifests
+# ---------------------------------------------------------------------------
+
+
+def read_records(cus_path: pathlib.Path) -> list[dict]:
+    """Every record of the target's ``cus.json``, in manifest order."""
     try:
         records = json.loads(pathlib.Path(cus_path).read_text())
     except OSError as exc:
         raise SystemExit(f"status: {cus_path}: {exc.strerror or exc}") from exc
     except json.JSONDecodeError as exc:
         raise SystemExit(f"status: {cus_path}: not JSON: {exc}") from exc
+    if not isinstance(records, list):
+        raise SystemExit(f"status: {cus_path}: expected a JSON array of records")
+    return records
+
+
+def units_of(records: Iterable[dict]) -> list[Unit]:
+    """Every translation unit record, in manifest order."""
     units = [Unit(record["file"], int(record["size"])) for record in records
              if record.get("kind") == "tu"]
     if not units:
-        raise SystemExit(f"status: {cus_path}: no kind 'tu' records")
+        raise SystemExit("status: the manifest has no kind 'tu' records")
     return units
+
+
+def load_units(cus_path: pathlib.Path) -> list[Unit]:
+    return units_of(read_records(cus_path))
+
+
+def unit_code(records: Iterable[dict]) -> tuple[dict[str, int], dict[str, int]]:
+    """``({file: function count}, {file: .text span})`` from the DWARF function records.
+
+    The byte count is the compiled ``.text`` size: each function's span rounded up to
+    :data:`FUNCTION_ALIGNMENT`, summed.  (``ddr verify --tu`` compares the low-to-high span,
+    which stops at the last function's last byte; the object keeps the alignment padding, and
+    that is the size the promotion's ``.text`` occupies.)  A unit with no function record is
+    absent from both maps (0 functions, 0 bytes).
+    """
+    functions: dict[str, list[dict]] = defaultdict(list)
+    for record in records:
+        if record.get("kind") == "function" and record.get("low_pc") is not None:
+            functions[record["file"]].append(record)
+    counts = {file: len(rows) for file, rows in functions.items()}
+    spans = {file: sum(_aligned(row["high_pc"] - row["low_pc"]) for row in rows)
+             for file, rows in functions.items()}
+    return counts, spans
+
+
+def _aligned(size: int) -> int:
+    """One function's span rounded up to the object's function alignment."""
+    return (size + FUNCTION_ALIGNMENT - 1) // FUNCTION_ALIGNMENT * FUNCTION_ALIGNMENT
+
+
+def load_splits(asm_root: pathlib.Path) -> list[Split]:
+    """Every sized ``nonmatching <fn>, 0xNN`` declaration under ``asm_root``.
+
+    A line without a size is a data symbol declaration, not a function, and is skipped.
+    """
+    splits: list[Split] = []
+    files = sorted(pathlib.Path(asm_root).rglob("nonmatchings/**/*.s"))
+    for path in files:
+        text = path.read_text()
+        match = NONMATCHING.search(text)
+        if match is None:
+            continue
+        address = SPLIT_ADDRESS.search(text)
+        if address is None:
+            raise SystemExit(f"status: {path}: sized split has no address comment")
+        splits.append(Split(int(address.group(1), 16), int(match.group(2), 16),
+                            match.group(1)))
+    if not splits:
+        raise SystemExit(f"status: {asm_root}: no sized nonmatching splits (run ./ddr build)")
+    return splits
+
+
+def code_of(records: Iterable[dict], splits: list[Split]) -> Code:
+    """The split denominator, attributed to modules through the DWARF function starts."""
+    owner = {record["low_pc"]: record["file"] for record in records
+             if record.get("kind") == "function" and record.get("low_pc") is not None}
+    functions_by_file, bytes_by_file = unit_code(records)
+
+    by_module: dict[str, CodeFact] = defaultdict(CodeFact)
+    total = CodeFact()
+    for split in splits:
+        file = owner.get(split.address)
+        if file is not None:
+            module = module_of(file)
+        elif split.name.startswith("func_"):
+            module = UNATTRIBUTED
+        else:
+            module = LIBRARY
+        fact = CodeFact(1, split.size)
+        by_module[module] = by_module[module] + fact
+        total = total + fact
+    return Code(splits=total, by_module=dict(by_module),
+                functions_by_file=functions_by_file, bytes_by_file=bytes_by_file)
 
 
 def module_of(file: str) -> str:
@@ -129,9 +284,14 @@ def module_of(file: str) -> str:
     return "(external)"
 
 
+_SYNTHETIC_ORDER = {"(root)": 0, "(external)": 1, LIBRARY: 2, UNATTRIBUTED: 3}
+
+
 def module_key(name: str) -> tuple:
-    """Real modules first, alphabetically, then the two synthetic groups."""
-    return (name.startswith("("), name.lower())
+    """Real modules first, alphabetically; then the four non-directory groups in order."""
+    if name in _SYNTHETIC_ORDER:
+        return (1, _SYNTHETIC_ORDER[name], "")
+    return (0, 0, name.lower())
 
 
 def classify(units: Iterable[Unit], sources: set[str], drafts: set[str],
@@ -156,21 +316,31 @@ def classify(units: Iterable[Unit], sources: set[str], drafts: set[str],
     return states
 
 
-def totals_of(units: Iterable[Unit], states: dict[str, str]) -> Totals:
-    units = list(units)
+def totals_of(units: list[Unit], states: dict[str, str], code: Code) -> Totals:
     promoted = [unit for unit in units if states.get(unit.file) == PROMOTED]
-    return Totals(units=len(units),
-                  bytes=sum(unit.size for unit in units),
-                  promoted_units=len(promoted),
-                  promoted_bytes=sum(unit.size for unit in promoted))
+    return Totals(
+        units=len(units),
+        promoted_units=len(promoted),
+        functions=code.splits.functions,
+        promoted_functions=sum(code.functions_by_file.get(unit.file, 0)
+                               for unit in promoted),
+        code_bytes=code.splits.code_bytes,
+        promoted_code_bytes=sum(code.bytes_by_file.get(unit.file, 0)
+                                for unit in promoted),
+    )
+
+
+# ---------------------------------------------------------------------------
+# rendering
+# ---------------------------------------------------------------------------
 
 
 def _fmt(number: int) -> str:
     return f"{number:,}"
 
 
-def _pct(part: int, total: int) -> str:
-    return f"{percent(part, total):.1f}%"
+def _pct(part: int, total: int, digits: int = 1) -> str:
+    return f"{percent(part, total):.{digits}f}%"
 
 
 def _state_groups(units: Iterable[Unit], states: dict[str, str]) -> list[tuple]:
@@ -181,15 +351,29 @@ def _state_groups(units: Iterable[Unit], states: dict[str, str]) -> list[tuple]:
     return [(module, groups[module]) for module in sorted(groups, key=module_key)]
 
 
-def render_markdown(units: list[Unit], states: dict[str, str], target: str) -> str:
+def _module_facts(group: list[Unit], states: dict[str, str],
+                  code: Code) -> tuple[int, int, int, int]:
+    """``(units, promoted units, reconstructed functions, reconstructed bytes)``."""
+    promoted = [unit for unit in group if states.get(unit.file) == PROMOTED]
+    return (len(group), len(promoted),
+            sum(code.functions_by_file.get(unit.file, 0) for unit in promoted),
+            sum(code.bytes_by_file.get(unit.file, 0) for unit in promoted))
+
+
+def render_markdown(units: list[Unit], states: dict[str, str], target: str,
+                    code: Code) -> str:
     """The block placed between the README markers."""
-    overall = totals_of(units, states)
+    overall = totals_of(units, states, code)
     groups = _state_groups(units, states)
+    unit_modules = {module for module, _ in groups}
+    all_modules = sorted(unit_modules | set(code.by_module), key=module_key)
     lines = [
-        f"**Overall: {overall.promoted_units} / {overall.units} translation units promoted "
-        f"({_pct(overall.promoted_units, overall.units)}); "
-        f"{_fmt(overall.promoted_bytes)} / {_fmt(overall.bytes)} retail code bytes "
-        f"({_pct(overall.promoted_bytes, overall.bytes)}).**",
+        f"**Overall: {overall.promoted_units} / {overall.units} translation units "
+        f"promoted ({_pct(overall.promoted_units, overall.units)}); "
+        f"{_fmt(overall.promoted_functions)} / {_fmt(overall.functions)} functions "
+        f"reconstructed ({_pct(overall.promoted_functions, overall.functions, 2)}); "
+        f"{_fmt(overall.promoted_code_bytes)} / {_fmt(overall.code_bytes)} code bytes "
+        f"reconstructed ({_pct(overall.promoted_code_bytes, overall.code_bytes, 2)}).**",
         "",
         "Green means a unit is **promoted** — this is not a draft count.  It has a source "
         "at its manifest path, a `tu_builds` row recording the compiler and flags it was "
@@ -198,26 +382,40 @@ def render_markdown(units: list[Unit], states: dict[str, str], target: str) -> s
         "a draft named like the unit exists on some branch, or a source exists without a "
         "`tu_builds` row (or its verdict is not green).  Grey is **untouched**.",
         "",
+        "**Code bytes are function sizes declared by the splits** (`nonmatching <fn>, "
+        "0xNN`), so debug information and data are excluded; a promoted unit contributes "
+        "its pinned `.text` size (each function's span rounded to MWCC's 16-byte function "
+        "alignment).  Split code no compile unit claims is `(library)` when the symbol has "
+        "a name and `(unattributed)` when it is still `func_*`.",
+        "",
         "Regenerate both this table and [`docs/status.svg`](docs/status.svg) with "
         f"`python3 tools/units/status.py --target {target}`; "
         "`python3 tools/units/status.py --check` fails when either is stale.  The heatmap "
         "has one cell per translation unit, grouped by module; hover a cell for its path, "
-        "bytes and state.",
+        "code bytes and state.",
         "",
-        "| module | units | promoted | bytes | promoted bytes | units % | bytes % |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| module | units | promoted units | functions | reconstructed functions | "
+        "code bytes | reconstructed bytes | units % | functions % | bytes % |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
-    for module, group in groups:
-        part = totals_of(group, states)
+    for module in all_modules:
+        group = next((rows for name, rows in groups if name == module), [])
+        unit_count, promoted_units, promoted_functions, promoted_bytes = \
+            _module_facts(group, states, code)
+        fact = code.fact_of(module)
         lines.append(
-            f"| `{module}` | {part.units} | {part.promoted_units} | {_fmt(part.bytes)} | "
-            f"{_fmt(part.promoted_bytes)} | {_pct(part.promoted_units, part.units)} | "
-            f"{_pct(part.promoted_bytes, part.bytes)} |")
+            f"| `{module}` | {unit_count} | {promoted_units} | {_fmt(fact.functions)} | "
+            f"{_fmt(promoted_functions)} | {_fmt(fact.code_bytes)} | "
+            f"{_fmt(promoted_bytes)} | {_pct(promoted_units, unit_count)} | "
+            f"{_pct(promoted_functions, fact.functions, 2)} | "
+            f"{_pct(promoted_bytes, fact.code_bytes, 2)} |")
     lines.append(
         f"| **total** | **{overall.units}** | **{overall.promoted_units}** | "
-        f"**{_fmt(overall.bytes)}** | **{_fmt(overall.promoted_bytes)}** | "
+        f"**{_fmt(overall.functions)}** | **{_fmt(overall.promoted_functions)}** | "
+        f"**{_fmt(overall.code_bytes)}** | **{_fmt(overall.promoted_code_bytes)}** | "
         f"**{_pct(overall.promoted_units, overall.units)}** | "
-        f"**{_pct(overall.promoted_bytes, overall.bytes)}** |")
+        f"**{_pct(overall.promoted_functions, overall.functions, 2)}** | "
+        f"**{_pct(overall.promoted_code_bytes, overall.code_bytes, 2)}** |")
     lines += [
         "",
         "Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); "
@@ -269,9 +467,10 @@ def _legend() -> str:
     return "".join(parts)
 
 
-def render_svg(units: list[Unit], states: dict[str, str], target: str) -> str:
+def render_svg(units: list[Unit], states: dict[str, str], target: str,
+               code: Code) -> str:
     """One cell per unit, grouped and labelled by module; no scripts, no external refs."""
-    overall = totals_of(units, states)
+    overall = totals_of(units, states, code)
     groups = _state_groups(units, states)
     layout = _svg_layout(groups)
     height = (layout[-1]["label_y"] + layout[-1]["height"] + LEGEND
@@ -283,33 +482,41 @@ def render_svg(units: list[Unit], states: dict[str, str], target: str) -> str:
         f'<title>{escape(target)} translation units: '
         f'{overall.promoted_units} / {overall.units} promoted</title>',
         f'<desc>One square per translation unit, grouped by module. '
-        f'{_pct(overall.promoted_units, overall.units)} of units and '
-        f'{_pct(overall.promoted_bytes, overall.bytes)} of retail code bytes are '
-        f'promoted.</desc>',
+        f'{_pct(overall.promoted_units, overall.units)} of units, '
+        f'{_pct(overall.promoted_functions, overall.functions, 2)} of functions and '
+        f'{_pct(overall.promoted_code_bytes, overall.code_bytes, 2)} of code bytes are '
+        f'reconstructed.</desc>',
         f'<rect width="{WIDTH}" height="{height}" fill="{PANEL}"/>',
         f'<text x="{MARGIN}" y="32" font-size="18" font-weight="600" fill="{INK}">'
         f'{escape(target)}: {overall.promoted_units} / {overall.units} units promoted '
         f'({_pct(overall.promoted_units, overall.units)})</text>',
         f'<text x="{MARGIN}" y="52" font-size="12" fill="{MUTED}">'
-        f'{_fmt(overall.promoted_bytes)} / {_fmt(overall.bytes)} retail code bytes '
-        f'({_pct(overall.promoted_bytes, overall.bytes)}) &#183; one cell per translation '
-        f'unit &#183; hover for path, bytes and state</text>',
+        f'{_fmt(overall.promoted_functions)} / {_fmt(overall.functions)} functions '
+        f'({_pct(overall.promoted_functions, overall.functions, 2)}) '
+        f'&#183; {_fmt(overall.promoted_code_bytes)} / {_fmt(overall.code_bytes)} code '
+        f'bytes ({_pct(overall.promoted_code_bytes, overall.code_bytes, 2)}) '
+        f'&#183; one cell per translation unit</text>',
         f'<text x="{MARGIN}" y="76" font-size="12" fill="{MUTED}">'
-        f'green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched</text>',
+        f'green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched '
+        f'&#183; hover for path, code bytes and state</text>',
     ]
     for band in layout:
         module = band["module"]
-        group, states_here = band["group"], [states.get(unit.file, UNTOUCHED)
-                                             for unit in band["group"]]
-        promoted = sum(1 for state in states_here if state == PROMOTED)
-        label = (f"{module} - {promoted}/{len(group)} promoted, "
-                 f"{_pct(promoted, len(group))}")
+        group = band["group"]
+        promoted = sum(1 for unit in group if states.get(unit.file) == PROMOTED)
+        _, _, promoted_functions, promoted_bytes = _module_facts(group, states, code)
+        fact = code.fact_of(module)
+        label = (f"{module} - {promoted}/{len(group)} units"
+                 f" \u00b7 {_fmt(promoted_functions)}/{_fmt(fact.functions)} funcs"
+                 f" \u00b7 {_fmt(promoted_bytes)}/{_fmt(fact.code_bytes)} bytes"
+                 f" ({_pct(promoted_bytes, fact.code_bytes, 1)})")
         out.append(f'<g class="module" data-module="{escape(module, {chr(34): "&quot;"})}">')
         out.append(f'<text x="{MARGIN}" y="{band["label_y"]}" font-size="12" '
                    f'font-weight="600" fill="{INK}">{escape(label)}</text>')
         for x, y, unit in band["cells"]:
             state = states.get(unit.file, UNTOUCHED)
-            title = f"{unit.file} - {_fmt(unit.size)} bytes - {state}"
+            code_bytes = code.bytes_by_file.get(unit.file, 0)
+            title = f"{unit.file} - {_fmt(code_bytes)} code bytes - {state}"
             out.append(
                 f'<rect class="cell" data-state="{state}" x="{x}" y="{y}" '
                 f'width="{CELL}" height="{CELL}" rx="2" fill="{COLOURS[state]}">'
@@ -332,13 +539,12 @@ def _git(*args: str) -> subprocess.CompletedProcess:
 
 
 def branches() -> list[str]:
-    """Every local and remote branch, plus ``HEAD``; an empty list outside a git tree."""
+    """Every local and remote branch; an empty list outside a git tree."""
     proc = _git("for-each-ref", "--format=%(refname:short)",
                 "refs/heads", "refs/remotes")
     if proc.returncode != 0:
         return []
-    refs = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
-    return refs
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
 
 
 def _tree_files(ref: str, paths: tuple[str, ...]) -> list[str]:
@@ -446,8 +652,10 @@ def main(argv=None) -> int:
     except targets.UnknownTarget as exc:
         print(f"status: {exc}", file=sys.stderr)
         return 2
-    units = load_units(target.config_dir / "cus.json")
+    records = read_records(target.config_dir / "cus.json")
+    units = units_of(records)
     rows = {entry[0] for entry in target.tu_builds}
+    code = code_of(records, load_splits(REPO_ROOT / "asm"))
 
     sources, drafts = collect_sources_and_drafts()
     candidates = [unit for unit in units
@@ -460,9 +668,9 @@ def main(argv=None) -> int:
             print(f"status: {file}: not promoted: {detail}", file=sys.stderr)
 
     states = classify(units, sources, drafts, rows, verified)
-    overall = totals_of(units, states)
-    markdown = render_markdown(units, states, target.name)
-    svg = render_svg(units, states, target.name)
+    overall = totals_of(units, states, code)
+    markdown = render_markdown(units, states, target.name, code)
+    svg = render_svg(units, states, target.name, code)
 
     readme_text = README.read_text()
     new_readme = replace_marked(readme_text, marked_block(markdown))
@@ -474,15 +682,20 @@ def main(argv=None) -> int:
     if svg_changed:
         stale.append(SVG)
 
+    summary = (
+        f"{overall.promoted_units}/{overall.units} units "
+        f"({_pct(overall.promoted_units, overall.units)}), "
+        f"{_fmt(overall.promoted_functions)}/{_fmt(overall.functions)} functions "
+        f"({_pct(overall.promoted_functions, overall.functions, 2)}), "
+        f"{_fmt(overall.promoted_code_bytes)}/{_fmt(overall.code_bytes)} code bytes "
+        f"({_pct(overall.promoted_code_bytes, overall.code_bytes, 2)})")
+
     if args.check:
         if stale:
             for path in stale:
                 print(f"status: stale: {path.relative_to(REPO_ROOT)}", file=sys.stderr)
             return 1
-        print(f"status: current: {overall.promoted_units}/{overall.units} units "
-              f"({_pct(overall.promoted_units, overall.units)}), "
-              f"{_fmt(overall.promoted_bytes)}/{_fmt(overall.bytes)} bytes "
-              f"({_pct(overall.promoted_bytes, overall.bytes)})")
+        print(f"status: current: {summary}")
         return 0
 
     if readme_changed:
@@ -491,10 +704,7 @@ def main(argv=None) -> int:
         SVG.parent.mkdir(parents=True, exist_ok=True)
         SVG.write_text(svg)
 
-    print(f"status: {overall.promoted_units}/{overall.units} units promoted "
-          f"({_pct(overall.promoted_units, overall.units)}), "
-          f"{_fmt(overall.promoted_bytes)}/{_fmt(overall.bytes)} retail code bytes "
-          f"({_pct(overall.promoted_bytes, overall.bytes)})")
+    print(f"status: {summary}")
     print(f"status: README.md {'updated' if readme_changed else 'current'}; "
           f"docs/status.svg {'updated' if svg_changed else 'current'}")
     return 0

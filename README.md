@@ -39,26 +39,30 @@ why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before edit
 
 <!-- status:start -->
 
-**Overall: 5 / 249 translation units promoted (2.0%); 41,935 / 3,757,587 retail code bytes (1.1%).**
+**Overall: 5 / 249 translation units promoted (2.0%); 11 / 4,463 functions reconstructed (0.25%); 3,184 / 1,631,596 code bytes reconstructed (0.20%).**
 
 Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
 
-Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python3 tools/units/status.py --target ddrex2p`; `python3 tools/units/status.py --check` fails when either is stale.  The heatmap has one cell per translation unit, grouped by module; hover a cell for its path, bytes and state.
+**Code bytes are function sizes declared by the splits** (`nonmatching <fn>, 0xNN`), so debug information and data are excluded; a promoted unit contributes its pinned `.text` size (each function's span rounded to MWCC's 16-byte function alignment).  Split code no compile unit claims is `(library)` when the symbol has a name and `(unattributed)` when it is still `func_*`.
 
-| module | units | promoted | bytes | promoted bytes | units % | bytes % |
-|---|---:|---:|---:|---:|---:|---:|
-| `AM` | 18 | 1 | 186,657 | 14,358 | 5.6% | 7.7% |
-| `common` | 15 | 0 | 55,989 | 0 | 0.0% | 0.0% |
-| `CS` | 118 | 2 | 2,317,293 | 26,326 | 1.7% | 1.1% |
-| `eyetoy` | 3 | 0 | 35,231 | 0 | 0.0% | 0.0% |
-| `fft` | 1 | 0 | 31,167 | 0 | 0.0% | 0.0% |
-| `gs` | 2 | 0 | 2,103 | 0 | 0.0% | 0.0% |
-| `network` | 82 | 1 | 1,103,818 | 1,014 | 1.2% | 0.1% |
-| `sound` | 4 | 0 | 3,479 | 0 | 0.0% | 0.0% |
-| `sys` | 2 | 1 | 1,429 | 237 | 50.0% | 16.6% |
-| `(external)` | 1 | 0 | 3,585 | 0 | 0.0% | 0.0% |
-| `(root)` | 3 | 0 | 16,836 | 0 | 0.0% | 0.0% |
-| **total** | **249** | **5** | **3,757,587** | **41,935** | **2.0%** | **1.1%** |
+Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python3 tools/units/status.py --target ddrex2p`; `python3 tools/units/status.py --check` fails when either is stale.  The heatmap has one cell per translation unit, grouped by module; hover a cell for its path, code bytes and state.
+
+| module | units | promoted units | functions | reconstructed functions | code bytes | reconstructed bytes | units % | functions % | bytes % |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `AM` | 18 | 1 | 182 | 5 | 67,808 | 2,384 | 5.6% | 2.75% | 3.52% |
+| `common` | 15 | 0 | 147 | 0 | 44,708 | 0 | 0.0% | 0.00% | 0.00% |
+| `CS` | 118 | 2 | 814 | 2 | 433,844 | 544 | 1.7% | 0.25% | 0.13% |
+| `eyetoy` | 3 | 0 | 30 | 0 | 13,300 | 0 | 0.0% | 0.00% | 0.00% |
+| `fft` | 1 | 0 | 9 | 0 | 12,084 | 0 | 0.0% | 0.00% | 0.00% |
+| `gs` | 2 | 0 | 18 | 0 | 3,172 | 0 | 0.0% | 0.00% | 0.00% |
+| `network` | 82 | 1 | 542 | 2 | 208,732 | 192 | 1.2% | 0.37% | 0.09% |
+| `sound` | 4 | 0 | 20 | 0 | 7,520 | 0 | 0.0% | 0.00% | 0.00% |
+| `sys` | 2 | 1 | 4 | 2 | 80 | 64 | 50.0% | 50.00% | 80.00% |
+| `(root)` | 3 | 0 | 43 | 0 | 7,232 | 0 | 0.0% | 0.00% | 0.00% |
+| `(external)` | 1 | 0 | 7 | 0 | 1,420 | 0 | 0.0% | 0.00% | 0.00% |
+| `(library)` | 0 | 0 | 439 | 0 | 117,800 | 0 | 0.0% | 0.00% | 0.00% |
+| `(unattributed)` | 0 | 0 | 2,208 | 0 | 713,896 | 0 | 0.0% | 0.00% | 0.00% |
+| **total** | **249** | **5** | **4,463** | **11** | **1,631,596** | **3,184** | **2.0%** | **0.25%** | **0.20%** |
 
 Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
 
