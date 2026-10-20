@@ -134,10 +134,10 @@ step exists: `condition 1`'s `.line` half is relaxed *only* here, and `.text`'s 
 relaxed at all.
 
 Measured on `p_anime.c` under `3.0b38-030307 -c -lang c -O3 -opt full -g`: all five bodies
-word-exact (`0x950` bytes), 35 of 248 `.line` rows byte-different in 5 statement tables (the
-first at `.line+0x45A`: ours 115, retail 114), and the `0x4273`-byte `.debug` chunk
-differing in `n`'s location in both large functions -- the emitted value is MW's `scratch`
-(`DW_OP_reg2`), retail's is `$a2` (`DW_OP_reg6`).  Adoption takes retail's `.line`, both `n`
+word-exact (`0x950` bytes), 10 statement lines moved (the first row at `.line+0x45A`: ours
+115, retail 114; 35 of 244 rows byte-different in 5 statement tables), and the `0x4273`-byte
+`.debug` chunk differing in `n`'s location in both large functions -- the emitted value is
+MW's `scratch` (`DW_OP_reg2`), retail's is `$a2` (`DW_OP_reg6`).  Adoption takes retail's `.line`, both `n`
 locations, 4 anonymous names and 15 reference words, and the chunk is retail's byte for byte
 (414 DIEs).  The `tu_builds` row's fourth element is `"adopt"` and its comment quotes the
 report.  `dmm_chara.c` is the negative case: `.text` and `.line` are exact, but its
