@@ -222,6 +222,13 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    same check on its staged copy, so an un-reflowed unit still promotes; the committed file
    should be the one without directives.
 
+   Promoted C is committed without unmarked comments.  Run
+   `python3 tools/units/strip_comments.py <src>` (it recompiles before and after under the
+   unit's `tu_builds` pair and writes only when `.text`, `.debug` and `.line` are identical),
+   then gate the stripped file with `verify --tu` and commit it.  The strip keeps the leading
+   header block and every `!`-marked note; if a note is load-bearing, mark it before running
+   the tool (see "Stripping comments from a promoted source").
+
 6. **Record the compiler.** Measure the pair that reproduces this unit with
    `tools/toolchain/select_build.py --tu <tu>` and add it to `tu_builds` in `config/targets.py`.
    `configure.py` refuses to promote a source nobody has measured. As of the last batch: four builds
@@ -309,6 +316,9 @@ The C is evidence, not an essay. Keep it to a short header and local notes:
 - **No narrated reasoning.** Why the source drifted, what the disassembly showed, which names were
   invented, which gates accepted it — that belongs in this document, in `docs/milestones/*.md`, or in
   `config/<target>/library-names.md`. Anywhere a reader goes looking for rationale rather than code.
+- **A surviving note is marked.** Before commit, `tools/units/strip_comments.py` blanks every
+  comment except the header; only an opener immediately followed by `!` (`/*!` or `//!`) keeps a
+  note. Mark the genuinely load-bearing ones (see "Stripping comments from a promoted source").
 
 **One mechanical exception, and it is a real one:** the `.line` gate pins *statement* lines to retail's
 own line numbers, so the number of lines before the first statement and between statements is fixed by
@@ -403,6 +413,67 @@ strict/backwards refusal is exercised by `src/CS/dancemaster/dmm_chara.c`'s draf
 which recompiles `sys_scf.c` with a no-op directive inserted and requires the three parts identical
 before and after, and the normalising check by the same file's normalise case (`.text` identical,
 the diverging rows counted).
+
+### Stripping comments from a promoted source (part of promotion)
+
+`tools/units/strip_comments.py` blanks a promoted file's comments lexically.  It **replaces
+the removed characters with spaces and keeps every newline**, so the file has the same number
+of physical lines, every statement keeps the line number the `.line` gate pins, and indentation
+that sat before a comment is still indentation.  A line that held only a comment becomes a line
+of spaces followed by its newline -- a blank line, never a deleted one.  That is the whole
+reason the step cannot delete text: `.line` pins *statement addresses to line numbers*, so
+removing one line from above a statement would move the statement and fail promotion.  For the
+same reason the tool **never collapses the blank lines it leaves behind**, even as an option:
+collapsing one would move every statement below it, and the compile gate would only be there to
+refuse the result.  The blank lines are the layout, and layout is evidence.
+
+The strip is lexical, not textual: `"..."` strings, `'...'` character literals and backslash
+escapes are respected, so a `//` or `/*` inside a string is code.  It refuses, writing nothing,
+on a malformed file -- an unterminated `/*` comment, a stray `*/`, an unterminated string or
+character literal -- and on a line ending in a backslash continuation, because C splices such a
+line before it tokenises and the comment structure the tool would strip is not the one the
+compiler sees.
+
+**What is kept, by policy.**
+
+- **The leading header block**: the first comment at the top of the file (only whitespace
+  before it).  A `//` header is the run of consecutive `//` lines; a blank line ends it.  The
+  header is the unit's provenance note and is kept whole, marker or not.
+- **A `!`-marked note**: a comment whose opener is immediately followed by `!` -- `/*! ... */`
+  or `//! ...`.  The marker means "load-bearing: do not delete".  It is how a note is
+  converted rather than dropped: a magic constant, a statement packing that must not be
+  "fixed", an epilogue that owns no statement.  Everything unmarked is blanked, so a note
+  worth keeping is marked before the tool runs.
+
+**Acceptance.** For a configured promotion unit the tool gets the pair from that unit's
+`tu_builds` row and compiles the file **before and after** through the promotion path; it
+writes only when `.text`, `.debug` and `.line` are byte-identical, and refuses (leaving the file
+untouched) on any difference.  A unit with no recorded pair is refused rather than stripped
+unchecked.  A file that is not a promotion unit has nothing to compile and is edited only with
+`--no-verify`, with an explicit "nothing was compiled" line.  `--check` runs the strip and the
+compile comparison and writes nothing.
+
+```bash
+python3 tools/units/strip_comments.py src/sys/sys_scf.c          # strip + verify + write
+python3 tools/units/strip_comments.py --check src/sys/sys_scf.c  # same, write nothing
+```
+
+**Measured 2026-10-20, `src/sys/sys_scf.c`** (`3.0b38-030307 -c -lang c -O3 -opt full -g`,
+state `False`): two unmarked comments (268 characters, lines 21 and 45-48) were blanked; the
+header and three `/*!` notes (the store/call packing, the `language = 1` constant, the epilogue
+that owns the closing brace) were kept.  Line count 51 -> 51.  Compiled before and after:
+`.text` 0x40, `.debug` 0x28C and `.line` 0x74 bytes, byte-identical.  `verify --tu` reports all
+three parts ok, `configure.py` + `ninja` rebuild the image, and G1 is
+`ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`.  The same pass stripped
+`src/network/net_grf.c` (state `True`, so the `.debug` DIE-order normaliser is part of the
+pair): three unmarked comments were blanked, the header and two `/*!` notes (the unused helper
+that carries the aggregate DIEs, and the `__builtin_next_arg` expression) were kept, the line
+count stayed 80, and `.text` 0xC0, `.debug` 0x638 and `.line` 0x9C came out byte-identical;
+`verify --tu` is green and the rebuilt image keeps the same G1 pin.  `src/AM/s573/play/p_anime.c`
+already consisted of its header alone, so it had nothing to strip.  The tool's tests are in
+`tests/units/test_strip_comments.py`: line and block comments, strings/char literals, line-count
+preservation, the header and `!` marker, the refusals, a changed object part, and the real
+before/after compile (skipped when the retail ELF or the recorded compiler is absent).
 
 ## House rules that keep the gates honest
 
