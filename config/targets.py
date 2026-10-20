@@ -569,6 +569,8 @@ DDREX2P = Target(
                ("src/AM/s573/play/p_anime.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", "adopt"),
                ("src/CS/dancemaster/dmm_chara.c", "3.0b38-030307",
+                "-c -lang c -O3 -opt full -g", "adopt"),
+               ("src/CS/lang.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
