@@ -92,88 +92,42 @@ static inline void dmm_chara_finish(void) {
     if (w->dancer[0] == 0x2D && w->dancer[1] == 0x2D) w->is_disp_dancer = 0;
 }
 
-#line 33
 void dmm_chara(anon_7_109 *work) {
-#line 34
     int step_type = 10;
-#line 37
     switch (work->step) {
-#line 40
     case 0:
-#line 41
         dmm_chara_work_init(work);
-#line 42
         work->step++;
-#line 43
         break;
-#line 44
     case 1:
-#line 47
         if (dmm_freeplay_chara_load()) {
-#line 56
             work->free_mem_addr = DMM_LAST_DATA;
-#line 59
             work->step++;
-#line 60
         }
-#line 61
         break;
-#line 62
     case 2: {
-#line 65
         int dmm_t = dmm_freeplay_step();
-#line 66
         switch (dmm_t) {
-#line 67
         case 1:
-#line 68
-            work->step = step_type;
-#line 68
-            break;
-#line 69
+            work->step = step_type; break;
         case 2:
-#line 70
             work->step = 20;
-#line 72
-            break;
-#line 72
-        }
-#line 72
-        break;
+            break; } break;
     }
-#line 76
     case 10:
-#line 77
         dmm_chara_finish();
-#line 78
         work->step++;
-#line 79
         break;
-#line 82
-    case 11:
-#line 82
-        work->before_state = 2;
-#line 83
+    case 11: work->before_state = 2;
         step_type = 8;
-#line 84
         break;
-#line 87
     case 20:
-#line 88
         work->step++;
-#line 89
         break;
-#line 90
     case 21:
-#line 91
         work->before_state = 2;
-#line 92
         dmm_set_step(9);
-#line 93
         return;
-#line 95
     }
-#line 99
     dmm_set_step(step_type);
-#line 101
 }
