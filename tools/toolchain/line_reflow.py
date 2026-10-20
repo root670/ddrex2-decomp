@@ -230,7 +230,7 @@ def rewrite(text: str, unit_path: str | None = None,
                 f"reached line {position + 1}, so the next line cannot sit at "
                 f"{directive.target}; physical layout cannot express it")
         ending = "\r\n" if raw.endswith("\r\n") else "\n"
-        output.extend(ending * padding)
+        output.extend([ending] * padding)
         # A target equal to the line the directive already occupies collapses the directive
         # away (`padding == 0`); the next line then falls exactly on the target.
         position += padding
