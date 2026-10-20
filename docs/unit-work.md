@@ -124,7 +124,7 @@ proves the result is retail's chunk byte for byte:
 
 | what is adopted | precondition | what the report names |
 |---|---|---|
-| retail's `.line` chunk, whole | `.text` is **byte-identical to retail's**; otherwise the step refuses loudly, before touching `.line` (`.text` differs, first byte at `+0xN`) | how many `.line` rows changed, and in how many statement tables |
+| retail's `.line` chunk, whole | `.text` is **byte-identical to retail's**; otherwise the step refuses loudly, before touching `.line` (`.text` differs, first byte at `+0xN`) | how many `.line` rows changed, and in how many statement tables; or that the emitted table is not row-for-row comparable (a normalised layout can emit a different number of records) and is therefore adopted whole |
 | `AT_location` values in `.debug` | the local's record is otherwise retail's (the DIE set is matched one-to-one; the location is excluded from the pairing signature) | every local by name and owning function, with the values: `n (in play_anime_step_inst): scratch -> $a2` |
 | anonymous `@anonN` names, and reference words between structurally identical DIEs | the referenced DIE is structurally identical to retail's -- duplicates are interchangeable, so retail's choice among them is adopted | every name (`@anon1 -> @anon0`) and a count of reference words |
 
@@ -133,14 +133,18 @@ DIE and attribute; there is no partial adoption.  The `.line` substitution is th
 step exists: `condition 1`'s `.line` half is relaxed *only* here, and `.text`'s half is not
 relaxed at all.
 
-Measured on `p_anime.c` under `3.0b38-030307 -c -lang c -O3 -opt full -g`: all five bodies
-word-exact (`0x950` bytes), 10 statement lines moved (the first row at `.line+0x45A`: ours
-115, retail 114; 35 of 244 rows byte-different in 5 statement tables), and the `0x4273`-byte
-`.debug` chunk differing in `n`'s location in both large functions -- the emitted value is
-MW's `scratch` (`DW_OP_reg2`), retail's is `$a2` (`DW_OP_reg6`).  Adoption takes retail's `.line`, both `n`
-locations, 4 anonymous names and 15 reference words, and the chunk is retail's byte for byte
-(414 DIEs).  The `tu_builds` row's fourth element is `"adopt"` and its comment quotes the
-report.  `dmm_chara.c` is the negative case: `.text` and `.line` are exact, but its
+Measured on `p_anime.c` under `3.0b38-030307 -c -lang c -O3 -opt full -g`.  With its
+original `#line` layout the report named 10 statement lines that moved (first at
+`.line+0x45A`: ours 115, retail 114; 35 of 244 rows byte-different in 5 tables).  The
+promoted source is now normalised (see the `#line` reflow section), so the emitted table
+carries 4 more records than retail's (`play_anime_step_inst` +1, `play_anime_step` +3) and is
+not row-for-row comparable: the report says so and retail's chunk is adopted whole.  Either
+way the `0x4273`-byte `.debug` chunk differed in `n`'s location in both large functions --
+the emitted value is MW's `scratch` (`DW_OP_reg2`), retail's is `$a2` (`DW_OP_reg6`) -- and
+adoption takes retail's `.line`, both `n` locations, 4 anonymous names and 15 reference
+words, leaving the chunk retail's byte for byte (414 DIEs).  The `tu_builds` row's fourth
+element is `"adopt"`; `verify --tu` reports all three parts ok and G1 is
+`ef31c90f…c02cd`.  `dmm_chara.c` is the negative case: `.text` and `.line` are exact, but its
 block-scoped temporary adds one local DIE (`0x19` bytes), so the step refuses on the DIE
 count -- adoption cannot change a count, and no C spelling of that function crosses the
 statement boundary without a declaration.
