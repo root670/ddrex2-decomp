@@ -135,6 +135,68 @@ def test_normalising_strips_directives_and_keeps_the_natural_layout():
     assert not lr.has_directives(stripped)
 
 
+def test_normalising_joins_lines_a_directive_numbered_alike():
+    """Two lines the directives give one number stay on one physical line."""
+    source = ("int f(int a) {\n"
+              "    a++;\n"
+              "#line 20\n"
+              "    a--;\n"
+              "#line 20\n"
+              "    return a;\n"
+              "}\n")
+
+    stripped, directives = lr.strip(source)
+
+    assert len(directives) == 2
+    assert stripped == "int f(int a) {\n    a++;\n    a--; return a;\n}\n"
+    assert not lr.has_directives(stripped)
+
+
+def test_normalising_joins_a_backward_target_with_the_line_before_it():
+    """A target the compiler will not move leaves the following line on the last one."""
+    source = ("int f(int a) {\n"
+              "#line 20\n"
+              "    a++;\n"
+              "#line 19\n"
+              "    return a;\n"
+              "}\n")
+
+    stripped, _directives = lr.strip(source)
+
+    assert stripped == "int f(int a) {\n    a++; return a;\n}\n"
+
+
+def test_normalising_does_not_join_across_a_blank_line():
+    """Only directives may sit between a joined pair; a blank line is layout of its own."""
+    source = ("int f(int a) {\n"
+              "#line 20\n"
+              "    a++;\n"
+              "\n"
+              "#line 20\n"
+              "    return a;\n"
+              "}\n")
+
+    stripped, _directives = lr.strip(source)
+
+    assert stripped == ("int f(int a) {\n    a++;\n\n    return a;\n}\n")
+
+
+def test_normalising_refuses_to_join_after_a_line_comment():
+    """Joining would put the next statement inside the earlier line's ``//`` comment."""
+    source = ("int f(int a) {\n"
+              "#line 20\n"
+              "    a++; // up\n"
+              "#line 20\n"
+              "    return a;\n"
+              "}\n")
+
+    with pytest.raises(lr.Refused) as excinfo:
+        lr.strip(source)
+
+    assert excinfo.value.line == 5
+    assert "comment" in str(excinfo.value)
+
+
 def test_normalising_refuses_a_foreign_filename():
     with pytest.raises(lr.Refused) as excinfo:
         lr.strip('#line 4 "elsewhere.c"\nint a;\n', accept_paths=("src/sys/sys_scf.c",))

@@ -32,8 +32,11 @@ still carries a directive, so a promotion cannot silently compile a layout the r
 would have changed.
 
 **Normalising (``--normalise``).**  The directives are stripped and the file keeps its own,
-natural layout -- no padding standing in for lines nobody can know.  The guarantee changes
-with the mode:
+natural layout -- no padding standing in for lines nobody can know.  Two lines the
+directives number alike (a repeated target, or a backward target the compiler does not
+move) are joined onto one physical line, so the normalised file records the same statement
+groups instead of one row per line; lines separated by anything but directives are left
+alone.  The guarantee changes with the mode:
 
 * ``.text`` must still be byte-identical; a rewrite that moves it refuses.
 * ``.line`` is *allowed* to diverge.  The tool reports how many ``.line`` rows would differ
@@ -133,6 +136,37 @@ def _advance(line: str, in_block: bool) -> bool:
             break
         index += 1
     return in_block
+
+
+def _ends_in_line_comment(line: str) -> bool:
+    """Whether ``line`` ends inside a ``//`` comment (comments and strings respected)."""
+    index, quote, in_block = 0, None, False
+    while index < len(line):
+        char = line[index]
+        if in_block:
+            if line.startswith("*/", index):
+                in_block, index = False, index + 2
+                continue
+            index += 1
+            continue
+        if quote is not None:
+            if char == "\\":
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in "\"'":
+            quote, index = char, index + 1
+            continue
+        if line.startswith("/*", index):
+            in_block, index = True, index + 2
+            continue
+        if line.startswith("//", index):
+            return True
+        index += 1
+    return False
 
 
 def _content(raw: str) -> str:
@@ -271,21 +305,69 @@ def rewrite(text: str, unit_path: str | None = None,
 
 def strip(text: str, unit_path: str | None = None,
           accept_paths=()) -> tuple[str, tuple[Directive, ...]]:
-    """Normalising mode: ``text`` with every directive line removed, nothing else touched.
+    """Normalising mode: remove every directive line, keeping shared line numbers joined.
 
-    No padding is emitted: the file keeps its natural layout, so the lines after a directive
-    move to wherever the remaining text puts them.  A file name that is not the unit's own
-    still refuses (stripping such a directive would change ``__FILE__``); the caller checks
-    the consequences with :func:`verify_normalised`.
+    The file keeps its natural layout, so the lines after a directive move to wherever the
+    remaining text puts them.  Two lines that the directives number alike -- a repeated
+    target, or a backward target the compiler does not move -- are joined with a single
+    space instead: the directive layout recorded one line for the pair, and giving each its
+    own physical line would add a statement row the directive layout never emitted.  Only
+    lines separated by directives alone are joined; a blank line or other text between them
+    is authoritative and stops the join.  A file name that is not the unit's own still
+    refuses (stripping such a directive would change ``__FILE__``); the caller checks the
+    consequences with :func:`verify_normalised`.
     """
     accepted = tuple(path for path in (unit_path, *accept_paths) if path)
     directives = scan(text)
     if not directives:
         return text, directives
     _check_names(directives, accepted)
-    removed = {directive.physical for directive in directives}
-    return "".join(raw for number, raw in enumerate(_lines(text), 1)
-                   if number not in removed), directives
+    lines = _lines(text)
+    by_line = {directive.physical: directive for directive in directives}
+    numbers = {}
+    number = 1
+    for physical, raw in enumerate(lines, 1):
+        directive = by_line.get(physical)
+        if directive is not None:
+            number = directive.target
+            continue
+        numbers[physical] = number
+        number += 1
+    joined = set()
+    previous = None
+    for physical in sorted(numbers):
+        if not lines[physical - 1].strip():
+            continue
+        if previous is not None:
+            between = range(previous + 1, physical)
+            if (all(index in by_line for index in between)
+                    and numbers[physical] <= numbers[previous]):
+                joined.add(physical)
+        previous = physical
+    output = []
+    for physical, raw in enumerate(lines, 1):
+        if physical in by_line:
+            continue
+        if physical not in joined:
+            output.append(raw)
+            continue
+        earlier = output[-1]
+        head = _content(earlier)
+        ending = earlier[len(head):]
+        if _ends_in_line_comment(head) or head.rstrip().endswith("\\"):
+            raise Refused(
+                physical,
+                "the two statements were recorded on one line, but the line before this "
+                "one ends in a comment or a continuation; joining them would change what "
+                "the comment covers, so the layout cannot be kept without the directive")
+        body = _content(raw).lstrip()
+        if body.startswith("#"):
+            raise Refused(
+                physical,
+                "the two statements were recorded on one line, but this line is a "
+                "preprocessor directive; joining them would not be C")
+        output[-1] = f"{head} {body}{ending}"
+    return "".join(output), directives
 
 
 def verify(tu, original: bytes, rewritten: bytes, target):
@@ -441,8 +523,9 @@ def _parser() -> argparse.ArgumentParser:
                              "(repeatable; added to the unit's own paths)")
     parser.add_argument("--normalise", action="store_true",
                         help="strip the directives and keep the natural layout instead of "
-                             "padding to their numbers; .text must stay identical and the "
-                             "differing .line rows are reported for --adopt-retail-meta")
+                             "padding to their numbers, joining the lines a directive "
+                             "numbered alike; .text must stay identical and the differing "
+                             ".line rows are reported for --adopt-retail-meta")
     parser.add_argument("--check", action="store_true",
                         help="run the whole rewrite and its compile check, write nothing")
     parser.add_argument("--no-verify", action="store_true",
