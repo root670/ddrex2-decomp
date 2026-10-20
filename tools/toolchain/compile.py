@@ -1006,14 +1006,8 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
                 f"({debug_set.LABEL[1]}) failed: .text is 0x{len(text):X} bytes against "
                 f"retail's 0x{len(retail_text):X}, first differing byte at 0x{at:X}; "
                 f"adoption needs retail's instructions, byte for byte")
-        if block_mismatches:
-            label, emitted, pinned, block = block_mismatches[0]
-            detail = (f"{label} .debug is short by 0x{pinned - emitted:X} bytes"
-                      if emitted < pinned else
-                      f"{label} .debug is 0x{emitted - pinned:X} bytes too large")
-            raise Unusable(f"{unit}: condition 2 ({debug_set.LABEL[2]}) failed: {detail}; "
-                           f"adoption cannot change a DIE count; "
-                           f"{block.detail or 'the block differs'}")
+        # A block that is longer than retail's is the extra-record case adoption drops; a
+        # shorter one is missing records, which the step refuses when it pairs the DIEs.
         try:
             adopted = debug_adopt.adopt(debug, retail_debug, base, line, retail_line)
         except debug_adopt.Refused as exc:
@@ -1036,9 +1030,17 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
             print(f"compile: {unit}: adopted AT_location {change}", file=sys.stderr)
         for change in adopted.anon_names:
             print(f"compile: {unit}: adopted anonymous name {change}", file=sys.stderr)
-        if adopted.references:
-            print(f"compile: {unit}: adopted {adopted.references} intra-chunk reference "
-                  f"word(s) between structurally identical DIEs", file=sys.stderr)
+        for where, code in adopted.adopted_attributes:
+            print(f"compile: {unit}: adopted attribute 0x{code:04X} on {where} "
+                  f"(missing from the emitted record)", file=sys.stderr)
+        for die, span in adopted.dropped:
+            print(f"compile: {unit}: dropped extra DIE +0x{die.offset - base:X} "
+                  f"{debug_set.TAG.get(die.tag, f'tag 0x{die.tag:02X}')}"
+                  f"{f' {die.name!r}' if die.name else ''} (0x{span:X} bytes; no "
+                  f"counterpart in retail)", file=sys.stderr)
+        for old, new, where, code in adopted.reference_changes:
+            print(f"compile: {unit}: rewrote reference 0x{old:08X} -> 0x{new:08X} "
+                  f"(attribute 0x{code:04X} in {where})", file=sys.stderr)
         print(f"compile: {unit}: .debug is retail's 0x{len(retail_debug):X} bytes byte for "
               f"byte after adoption ({adopted.dies} DIEs)", file=sys.stderr)
         print(f"compile: {unit}: record in its tu_builds comment: .line and AT_location "

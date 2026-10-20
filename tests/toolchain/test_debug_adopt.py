@@ -119,13 +119,35 @@ def test_a_unit_whose_text_differs_refuses_loudly():
     assert "first differing byte at 0x3" in message
 
 
-def test_adoption_refuses_a_die_count_difference():
-    """An extra local DIE is a count difference, not metadata; the step cannot make it retail's."""
+def test_an_extra_die_is_dropped_and_reported(capsys):
+    """Our extra local has no retail counterpart: it is dropped, and the bytes are the proof."""
     retail = build(tree(location=6, anon="@anon1"))
     extra = tree(location=2, anon="@anon0")
     extra.children[0].children.append(
         Die(0x000C, [(AT_NAME, "t"), (AT_FUND_TYPE, 8), (AT_LOCATION, register(2))]))
     emitted = build(extra)
+    assert len(emitted) > len(retail)
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=emitted,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=retail, adopt=True)
+
+    assert placed == retail
+    error = capsys.readouterr().err
+    assert "dropped extra DIE +0x" in error
+    assert "local_variable 't'" in error
+    assert "no counterpart in retail" in error
+    assert "byte for byte after adoption" in error
+
+
+def test_a_missing_die_refuses(capsys):
+    """Retail has a record we do not: fabricating it would be invention, not adoption."""
+    retail_extra = tree(location=6, anon="@anon1")
+    retail_extra.children[0].children.append(
+        Die(0x000C, [(AT_NAME, "t"), (AT_FUND_TYPE, 8), (AT_LOCATION, register(6))]))
+    retail = build(retail_extra)
+    emitted = build(tree(location=6, anon="@anon1"))
+    assert len(emitted) < len(retail)
 
     with pytest.raises(cc.Unusable) as excinfo:
         cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=emitted,
@@ -134,7 +156,8 @@ def test_adoption_refuses_a_die_count_difference():
 
     message = str(excinfo.value)
     assert "condition 6 (retail metadata adoption) failed" in message
-    assert "adoption cannot change a chunk's length" in message
+    assert "missing record is not fabricated" in message
+    assert not capsys.readouterr().err.count("dropped extra DIE")
 
 
 def test_adoption_refuses_a_chunk_that_does_not_come_out_identical():

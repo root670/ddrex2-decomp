@@ -553,13 +553,22 @@ DDREX2P = Target(
     # `--adopt-retail-meta` also adopts `n`'s location in both large functions -- the
     # emitted `AT_location` is MW's `scratch` (DW_OP_reg2), retail's is `$a2`
     # (DW_OP_reg6) -- plus 4 anonymous names and 15 reference words between structurally
-    # identical DIEs; the chunk then equals retail's byte for byte.  A sixth local DIE
-    # (dmm_chara's residue) would refuse: adoption cannot change a DIE count.
+    # identical DIEs; the chunk then equals retail's byte for byte.
+    #
+    # `dmm_chara.c` measured 2026-10-20 under the same pair: `.text` and `.line` are
+    # byte-equal (0x1D0 / 0x152).  `.debug` is 0x16A against retail's 0x151 because the
+    # block-scoped temp adds one local record (`dmm_t`, local_variable at +0x64C6, 0x21
+    # bytes) and the function DIE lacks retail's 0x2303 access-reference list.  Adoption
+    # drops the extra record, adopts the missing 0x2303 attribute, 24 anonymous names and
+    # 142 reference words; `.debug` becomes retail's 0x64DA bytes / 666 DIEs.  A *missing*
+    # record would refuse -- fabricating a DIE retail has is invention, not adoption.
     tu_builds=(("src/sys/sys_scf.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", False),
                ("src/network/net_grf.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", True),
                ("src/AM/s573/play/p_anime.c", "3.0b38-030307",
+                "-c -lang c -O3 -opt full -g", "adopt"),
+               ("src/CS/dancemaster/dmm_chara.c", "3.0b38-030307",
                 "-c -lang c -O3 -opt full -g", "adopt")),
 )
 

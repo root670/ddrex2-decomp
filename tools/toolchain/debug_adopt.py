@@ -82,10 +82,13 @@ class Adopted:
 
     __slots__ = ("chunk", "line", "line_rows", "line_tables", "line_total",
                  "line_changed", "first_line_row", "line_note", "locations", "anon_names",
-                 "references", "dies")
+                 "references", "reference_changes", "dropped", "adopted_attributes",
+                 "dies")
 
     def __init__(self, chunk, line, line_rows, line_tables, line_total, line_changed,
-                 first_line_row, locations, anon_names, references, dies, line_note=None):
+                 first_line_row, locations, anon_names, references, dies,
+                 line_note=None, reference_changes=(), dropped=(),
+                 adopted_attributes=()):
         self.chunk = chunk              # retail's .debug chunk, byte-equal to the proof
         self.line = line                # retail's .line chunk, adopted whole
         self.line_rows = line_rows      # [(table, row, before, after)] byte-different rows
@@ -96,7 +99,13 @@ class Adopted:
         self.line_note = line_note      # why the emitted table is not row-comparable, or None
         self.locations = locations      # [Changed], one per adopted AT_location
         self.anon_names = anon_names    # [Changed], one per adopted @anonN name
-        self.references = references    # intra-chunk reference words adopted
+        self.references = references    # intra-chunk reference words rewritten
+        #: ``(old, new, die_offset, attribute)`` for every reference rewritten.
+        self.reference_changes = tuple(reference_changes)
+        #: ``(die, span_length)`` for every extra DIE dropped (with its whole subtree).
+        self.dropped = tuple(dropped)
+        #: ``(die_description, attribute)`` for every attribute retail has and ours lacks.
+        self.adopted_attributes = tuple(adopted_attributes)
         self.dies = dies                # DIEs in the adopted chunk
 
 
@@ -274,9 +283,15 @@ def _owner(die) -> str:
 
 
 def _key_tree(dies):
-    """``{offset: structural key}``: what a reference's target is, order-independently."""
+    """``{offset: shallow key}``: what a reference's target is, ignoring its children.
+
+    Two DIEs with the same tag, name, size and attributes are interchangeable for a
+    reference -- and after the pairing they are in retail's order, so retail's choice among
+    identical records is the one adopted.  The final whole-chunk byte comparison is what
+    proves no real difference was hidden.
+    """
     by_offset = {die.offset: die for die in dies}
-    key = debug_normalize._signature_key(by_offset)
+    key = debug_normalize._shallow_key(by_offset)
     return {die.offset: key(die) for die in dies}
 
 
@@ -298,15 +313,18 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
         line_diff, line_table_count, line_total = [], 0, 0
         line_changed, first_line_row = 0, None
 
-    if len(emitted) != len(retail):
+    if len(emitted) < len(retail):
         raise Refused(f".debug is 0x{len(emitted):X} bytes against retail's "
-                      f"0x{len(retail):X}; adoption cannot change a chunk's length")
+                      f"0x{len(retail):X}; retail carries records we do not, and a missing "
+                      f"record is not fabricated")
 
     try:
         ordering = debug_normalize.normalise(
             emitted, retail, base,
-            ignore=lambda die, code: (code == AT_LOCATION
-                                      and die.tag == TAG_LOCAL_VARIABLE))
+            ignore=lambda die, code: (
+                (code == AT_LOCATION and die.tag == TAG_LOCAL_VARIABLE)
+                or code == debug_set.AT_2303),
+            drop_extra=True, adopt_missing=(debug_set.AT_2303,), adopt_names=True)
     except debug_normalize.Refusal as exc:
         raise Refused(str(exc))
 
@@ -330,8 +348,11 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
                           f"against {debug_set.TAG.get(other.tag, '?')}")
 
     ours_keys, retail_keys = _key_tree(ours), _key_tree(theirs)
-    locations, anon_names = [], []
-    references = 0
+    locations = []
+    anon_names = [Changed("", old, old, new)
+                  for old, new, _where in ordering.name_changes]
+    reference_changes = list(ordering.reference_changes)
+    references = len(reference_changes)
 
     for die, ref_die in zip(ours, theirs):
         if die.length != ref_die.length:
@@ -343,7 +364,7 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
         retail_record = retail[start:start + die.length]
         if record == retail_record:
             continue
-        for code, _form, at, size in list(_fields(record)):
+        for code, form, at, size in list(_fields(record)):
             mine = record[at:at + size]
             other = retail_record[at:at + size]
             if mine == other:
@@ -364,10 +385,12 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
                     out[start + at:start + at + size] = other
                     anon_names.append(Changed("", old, old, new))
                     continue
-            if code in REFERENCE_CODES and size and size % 4 == 0:
+            if code in REFERENCE_CODES and size:
+                positions = ([0] if form == 2
+                             else debug_normalize._block_references(code, mine))
                 patched = bytearray(mine)
                 repaired = 0
-                for word in range(0, size, 4):
+                for word in positions or ():
                     value = _U32(mine, word)[0]
                     target = _U32(other, word)[0]
                     if value == target:
@@ -380,9 +403,10 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
                             f"and the two DIEs are not structurally identical")
                     _P32(patched, word, target)
                     repaired += 1
+                    reference_changes.append((value, target, debug_set._describe(die, base),
+                                              code))
                 if repaired:
                     out[start + at:start + at + size] = patched
-                    references += repaired
                 continue
             prefix = min(size, 16)
             raise Refused(
@@ -398,5 +422,6 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
                       f"+0x{at:X} (0x{out[at]:02X} against 0x{retail[at]:02X})")
 
     return Adopted(retail, retail_line, line_diff, line_table_count, line_total,
-                   line_changed, first_line_row, locations, anon_names, references,
-                   len(ours), line_note)
+                   line_changed, first_line_row, locations, anon_names,
+                   len(reference_changes), len(ours), line_note,
+                   reference_changes, ordering.dropped, ordering.adopted_attributes)
