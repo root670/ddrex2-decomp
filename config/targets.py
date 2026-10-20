@@ -188,7 +188,8 @@ class Target:
     ``((source, compiler build, flags[, state]), ...)``: the compiler/flag pair
     ``tools/toolchain/select_build.py`` *measured* as reproducing a promoted unit's retail
     ``.text``/``.debug``/``.line`` bytes.  ``state`` (optional, default ``False``) is the
-    debug step the pair needs, and has four values counting its absence:
+    debug step the pair needs: ``False`` (or an absent element) means none, ``True`` means
+    the order normaliser, and ``"adopt"`` means retail-metadata adoption.  The values are:
 
     * absent or ``False`` -- the unit is byte-equal without a step;
     * ``True`` -- normalise: the emitted ``.debug`` chunk is retail's DIE *set* in another
