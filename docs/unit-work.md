@@ -126,7 +126,15 @@ proves the result is retail's chunk byte for byte:
 |---|---|---|
 | retail's `.line` chunk, whole | `.text` is **byte-identical to retail's**; otherwise the step refuses loudly, before touching `.line` (`.text` differs, first byte at `+0xN`) | how many `.line` rows changed, and in how many statement tables; or that the emitted table is not row-for-row comparable (a normalised layout can emit a different number of records) and is therefore adopted whole |
 | `AT_location` values in `.debug` | the local's record is otherwise retail's (the DIE set is matched one-to-one; the location is excluded from the pairing signature) | every local by name and owning function, with the values: `n (in play_anime_step_inst): scratch -> $a2` |
-| anonymous `@anonN` names, and reference words between structurally identical DIEs | the referenced DIE is structurally identical to retail's -- duplicates are interchangeable, so retail's choice among them is adopted | every name (`@anon1 -> @anon0`) and a count of reference words |
+| anonymous `@anonN` names, and reference words between structurally identical DIEs | the referenced DIE is structurally identical to retail's -- duplicates are interchangeable, so retail's choice among them is adopted | every name (`@anon1 -> @anon0`) and every rewritten reference (old -> new, attribute, owning DIE) |
+| one of **our** `.debug` records that retail does not have | `.text` is byte-identical, and the record's whole subtree has no retail counterpart; the record is dropped, its references are remapped, and the remaining bytes must equal retail's | every dropped DIE: tag, name, chunk offset and span (`dropped extra DIE +0x64C6 local_variable 'dmm_t' (0x21 bytes; no counterpart in retail)`) |
+| an attribute retail carries on a paired DIE while ours lacks it (measured: the `0x2303` access-reference list) | the attribute is a list of 4-byte references, and every target has a paired DIE | the attribute and its owning DIE (`adopted attribute 0x2303 on …`) |
+
+**The distinction is explicit:** extra records on our side may be **dropped**; a record
+retail has and we do not must **refuse** -- fabricating a DIE would be invention, not
+adoption.  `_pair` only returns leftovers for our side, and the refusal names the missing
+retail DIE (`no counterpart in the emitted chunk`, or `a missing record is not fabricated`
+when the chunk is shorter).
 
 Then the **whole `.debug` chunk must equal retail's**.  Anything else refuses, naming the
 DIE and attribute; there is no partial adoption.  The `.line` substitution is the reason the
@@ -144,10 +152,17 @@ the emitted value is MW's `scratch` (`DW_OP_reg2`), retail's is `$a2` (`DW_OP_re
 adoption takes retail's `.line`, both `n` locations, 4 anonymous names and 15 reference
 words, leaving the chunk retail's byte for byte (414 DIEs).  The `tu_builds` row's fourth
 element is `"adopt"`; `verify --tu` reports all three parts ok and G1 is
-`ef31c90f…c02cd`.  `dmm_chara.c` is the negative case: `.text` and `.line` are exact, but its
-block-scoped temporary adds one local DIE (`0x19` bytes), so the step refuses on the DIE
-count -- adoption cannot change a count, and no C spelling of that function crosses the
-statement boundary without a declaration.
+`ef31c90f…c02cd`.
+
+Measured on `dmm_chara.c` under the same pair: `.text` and `.line` are byte-equal
+(`0x1D0` / `0x152`), but `.debug` is `0x16A` against retail's `0x151` -- the block-scoped
+temporary that forces retail's register split adds one local record (`dmm_t`,
+`local_variable` at `+0x64C6`, `0x21` bytes), and the function DIE lacks retail's `0x2303`
+access-reference list.  Adoption drops `dmm_t` (the 33-byte span and the 8-byte adopted
+attribute explain the block's 25-byte difference), adopts `0x2303`, 24 anonymous names and
+142 reference words; `.debug` becomes retail's `0x64DA` bytes / 666 DIEs, `verify --tu` is
+ok on all three parts, and G1 stays `ef31c90f…c02cd`.  A *missing* record is still the
+refusal case: adoption never fabricates a DIE retail has and we do not.
 
 ## The loop
 
