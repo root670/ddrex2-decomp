@@ -115,6 +115,36 @@ change nothing.  `3.0-011126 -c -lang c -O3 -opt full -g` still reproduces both 
 byte without the normaliser; that measurement is why the strict claim is not new, only
 recorded against the build whose DIE order needed rewriting.
 
+### Adopting retail's metadata: `--adopt-retail-meta`
+
+`tools/toolchain/debug_adopt.py`, reached only through `compile.py --adopt-retail-meta`
+(off by default; mutually exclusive with `--normalise-debug`), is for the unit whose
+**instructions are already retail's** and whose debug metadata is not.  It adopts, and
+proves the result is retail's chunk byte for byte:
+
+| what is adopted | precondition | what the report names |
+|---|---|---|
+| retail's `.line` chunk, whole | `.text` is **byte-identical to retail's**; otherwise the step refuses loudly, before touching `.line` (`.text` differs, first byte at `+0xN`) | how many `.line` rows changed, and in how many statement tables |
+| `AT_location` values in `.debug` | the local's record is otherwise retail's (the DIE set is matched one-to-one; the location is excluded from the pairing signature) | every local by name and owning function, with the values: `n (in play_anime_step_inst): scratch -> $a2` |
+| anonymous `@anonN` names, and reference words between structurally identical DIEs | the referenced DIE is structurally identical to retail's -- duplicates are interchangeable, so retail's choice among them is adopted | every name (`@anon1 -> @anon0`) and a count of reference words |
+
+Then the **whole `.debug` chunk must equal retail's**.  Anything else refuses, naming the
+DIE and attribute; there is no partial adoption.  The `.line` substitution is the reason the
+step exists: `condition 1`'s `.line` half is relaxed *only* here, and `.text`'s half is not
+relaxed at all.
+
+Measured on `p_anime.c` under `3.0b38-030307 -c -lang c -O3 -opt full -g`: all five bodies
+word-exact (`0x950` bytes), 35 of 248 `.line` rows byte-different in 5 statement tables (the
+first at `.line+0x45A`: ours 115, retail 114), and the `0x4273`-byte `.debug` chunk
+differing in `n`'s location in both large functions -- the emitted value is MW's `scratch`
+(`DW_OP_reg2`), retail's is `$a2` (`DW_OP_reg6`).  Adoption takes retail's `.line`, both `n`
+locations, 4 anonymous names and 15 reference words, and the chunk is retail's byte for byte
+(414 DIEs).  The `tu_builds` row's fourth element is `"adopt"` and its comment quotes the
+report.  `dmm_chara.c` is the negative case: `.text` and `.line` are exact, but its
+block-scoped temporary adds one local DIE (`0x19` bytes), so the step refuses on the DIE
+count -- adoption cannot change a count, and no C spelling of that function crosses the
+statement boundary without a declaration.
+
 ## The loop
 
 1. **Pick a unit by shape, not by size.** Small turned out to mean hard: the three smallest candidates
