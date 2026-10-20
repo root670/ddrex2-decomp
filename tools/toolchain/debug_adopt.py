@@ -81,11 +81,11 @@ class Adopted:
     """Retail's metadata, and what had to change to make it ours."""
 
     __slots__ = ("chunk", "line", "line_rows", "line_tables", "line_total",
-                 "line_changed", "first_line_row", "locations", "anon_names",
+                 "line_changed", "first_line_row", "line_note", "locations", "anon_names",
                  "references", "dies")
 
     def __init__(self, chunk, line, line_rows, line_tables, line_total, line_changed,
-                 first_line_row, locations, anon_names, references, dies):
+                 first_line_row, locations, anon_names, references, dies, line_note=None):
         self.chunk = chunk              # retail's .debug chunk, byte-equal to the proof
         self.line = line                # retail's .line chunk, adopted whole
         self.line_rows = line_rows      # [(table, row, before, after)] byte-different rows
@@ -93,6 +93,7 @@ class Adopted:
         self.line_total = line_total    # rows in the adopted chunk
         self.line_changed = line_changed  # rows whose statement line moved, aligned
         self.first_line_row = first_line_row  # (table, row, offset, ours, retail) or None
+        self.line_note = line_note      # why the emitted table is not row-comparable, or None
         self.locations = locations      # [Changed], one per adopted AT_location
         self.anon_names = anon_names    # [Changed], one per adopted @anonN name
         self.references = references    # intra-chunk reference words adopted
@@ -282,10 +283,20 @@ def _key_tree(dies):
 def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"",
           retail_line: bytes = b"") -> Adopted:
     """Retail's metadata in our chunk, accepted only when the bytes are retail's."""
-    line_diff, line_table_count, line_total = line_changes(emitted_line, retail_line) \
-        if emitted_line or retail_line else ([], 0, 0)
-    line_changed, first_line_row = line_number_changes(emitted_line, retail_line) \
-        if emitted_line or retail_line else (0, None)
+    # The report is best-effort: retail's chunk is adopted whole either way, and a source
+    # whose layout was normalised (``#line`` directives stripped) can emit a different
+    # number of statement records while its .text stays retail's.  A table that is not
+    # row-for-row comparable is recorded in ``line_note`` instead of refusing the adoption.
+    line_note = None
+    try:
+        line_diff, line_table_count, line_total = line_changes(emitted_line, retail_line) \
+            if emitted_line or retail_line else ([], 0, 0)
+        line_changed, first_line_row = line_number_changes(emitted_line, retail_line) \
+            if emitted_line or retail_line else (0, None)
+    except Refused as exc:
+        line_note = str(exc)
+        line_diff, line_table_count, line_total = [], 0, 0
+        line_changed, first_line_row = 0, None
 
     if len(emitted) != len(retail):
         raise Refused(f".debug is 0x{len(emitted):X} bytes against retail's "
@@ -388,4 +399,4 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
 
     return Adopted(retail, retail_line, line_diff, line_table_count, line_total,
                    line_changed, first_line_row, locations, anon_names, references,
-                   len(ours))
+                   len(ours), line_note)

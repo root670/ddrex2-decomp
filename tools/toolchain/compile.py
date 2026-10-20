@@ -1018,15 +1018,20 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
             adopted = debug_adopt.adopt(debug, retail_debug, base, line, retail_line)
         except debug_adopt.Refused as exc:
             raise Unusable(f"{unit}: condition 6 (retail metadata adoption) failed: {exc}")
-        first = ""
-        if adopted.first_line_row is not None:
-            _table, _row, offset, before, after = adopted.first_line_row
-            first = (f", first at .line+0x{offset:X}: {before}"
-                     + (f" -> {after}" if after is not None else " (absent in retail)"))
-        print(f"compile: {unit}: adopted retail's .line ({adopted.line_changed} row(s) "
-              f"changed by statement line{first}; {len(adopted.line_rows)} of "
-              f"{adopted.line_total} rows byte-different in {adopted.line_tables} "
-              f"statement table(s))", file=sys.stderr)
+        if adopted.line_note:
+            print(f"compile: {unit}: the emitted .line is not row-for-row comparable with "
+                  f"retail's ({adopted.line_note}); retail's chunk is adopted whole",
+                  file=sys.stderr)
+        else:
+            first = ""
+            if adopted.first_line_row is not None:
+                _table, _row, offset, before, after = adopted.first_line_row
+                first = (f", first at .line+0x{offset:X}: {before}"
+                         + (f" -> {after}" if after is not None else " (absent in retail)"))
+            print(f"compile: {unit}: adopted retail's .line ({adopted.line_changed} row(s) "
+                  f"changed by statement line{first}; {len(adopted.line_rows)} of "
+                  f"{adopted.line_total} rows byte-different in {adopted.line_tables} "
+                  f"statement table(s))", file=sys.stderr)
         for change in adopted.locations:
             print(f"compile: {unit}: adopted AT_location {change}", file=sys.stderr)
         for change in adopted.anon_names:

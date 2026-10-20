@@ -62,6 +62,18 @@ def test_a_forward_directive_round_trips_onto_physical_lines():
     assert lr.rewrite(rewritten) == (rewritten, ())
 
 
+def test_a_gap_past_the_padding_bound_prefers_normalise():
+    """A directive standing in for a block is refused, not filled with a wall of blanks."""
+    source = "int a;\n#line 100\nint b;\n"
+
+    with pytest.raises(lr.Refused) as excinfo:
+        lr.rewrite(source)
+
+    assert excinfo.value.line == 2
+    assert "98 blank lines" in str(excinfo.value)
+    assert "--normalise" in str(excinfo.value)
+
+
 def test_a_directive_inside_a_comment_is_not_a_directive():
     source = "/*\n#line 3\n*/\nint a;\n"
     assert lr.rewrite(source) == (source, ())
@@ -111,6 +123,37 @@ def test_the_cli_refuses_a_foreign_filename_and_leaves_the_file(tmp_path):
     assert result.returncode == 1
     assert "line 1" in result.stderr and "not this unit" in result.stderr
     assert source.read_bytes() == original
+
+
+def test_normalising_strips_directives_and_keeps_the_natural_layout():
+    source = ("/* h */\nint f(void) {\n    int a = 1;\n#line 20\n    return a;\n}\n")
+
+    stripped, directives = lr.strip(source)
+
+    assert directives == (lr.Directive(physical=4, target=20, filename=None),)
+    assert stripped == "/* h */\nint f(void) {\n    int a = 1;\n    return a;\n}\n"
+    assert not lr.has_directives(stripped)
+
+
+def test_normalising_refuses_a_foreign_filename():
+    with pytest.raises(lr.Refused) as excinfo:
+        lr.strip('#line 4 "elsewhere.c"\nint a;\n', accept_paths=("src/sys/sys_scf.c",))
+    assert excinfo.value.line == 1
+    assert "not this unit" in str(excinfo.value)
+
+
+def test_normalising_refuses_when_text_moves():
+    """The normalising guarantee is .text byte-identity, and nothing may be traded for it."""
+    from types import SimpleNamespace
+
+    before = SimpleNamespace(text=b"\x11\x22\x33\x44")
+    after = SimpleNamespace(text=b"\x11\x22\x99\x44")
+
+    with pytest.raises(lr.Refused) as excinfo:
+        lr.compare_normalised(before, after, b"")
+
+    assert "moves .text" in str(excinfo.value)
+    assert "first difference at 0x2" in str(excinfo.value)
 
 
 # ---------------------------------------------------------------------------
@@ -181,6 +224,38 @@ def test_a_recompiled_unit_is_byte_identical_after_the_rewrite(tmp_path):
                       source_text=variant.encode("latin-1"))
     assert (placed.text, placed.debug, placed.line) == (before.text, before.debug,
                                                         before.line)
+
+
+def test_normalising_keeps_text_and_reports_the_line_rows_that_diverge(tmp_path):
+    """The normalising acceptance: .text identical, .line divergence counted for adoption."""
+    from toolchain import compile as cc
+
+    tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
+    original = tu.source.read_bytes()
+    text = original.decode("latin-1")
+    lines = text.split("\n")
+    blank = next(number for number, line in enumerate(lines, 1)
+                 if line == "" and number < len(lines) and lines[number] != "")
+    # The directive replaces a blank line and re-numbers the next line to its own old
+    # number: compiled strictly, the source still reproduces retail's .line.  Stripping the
+    # directive removes that blank, so every later statement moves up one line.
+    variant = "\n".join(lines[:blank - 1] + [f"#line {blank + 1}"] + lines[blank:])
+    stripped, directives = lr.strip(variant, accept_paths=(tu.name, tu.file))
+    assert len(directives) == 1 and stripped != text
+
+    # Strict mode expresses this one (a single blank line), so the two modes differ only in
+    # what they do with the layout they produce -- and the strict result is the original.
+    assert lr.rewrite(variant, accept_paths=(tu.name, tu.file))[0] == text
+
+    from config import targets
+    target = targets.get(targets.DEFAULT)
+    before, after, changes, tables, rows, note = lr.verify_normalised(
+        tu, variant.encode("latin-1"), stripped.encode("latin-1"), target)
+
+    assert before.text == after.text == cc.retail_bytes(tu)["text"]
+    assert len(changes) > 0, "stripping the blank must move at least one statement line"
+    assert tables >= 1 and rows >= len(changes) and note is None
+    assert all(one[0] != other[0] for _table, _row, (_, one), (_, other) in changes)
 
 
 def test_a_backward_unit_is_compiled_unrewritten_rather_than_refused(tmp_path, capsys):

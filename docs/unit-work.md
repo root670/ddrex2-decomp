@@ -323,10 +323,12 @@ statements, and the emitted `.line` numbers stayed retail's.  Two rules come wit
 
 ### The `#line` reflow step (part of promotion)
 
-`tools/toolchain/line_reflow.py` turns a directive-bearing source into the same source laid out
-physically: each `#line N` is replaced by the blank lines that put the line after it on physical
-line `N`, and every other byte — indentation, comments, blank lines — is copied unchanged.  The
-directive can then go, and with it the reader's need to simulate a preprocessor:
+`tools/toolchain/line_reflow.py` removes a promoted source's `#line` directives in one of two
+modes.  Both copy every non-directive byte unchanged; they differ in what they do to the line
+layout, and therefore in what they guarantee.
+
+**Strict (the default)** replaces each `#line N` with the blank lines that put the line after it
+on physical line `N`, so every compiled line number survives by construction:
 
 ```bash
 python3 tools/toolchain/line_reflow.py src/<dir>/<tu>.c          # rewrite in place
@@ -338,29 +340,50 @@ expressed:
 
 - **a directive that moves backwards** — `#line N` where the rewritten file has already reached
   line `N` or beyond.  Padding only adds lines, so the next line cannot sit there.
+- **a gap larger than a screenful** — more than `MAX_PADDING` (40) blank lines for one directive.
+  The refusal quotes the count and recommends `--normalise`: a directive standing in for a
+  thousand-line type closure is a hole, and padding it is pretending to know what was there.
 - **a directive carrying a file name that is not the unit's own** — the accepted spellings are
   the unit's DWARF name (`cus.json`'s `name`, e.g. `C:\work2\usaex2\src\sys\sys_scf.c`), its
-  repository path (`src/sys/sys_scf.c`), or what `--unit-path` names.  A different path would
-  change what the compiler records.
-- **a `#line` spelling it does not parse** (a macro, a continuation) — it refuses rather than
-  guess.
+  repository path (`src/sys/sys_scf.c`), or what `--unit-path` names.
+- **a `#line` spelling it does not parse** (a macro, a continuation).
 
-For a unit with a recorded pair in `tu_builds`, the rewrite is accepted only after the source is
-compiled **before and after** through the promotion path with that pair and `.text`, `.debug` and
-`.line` come out **byte-identical**; any difference refuses and the file is left untouched.  That
-is the acceptance criterion, and the same condition runs inside `compile.py` whenever a promoted
-source still carries a directive: it rewrites its staged copy, compiles the un-rewritten spelling
-beside it, and accepts only the identical result.  A source whose rewrite is not expressible is
-compiled as written, with an explicit `#line reflow skipped (...)` line — the step is a
-normalisation, never a condition on the source.
+For a unit with a recorded pair in `tu_builds`, the strict rewrite is accepted only after the
+source is compiled **before and after** through the promotion path with that pair and `.text`,
+`.debug` and `.line` come out **byte-identical**; any difference refuses and the file is left
+untouched.  The same condition runs inside `compile.py` whenever a promoted source still carries a
+directive: it rewrites its staged copy, compiles the un-rewritten spelling beside it, and accepts
+only the identical result.  A source whose rewrite is not expressible is compiled as written, with
+an explicit `#line reflow skipped (...)` line — the step is a normalisation, never a condition on
+the source.
 
-**Measured 2026-10-20.** Neither promoted unit carries a directive — `src/sys/sys_scf.c` and
-`src/network/net_grf.c` both answer `no #line directives; nothing to do` — so there was nothing to
-reflow; their statements are laid out with blank lines and the tool is inert on both.  The
-backwards refusal is exercised by `src/CS/dancemaster/dmm_chara.c`'s draft, whose first directive
-is `#line 33` on physical line 80 (`line 80: #line 33 moves backwards…`), and the compile check by
-`tests/toolchain/test_line_reflow.py`, which recompiles `sys_scf.c` with a no-op directive inserted
-and requires the three parts identical before and after the rewrite.
+**Normalising (`--normalise`)** strips the directives and keeps the file's own, natural layout —
+no padding standing in for comment blocks or blank lines nobody can know.  The guarantee changes:
+
+- **`.text` must stay byte-identical**; if the rewrite moves even one instruction the tool refuses
+  and writes nothing.
+- **`.line` is allowed to diverge.**  The tool reports it: either *N of M rows differ* (when the
+  emitted table is still row-for-row comparable) or *the emitted `.line` is not row-for-row
+  comparable, +N records* (a changed layout can emit a different number of statement records).
+  Either way `--adopt-retail-meta` takes retail's `.line` chunk **whole**, and `.text` byte-identity
+  is that step's precondition.  The adoption step's row report degrades to an explicit
+  `not row-for-row comparable … retail's chunk is adopted whole` line rather than refusing a source
+  whose code is retail's.
+
+Use it for a promoted unit whose directives exist to compress layout (the `dexport.c` class):
+strict padding would be a wall of blanks, and the unit's `tu_builds` row is `"adopt"`, so retail's
+statement table is what the image carries.
+
+**Measured 2026-10-20, `src/AM/s573/play/p_anime.c`** (`3.0b38-030307 -c -lang c -O3 -opt full
+-g`, `"adopt"`): 189 directives, 454 lines before and 265 after, zero left.  The normalised source
+compiles to `.text` 0x950 bytes byte-identical to retail's; its emitted `.line` gains 4 records
+(`play_anime_step_inst` +1, `play_anime_step` +3), so the table is adopted whole.  Before and after
+compile through `place` to identical `.text` (0x950), `.debug` (0x4273) and `.line` (0x9B0).  The
+strict/backwards refusal is exercised by `src/CS/dancemaster/dmm_chara.c`'s draft (`line 80:
+#line 33 moves backwards…`); the strict compile check by `tests/toolchain/test_line_reflow.py`,
+which recompiles `sys_scf.c` with a no-op directive inserted and requires the three parts identical
+before and after, and the normalising check by the same file's normalise case (`.text` identical,
+the diverging rows counted).
 
 ## House rules that keep the gates honest
 

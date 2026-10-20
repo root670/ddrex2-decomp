@@ -149,8 +149,13 @@ def test_adoption_refuses_a_chunk_that_does_not_come_out_identical():
     assert "first difference" in str(excinfo.value)
 
 
-def test_a_line_table_of_a_different_shape_refuses():
+def test_a_line_table_of_a_different_shape_is_reported_and_retail_is_adopted():
+    """A normalised layout can emit a different number of rows; retail's chunk is adopted."""
     other = line_chunk([(10, 0, 0), (11, 0, 4)])
 
-    with pytest.raises(da.Refused, match="holds 2 rows against retail's 3"):
-        da.adopt(build(tree()), build(tree()), 0, other, RETAIL_LINE)
+    result = da.adopt(build(tree()), build(tree()), 0, other, RETAIL_LINE)
+
+    assert "holds 2 rows against retail's 3" in (result.line_note or "")
+    assert result.line_rows == [] and result.line_total == 0
+    assert result.line == RETAIL_LINE, "the emitted table is replaced whole"
+    assert result.chunk == build(tree())
