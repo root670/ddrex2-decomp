@@ -790,14 +790,15 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         "\n",
         # One section out of the object the compiler produced: the promoted unit's own
         # `.debug`/`.line` bytes, which the tail edge substitutes for retail's databins.
-        # `-p` matters: objcopy treats a lone input file as an *in-place* edit, so without
-        # it the object is rewritten (byte for byte the same, but with a fresh mtime) after
-        # the dump was written, leaving the payload permanently ~200us older than its own
-        # input -- the edge is then dirty on every build and the whole gate chain behind it
-        # re-runs.  Measured on the pinned binutils: with `-p` the object keeps its dates
-        # (and its bytes) and the dump lands at `now`, so the edge is incremental.
+        # The explicit `/dev/null` output matters: objcopy treats a lone input file as an
+        # *in-place* edit, and the `.debug` and `.line` edges run concurrently against the
+        # same object, so an in-place rewrite (truncate, then write the same bytes back)
+        # has one edge reading the object while the other is mid-write -- observed as
+        # `objcopy: [.debug]: file truncated` and a short payload.  Naming an output keeps
+        # objcopy read-only on $in: the object keeps its dates and bytes, each dump lands
+        # at `now`, and both edges stay incremental.
         "rule objsec\n",
-        "  command = mips-linux-gnu-objcopy -p --dump-section $section=$out $in\n",
+        "  command = mips-linux-gnu-objcopy --dump-section $section=$out $in /dev/null\n",
         "  description = objsec $section $out\n",
         "\n",
         "rule ld\n",
