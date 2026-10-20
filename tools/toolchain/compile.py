@@ -76,7 +76,7 @@ for _extra in (str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT / "tools"), st
 
 import elf  # noqa: E402  the vendored 32-bit little-endian MIPS reader
 from config import targets  # noqa: E402  the one place a target's facts are written down
-from toolchain import check_deps, debug_normalize, debug_set, fetch, probe  # noqa: E402
+from toolchain import check_deps, debug_normalize, debug_set, fetch, line_reflow, probe  # noqa: E402
 
 #: The target a direct invocation works on when ``--target`` names none: the one the tree is
 #: configured for.  The ninja graph always names the target it was generated for, so a build
@@ -1104,13 +1104,73 @@ def include_flags(target) -> list:
 
 
 def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
-          normalise: bool = False) -> Placed:
-    """Compile ``tu`` and place it: the unit's bytes, as the pinned layout has them."""
-    if not tu.source.is_file():
-        raise Unusable(f"{tu.source.relative_to(REPO_ROOT)} does not exist")
+          normalise: bool = False, source_text: bytes | None = None) -> Placed:
+    """Compile ``tu`` and place it: the unit's bytes, as the pinned layout has them.
+
+    ``source_text`` overrides the file's bytes (the reflow step's before/after check and
+    :mod:`toolchain.line_reflow` use it); the staged path, and therefore the source name
+    the compiler records, is the same either way.
+
+    A source that still carries ``#line`` directives is first rewritten into physical line
+    numbers (:mod:`toolchain.line_reflow`) and the un-rewritten source is compiled beside
+    it: the rewrite is accepted only when both compile to byte-identical ``.text``,
+    ``.debug`` and ``.line`` under the pair this call was given.  The failure path writes
+    nothing, so a promotion cannot carry a layout the rewrite would have changed.
+    """
+    if source_text is None:
+        if not tu.source.is_file():
+            raise Unusable(f"{tu.source.relative_to(REPO_ROOT)} does not exist")
+        source_text = tu.source.read_bytes()
+    text = source_text.decode("latin-1")
+    if not line_reflow.has_directives(text):
+        return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
+                             normalise)
+
+    try:
+        rewritten, directives = line_reflow.rewrite(
+            text, accept_paths=(tu.name, tu.file))
+    except line_reflow.Refused as exc:
+        # The rewrite is a normalisation, not a condition on the source: a unit whose
+        # directives run backwards (or name another file) still promotes, compiled exactly
+        # as written.  The standalone tool refuses this input; the build only declines to
+        # rewrite it, and says so rather than compile something the caller cannot see.
+        print(f"compile: {tu.file}: #line reflow skipped ({exc}); compiling the directives "
+              f"as written", file=sys.stderr)
+        return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
+                             normalise)
+    if not directives:
+        return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
+                             normalise)
+
+    with tempfile.TemporaryDirectory(prefix="line-reflow-") as scratch:
+        before = _place_source(tu, manifests, compiler_dir, wibo, flags, source_text,
+                               pathlib.Path(scratch) / "before.mw.o", normalise)
+    reflowed = rewritten.encode("latin-1")
+    after = _place_source(tu, manifests, compiler_dir, wibo, flags, reflowed, keep,
+                          normalise)
+    for part in ("text", "debug", "line"):
+        mine, theirs = getattr(before, part), getattr(after, part)
+        if mine == theirs:
+            continue
+        at = _first_difference(mine, theirs)
+        raise Unusable(
+            f"{tu.file}: refusing the #line reflow: the rewritten source does not compile "
+            f"to the same {part} (0x{len(mine):X} bytes against 0x{len(theirs):X}, first "
+            f"difference at 0x{at:X}); the file was not rewritten")
+    print(f"compile: {tu.file}: reflowed {len(directives)} #line directive(s) into physical "
+          f"layout; .text, .debug and .line are byte-identical", file=sys.stderr)
+    return after
+
+
+def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, source: bytes,
+                  keep=None, normalise: bool = False) -> Placed:
+    """Compile one spelling of the unit's source and place its bytes.
+
+    :func:`place` owns the file/reflow decision; this is the promotion itself, unchanged.
+    """
     staged = staged_path(tu)
     staged.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(tu.source, staged)
+    staged.write_bytes(source)
     recorded = recorded_name(staged)
     if len(recorded) != len(tu.name):
         raise Unusable(f"staging {staged} spells {len(recorded)} bytes, retail "

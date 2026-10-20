@@ -166,6 +166,13 @@ recorded against the build whose DIE order needed rewriting.
    git add <explicit paths> && git commit -m "ddrex2p: promote <tu>"
    ```
 
+   If the source still carries `#line` directives, run
+   `python3 tools/toolchain/line_reflow.py <src>` before committing and commit the rewritten
+   file: the step turns the directives into physical lines and proves by recompilation that
+   nothing moved (see "The `#line` reflow step").  `compile.py` runs the same rewrite and the
+   same check on its staged copy, so an un-reflowed unit still promotes; the committed file
+   should be the one without directives.
+
 6. **Record the compiler.** Measure the pair that reproduces this unit with
    `tools/toolchain/select_build.py --tu <tu>` and add it to `tu_builds` in `config/targets.py`.
    `configure.py` refuses to promote a source nobody has measured. As of the last batch: four builds
@@ -283,6 +290,47 @@ statements, and the emitted `.line` numbers stayed retail's.  Two rules come wit
   records the `n++` and the test on line 9.  So when the line a `#line` must reach is a loop's,
   it is the brace's line that has to be right, and both of UnitC's candidate units are only
   explicable with that rule.
+
+### The `#line` reflow step (part of promotion)
+
+`tools/toolchain/line_reflow.py` turns a directive-bearing source into the same source laid out
+physically: each `#line N` is replaced by the blank lines that put the line after it on physical
+line `N`, and every other byte — indentation, comments, blank lines — is copied unchanged.  The
+directive can then go, and with it the reader's need to simulate a preprocessor:
+
+```bash
+python3 tools/toolchain/line_reflow.py src/<dir>/<tu>.c          # rewrite in place
+python3 tools/toolchain/line_reflow.py --check src/<dir>/<tu>.c  # same check, write nothing
+```
+
+It refuses, with a non-zero exit and a message naming the physical line, when the layout cannot be
+expressed:
+
+- **a directive that moves backwards** — `#line N` where the rewritten file has already reached
+  line `N` or beyond.  Padding only adds lines, so the next line cannot sit there.
+- **a directive carrying a file name that is not the unit's own** — the accepted spellings are
+  the unit's DWARF name (`cus.json`'s `name`, e.g. `C:\work2\usaex2\src\sys\sys_scf.c`), its
+  repository path (`src/sys/sys_scf.c`), or what `--unit-path` names.  A different path would
+  change what the compiler records.
+- **a `#line` spelling it does not parse** (a macro, a continuation) — it refuses rather than
+  guess.
+
+For a unit with a recorded pair in `tu_builds`, the rewrite is accepted only after the source is
+compiled **before and after** through the promotion path with that pair and `.text`, `.debug` and
+`.line` come out **byte-identical**; any difference refuses and the file is left untouched.  That
+is the acceptance criterion, and the same condition runs inside `compile.py` whenever a promoted
+source still carries a directive: it rewrites its staged copy, compiles the un-rewritten spelling
+beside it, and accepts only the identical result.  A source whose rewrite is not expressible is
+compiled as written, with an explicit `#line reflow skipped (...)` line — the step is a
+normalisation, never a condition on the source.
+
+**Measured 2026-10-20.** Neither promoted unit carries a directive — `src/sys/sys_scf.c` and
+`src/network/net_grf.c` both answer `no #line directives; nothing to do` — so there was nothing to
+reflow; their statements are laid out with blank lines and the tool is inert on both.  The
+backwards refusal is exercised by `src/CS/dancemaster/dmm_chara.c`'s draft, whose first directive
+is `#line 33` on physical line 80 (`line 80: #line 33 moves backwards…`), and the compile check by
+`tests/toolchain/test_line_reflow.py`, which recompiles `sys_scf.c` with a no-op directive inserted
+and requires the three parts identical before and after the rewrite.
 
 ## House rules that keep the gates honest
 
