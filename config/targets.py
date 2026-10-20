@@ -590,6 +590,9 @@ DDREX2P = Target(
          "-c -lang c -O3 -opt full -g", "adopt"),
         # Layout tidied; `.line` adopted (7 records, retail's).
         ("src/CS/lang.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # Layout tidied; `.line` adopted (9 rows, 0x62 table); `.debug` byte-equal outright.
+        ("src/CS/edit_lib/el_mes.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
