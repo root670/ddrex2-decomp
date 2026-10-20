@@ -6,10 +6,10 @@ verdict comes from ``./ddr verify --tu sys_scf.c`` -- a build, which this suite 
 verdict cannot tell apart on its own: retail's own databin *is* retail, so a promotion that
 quietly fell back to it would still print "debug chunk ok".  So the graph is asserted -- the
 ``cc`` object, one ``objsec`` payload per section, and those payloads in place of the chunks'
-databins on the tail edge -- together with the two facts the graph rests on: the source puts
-every statement on a retail statement line (what the ``.line`` verdict compares), and the
-target's descriptor records a *measured* compiler pair for it (what ``configure.py`` refuses
-to promote without).
+databins on the tail edge -- together with the two facts the graph rests on: the source keeps
+retail's statement *grouping* (its layout is tidied, so the row adopts retail's ``.line``
+chunk whole and the physical numbers are free), and the target's descriptor records a
+*measured* compiler pair for it (what ``configure.py`` refuses to promote without).
 """
 
 import pathlib
@@ -28,13 +28,13 @@ from tests import target_support  # noqa: E402
 TARGET = target_support.registered()
 SOURCE = "src/sys/sys_scf.c"
 
-#: The line every statement, opening brace and closing brace sits on, from this build's own
-#: line tables (``dwarf1.py lines orig/SLUS_211.74 0x001B3D30 --table`` and ``… 0x001B3D40
-#: --table``): ``sysInitScf`` (0x001B3D40, 48 B) has statements on 24, 29, 35 and 43, and
+#: Retail's statement lines and what sits on each, from this build's own line tables
+#: (``dwarf1.py lines orig/SLUS_211.74 0x001B3D30 --table`` and ``… 0x001B3D40 --table``):
+#: ``sysInitScf`` (0x001B3D40, 48 B) has statements on 24, 29, 35 and 43, and
 #: ``sysGetDateNotation`` (0x001B3D30, 12 B) on 50 and 51.  Line 24 is both the opening brace
 #: and the line the prologue is attributed to; 43 and 51 are the closing braces that own the
-#: epilogues.  49 is not in any statement list -- it is pinned because the return has to land
-#: on 50, which is what ``.line`` compares.
+#: epilogues.  The unit's layout is tidied and its row records ``adopt``, so the numbers are
+#: provenance for the *grouping* the test pins, not the physical lines the file uses.
 RETAIL_LINES = {
     24: "void sysInitScf(struct _tag_SYS_SCF_WORK *p) {",
     29: "pscf = p; pscf->date_notation = sceScfGetDateNotation(p);",
@@ -60,14 +60,26 @@ def graph() -> str:
     return path.read_text()
 
 
-def test_the_unit_is_c_at_the_retail_lines():
-    """Every statement on the line retail's DWARF records for it -- the ``.line`` payload is a
-    byte comparison, so a statement that moves by one line fails the gate."""
-    lines = source_lines()
+def test_the_unit_keeps_retails_statement_grouping():
+    """Every statement retail's DWARF records is present, once, in retail's order.
+
+    The tidy moves the physical lines, so the ``.line`` half of the rule is satisfied by
+    adopting retail's chunk -- and what the source must then keep is the grouping (which
+    statements share a line), which is what the record-count check in the tidy tool proves.
+    A missing, duplicated or reordered statement would still change that count.
+    """
+    lines = [line.strip() for line in source_lines()]
+    index = 0
     for number, statement in RETAIL_LINES.items():
-        assert lines[number - 1].strip() == statement, (
-            f"{SOURCE}:{number} is {lines[number - 1].strip()!r}, not {statement!r}; "
-            f"retail's statement list pins that line")
+        while index < len(lines) and lines[index] != statement:
+            index += 1
+        assert index < len(lines), (
+            f"{SOURCE}: {statement!r} (retail line {number}) is missing or out of order")
+        index += 1
+    pair = TARGET.build_pair(SOURCE)
+    assert pair is not None and pair[2] == "adopt", (
+        f"{SOURCE}: a moved statement line needs retail-metadata adoption recorded in "
+        f"tu_builds")
 
 
 def test_the_descriptor_records_a_measured_compiler_for_the_unit():

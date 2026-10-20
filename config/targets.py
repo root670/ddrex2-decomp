@@ -454,7 +454,10 @@ def _display(path) -> str:
 #: normaliser for ``net_grf``: b38 takes both units' ``.text``/``.line`` byte-exactly,
 #: ``sys_scf``'s ``.debug`` is byte-equal outright (the normaliser is inert), and
 #: ``net_grf``'s chunk -- the same DIE set in b38's order -- is rewritten into retail's DIE
-#: order and comes out byte-identical (41 DIEs, 31 moved, 8 references rewritten).  b38
+#: order and comes out byte-identical (41 DIEs, 31 moved, 8 references rewritten).  All five
+#: promoted units' layouts are now tidied, which moves their statement lines, so every row
+#: records ``"adopt"`` and ``--adopt-retail-meta`` supplies retail's ``.line`` (and applies
+#: the normaliser itself where a chunk needs it).  b38
 #: writes ``(3.0.0)`` in ``.comment`` where retail writes ``(2.4.1.01)``; that string and the
 #: chunk order never reach the image (whose ``.comment`` and chunks are retail's), so the pair
 #: is a reproduction recipe, not a claim that b38 is the original compiler.  ``2.4-001213``
@@ -520,8 +523,11 @@ DDREX2P = Target(
     # quoting the line the step prints: `.debug DIE order normalised under
     # --normalise-debug, byte-equal`.  `configure.py` puts `--normalise-debug` on that
     # unit's `cc` edge and the step is strict: a chunk that does not come out retail's
-    # bytes fails the build.  `net_grf.c` carries it under `3.0b38-030307`; `sys_scf.c`
-    # does not need it -- its chunk is byte-equal under that build, so the flag is inert.
+    # bytes fails the build.  `net_grf.c` was the one row that carried it under
+    # `3.0b38-030307`; its layout is now tidied, so the row records `"adopt"` instead (the
+    # adoption step applies the same normaliser internally), and no row carries `True`.
+    # `sys_scf.c` never needed it -- its chunk is byte-equal under that build, so the flag
+    # was inert -- and it is `"adopt"` for the same layout reason.
     #
     # The fourth element's other state is `"adopt"` (`--adopt-retail-meta`): the unit's
     # `.text` is retail's byte for byte, but `.line` is not and a local's `AT_location`
@@ -562,16 +568,29 @@ DDREX2P = Target(
     # drops the extra record, adopts the missing 0x2303 attribute, 24 anonymous names and
     # 142 reference words; `.debug` becomes retail's 0x64DA bytes / 666 DIEs.  A *missing*
     # record would refuse -- fabricating a DIE retail has is invention, not adoption.
-    tu_builds=(("src/sys/sys_scf.c", "3.0b38-030307",
-                "-c -lang c -O3 -opt full -g", False),
-               ("src/network/net_grf.c", "3.0b38-030307",
-                "-c -lang c -O3 -opt full -g", True),
-               ("src/AM/s573/play/p_anime.c", "3.0b38-030307",
-                "-c -lang c -O3 -opt full -g", "adopt"),
-               ("src/CS/dancemaster/dmm_chara.c", "3.0b38-030307",
-                "-c -lang c -O3 -opt full -g", "adopt"),
-               ("src/CS/lang.c", "3.0b38-030307",
-                "-c -lang c -O3 -opt full -g", "adopt")),
+    tu_builds=(
+        # The layout is tidied (blank runs collapsed to one, header dropped), so its
+        # statement lines moved and `.line` is adopted.  Under this pair `.text` is
+        # retail's 0x40 bytes and `.debug` its 0x28C bytes outright; adoption has
+        # only `.line` to substitute.
+        ("src/sys/sys_scf.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # Layout tidied, so `.line` is adopted; the row was `True` while `.line` was
+        # still retail's.  Adoption applies the DIE-order normaliser internally (41
+        # DIEs, 31 moved, 8 references) and proves the chunk retail's 0x638 bytes.
+        ("src/network/net_grf.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # Layout tidied; `.line` adopted.  The emitted table keeps retail's 244
+        # records in its 5 tables (104 + 2 + 123 + 12 + 3), so the grouping the old
+        # `#line` layout encoded survived the tidy.
+        ("src/AM/s573/play/p_anime.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # Layout tidied; `.line` adopted (33 records in one table, retail's).
+        ("src/CS/dancemaster/dmm_chara.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # Layout tidied; `.line` adopted (7 records, retail's).
+        ("src/CS/lang.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

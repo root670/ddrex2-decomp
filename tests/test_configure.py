@@ -352,7 +352,9 @@ def test_the_cc_edge_carries_the_debug_step_recorded_for_each_unit():
         flags = promoted[file].flags
         assert ("--normalise-debug" in flags) is (state is True)
         assert ("--adopt-retail-meta" in flags) is (state == "adopt")
-    assert promoted["src/network/net_grf.c"].flags.endswith("--normalise-debug")
+    # net_grf's row was `True` until its layout was tidied; the moved statement lines now need
+    # retail's `.line`, so the edge carries adoption (which normalises the DIE order itself).
+    assert promoted["src/network/net_grf.c"].flags.endswith("--adopt-retail-meta")
 
 
 def test_load_json_stops_on_a_missing_or_broken_manifest(tmp_path):

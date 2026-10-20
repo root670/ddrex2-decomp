@@ -1,10 +1,3 @@
-/* src/AM/s573/play/p_anime.c
- *
- * Reconstructed from orig/SLUS_211.74: the DWARF 1 records for this file
- * (rendered into include/src/AM/s573/play/p_anime.h) plus the five functions'
- * disassembly.  Statement line numbers are evidence, so the statements sit on
- * the retail line numbers.
- */
 static int anime_id_tbl[11] = {0};
 static int hold_release = 0;
 static int pre_hold_flag = 0;

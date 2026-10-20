@@ -27,6 +27,10 @@ A translation unit counts as promoted only when `./ddr --target ddrex2p verify -
 | `.debug` | the debug chunk the compiler emits for that unit — types, member order, visibility |
 | `.line` | the statement→address line table, i.e. **your statements must sit on retail's line numbers** |
 
+For a unit whose row records `"adopt"`, the `.line` row is satisfied by retail's own chunk,
+substituted whole; what the source must then preserve is *which statements share a line*, not
+the physical number (see "Tidying a promoted source").
+
 **A per-unit green is necessary but not sufficient.** Observed twice: `verify --tu` reported all
 three parts ok for units whose `.debug`/`.line` payload was *smaller* than the pinned layout, and the
 link then refused with `the code splits are not the retail N bytes`. So build the image before
@@ -222,12 +226,28 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    same check on its staged copy, so an un-reflowed unit still promotes; the committed file
    should be the one without directives.
 
-   Promoted C is committed without unmarked comments.  Run
+   Promoted C is committed with **no comments at all**.  Run
    `python3 tools/units/strip_comments.py <src>` (it recompiles before and after under the
    unit's `tu_builds` pair and writes only when `.text`, `.debug` and `.line` are identical),
-   then gate the stripped file with `verify --tu` and commit it.  The strip keeps the leading
-   header block and every `!`-marked note; if a note is load-bearing, mark it before running
-   the tool (see "Stripping comments from a promoted source").
+   then gate the stripped file with `verify --tu` and commit it.  Every comment is blanked --
+   the header block and `/*!`/`//!` notes included; a note worth keeping belongs in this
+   document, not in the source.  `strip_comments.py --check <src>` is the gate that enforces
+   it, and it fails while the file still carries a comment (see "Stripping comments from a
+   promoted source").
+
+   Then tidy the layout:
+   `python3 tools/units/strip_comments.py --collapse <src>`.  It strips the comments and
+   collapses blank-line runs to one, strips trailing whitespace and drops the lines the header
+   and notes left behind.  Because
+   that **moves statement lines**, the unit's `tu_builds` row must record `"adopt"` first --
+   the tool refuses, writing nothing, when the row is `False` or `True` and a line moved.
+   Change the row's fourth element (never the compiler or the flags) and say in the row
+   comment that the layout is tidied and `.line` adopted.  The tool compiles the committed and
+   tidied spellings pre-adoption and requires each function's `.line` record count to be
+   equal (the directive grouping must survive), then accepts only when `.text` is
+   byte-identical and `.debug`/`.line` are retail's after adoption.  Gate with `verify --tu`,
+   rebuild with `configure.py` + `ninja`, and check the G1 pin (see "Tidying a promoted
+   source").
 
 6. **Record the compiler.** Measure the pair that reproduces this unit with
    `tools/toolchain/select_build.py --tu <tu>` and add it to `tu_builds` in `config/targets.py`.
@@ -307,29 +327,32 @@ The rule to follow is tww's, and it is a good one: **no names are better than in
 
 ## Comment style
 
-The C is evidence, not an essay. Keep it to a short header and local notes:
+**A committed promoted file carries no comments at all.**  The C is evidence, not an essay,
+and the evidence lives beside it, not in it:
 
-- **A two-line header**: the source path the DWARF records, and that the unit was reconstructed from
-  `orig/SLUS_211.74`'s DWARF and disassembly.
-- **An inline comment only where the C is genuinely non-obvious** — a magic constant, an unusual
-  expression shape, a gap the evidence forces.
-- **No narrated reasoning.** Why the source drifted, what the disassembly showed, which names were
-  invented, which gates accepted it — that belongs in this document, in `docs/milestones/*.md`, or in
-  `config/<target>/library-names.md`. Anywhere a reader goes looking for rationale rather than code.
-- **A surviving note is marked.** Before commit, `tools/units/strip_comments.py` blanks every
-  comment except the header; only an opener immediately followed by `!` (`/*!` or `//!`) keeps a
-  note. Mark the genuinely load-bearing ones (see "Stripping comments from a promoted source").
+- **No top-level header comment.**  A committed promoted file starts with its first declaration
+  or `#include`; the source path the DWARF records, the pair, and the measurements live in the
+  `tu_builds` row comment and this document.
+- **No inline comments either.**  A note about a magic constant, an unusual expression shape
+  or a gap the evidence forces belongs in this document, in `docs/milestones/*.md`, or in
+  `config/<target>/library-names.md`.
+- **No markers.**  `/*!` and `//!` are blanked like any other comment: there is no opt-out.
+  `tools/units/strip_comments.py` blanks every comment, and
+  `tools/units/strip_comments.py --check <src>` fails while the file still carries one (see
+  "Stripping comments from a promoted source").
 
 **One mechanical exception, and it is a real one:** the `.line` gate pins *statement* lines to retail's
 own line numbers, so the number of lines before the first statement and between statements is fixed by
 evidence, not by taste. Where that forces space, use **blank lines** — a comment thick enough to fill a
-twenty-line gap is padding pretending to be documentation. The statement lines must not move; what
-fills the space between them is your choice.
+twenty-line gap is padding pretending to be documentation. While the pair is `False`/`True` the
+statement lines must not move; what fills the space between them is your choice. A unit recorded as
+`"adopt"` is the exception: retail's `.line` is substituted, so the *grouping* is what must survive
+(see "Tidying a promoted source") and the physical numbers are free.
 
 **A better answer than padding when the file must carry more than the statements.** A `#line N`
 directive makes the line that *follows* it number `N`, so statements land on retail's line
-numbers directly and the blank-line dance disappears: the file can hold a header comment, an
-`#include`, a type block or a `#define` between two statements without forty empty lines
+numbers directly and the blank-line dance disappears: the file can hold an `#include`, a type block
+or a `#define` between two statements without forty empty lines
 standing in for them.  Measured on UnitC's `AM/s573/doll/dexport.c`, whose statements are at
 lines 61–105 while its type closure is 1,111 lines over 28 headers — the generated headers are
 the only way to declare `SaveData` (0x1FF50 B) and `g_game_w` (0xACDC4) without moving the
@@ -422,10 +445,10 @@ of physical lines, every statement keeps the line number the `.line` gate pins, 
 that sat before a comment is still indentation.  A line that held only a comment becomes a line
 of spaces followed by its newline -- a blank line, never a deleted one.  That is the whole
 reason the step cannot delete text: `.line` pins *statement addresses to line numbers*, so
-removing one line from above a statement would move the statement and fail promotion.  For the
-same reason the tool **never collapses the blank lines it leaves behind**, even as an option:
-collapsing one would move every statement below it, and the compile gate would only be there to
-refuse the result.  The blank lines are the layout, and layout is evidence.
+removing one line from above a statement would move the statement and fail promotion.  The
+strip therefore never deletes or collapses anything; a line that held only a comment becomes a
+line of spaces, and the *tidy* step below is what removes those lines -- deliberately, with
+adoption as its acceptance.
 
 The strip is lexical, not textual: `"..."` strings, `'...'` character literals and backslash
 escapes are respected, so a `//` or `/*` inside a string is code.  It refuses, writing nothing,
@@ -434,46 +457,110 @@ character literal -- and on a line ending in a backslash continuation, because C
 line before it tokenises and the comment structure the tool would strip is not the one the
 compiler sees.
 
-**What is kept, by policy.**
-
-- **The leading header block**: the first comment at the top of the file (only whitespace
-  before it).  A `//` header is the run of consecutive `//` lines; a blank line ends it.  The
-  header is the unit's provenance note and is kept whole, marker or not.
-- **A `!`-marked note**: a comment whose opener is immediately followed by `!` -- `/*! ... */`
-  or `//! ...`.  The marker means "load-bearing: do not delete".  It is how a note is
-  converted rather than dropped: a magic constant, a statement packing that must not be
-  "fixed", an epilogue that owns no statement.  Everything unmarked is blanked, so a note
-  worth keeping is marked before the tool runs.
+**Every comment is blanked -- there is no exception.**  The leading header block, an inline
+note and a `!`-marked comment (`/*! ... */` or `//! ...`) all go: a promoted source carries
+no comments at all, and a note worth keeping belongs in this document, in
+`docs/milestones/*.md` or in `config/<target>/library-names.md`.  The tool does not rely on
+its own blanking to hold that line: `require_no_comments` raises when a source still holds a
+comment, `--check` fails while the file on disk is not clean, and the write path refuses to
+write a result that carries one.
 
 **Acceptance.** For a configured promotion unit the tool gets the pair from that unit's
 `tu_builds` row and compiles the file **before and after** through the promotion path; it
 writes only when `.text`, `.debug` and `.line` are byte-identical, and refuses (leaving the file
 untouched) on any difference.  A unit with no recorded pair is refused rather than stripped
 unchecked.  A file that is not a promotion unit has nothing to compile and is edited only with
-`--no-verify`, with an explicit "nothing was compiled" line.  `--check` runs the strip and the
-compile comparison and writes nothing.
+`--no-verify`, with an explicit "nothing was compiled" line.  `--check` writes nothing and
+**fails while the file still carries a comment** (or a blank line directly inside a brace, the
+tidy rule below): it is the gate that keeps a promoted source clean, not a dry run.
 
 ```bash
 python3 tools/units/strip_comments.py src/sys/sys_scf.c          # strip + verify + write
-python3 tools/units/strip_comments.py --check src/sys/sys_scf.c  # same, write nothing
+python3 tools/units/strip_comments.py --check src/sys/sys_scf.c  # fail unless already clean
 ```
 
-**Measured 2026-10-20, `src/sys/sys_scf.c`** (`3.0b38-030307 -c -lang c -O3 -opt full -g`,
-state `False`): two unmarked comments (268 characters, lines 21 and 45-48) were blanked; the
-header and three `/*!` notes (the store/call packing, the `language = 1` constant, the epilogue
-that owns the closing brace) were kept.  Line count 51 -> 51.  Compiled before and after:
-`.text` 0x40, `.debug` 0x28C and `.line` 0x74 bytes, byte-identical.  `verify --tu` reports all
-three parts ok, `configure.py` + `ninja` rebuild the image, and G1 is
-`ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`.  The same pass stripped
-`src/network/net_grf.c` (state `True`, so the `.debug` DIE-order normaliser is part of the
-pair): three unmarked comments were blanked, the header and two `/*!` notes (the unused helper
-that carries the aggregate DIEs, and the `__builtin_next_arg` expression) were kept, the line
-count stayed 80, and `.text` 0xC0, `.debug` 0x638 and `.line` 0x9C came out byte-identical;
-`verify --tu` is green and the rebuilt image keeps the same G1 pin.  `src/AM/s573/play/p_anime.c`
-already consisted of its header alone, so it had nothing to strip.  The tool's tests are in
+**Measured 2026-10-20, the five promoted units.**  `src/sys/sys_scf.c` had three `/*!` notes
+(the store/call packing, the `language = 1` constant, the epilogue that owns the closing brace);
+all three were blanked, and the tidy then dropped their lines (33 -> 20, and 18 after the
+brace rule below).  `src/network/net_grf.c` had two `/*!` notes (the unused helper that carries
+the aggregate DIEs, and the `__builtin_next_arg` expression); both were blanked (58 -> 50).
+`src/AM/s573/play/p_anime.c` (247 lines), `src/CS/lang.c` (20) and
+`src/CS/dancemaster/dmm_chara.c` (69) were already comment-free, so the tool reported nothing
+to do.  Compiled before and after under `3.0b38-030307 -c -lang c -O3 -opt full -g`: `sys_scf`
+`.text` 0x40, `.debug` 0x28C, `.line` 0x74; `net_grf` 0xC0 / 0x638 / 0x9C -- `.text`
+byte-identical, `.debug`/`.line` retail's after adoption.  The tool's tests are in
 `tests/units/test_strip_comments.py`: line and block comments, strings/char literals, line-count
-preservation, the header and `!` marker, the refusals, a changed object part, and the real
-before/after compile (skipped when the retail ELF or the recorded compiler is absent).
+preservation, the header and `!` marker being blanked, the no-comment gate, the refusals, a
+changed object part, and the real before/after compile (skipped when the retail ELF or the
+recorded compiler is absent).
+
+### Tidying a promoted source (part of promotion, after the strip)
+
+`python3 tools/units/strip_comments.py --collapse <src>` is the layout step.  It differs from
+the strip in exactly one way: it **deletes lines**, on purpose.
+
+- **Runs of blank lines collapse to one**, anywhere -- between functions, between blocks and
+  between statements inside a block -- and leading blank lines go; the file ends in one
+  newline.
+- **Trailing whitespace is removed from every line.**  A line that held only a blanked comment
+  is therefore whitespace-only, becomes blank, and joins the run beside it.
+- **No blank line directly inside a brace.**  A blank immediately after an opening `{` or
+  immediately before a closing `}` is dropped, for functions and nested blocks alike; the same
+  goes for `if (...) {`, `} else {` and a multi-line struct initialiser.  One blank line
+  *between* statements inside a block stays.  Those inner blanks were line-number
+  placeholders under the `#line` layout; with `.line` adopted they carry nothing, and leaving
+  them makes tidy code look accidental.  The check path fails while one is present.
+- **Comments are gone before the layout is considered.**  The tidy runs the strip first, so
+  the leading header block and every `/*!`/`//!` note become blank lines and are dropped by
+  the rules above -- there is no separate header rule and no surviving marker.  A promoted
+  file starts with its first declaration or `#include`; its measurements live in the
+  `tu_builds` row comment and the unit report, not in the source.
+
+**What the line shift costs, and the state it demands.**  Collapsing a blank line above a
+statement moves that statement, so the emitted `.line` is no longer retail's and the recorded
+pair -- `False` (nothing) or `True` (DIE-order normalisation) -- would refuse the result.  Only
+`"adopt"` (`--adopt-retail-meta`) substitutes retail's `.line` chunk, so a unit tidied this way
+**must** record it: the tool refuses, writing nothing, when the tidy moves a line and the row
+does not say `"adopt"`, naming the row and the fix.  That is why the tidy is applied after the
+strip and alongside the row's state change; changing the compiler or the flags is never part
+of it.
+
+**The grouping check.**  The old `#line` layout encoded *which statements share a line*, and
+adoption cannot recover a grouping the source has lost -- it only replaces the table.  So
+before accepting, the tool compiles the committed and the tidied spelling of the unit through
+the promotion path and requires each function's **emitted** `.line` record count to be equal.
+The count comes from the per-function block sizes `_fill` reports, which are measured before
+adoption replaces the table with retail's.  A record is 10 bytes, so the count is the block size divided by
+ten; a difference means a rewrite joined or separated two statements and is refused by name and
+by count (`f 7 -> 8`).  The same measure is how a `#line` layout was shown to be droppable: the
+directive and reflowed spellings of `p_anime.c` both emit 244 records in 5 tables
+(104 + 2 + 123 + 12 + 3), `dmm_chara.c` 33 in one, and the tidied sources keep those exact
+counts.
+
+**Acceptance.**  Stricter than the strip's, because `.line` is no longer ours: `.text` must be
+byte-identical, and the resulting `.debug` and `.line` must be **retail's bytes** -- the
+adoption step proves the chunk byte for byte and substitutes the line table, and the tool
+re-checks both against `retail_bytes` before writing.  A unit with no recorded pair, a
+non-unit without `--no-verify`, or a `#line`-carrying file is refused exactly as for the strip;
+`--check` writes nothing and fails if the file still carries a comment or a blank line directly
+inside a brace.
+
+```bash
+python3 tools/units/strip_comments.py --collapse src/sys/sys_scf.c          # tidy + verify + write
+python3 tools/units/strip_comments.py --collapse --check src/sys/sys_scf.c  # fail unless clean
+```
+
+**Measured 2026-10-20, all five promoted units** under `3.0b38-030307 -c -lang c -O3 -opt full
+-g`.  The comment strip (above) took `sys_scf.c` 33 -> 20 with its three notes, and the brace
+rule took it 20 -> 18; `net_grf.c` 58 -> 50 with its two notes.  `p_anime.c` (247 lines),
+`lang.c` (20) and `dmm_chara.c` (69) were already comment-free and tidy, so the tool reported
+nothing to do.  Every unit's `.text` is byte-identical (0x40 / 0xC0 / 0x950 / 0x50 / 0x1D0),
+`.debug` and `.line` are retail's after adoption (0x28C / 0x74, 0x638 / 0x9C, 0x4273 / 0x9B0,
+0x43E / 0x4E, 0x64DA / 0x152), and the record counts are unchanged -- the rows all record
+`"adopt"`, with the row comment saying the layout was tidied and `.line` adopted.  G1 is
+`ef31c90f…c02cd`.  Tests: blank-run collapse, trailing whitespace, header removal, the
+brace-edge blank, idempotence, the line-shift-needs-adoption refusal, the grouping refusal, a
+moved `.text`, and the real before/after compile with per-function counts.
 
 ## House rules that keep the gates honest
 

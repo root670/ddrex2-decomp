@@ -59,7 +59,7 @@ def test_a_block_comment_keeps_its_newlines():
 
     stripped = sc.strip(source)
 
-    expected = ("/* head */\n"
+    expected = (" " * len("/* head */") + "\n"
                 "int f(void) {\n"
                 "             \n"
                 "                        \n"
@@ -67,7 +67,6 @@ def test_a_block_comment_keeps_its_newlines():
                 "}\n")
     assert stripped == expected
     assert stripped.count("\n") == source.count("\n")
-    assert stripped.splitlines()[1:] == expected.splitlines()[1:]
 
 
 def test_a_comment_only_line_becomes_a_blank_line_not_a_deleted_line():
@@ -103,21 +102,24 @@ def test_a_divisor_is_not_a_comment():
 
 
 # ---------------------------------------------------------------------------
-# what is kept
+# every comment goes: no header, no marker, no exception
 # ---------------------------------------------------------------------------
 
 
-def test_the_leading_block_header_is_kept_whole():
+def test_the_leading_block_header_is_blanked_like_any_comment():
     source = "/* src/x.c -- what this is.\n *\n * More provenance. */\nint a; /* gone */\n"
 
     stripped = sc.strip(source)
 
-    assert stripped.startswith("/* src/x.c -- what this is.\n *\n * More provenance. */\n")
+    assert sc.scan(stripped) == ()
+    assert "src/x.c" not in stripped
+    assert "More provenance" not in stripped
     assert "/* gone */" not in stripped
     assert stripped.count("\n") == source.count("\n")
+    assert stripped.splitlines()[-1].rstrip() == "int a;"
 
 
-def test_a_leading_line_header_run_is_kept():
+def test_a_leading_line_header_run_is_blanked():
     source = ("// header one\n"
               "// header two\n"
               "\n"
@@ -125,37 +127,55 @@ def test_a_leading_line_header_run_is_kept():
 
     stripped = sc.strip(source)
 
-    assert stripped == "// header one\n// header two\n\nint a;        \n"
+    assert sc.scan(stripped) == ()
+    assert stripped == (" " * len("// header one") + "\n"
+                        + " " * len("// header two") + "\n"
+                        + "\n"
+                        + "int a; " + " " * len("// gone") + "\n")
 
 
-def test_a_marked_block_comment_is_kept_and_an_unmarked_one_is_not():
+def test_a_marked_block_comment_is_blanked_too():
     source = "/*! keep this: magic constant 1 */\nint a = 1; /* drop this */\n"
 
     stripped = sc.strip(source)
 
-    assert "/*! keep this: magic constant 1 */" in stripped
+    assert sc.scan(stripped) == ()
+    assert "keep this" not in stripped
     assert "drop this" not in stripped
 
 
-def test_a_marked_line_comment_is_kept():
+def test_a_marked_line_comment_is_blanked_too():
     source = "int a = 1; //! delay slot packing\nint b; // note\n"
 
     stripped = sc.strip(source)
 
-    assert "//! delay slot packing" in stripped
+    assert sc.scan(stripped) == ()
+    assert "delay slot packing" not in stripped
     assert "// note" not in stripped
 
 
-def test_the_header_is_kept_but_a_marker_is_needed_below_it():
+def test_the_header_and_a_marker_are_blanked_alike():
     source = ("/* header */\n"
               "/* second note */\n"
               "/*! third note */\n")
 
     stripped = sc.strip(source)
 
-    assert "/* header */" in stripped
-    assert "second note" not in stripped
-    assert "/*! third note */" in stripped
+    assert sc.scan(stripped) == ()
+    assert stripped.strip() == ""
+
+
+def test_require_no_comments_accepts_a_clean_source():
+    sc.require_no_comments("int a;\n")
+
+
+def test_require_no_comments_refuses_a_marked_note():
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.require_no_comments("int a;\n/*! notes a magic constant */\n")
+
+    assert "still carries 1 comment(s)" in str(excinfo.value)
+    assert "carries none" in str(excinfo.value)
+    assert "line 2" in str(excinfo.value)
 
 
 # ---------------------------------------------------------------------------
@@ -241,14 +261,28 @@ def test_the_cli_layout_only_edit_with_no_verify(tmp_path):
     assert "nothing was compiled" in result.stdout
 
 
-def test_the_cli_check_writes_nothing(tmp_path):
+def test_the_cli_check_fails_a_file_that_still_carries_a_comment(tmp_path):
     source = tmp_path / "plain.c"
-    body = "int a; /* note */\n"
+    body = "int a; /*! a load-bearing note */\n"
+    source.write_text(body)
+
+    result = run("--no-verify", "--check", str(source))
+
+    assert result.returncode == 1
+    assert "still carries 1 comment(s)" in result.stderr
+    assert "carries none" in result.stderr
+    assert source.read_text() == body, "--check writes nothing"
+
+
+def test_the_cli_check_passes_a_clean_file(tmp_path):
+    source = tmp_path / "plain.c"
+    body = "int a;\n"
     source.write_text(body)
 
     result = run("--no-verify", "--check", str(source))
 
     assert result.returncode == 0, result.stderr
+    assert "no comments remain" in result.stdout
     assert source.read_text() == body
 
 
@@ -285,8 +319,12 @@ def test_a_stripped_unit_compiles_byte_identically(tmp_path):
     from toolchain import compile as cc
 
     tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
-    original = tu.source.read_bytes()
+    committed = tu.source.read_bytes()
+    # The promoted file is comment-free; put a comment back so this still exercises the
+    # blanking (inline, so no line moves) rather than passing on an identity transform.
+    original = committed.replace(b"\n", b" /* probe note */\n", 1)
     stripped = sc.strip(original.decode("latin-1")).encode("latin-1")
+    assert stripped != original and sc.scan(stripped.decode("latin-1")) == ()
     target = targets.get(targets.DEFAULT)
 
     before = cc._place_source(tu, manifests, compiler_dir, wibo, flags, original,
@@ -299,3 +337,300 @@ def test_a_stripped_unit_compiles_byte_identically(tmp_path):
     checked = sc.verify(tu, original, stripped, target)
     assert (checked[0].text, checked[0].debug, checked[0].line) == (
         checked[1].text, checked[1].debug, checked[1].line)
+
+
+# ---------------------------------------------------------------------------
+# the tidy (--collapse): blank runs, trailing whitespace, the header, adoption
+# ---------------------------------------------------------------------------
+
+
+def test_collapse_reduces_a_blank_run_to_one_line():
+    source = "int a;\n\n\n\nint b;\n\n\nint c;\n"
+
+    assert sc.collapse(source) == "int a;\n\nint b;\n\nint c;\n"
+
+
+def test_collapse_drops_leading_and_trailing_blank_lines():
+    source = "\n\nint a;\n\n\nint b;\n\n\n\n"
+
+    assert sc.collapse(source) == "int a;\n\nint b;\n"
+
+
+def test_collapse_trims_trailing_whitespace_without_moving_a_line():
+    source = "int a;   \nint b;\t \n\n   \nint c;\n"
+
+    tidied = sc.collapse(source)
+
+    assert tidied == "int a;\nint b;\n\nint c;\n"
+    assert sc._moves_lines(source, tidied) is True, "the whitespace-only run collapsed"
+
+
+def test_collapse_drops_the_header_block_and_the_notes_entirely():
+    source = ("/* src/x.c -- what this file is, over\n"
+              " * several lines and two paragraphs.\n"
+              " *\n"
+              " * More measurements live here. */\n"
+              "\n"
+              "int a; /*! a load-bearing note */\n"
+              "//! another load-bearing note\n"
+              "int b;\n")
+
+    tidied = sc.collapse(source)
+
+    assert tidied.startswith("int a;"), "a promoted file starts with its first declaration"
+    assert sc.scan(tidied) == ()
+    assert "src/x.c" not in tidied
+    assert "reconstructed from DWARF 1" not in tidied
+    assert "measurements live here" not in tidied
+    assert "load-bearing" not in tidied
+    assert tidied == "int a;\n\nint b;\n"
+
+
+def test_collapse_is_idempotent():
+    source = "/* head\n * two lines */\n\n\nint a;\n\nint b;   \n"
+
+    once = sc.collapse(source)
+
+    assert sc.collapse(once) == once
+
+
+def test_collapse_drops_a_blank_line_inside_a_open_and_close_brace():
+    source = ("void f(void) {\n"
+              "\n"
+              "    int a;\n"
+              "\n"
+              "    int b;\n"
+              "\n"
+              "}\n"
+              "\n"
+              "void g(void) {\n"
+              "\n"
+              "    if (a) {\n"
+              "\n"
+              "        b();\n"
+              "\n"
+              "    }\n"
+              "}\n")
+
+    tidied = sc.collapse(source)
+
+    assert tidied == ("void f(void) {\n"
+                      "    int a;\n"
+                      "\n"
+                      "    int b;\n"
+                      "}\n"
+                      "\n"
+                      "void g(void) {\n"
+                      "    if (a) {\n"
+                      "        b();\n"
+                      "    }\n"
+                      "}\n")
+    assert sc._brace_edge_blanks(tidied.splitlines()) == ()
+
+
+def test_collapse_drops_a_blank_line_at_a_brace_with_else():
+    source = ("void f(void) {\n"
+              "    if (a) {\n"
+              "        b();\n"
+              "\n"
+              "    } else {\n"
+              "\n"
+              "        c();\n"
+              "    }\n"
+              "}\n")
+
+    tidied = sc.collapse(source)
+
+    assert tidied == ("void f(void) {\n"
+                      "    if (a) {\n"
+                      "        b();\n"
+                      "    } else {\n"
+                      "        c();\n"
+                      "    }\n"
+                      "}\n")
+
+
+def test_require_no_brace_padding_refuses_a_blank_after_an_opening_brace():
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.require_no_brace_padding("void f(void) {\n\n    int a;\n}\n")
+
+    assert "blank line directly inside a brace" in str(excinfo.value)
+    assert "line 2" in str(excinfo.value)
+
+
+def test_require_no_brace_padding_refuses_a_blank_before_a_closing_brace():
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.require_no_brace_padding("void f(void) {\n    int a;\n\n}\n")
+
+    assert "line 3" in str(excinfo.value)
+
+
+def test_require_no_brace_padding_accepts_blanks_between_statements():
+    sc.require_no_brace_padding("void f(void) {\n    int a;\n\n    int b;\n}\n")
+
+
+def test_a_comment_sharing_its_line_with_code_leaves_the_code():
+    tidied = sc.collapse("/* head */ int a;\n")
+
+    assert tidied == " " * len("/* head */") + " int a;\n"
+    assert sc.scan(tidied) == ()
+
+
+def test_a_tidy_that_moves_a_line_requires_an_adoption_state():
+    source = "/* head */\n\n\nint a;\n"
+    tidied = sc.collapse(source)
+
+    assert sc._moves_lines(source, tidied) is True
+    for state in (False, True):
+        with pytest.raises(sc.Refused) as excinfo:
+            sc._require_adoption("src/x.c", state, True)
+        assert "records" in str(excinfo.value)
+        assert "adopt" in str(excinfo.value)
+        assert "refusing to write it" in str(excinfo.value)
+    sc._require_adoption("src/x.c", "adopt", True)
+    sc._require_adoption("src/x.c", False, False)
+
+
+def test_verify_refuses_a_moved_tidy_without_an_adoption_row():
+    """The rule is enforced by the compile gate, not only by convention."""
+    from types import SimpleNamespace
+
+    target = SimpleNamespace(build_pair=lambda _file: ("3.0b38-030307", "-c -lang c", False))
+    tu = SimpleNamespace(file="src/x.c")
+
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.verify(tu, b"/* head */\n\n\nint a;\n", b"\nint a;\n", target,
+                  tidy=True)
+
+    assert "src/x.c records False" in str(excinfo.value)
+    assert "adopt" in str(excinfo.value)
+    assert "refusing to write it" in str(excinfo.value)
+
+
+def test_a_tidy_that_moves_nothing_needs_no_adoption_state():
+    source = "int a;   \nint b;\t\n"
+
+    tidied = sc.collapse(source)
+
+    assert sc._moves_lines(source, tidied) is False
+    sc._require_adoption("src/x.c", False, sc._moves_lines(source, tidied))
+
+
+def test_a_tidied_source_whose_text_moves_is_refused():
+    from types import SimpleNamespace
+
+    before = SimpleNamespace(text=b"\x01\x02", debug=b"d", line=b"l")
+    after = SimpleNamespace(text=b"\x01\x03", debug=b"d", line=b"l")
+
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.compare(before, after, "tidied")
+
+    assert "same text" in str(excinfo.value)
+    assert "refusing to write it" in str(excinfo.value)
+
+
+def test_a_tidy_that_changes_the_record_grouping_is_refused():
+    from types import SimpleNamespace
+
+    def placed(*counts):
+        return SimpleNamespace(sizes=[(name, ".line", count * 10, pinned * 10)
+                                      for name, count, pinned in counts])
+
+    before = placed(("f", 7, 7), ("g", 3, 3))
+    after = placed(("f", 8, 7), ("g", 2, 3))
+
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.compare_grouping(before, after)
+
+    assert "f 7 -> 8" in str(excinfo.value)
+    assert "grouping did not survive" in str(excinfo.value)
+    sc.compare_grouping(placed(("f", 7, 7)), placed(("f", 7, 7)))
+
+
+def test_the_cli_collapse_layout_edit_with_no_verify(tmp_path):
+    source = tmp_path / "plain.c"
+    source.write_text("/* head\n * two lines */\n\n\nint a;   \n")
+
+    result = run("--collapse", "--no-verify", str(source))
+
+    assert result.returncode == 0, result.stderr
+    assert source.read_bytes() == sc.collapse(
+        "/* head\n * two lines */\n\n\nint a;   \n").encode("latin-1")
+    assert "nothing was compiled" in result.stdout
+
+
+def test_the_cli_check_fails_a_blank_line_inside_a_brace(tmp_path):
+    source = tmp_path / "plain.c"
+    body = "void f(void) {\n\n    int a;\n}\n"
+    source.write_text(body)
+
+    result = run("--no-verify", "--check", str(source))
+
+    assert result.returncode == 1
+    assert "blank line directly inside a brace" in result.stderr
+    assert source.read_text() == body, "--check writes nothing"
+
+
+def test_the_cli_collapse_check_fails_a_file_that_still_carries_a_header(tmp_path):
+    source = tmp_path / "plain.c"
+    body = "/* head\n * two lines */\n\n\nint a;\n"
+    source.write_text(body)
+
+    result = run("--collapse", "--no-verify", "--check", str(source))
+
+    assert result.returncode == 1
+    assert "still carries 1 comment(s)" in result.stderr
+    assert source.read_text() == body, "--check writes nothing"
+
+
+def test_the_cli_collapse_check_passes_a_clean_file(tmp_path):
+    source = tmp_path / "plain.c"
+    body = "int a;\n\nint b;\n"
+    source.write_text(body)
+
+    result = run("--collapse", "--no-verify", "--check", str(source))
+
+    assert result.returncode == 0, result.stderr
+    assert "no comments remain" in result.stdout
+    assert source.read_text() == body
+
+
+def test_the_cli_collapse_refuses_a_non_unit_without_layout_edit(tmp_path):
+    source = tmp_path / "plain.c"
+    body = "/* head */\n\n\nint a;\n"
+    source.write_text(body)
+
+    result = run("--collapse", str(source))
+
+    assert result.returncode == 2
+    assert "nothing can be compiled" in result.stderr
+    assert source.read_text() == body
+
+
+def test_a_tidied_unit_compiles_with_the_same_record_grouping(tmp_path):
+    """The tidy's compile gate: .text identical, retail's .debug/.line, equal counts."""
+    from config import targets
+    from toolchain import compile as cc
+
+    tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
+    committed = tu.source.read_bytes()
+    # Re-dirty the comment-free file (a header and a note line) so the tidy really strips,
+    # deletes those lines and shifts statements, instead of collapsing an identity.
+    original = b"/* probe header */\n\n" + committed.replace(
+        b"\n", b"\n    /*! probe note */\n", 1)
+    tidied = sc.collapse(original.decode("latin-1")).encode("latin-1")
+    assert sc.scan(tidied.decode("latin-1")) == ()
+    assert sc._moves_lines(original.decode("latin-1"), tidied.decode("latin-1"))
+    target = targets.get(targets.DEFAULT)
+
+    before = cc._place_source(tu, manifests, compiler_dir, wibo, flags, original,
+                              tmp_path / "before.mw.o", normalise, adopt, allow_line=True)
+    after = cc._place_source(tu, manifests, compiler_dir, wibo, flags, tidied,
+                             tmp_path / "after.mw.o", normalise, adopt, allow_line=True)
+
+    assert before.text == after.text
+    assert sc.record_counts(before) == sc.record_counts(after)
+    checked = sc.verify(tu, original, tidied, target, tidy=True)
+    retail = cc.retail_bytes(tu, text_size=len(checked[1].text))
+    assert (checked[1].text, checked[1].debug, checked[1].line) == (
+        retail["text"], retail["debug"], retail["line"])

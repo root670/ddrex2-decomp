@@ -11,16 +11,11 @@ token stream is unchanged the object *should* be unchanged, and the tool does no
 a source that names a configured promotion unit is compiled before and after through the
 promotion path and is written only when ``.text``, ``.debug`` and ``.line`` are byte-identical.
 
-Two classes of comment survive, by policy:
-
-* **the leading header block** -- the first comment at the top of the file (only whitespace
-  before it).  For a ``//`` header, consecutive ``//`` lines are part of the block; a blank
-  line ends it.  This is the file's provenance note; it is kept whole, marker or not.
-* **a marked comment** -- one whose opener is immediately followed by ``!``, i.e. ``/*!``
-  or ``//!``.  The marker is the author's decision that the note is load-bearing (a magic
-  constant, a statement packing that must not be "fixed", an epilogue that owns no
-  statement).  An unmarked comment is blanked; marking it is how a note is converted into
-  a kept one.
+There is no exception: every comment is blanked, including the leading header block and a
+note marked with ``/*!`` or ``//!``.  A promoted source carries no comments at all.  The tool
+enforces that rather than trusting the strip: :func:`require_no_comments` fails when a source
+still holds one, ``--check`` fails while the file on disk is not clean, and the write path
+refuses to write a result that carries one.
 
 The lexer respects ``"..."`` strings, ``'...'`` character literals and backslash escapes, so
 a ``//`` or ``/*`` inside a string is code and is left alone.  It refuses rather than guesses
@@ -32,14 +27,29 @@ when the file's comment structure is not well formed:
   so a "comment" can swallow the line after it and blanking it would change the program
   text the compiler sees.
 
+``--collapse`` is the tidy step that follows the strip.  It strips first, so the comments
+are already gone, and then deliberately *moves* lines: runs of blank lines (including the
+blank lines a stripped header and stripped notes became) become one, trailing whitespace
+goes, and a blank line directly after an opening ``{`` or before a closing ``}`` is dropped
+-- those were line-number placeholders and carry nothing once ``.line`` is adopted.  A
+promoted file starts with its first declaration or ``#include``, and its measurements live
+in the unit's ``tu_builds`` comment and the unit report.
+Statements therefore sit on new line numbers, so the emitted ``.line`` is no longer
+retail's and only retail-metadata adoption can accept the result: the tool refuses a unit
+whose ``tu_builds`` row does not record ``"adopt"`` (``--adopt-retail-meta``) when the tidy
+moves a line.  Acceptance is then stricter than the strip's: ``.text`` must be
+byte-identical, and ``.debug``/``.line`` must be *retail's* -- the adoption step proves the
+chunk byte for byte and substitutes retail's ``.line``.
+
 Usage::
 
     python3 tools/units/strip_comments.py src/sys/sys_scf.c
     python3 tools/units/strip_comments.py --check src/sys/sys_scf.c
+    python3 tools/units/strip_comments.py --collapse src/sys/sys_scf.c
 
 For a file that is not a configured promotion unit there is nothing to compile; such a file
 is handled only with ``--no-verify`` (a layout-only edit) and the tool says so.  Exit codes:
-0 stripped (or nothing to do), 1 refused, 2 unusable invocation or input.
+0 stripped/tidied (or nothing to do), 1 refused, 2 unusable invocation or input.
 """
 
 from __future__ import annotations
@@ -56,9 +66,6 @@ for _extra in (str(REPO_ROOT / "tools"), str(REPO_ROOT / "tools" / "oracle"), st
     if _extra not in sys.path:
         sys.path.insert(0, _extra)
 
-#: The characters that make up a kept header's ``//`` continuation.  A blank line, code or
-#: a block comment between two ``//`` lines ends the header block.
-_LINE_GAP = ("\n", "\r\n")
 
 
 class Comment(NamedTuple):
@@ -67,7 +74,6 @@ class Comment(NamedTuple):
     start: int          # offset of the opener
     end: int            # offset just past the closer (past the line feed for ``//``)
     kind: str           # "line" or "block"
-    keep: bool          # the header block or a ``!``-marked note
 
 
 class Refused(Exception):
@@ -104,7 +110,7 @@ def _check_splices(text: str) -> None:
 
 
 def scan(text: str) -> tuple:
-    """Every comment in ``text``, in order, with the header block and markers marked.
+    """Every comment in ``text``, in order.
 
     Raises :class:`Refused` for malformed comments or literals.
     """
@@ -154,44 +160,66 @@ def scan(text: str) -> tuple:
             raise Refused(_line_of(text, index), "*/ outside a comment")
         index += 1
 
-    header_end = _header_end(text, found)
-    comments = []
-    for item in found:
-        opener = text[item["start"]:item["start"] + 3]
-        marker = opener.startswith("//!") or opener.startswith("/*!")
-        in_header = header_end is not None and item["start"] < header_end
-        comments.append(Comment(item["start"], item["end"], item["kind"],
-                                keep=marker or in_header))
-    return tuple(comments)
+    return tuple(Comment(item["start"], item["end"], item["kind"]) for item in found)
 
 
-def _header_end(text: str, found: list) -> int | None:
-    """The offset just past the leading header block, or None when the file has none."""
+def require_no_comments(text: str, what: str = "source") -> None:
+    """Raise :class:`Refused` unless ``text`` contains no comment at all.
+
+    This is the enforcement behind "a promoted source carries no comments": it is run on
+    the bytes the tool is about to write and under ``--check`` on the file as committed, so
+    a kept header, a ``/*!`` note or a strip that silently missed one is a failure, not a
+    style question.
+    """
+    comments = scan(text)
+    if not comments:
+        return
+    first = comments[0]
+    raise Refused(
+        _line_of(text, first.start),
+        f"the {what} still carries {len(comments)} comment(s); a promoted source carries "
+        f"none -- run the strip without --check to blank them")
+
+
+def _brace_edge_blanks(lines) -> tuple:
+    """The 1-based numbers of blank lines sitting directly inside a brace.
+
+    A blank line immediately after a line ending in ``{`` or immediately before a line
+    starting with ``}`` is a line-number placeholder under the old ``#line`` layout.  With
+    ``.line`` adopted it carries nothing, so the tidy drops it and the gate refuses it.
+    """
+    found = []
+    for index, line in enumerate(lines):
+        if line.strip():
+            continue
+        previous = lines[index - 1] if index else None
+        following = lines[index + 1] if index + 1 < len(lines) else None
+        after_open = previous is not None and previous.rstrip().endswith("{")
+        before_close = following is not None and following.lstrip().startswith("}")
+        if after_open or before_close:
+            found.append(index + 1)
+    return tuple(found)
+
+
+def require_no_brace_padding(text: str, what: str = "source") -> None:
+    """Raise :class:`Refused` if a blank line sits directly inside a brace.
+
+    This keeps a promoted file from looking accidental: a function or nested block opens
+    and immediately reads its first statement, and its last statement is immediately
+    followed by the closing brace.
+    """
+    found = _brace_edge_blanks(text.splitlines())
     if not found:
-        return None
-    index = 0
-    while index < len(text) and text[index] in " \t\r\n":
-        index += 1
-    first = found[0]
-    if first["start"] != index:
-        return None
-    if first["kind"] == "block":
-        return first["end"]
-    # A ``//`` header is the run of consecutive ``//`` lines that starts the file.
-    end = first["end"]
-    previous = first
-    for item in found[1:]:
-        if item["kind"] != "line":
-            break
-        if text[previous["end"]:item["start"]] not in _LINE_GAP:
-            break
-        end = item["end"]
-        previous = item
-    return end
+        return
+    raise Refused(
+        found[0],
+        f"the {what} has a blank line directly inside a brace (line {found[0]}); no blank "
+        f"line belongs immediately after an opening brace or before a closing one -- run "
+        f"--collapse to drop it")
 
 
 def strip(text: str) -> str:
-    """``text`` with every comment but the header and ``!``-marked notes blanked.
+    """``text`` with every comment blanked, header and ``/*!`` notes included.
 
     Removed characters become spaces; newlines (and carriage returns) are kept, so the
     file has the same number of lines and every statement keeps its line number.  The
@@ -201,8 +229,6 @@ def strip(text: str) -> str:
     comments = scan(text)
     output = list(text)
     for comment in comments:
-        if comment.keep:
-            continue
         for offset in range(comment.start, comment.end):
             if output[offset] not in "\r\n":
                 output[offset] = " "
@@ -212,7 +238,110 @@ def strip(text: str) -> str:
     return stripped
 
 
-def compare(before, after) -> None:
+def collapse(text: str) -> str:
+    """``text`` stripped and tidied: no comment, one blank line at most, no trailing space.
+
+    Unlike :func:`strip`, this step **deletes lines** and therefore moves every statement
+    below a deleted one.  That is the point -- the promotion gate's ``.line`` half is then
+    supplied by retail-metadata adoption -- and the caller is responsible for refusing a
+    unit whose recorded pair does not record adoption (:func:`_require_adoption`).
+
+    The comments go first (every one, header and notes included), so the leading header
+    block no longer needs its own rule: it becomes blank lines and the blank-run collapse
+    drops them.  Runs of blank lines collapse to one, with leading blank lines dropped and
+    the file ending in exactly one newline.  Trailing spaces and tabs are removed from
+    every line (a line that was only spaces therefore becomes blank and joins the run).
+    Finally a blank line directly after an opening ``{`` or before a closing ``}`` is
+    dropped (:func:`_brace_edge_blanks`): those were ``#line`` placeholders and carry
+    nothing once ``.line`` is adopted.
+    """
+    if not text:
+        return text
+    _check_splices(text)
+    text = strip(text)
+    newline = "\r\n" if "\r\n" in text else "\n"
+
+    output: list[str] = []
+    for line in text.split(newline):
+        line = line.rstrip(" \t\r\f\v")
+        if not line:
+            if not output or output[-1] == "":
+                continue
+            output.append("")
+        else:
+            output.append(line)
+    while output and output[-1] == "":
+        output.pop()
+    edge = set(_brace_edge_blanks(output))
+    if edge:
+        output = [line for number, line in enumerate(output, 1) if number not in edge]
+    return newline.join(output) + newline
+
+
+def _nonblank_lines(text: str) -> tuple:
+    """The numbers of ``text``'s non-blank lines, in order."""
+    return tuple(number for number, line in enumerate(text.splitlines(), 1)
+                 if line.strip())
+
+
+def _moves_lines(before: str, after: str) -> bool:
+    """Whether the tidy puts a non-blank line on a different number.
+
+    :func:`collapse` strips comments and then only ever deletes lines, so a blanked
+    comment-only line counts as a deletion like any other.  Comparing the *numbers* of the
+    non-blank lines before and after is therefore enough: they differ exactly when a
+    deletion happened above the last of them.
+    """
+    return _nonblank_lines(before) != _nonblank_lines(after)
+
+
+def _require_adoption(unit: str, state, moved: bool) -> None:
+    """Refuse a tidy that moves lines when the unit's recorded pair is not adoption.
+
+    A unit records ``False`` (nothing) or ``True`` (DIE-order normalisation); neither
+    accepts a ``.line`` that is not retail's.  Only ``"adopt"`` substitutes retail's chunk,
+    so a unit tidied this way must record it -- and the refusal is what keeps the tool from
+    writing a source the recorded pair cannot build.
+    """
+    if not moved or state == "adopt":
+        return
+    raise Refused(
+        None,
+        f"{unit} records {state!r} in tu_builds; the tidy moves statement lines, so the "
+        f"emitted .line is no longer retail's and the recorded pair would not verify the "
+        f"result.  Record \"adopt\" (compile.py --adopt-retail-meta) on that row and run "
+        f"again; refusing to write it")
+
+
+def record_counts(placed) -> tuple:
+    """``((function, emitted .line record count), ...)`` from a placement.
+
+    A DWARF 1 statement record is 10 bytes (``line, column, address delta`` plus a
+    terminator), so each function's emitted ``.line`` block size divides by ten.  This is
+    the measure the tidy must preserve: the layout encoded *which statements share a
+    line*, and a rewrite that separates or joins two statements changes the count.
+    """
+    return tuple((label, emitted // 10)
+                 for label, chunk, emitted, _pinned in placed.sizes if chunk == ".line")
+
+
+def compare_grouping(before, after, what: str = "tidied") -> None:
+    """Require the edit to leave every function's ``.line`` record count equal."""
+    counts = record_counts(before)
+    current = dict(record_counts(after))
+    changed = [(label, count, current.get(label)) for label, count in counts
+               if current.get(label) != count]
+    if not changed:
+        return
+    detail = "; ".join(f"{label} {was} -> {now}"
+                       for label, was, now in changed)
+    raise Refused(
+        None,
+        f"the {what} source changes which statements share a line: {detail} record(s) "
+        f"before and after; the directive grouping did not survive, refusing to write it")
+
+
+def compare(before, after, what: str = "stripped") -> None:
     """Require the three promotion parts to be byte-identical, or raise :class:`Refused`."""
     from toolchain import compile as cc
 
@@ -223,27 +352,41 @@ def compare(before, after) -> None:
         at = cc._first_difference(left, right)
         raise Refused(
             None,
-            f"the stripped source does not compile to the same {part}: "
+            f"the {what} source does not compile to the same {part}: "
             f"0x{len(left):X} bytes against 0x{len(right):X}, first difference at "
             f"0x{at:X}; refusing to write it")
 
 
-def verify(tu, original: bytes, rewritten: bytes, target):
+def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False):
     """Compile both spellings under the unit's recorded pair and compare the three parts.
 
     ``tu`` is the :class:`toolchain.compile.Tu`, ``target`` the configured target whose
     ``tu_builds`` row supplies the pair.  A different length or byte raises
     :class:`Refused` and the caller writes nothing.  Returns the before/after placements
     for their sizes.
+
+    ``tidy`` is :func:`collapse`'s acceptance, which is stricter because the tidy moves
+    lines: the unit must record ``"adopt"`` when a line moved (the emitted ``.line`` is no
+    longer retail's), ``.text`` must be byte-identical, and the resulting ``.debug`` and
+    ``.line`` must both be **retail's** bytes -- which the adoption step proves and
+    substitutes rather than the tool assuming it.
+
+    ``rewritten`` is also held to :func:`require_no_comments`: a rewrite that still carries
+    a comment (a kept header, a ``/*!`` note) is refused before anything is compiled.
     """
     from toolchain import compile as cc
     from toolchain import fetch
 
+    require_no_comments(rewritten.decode("latin-1"), "rewritten source")
     pair = target.build_pair(tu.file)
     if pair is None:
         raise Refused(None, f"{tu.file} has no recorded compiler pair in tu_builds; measure "
                             f"it with tools/toolchain/select_build.py before stripping it")
     compiler, flags, state = pair
+    if tidy:
+        _require_adoption(tu.file, state,
+                          _moves_lines(original.decode("latin-1"),
+                                       rewritten.decode("latin-1")))
     manifests = cc.Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
@@ -251,11 +394,37 @@ def verify(tu, original: bytes, rewritten: bytes, target):
     normalise = state is True
     adopt = state == "adopt"
     with tempfile.TemporaryDirectory(prefix="strip-comments-") as scratch:
-        before = cc._place_source(tu, manifests, compiler_dir, wibo, command, original,
-                                  pathlib.Path(scratch) / "before.mw.o", normalise, adopt)
-        after = cc._place_source(tu, manifests, compiler_dir, wibo, command, rewritten,
-                                 pathlib.Path(scratch) / "after.mw.o", normalise, adopt)
-    compare(before, after)
+        try:
+            before = cc._place_source(tu, manifests, compiler_dir, wibo, command, original,
+                                      pathlib.Path(scratch) / "before.mw.o", normalise, adopt)
+        except cc.Unusable as exc:
+            raise Refused(None, f"the source as committed does not verify under its "
+                                f"recorded pair ({exc}); nothing was written")
+        try:
+            after = cc._place_source(tu, manifests, compiler_dir, wibo, command, rewritten,
+                                     pathlib.Path(scratch) / "after.mw.o", normalise, adopt)
+        except cc.Unusable as exc:
+            raise Refused(None, f"the edited source does not verify under its recorded "
+                                f"pair ({exc}); refusing to write it")
+    compare(before, after, "tidied" if tidy else "stripped")
+    if tidy:
+        # The layout encoded which statements share a line.  Blank-run collapse and header
+        # shrink must move line *numbers* only: every function's record count stays equal,
+        # which is what proves no two statements were joined or separated.
+        compare_grouping(before, after)
+        # The tidy's claim is stronger than "unchanged": the three parts it leaves are
+        # retail's.  Adoption returns retail's chunk and line; the non-adoption path has
+        # already required them, and this states the acceptance in the tool's own terms.
+        want = cc.retail_bytes(tu, target.elf, text_size=len(after.text))
+        for part in ("text", "debug", "line"):
+            got, expected = getattr(after, part), want[part]
+            if got == expected:
+                continue
+            at = cc._first_difference(got, expected)
+            raise Refused(
+                None,
+                f"the tidied source's {part} is not retail's: 0x{len(got):X} bytes against "
+                f"0x{len(expected):X}, first difference at 0x{at:X}; refusing to write it")
     return before, after
 
 
@@ -291,7 +460,14 @@ def _parser() -> argparse.ArgumentParser:
                         help="the target whose manifests and tu_builds name the unit "
                              "(default: this tree's configured target)")
     parser.add_argument("--check", action="store_true",
-                        help="run the strip and its compile check, write nothing")
+                        help="write nothing and fail if the file still carries a comment or "
+                             "a blank line directly inside a brace (the gate that keeps a "
+                             "promoted source clean)")
+    parser.add_argument("--collapse", action="store_true",
+                        help="strip every comment, then tidy the layout: drop the blank "
+                             "lines the header and notes leave, one blank line at most, no "
+                             "trailing whitespace; moves statement lines, so the unit must "
+                             "record \"adopt\" in tu_builds")
     parser.add_argument("--no-verify", action="store_true",
                         help="layout-only edit for a file that is not a promotion unit; "
                              "refused for a unit that has a recorded pair")
@@ -314,18 +490,41 @@ def main(argv=None) -> int:
     original = source.read_bytes()
     text = original.decode("latin-1")       # one byte <-> one character: exact round trip
 
+    if args.collapse:
+        try:
+            rewritten = collapse(text)
+        except Refused as exc:
+            print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
+            return 1
+    else:
+        try:
+            rewritten = strip(text)
+        except Refused as exc:
+            print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
+            return 1
+
+    # The contract this tool exists to enforce: a promoted source carries no comment.  In
+    # --check the file on disk is the thing being checked (nothing is written), so a
+    # comment still in it fails; otherwise the bytes about to be written are held to it.
     try:
-        stripped = strip(text)
+        if args.check:
+            require_no_comments(text, _display(source))
+            require_no_brace_padding(text, _display(source))
+        else:
+            require_no_comments(rewritten, "rewritten source")
     except Refused as exc:
         print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
         return 1
 
-    if stripped == text:
-        print(f"strip_comments.py: {_display(source)}: no comments to strip; nothing to do")
+    if rewritten == text:
+        if args.check:
+            print(f"strip_comments.py: {_display(source)}: --check: no comments remain; "
+                  f"nothing written")
+            return 0
+        print(f"strip_comments.py: {_display(source)}: nothing to "
+              f"{'tidy' if args.collapse else 'strip'}; nothing to do")
         return 0
 
-    removed = sum(1 for before, after in zip(text, stripped) if before != after
-                  and before not in "\r\n")
     tu = _unit(source, target)
     if tu is None:
         if not args.no_verify:
@@ -336,35 +535,49 @@ def main(argv=None) -> int:
         print(f"strip_comments.py: {_display(source)}: no recorded pair for this file; "
               f"layout check only, nothing was compiled")
     elif args.no_verify:
-        print(f"strip_comments.py: {_display(source)}: this is a promotion unit; its strip "
-              f"must be compiled before and after through the promotion path, so --no-verify "
-              f"is refused", file=sys.stderr)
+        print(f"strip_comments.py: {_display(source)}: this is a promotion unit; its "
+              f"{'tidy' if args.collapse else 'strip'} must be compiled before and after "
+              f"through the promotion path, so --no-verify is refused", file=sys.stderr)
         return 2
     else:
         try:
-            before, after = verify(tu, original, stripped.encode("latin-1"), target)
+            before, after = verify(tu, original, rewritten.encode("latin-1"), target,
+                                   tidy=args.collapse)
         except Refused as exc:
             print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
             return 1
         compiler, flags, _state = target.build_pair(tu.file)
-        comments = scan(text)
-        blanked = [comment for comment in comments if not comment.keep]
-        touched = len({_line_of(text, offset)
-                       for comment in blanked
-                       for offset in range(comment.start, comment.end)
-                       if text[offset] not in "\r\n"})
-        print(f"strip_comments.py: {_display(source)}: blanked {len(blanked)} comment(s) "
-              f"({removed} character(s)) on {touched} line(s); kept "
-              f"{len(comments) - len(blanked)}; line count {text.count(chr(10))} -> "
-              f"{stripped.count(chr(10))}; "
-              f".text 0x{len(before.text):X}, .debug 0x{len(before.debug):X}, "
-              f".line 0x{len(before.line):X} bytes under {compiler} {flags} -- byte-identical")
-        del after
+        if args.collapse:
+            comments = scan(text)
+            print(f"strip_comments.py: {_display(source)}: tidied: "
+                  f"{len(comments)} comment(s) blanked; line count "
+                  f"{text.count(chr(10))} -> {rewritten.count(chr(10))}; "
+                  f".text 0x{len(after.text):X} byte-identical, .debug "
+                  f"0x{len(after.debug):X} and .line 0x{len(after.line):X} retail's "
+                  f"under {compiler} {flags}")
+            del before
+        else:
+            removed = sum(1 for before, after in zip(text, rewritten) if before != after
+                          and before not in "\r\n")
+            comments = scan(text)
+            touched = len({_line_of(text, offset)
+                           for comment in comments
+                           for offset in range(comment.start, comment.end)
+                           if text[offset] not in "\r\n"})
+            print(f"strip_comments.py: {_display(source)}: blanked {len(comments)} comment(s) "
+                  f"({removed} character(s)) on {touched} line(s); line count "
+                  f"{text.count(chr(10))} -> "
+                  f"{rewritten.count(chr(10))}; "
+                  f".text 0x{len(before.text):X}, .debug 0x{len(before.debug):X}, "
+                  f".line 0x{len(before.line):X} bytes under {compiler} {flags} -- "
+                  f"byte-identical")
+            del after
 
     if args.check:
-        print(f"strip_comments.py: {_display(source)}: --check, nothing written")
+        print(f"strip_comments.py: {_display(source)}: --check: no comments remain; "
+              f"nothing written")
         return 0
-    source.write_bytes(stripped.encode("latin-1"))
+    source.write_bytes(rewritten.encode("latin-1"))
     print(f"strip_comments.py: {_display(source)}: written")
     return 0
 
