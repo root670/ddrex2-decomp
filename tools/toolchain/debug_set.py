@@ -43,6 +43,8 @@ AT_FUND_TYPE = 0x0055
 AT_LOCATION = 0x0023
 AT_SUBSCR_DATA = 0x00A3
 AT_MOD_U_D_TYPE = 0x0083
+#: The MW attribute measured as a block of 4-byte DIE references (one per element).
+AT_2303 = 0x2303
 
 TAG = {
     0x0001: "array_type", 0x0002: "class_type", 0x0003: "entry_point",
@@ -269,11 +271,18 @@ def _subscript_key(block, by_offset):
     return ("subscript", tuple(parts))
 
 
-def _local_signature(die, by_offset):
-    """The DIE's own tag and attributes, without its parent's shape."""
+def _local_signature(die, by_offset, ignore=None):
+    """The DIE's own tag and attributes, without its parent's shape.
+
+    ``ignore`` is a predicate ``(die, code) -> bool`` naming attribute values that are not
+    part of the identity being compared.  The metadata-adoption step ignores ``AT_location``
+    on locals only: two objects assign the same local to different registers, and the step
+    proves the rest of the record is retail's before it adopts the location.  A member's
+    ``AT_location`` is an offset, never ignored.
+    """
     attrs = []
     for code, value in sorted(die.attrs.items()):
-        if code == AT_SIBLING:
+        if code == AT_SIBLING or (ignore is not None and ignore(die, code)):
             continue
         if isinstance(value, str):
             value = _normalise(value)
@@ -289,6 +298,12 @@ def _local_signature(die, by_offset):
             # anonymous index.
             value = ("mod_u_d", value[:-4],
                      _target_key(_U32(value, len(value) - 4)[0], by_offset))
+        elif (code == AT_2303 and isinstance(value, bytes) and len(value) >= 4
+              and len(value) % 4 == 0):
+            # A list of DIE references: each word names an object that moved with the DIE
+            # order, so the raw bytes are not the attribute's identity.
+            value = ("refs", tuple(_target_key(_U32(value, at)[0], by_offset)
+                                   for at in range(0, len(value), 4)))
         attrs.append((code, value))
     return (die.tag, tuple(attrs))
 

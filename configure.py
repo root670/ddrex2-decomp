@@ -608,11 +608,13 @@ def _promotions(manifests=None, target=None) -> list:
             + ", ".join(sorted(set(builds) - present)))
     out = []
     segment = target.geometry_required().code_segment
-    for file, (version, flags, normalise) in sorted(builds.items()):
+    for file, (version, flags, state) in sorted(builds.items()):
         tu = manifests.tu_named(file)
         command = f"--compiler {version} {flags}"
-        if normalise:
+        if state is True:
             command += " --normalise-debug"
+        elif state == "adopt":
+            command += " --adopt-retail-meta"
         out.append(Promotion(
             file, tu.address, command,
             f"build/{file}.o", f"build/{file}.o.debug", f"build/{file}.o.line",

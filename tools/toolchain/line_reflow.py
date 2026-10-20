@@ -252,16 +252,18 @@ def verify(tu, original: bytes, rewritten: bytes, target):
     if pair is None:
         raise Refused(None, f"{tu.file} has no recorded compiler pair in tu_builds; measure "
                             f"it with tools/toolchain/select_build.py before rewriting it")
-    compiler, flags, normalise = pair
+    compiler, flags, state = pair
     manifests = cc.Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
     command = shlex.split(flags)
+    normalise = state is True
+    adopt = state == "adopt"
     with tempfile.TemporaryDirectory(prefix="line-reflow-") as scratch:
         before = cc._place_source(tu, manifests, compiler_dir, wibo, command, original,
-                                  pathlib.Path(scratch) / "before.mw.o", normalise)
+                                  pathlib.Path(scratch) / "before.mw.o", normalise, adopt)
         after = cc._place_source(tu, manifests, compiler_dir, wibo, command, rewritten,
-                                 pathlib.Path(scratch) / "after.mw.o", normalise)
+                                 pathlib.Path(scratch) / "after.mw.o", normalise, adopt)
     for part in ("text", "debug", "line"):
         mine, theirs = getattr(before, part), getattr(after, part)
         if mine == theirs:

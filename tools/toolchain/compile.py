@@ -47,6 +47,12 @@ are retail's, byte for byte (:mod:`toolchain.debug_normalize`).  It is never sil
 prints what it normalised -- and it is off by default, because the gate's own treatment
 (recognise the class, keep retail's bytes) stays the promotion path.
 
+``--adopt-retail-meta`` is the fourth: for a unit whose ``.text`` is already retail's, it
+adopts retail's ``.line`` chunk and the ``AT_location`` values of locals whose records
+otherwise match, then accepts only when the whole ``.debug`` chunk is retail's bytes
+(:mod:`toolchain.debug_adopt`).  ``.text`` differing is a refusal, printed loudly; every
+adopted row and location is printed, with its before and after values.
+
 MWCC has no parse-only mode -- ``-nocodegen`` skips the front end's own error reporting, so
 it exits 0 on a file it cannot parse -- so the check runs the ordinary compile and throws
 the object away.  What is left is the exit status and the compiler's own diagnostics.
@@ -76,7 +82,8 @@ for _extra in (str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT / "tools"), st
 
 import elf  # noqa: E402  the vendored 32-bit little-endian MIPS reader
 from config import targets  # noqa: E402  the one place a target's facts are written down
-from toolchain import check_deps, debug_normalize, debug_set, fetch, line_reflow, probe  # noqa: E402
+from toolchain import (check_deps, debug_adopt, debug_normalize, debug_set, fetch,
+                       line_reflow, probe)  # noqa: E402
 
 #: The target a direct invocation works on when ``--target`` names none: the one the tree is
 #: configured for.  The ninja graph always names the target it was generated for, so a build
@@ -890,15 +897,16 @@ def assemble(source: str, out: pathlib.Path) -> None:
 class Placed:
     """What a promoted unit contributes to the pinned build."""
 
-    __slots__ = ("text", "debug", "line", "labels", "sizes", "normalised")
+    __slots__ = ("text", "debug", "line", "labels", "sizes", "normalised", "adopted")
 
-    def __init__(self, text, debug, line, labels, sizes, normalised=False):
+    def __init__(self, text, debug, line, labels, sizes, normalised=False, adopted=False):
         self.text = text        # the promoted run of code splits, including its tail padding
         self.debug = debug      # the unit's .debug chunk
         self.line = line        # the unit's run of .line chunks
         self.labels = labels    # [(offset within .text, function name, bytes)]
         self.sizes = sizes      # [(function name, (block, emitted, pinned))]
         self.normalised = normalised  # the .debug chunk came out of the order normaliser
+        self.adopted = adopted  # retail's .line and AT_location values were adopted
 
 
 def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: str,
@@ -951,7 +959,8 @@ def _first_difference(left: bytes, right: bytes) -> int:
 
 def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
                     retail_text: bytes, retail_line: bytes, retail_debug: bytes,
-                    base: int = 0, block_mismatches=(), normalise: bool = False) -> bytes:
+                    base: int = 0, block_mismatches=(), normalise: bool = False,
+                    adopt: bool = False) -> bytes:
     """The four conditions, and the bytes the image should carry for this unit.
 
     Condition 1 (``.text`` and ``.line`` byte-equal) is checked here rather than in
@@ -971,7 +980,52 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
     keeping retail's chunk, rewrite our own into retail's DIE order and accept it **only** if
     the result is retail's bytes.  It is off unless the caller asks for it, and on acceptance
     it prints that it normalised, with the counts the unit's record quotes.
+
+    ``adopt`` is the other opt-in step (:mod:`toolchain.debug_adopt`), and it relaxes
+    condition 1 for ``.line`` only: ``.text`` must still be byte-identical -- the callers
+    that pass ``adopt`` print exactly that refusal -- and then retail's ``.line`` chunk and
+    the ``AT_location`` values of locals whose records otherwise match are adopted.  The
+    whole ``.debug`` chunk must come out retail's byte for byte, or the unit refuses.
     """
+    if adopt:
+        if normalise:
+            raise Unusable(f"{unit}: --adopt-retail-meta and --normalise-debug are "
+                           f"different claims; pass one")
+        if text != retail_text:
+            at = _first_difference(text, retail_text)
+            raise Unusable(
+                f"{unit}: refusing to adopt retail's metadata: condition 1 "
+                f"({debug_set.LABEL[1]}) failed: .text is 0x{len(text):X} bytes against "
+                f"retail's 0x{len(retail_text):X}, first differing byte at 0x{at:X}; "
+                f"adoption needs retail's instructions, byte for byte")
+        if block_mismatches:
+            label, emitted, pinned, block = block_mismatches[0]
+            detail = (f"{label} .debug is short by 0x{pinned - emitted:X} bytes"
+                      if emitted < pinned else
+                      f"{label} .debug is 0x{emitted - pinned:X} bytes too large")
+            raise Unusable(f"{unit}: condition 2 ({debug_set.LABEL[2]}) failed: {detail}; "
+                           f"adoption cannot change a DIE count; "
+                           f"{block.detail or 'the block differs'}")
+        try:
+            adopted = debug_adopt.adopt(debug, retail_debug, base, line, retail_line)
+        except debug_adopt.Refused as exc:
+            raise Unusable(f"{unit}: condition 6 (retail metadata adoption) failed: {exc}")
+        print(f"compile: {unit}: adopted retail's .line "
+              f"({len(adopted.line_rows)} row(s) changed in {adopted.line_tables} "
+              f"statement table(s))", file=sys.stderr)
+        for change in adopted.locations:
+            print(f"compile: {unit}: adopted AT_location {change}", file=sys.stderr)
+        for change in adopted.anon_names:
+            print(f"compile: {unit}: adopted anonymous name {change}", file=sys.stderr)
+        if adopted.references:
+            print(f"compile: {unit}: adopted {adopted.references} intra-chunk reference "
+                  f"word(s) between structurally identical DIEs", file=sys.stderr)
+        print(f"compile: {unit}: .debug is retail's 0x{len(retail_debug):X} bytes byte for "
+              f"byte after adoption ({adopted.dies} DIEs)", file=sys.stderr)
+        print(f"compile: {unit}: record in its tu_builds comment: .line and AT_location "
+              f"adopted under --adopt-retail-meta, .debug byte-equal", file=sys.stderr)
+        return adopted.chunk
+
     if debug == retail_debug and not block_mismatches:
         return debug
 
@@ -1104,7 +1158,8 @@ def include_flags(target) -> list:
 
 
 def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
-          normalise: bool = False, source_text: bytes | None = None) -> Placed:
+          normalise: bool = False, adopt: bool = False,
+          source_text: bytes | None = None) -> Placed:
     """Compile ``tu`` and place it: the unit's bytes, as the pinned layout has them.
 
     ``source_text`` overrides the file's bytes (the reflow step's before/after check and
@@ -1124,7 +1179,7 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
     text = source_text.decode("latin-1")
     if not line_reflow.has_directives(text):
         return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
-                             normalise)
+                             normalise, adopt)
 
     try:
         rewritten, directives = line_reflow.rewrite(
@@ -1137,17 +1192,17 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
         print(f"compile: {tu.file}: #line reflow skipped ({exc}); compiling the directives "
               f"as written", file=sys.stderr)
         return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
-                             normalise)
+                             normalise, adopt)
     if not directives:
         return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
-                             normalise)
+                             normalise, adopt)
 
     with tempfile.TemporaryDirectory(prefix="line-reflow-") as scratch:
         before = _place_source(tu, manifests, compiler_dir, wibo, flags, source_text,
-                               pathlib.Path(scratch) / "before.mw.o", normalise)
+                               pathlib.Path(scratch) / "before.mw.o", normalise, adopt)
     reflowed = rewritten.encode("latin-1")
     after = _place_source(tu, manifests, compiler_dir, wibo, flags, reflowed, keep,
-                          normalise)
+                          normalise, adopt)
     for part in ("text", "debug", "line"):
         mine, theirs = getattr(before, part), getattr(after, part)
         if mine == theirs:
@@ -1163,7 +1218,7 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
 
 
 def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, source: bytes,
-                  keep=None, normalise: bool = False) -> Placed:
+                  keep=None, normalise: bool = False, adopt: bool = False) -> Placed:
     """Compile one spelling of the unit's source and place its bytes.
 
     :func:`place` owns the file/reflow decision; this is the promotion itself, unchanged.
@@ -1217,6 +1272,7 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
         [(f.line_offset, f.line_size, groups[f.name][2], f.name) for f in tu.functions],
         gp, ".line", unit_file=tu.file)
     retail_debug = _retail_chunk(retail, ".debug", tu.debug_offset, tu.debug_size)
+    retail_line = _retail_chunk(retail, ".line", tu.line_offset, tu.line_size)
     emitted_debug, debug_sizes, debug_mismatches = _fill_debug(
         mw, tu, tu.debug_offset, tu.debug_size,
         [(types["offset"], types["size"], mw.section_named(".debug"), "the unit's types")]
@@ -1224,11 +1280,12 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
         gp, (recorded, tu.name.encode()), retail_chunk=retail_debug)
     debug = debug_promotion(
         tu.file, text=bytes(text), line=line, debug=emitted_debug, retail_text=expected_text,
-        retail_line=_retail_chunk(retail, ".line", tu.line_offset, tu.line_size),
-        retail_debug=retail_debug, base=tu.debug_offset,
-        block_mismatches=debug_mismatches, normalise=normalise)
-    return Placed(bytes(text), debug, line, labels, sizes + debug_sizes + line_sizes,
-                  normalised=normalise and emitted_debug != retail_debug)
+        retail_line=retail_line, retail_debug=retail_debug, base=tu.debug_offset,
+        block_mismatches=debug_mismatches, normalise=normalise, adopt=adopt)
+    return Placed(bytes(text), debug, retail_line if adopt else line, labels,
+                  sizes + debug_sizes + line_sizes,
+                  normalised=normalise and emitted_debug != retail_debug,
+                  adopted=adopt)
 
 
 def retail_bytes(tu: Tu, retail=RETAIL, text_size=None) -> dict:
@@ -1279,13 +1336,15 @@ def _display(path) -> str:
 
 
 def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
-          keep=None, target=None, normalise: bool = False) -> Placed:
+          keep=None, target=None, normalise: bool = False,
+          adopt: bool = False) -> Placed:
     """Everything the ``cc`` rule does: compile, place, and write ``out``."""
     target = target if target is not None else DEFAULT_TARGET
     manifests = manifests if manifests is not None else Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
-    placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep, normalise=normalise)
+    placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep,
+                   normalise=normalise, adopt=adopt)
     assemble(assembly(len(placed.text), placed.labels, placed.debug, placed.line), out)
     return placed
 
@@ -1349,11 +1408,17 @@ def _parser(with_out: bool) -> argparse.ArgumentParser:
                         help="where to keep the Metrowerks object the compiler writes")
     parser.add_argument("--compare", action="store_true",
                         help="also report each part against the retail image")
-    parser.add_argument("--normalise-debug", action="store_true",
-                        help="opt in to the .debug DIE-order normaliser: re-emit our chunk "
-                             "in retail's DIE order and accept it only if the result is "
-                             "byte-identical; without it the set-equal gate keeps retail's "
-                             "chunk (never silent: the normalisation is printed)")
+    opt = parser.add_mutually_exclusive_group()
+    opt.add_argument("--normalise-debug", action="store_true",
+                     help="opt in to the .debug DIE-order normaliser: re-emit our chunk "
+                          "in retail's DIE order and accept it only if the result is "
+                          "byte-identical; without it the set-equal gate keeps retail's "
+                          "chunk (never silent: the normalisation is printed)")
+    opt.add_argument("--adopt-retail-meta", action="store_true",
+                     help="opt in to retail metadata adoption: .text must be byte-equal, "
+                          "then retail's .line chunk and the AT_location of locals whose "
+                          "records otherwise match are adopted and the whole .debug chunk "
+                          "must be retail's byte for byte; every adopted value is printed")
     return parser
 
 
@@ -1370,7 +1435,8 @@ def main(argv=None) -> int:
         manifests = Manifests(target)
         tu = manifests.tu_named(args.source)
         placed = build(tu, args.out, flags or DEFAULT_FLAGS, args.compiler, manifests,
-                       keep=args.keep, target=target, normalise=args.normalise_debug)
+                       keep=args.keep, target=target, normalise=args.normalise_debug,
+                       adopt=args.adopt_retail_meta)
         shown = _display(args.out)
         print(f"cc {tu.file} [{target.name}]: {len(placed.text):#x} bytes of .text, "
               f"{len(placed.debug):#x} of .debug, {len(placed.line):#x} of .line -> {shown}")
@@ -1378,6 +1444,8 @@ def main(argv=None) -> int:
             for part, (ok, detail) in compare(tu, placed, target.elf).items():
                 note = (" [normalised: our DIE order re-emitted as retail's]"
                         if part == "debug" and placed.normalised and ok else "")
+                if placed.adopted and ok and part in ("debug", "line"):
+                    note = " [adopted: retail's bytes]"
                 print(f"cc {tu.file}: {part} {'ok' if ok else 'DIFFERS'} ({detail}){note}")
         return 0
     except targets.UnknownTarget as exc:

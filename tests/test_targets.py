@@ -274,12 +274,13 @@ def test_an_unknown_target_name_fails_loudly():
 # ---------------------------------------------------------------------------
 
 
-def test_tu_builds_carries_the_normaliser_as_an_optional_fourth_element():
-    """A pair may say the unit's `.debug` needs the opt-in DIE-order normaliser.
+def test_tu_builds_carries_the_debug_step_as_an_optional_fourth_element():
+    """A pair may say the unit's `.debug` needs the opt-in normaliser or metadata adoption.
 
     The fourth element is a fact of the measurement, not a build setting a caller improvises:
-    ``configure.py`` puts ``--normalise-debug`` on that unit's edge and the step refuses unless
-    the rewritten chunk is retail's bytes.
+    ``configure.py`` puts ``--normalise-debug`` or ``--adopt-retail-meta`` on that unit's edge
+    and the step refuses unless the result is retail's bytes.  The two states are kept
+    distinct because they prove different things.
     """
     plain = probe_target(tu_builds=(("src/a.c", "3.0", "-g"),))
     assert plain.build_pair("src/a.c") == ("3.0", "-g", False)
@@ -288,6 +289,10 @@ def test_tu_builds_carries_the_normaliser_as_an_optional_fourth_element():
     normalised = probe_target(tu_builds=(("src/a.c", "3.0", "-g", True),))
     assert normalised.build_pair("src/a.c") == ("3.0", "-g", True)
     assert normalised.build_table() == {"src/a.c": ("3.0", "-g", True)}
+
+    adopted = probe_target(tu_builds=(("src/a.c", "3.0", "-g", "adopt"),))
+    assert adopted.build_pair("src/a.c") == ("3.0", "-g", "adopt")
+    assert adopted.build_table() == {"src/a.c": ("3.0", "-g", "adopt")}
 
     with pytest.raises(ValueError):
         probe_target(tu_builds=(("src/a.c", "3.0", "-g", "yes"),))

@@ -37,8 +37,8 @@ attribute                            form    how it is handled
 ``0x00a3`` AT_subscr_data            3       element type / index type refs, by DWARF 1
                                               subscript grammar; remapped
 ``0x0083`` AT_mod_u_d_type           3       trailing user-defined reference; remapped
-``0x2303`` (MW attribute 0x230)      3       1782 occurrences, and *every one* holds a
-                                              4-byte reference; remapped
+``0x2303`` (MW attribute 0x230)      3       1782 occurrences, each a block of 4-byte
+                                              references; every word is remapped
 every other block form               3, 4    untouched: no occurrence in the section holds
                                               an intra-chunk DIE offset (the 0x23 blocks'
                                               coincidental hits are addresses, not refs)
@@ -187,19 +187,19 @@ def _block_references(code, payload):
         return _subscript_refs(payload)
     if code == AT_MOD_U_D_TYPE and len(payload) >= 4:
         return [len(payload) - 4]
-    if code == AT_2303 and len(payload) == 4:
-        return [0]
+    if code == AT_2303 and len(payload) >= 4 and len(payload) % 4 == 0:
+        return list(range(0, len(payload), 4))
     return None
 
 
-def _signature_key(by_offset):
+def _signature_key(by_offset, ignore=None):
     """An order-invariant key for one DIE and its subtree; ``by_offset`` is its own map."""
     memo = {}
 
     def key(die):
         got = memo.get(die.offset)
         if got is None:
-            local = debug_set._local_signature(die, by_offset)
+            local = debug_set._local_signature(die, by_offset, ignore)
             children = tuple(sorted(repr(key(child)) for child in die.children))
             got = (local, children)
             memo[die.offset] = got
@@ -208,14 +208,14 @@ def _signature_key(by_offset):
     return key
 
 
-def _shallow_key(by_offset):
+def _shallow_key(by_offset, ignore=None):
     """A DIE's own signature, without its children: the key that locates a difference."""
     memo = {}
 
     def key(die):
         got = memo.get(die.offset)
         if got is None:
-            got = debug_set._local_signature(die, by_offset)
+            got = debug_set._local_signature(die, by_offset, ignore)
             memo[die.offset] = got
         return got
 
@@ -284,7 +284,7 @@ def _pair(ours, theirs, our_key, retail_key, base, where, locator=None):
     return pairs
 
 
-def normalise(emitted: bytes, retail: bytes, base: int = 0) -> Reordered:
+def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None) -> Reordered:
     """Rewrite ``emitted`` into ``retail``'s DIE order, at the same ``base`` in ``.debug``.
 
     The result carries retail's DIE *sequence*; whether it is retail's *bytes* is the
@@ -292,6 +292,10 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0) -> Reordered:
     when the chunk cannot be rewritten at all: a different DIE set, a chunk that is not a
     contiguous DIE sequence, an unknown attribute form, or a reference that lies inside the
     chunk but names no DIE.
+
+    ``ignore`` names attributes whose value is excluded from the pairing signature.  The
+    metadata-adoption step passes ``AT_location`` for locals: the location is being adopted
+    from retail, so it must not stop the two records from pairing.
     """
     try:
         ours = debug_set.parse(emitted, base)
@@ -326,11 +330,11 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0) -> Reordered:
             raise Refusal(f"{_describe(die, base)} ends at 0x{stop:X}, past the chunk")
         residues[die.offset] = (cursor, stop)
 
-    our_key = _signature_key(by_offset)
+    our_key = _signature_key(by_offset, ignore)
     theirs_by_offset = {die.offset: die for die in theirs}
-    retail_key = _signature_key(theirs_by_offset)
-    our_shallow = _shallow_key(by_offset)
-    retail_shallow = _shallow_key(theirs_by_offset)
+    retail_key = _signature_key(theirs_by_offset, ignore)
+    our_shallow = _shallow_key(by_offset, ignore)
+    retail_shallow = _shallow_key(theirs_by_offset, ignore)
     roots = [die for die in ours if die.parent is None]
     retail_roots = [die for die in theirs if die.parent is None]
 
