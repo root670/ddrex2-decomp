@@ -464,10 +464,16 @@ class Manifests:
         invented: both records are already derived from retail's bytes by :func:`verify_data`,
         so the choice is between measured addresses, not between a measurement and a guess.
         A unit with no records of its own changes nothing -- the ledger default stands.
+
+        ``symbols`` also has to yield: `netwinslby_plate_board` is one unit's static at
+        0x002C0780 and another's at 0x002BF710, and the split records the bare name for the
+        first, so without this pop the object's ``AT_location`` and initialiser would bake
+        the other unit's address.  The source's own measured record displaces the bare name.
         """
         for record in self.placements:
             if record["source"] == source:
                 self.placed[record["name"]] = record["address"]
+                self.symbols.pop(record["name"], None)
                 self.by_address[record["address"]] = record["name"]
 
     def address_of(self, name) -> int:
