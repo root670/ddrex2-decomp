@@ -1,4 +1,16 @@
-static int anime_id_tbl[11] = { 0, 1, 4, 0, 7, 0, 16, 0, 10, 13, 0 };
+static int anime_id_tbl[11] = {
+    0,
+    1,
+    4,
+    0,
+    7,
+    0,
+    16,
+    0,
+    10,
+    13,
+    0,
+};
 static int hold_release = 0;
 static int pre_hold_flag = 0;
 
