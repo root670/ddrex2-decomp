@@ -38,18 +38,15 @@ static unsigned char *CHANGE_OK[2] = { (unsigned char *)"Password has been chang
 unsigned char **naMessageTbl_ENGLISH[37];
 unsigned char *cmes_yesno_str_english[];
 
-unsigned char *namesGetNo(void)
-{
+unsigned char *namesGetNo(void) {
     return cmes_yesno_str_english[0];
 }
 
-unsigned char *namesGetYes(void)
-{
+unsigned char *namesGetYes(void) {
     return cmes_yesno_str_english[1];
 }
 
-unsigned char **namesGetMessageTable(int id)
-{
+unsigned char **namesGetMessageTable(int id) {
     unsigned char **ret;
 
     ret = 0;
