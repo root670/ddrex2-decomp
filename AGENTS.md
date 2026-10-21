@@ -84,10 +84,10 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 
    **A promoted source carries no comments, no blank line directly inside a brace, and no `#line`
    directive — and the build enforces all three.**  `tools/units/strip_comments.py --check` fails
-   on the first two, with one exception that follows the paragraph above: a unit whose
-   `tu_builds` row records `False` or `True` emits the source's own statement positions, so a
-   blank line inside a brace is the line itself — `--check` reports it as evidence, and
-   `--collapse` refuses until that row records `adopt`.  `configure.py` refuses a `tu_builds`
+   on the first two, with one exception that follows the paragraph above: a promoted unit's
+   `.line` chunk pins its statements to retail's line numbers, so a blank line inside a brace is
+   the line itself — `--check` passes it for a file that has a `tu_builds` row, and a file with
+   no row is held to the tidy layout.  `configure.py` refuses a `tu_builds`
    source with a directive *before* it writes `build.ninja`, and `compile.py` refuses the same
    unit before the compiler runs.  Both
    name the file, the count and the remedy
@@ -115,10 +115,10 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    *measured*: `python3 tools/toolchain/select_build.py --tu <file>` prints every candidate with its
    verdict for text/debug/line, and the pair that wins is recorded next to the source it belongs to
    in the *target's* `tu_builds` (`config/targets.py`) — per target, because a pair measured against
-   one retail binary says nothing about another.  A row's fourth element is optional and defaults to
-   adoption: `.text` byte equality is the promotion proof and `.line`/`.debug` are reconstructed
-   from retail's inventory (`--adopt-retail-meta`).  `False` and `True` are opt-in stronger claims,
-   recorded only when the unit earns them at no cost.  The same holds for the geometry, which
+   one retail binary says nothing about another.  A row is `(source, compiler build, flags)`:
+   promotion is always adoption, so `--adopt-retail-meta` goes on every promoted unit's `cc`
+   edge — `.text` byte equality is the promotion proof and `.line`/`.debug` are reconstructed
+   from retail's inventory.  The same holds for the geometry, which
    lives in the same descriptor: those numbers were read out of that target's retail ELF's own
    headers, not chosen.  A target whose geometry has not been measured yet cannot be configured at all —
    `geometry_required()` stops the tool and names it, rather than splitting one game's bytes at

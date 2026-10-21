@@ -274,35 +274,28 @@ def test_an_unknown_target_name_fails_loudly():
 # ---------------------------------------------------------------------------
 
 
-def test_tu_builds_defaults_to_adoption_and_records_stronger_claims_explicitly():
-    """An omitted fourth element means `--adopt-retail-meta`; `False`/`True` are opt-in.
+def test_tu_builds_rows_are_a_measured_pair_and_nothing_more():
+    """A row is `(source, compiler build, flags)`; promotion is always adoption.
 
-    Adoption is the promotion default because `.text` byte equality is the proof and the
-    debug metadata (`.line`, `AT_location`s, DIE order) is reconstructed from retail's
-    inventory.  A row says `False` or `True` only when the unit proves the stronger claim,
-    so the two explicit states behave exactly as before: nothing, or the order normaliser.
-    The state is a fact of the measurement, not a build setting a caller improvises:
-    ``configure.py`` puts the step on that unit's edge and it refuses unless the result is
-    retail's bytes.
+    `.text` byte equality is the proof and the debug metadata (`.line`, `AT_location`s, DIE
+    order) is reconstructed from retail's inventory by `--adopt-retail-meta`, so the row
+    carries no state: the pair is a fact of the measurement, not a build setting a caller
+    improvises.  A four-element row is a leftover of the removed state ladder and fails
+    loudly rather than being silently ignored.
     """
-    default = probe_target(tu_builds=(("src/a.c", "3.0", "-g"),))
-    assert default.build_pair("src/a.c") == ("3.0", "-g", "adopt")
-    assert default.build_table() == {"src/a.c": ("3.0", "-g", "adopt")}
+    measured = probe_target(tu_builds=(("src/a.c", "3.0", "-g"),))
+    assert measured.build_pair("src/a.c") == ("3.0", "-g")
+    assert measured.build_table() == {"src/a.c": ("3.0", "-g")}
+    assert measured.build_pair("src/b.c") is None
 
-    untouched = probe_target(tu_builds=(("src/a.c", "3.0", "-g", False),))
-    assert untouched.build_pair("src/a.c") == ("3.0", "-g", False)
-    assert untouched.build_table() == {"src/a.c": ("3.0", "-g", False)}
-
-    normalised = probe_target(tu_builds=(("src/a.c", "3.0", "-g", True),))
-    assert normalised.build_pair("src/a.c") == ("3.0", "-g", True)
-    assert normalised.build_table() == {"src/a.c": ("3.0", "-g", True)}
-
-    adopted = probe_target(tu_builds=(("src/a.c", "3.0", "-g", "adopt"),))
-    assert adopted.build_pair("src/a.c") == ("3.0", "-g", "adopt")
-    assert adopted.build_table() == {"src/a.c": ("3.0", "-g", "adopt")}
-
-    with pytest.raises(ValueError):
-        probe_target(tu_builds=(("src/a.c", "3.0", "-g", "yes"),))
+    for stale in (("src/a.c", "3.0", "-g", "adopt"),
+                  ("src/a.c", "3.0", "-g", True),
+                  ("src/a.c", "3.0", "-g", False)):
+        with pytest.raises(ValueError) as excinfo:
+            probe_target(tu_builds=(stale,))
+        message = str(excinfo.value)
+        assert "three elements" in message
+        assert "--adopt-retail-meta" in message
 
 
 def test_a_descriptor_missing_a_required_field_fails_loudly():

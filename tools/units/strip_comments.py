@@ -36,13 +36,11 @@ every block-opening brace is joined to the line of its statement (a brace alone 
 next line, ``if (x)\\n{``, and a brace that opens a block inline, ``do\\n{ x = 1;``).  The
 brace pass refuses a site it cannot read: a brace after a declaration or a closed block,
 an aggregate-initializer row, and a block whose first statement is itself a declaration
-are left on their own lines and reported.  A promoted file starts with its first
-declaration or ``#include``, and its measurements live
-in the unit's ``tu_builds`` comment and the unit report.
-Statements therefore sit on new line numbers, so the emitted ``.line`` is no longer
-retail's and only retail-metadata adoption can accept the result: the tool refuses a unit
-whose ``tu_builds`` row does not record ``"adopt"`` (``--adopt-retail-meta``) when the tidy
-moves a line.  Acceptance is then stricter than the strip's: ``.text`` must be
+are left on their own lines and reported.  Stray brace-padding is refused only
+for a file that is not a promoted unit: a promoted source's blank line directly inside a
+brace is line evidence (retail's own statement position), so ``--check`` passes it, while a
+comment still fails there as everywhere.  Because the tidy
+**moves statement lines**, acceptance is stricter than the strip's: ``.text`` must be
 byte-identical, and ``.debug``/``.line`` must be *retail's* -- the adoption step proves the
 chunk byte for byte and substitutes retail's ``.line``.
 
@@ -191,9 +189,9 @@ def _brace_edge_blanks(lines) -> tuple:
     """The 1-based numbers of blank lines sitting directly inside a brace.
 
     A blank line immediately after a line ending in ``{`` or immediately before a line
-    starting with ``}`` is a line-number placeholder: under an adopting unit's ``.line`` it
-    carries nothing, so the tidy drops it and the gate refuses it, while under a row
-    recording ``False`` or ``True`` it holds the number itself and is kept.
+    starting with ``}`` is a possible line-number placeholder: for a promoted unit it holds
+    retail's statement position, so ``--check`` passes it and the tidy keeps it; for any
+    other file it carries nothing, so the tidy drops it and the gate refuses it.
     """
     found = []
     for index, line in enumerate(lines):
@@ -208,30 +206,26 @@ def _brace_edge_blanks(lines) -> tuple:
     return tuple(found)
 
 
-def brace_blanks_are_evidence(state) -> bool:
-    """Whether a blank line inside a brace is line evidence for a unit recording ``state``.
+def brace_blanks_are_evidence(unit) -> bool:
+    """Whether a blank line inside a brace is line evidence: only for a promoted unit.
 
-    A unit recording ``False`` or ``True`` keeps the source's own ``.line`` (``True`` only
-    normalises the DIE order), so retail's statement numbers *are* the source's statement
-    positions: a blank line directly inside a brace is the placeholder that holds them, not
-    padding.  ``"adopt"`` is the one state that substitutes retail's ``.line`` wholesale, so
-    only there does such a blank carry nothing and fail the gate.  ``None`` -- a file that
-    is not a promotion unit -- has no row saying its blanks are evidence, so it is held to
-    the tidy layout like an adopting unit.
+    A promoted unit's ``.line`` chunk pins its statements to retail's line numbers, so a
+    blank line directly inside a brace is the placeholder that holds the number, not
+    padding.  ``None`` -- a file that is not a promotion unit -- has no such evidence, so it
+    is held to the tidy layout.
     """
-    return state is False or state is True
+    return unit is not None
 
 
 def require_no_brace_padding(text: str, what: str = "source") -> None:
     """Raise :class:`Refused` if a blank line sits directly inside a brace.
 
-    This keeps a promoted file from looking accidental: a function or nested block opens
-    and immediately reads its first statement, and its last statement is immediately
-    followed by the closing brace.
+    This keeps a file that is not a promoted unit from looking accidental: a function or
+    nested block opens and immediately reads its first statement, and its last statement is
+    immediately followed by the closing brace.
 
-    Only a unit that adopts retail's ``.line`` can be held to this: a unit recording
-    ``False`` or ``True`` keeps retail's numbers in the blanks themselves, so ``--check``
-    asks :func:`brace_blanks_are_evidence` before it fails.
+    A promoted unit is not held to this: its blank is retail's statement position, so
+    ``--check`` asks :func:`brace_blanks_are_evidence` before it fails.
     """
     found = _brace_edge_blanks(text.splitlines())
     if not found:
@@ -384,8 +378,7 @@ def tidy(text: str) -> Attached:
 
     Unlike :func:`strip`, this step **deletes lines** and therefore moves every statement
     below a deleted one.  That is the point -- the promotion gate's ``.line`` half is then
-    supplied by retail-metadata adoption -- and the caller is responsible for refusing a
-    unit whose recorded pair does not record adoption (:func:`_require_adoption`).
+    supplied by retail-metadata adoption, which every promoted unit goes through.
 
     The comments go first (every one, header and notes included), so the leading header
     block no longer needs its own rule: it becomes blank lines and the blank-run collapse
@@ -423,41 +416,6 @@ def tidy(text: str) -> Attached:
 def collapse(text: str) -> str:
     """The text half of :func:`tidy`; the brace-attach result is discarded."""
     return tidy(text).text
-
-
-def _nonblank_lines(text: str) -> tuple:
-    """The numbers of ``text``'s non-blank lines, in order."""
-    return tuple(number for number, line in enumerate(text.splitlines(), 1)
-                 if line.strip())
-
-
-def _moves_lines(before: str, after: str) -> bool:
-    """Whether the tidy puts a non-blank line on a different number.
-
-    :func:`collapse` strips comments and then only ever deletes lines, so a blanked
-    comment-only line counts as a deletion like any other.  Comparing the *numbers* of the
-    non-blank lines before and after is therefore enough: they differ exactly when a
-    deletion happened above the last of them.
-    """
-    return _nonblank_lines(before) != _nonblank_lines(after)
-
-
-def _require_adoption(unit: str, state, moved: bool) -> None:
-    """Refuse a tidy that moves lines when the unit's recorded pair is not adoption.
-
-    A unit records ``False`` (nothing) or ``True`` (DIE-order normalisation); neither
-    accepts a ``.line`` that is not retail's.  Only ``"adopt"`` substitutes retail's chunk,
-    so a unit tidied this way must record it -- and the refusal is what keeps the tool from
-    writing a source the recorded pair cannot build.
-    """
-    if not moved or state == "adopt":
-        return
-    raise Refused(
-        None,
-        f"{unit} records {state!r} in tu_builds; the tidy moves statement lines, so the "
-        f"emitted .line is no longer retail's and the recorded pair would not verify the "
-        f"result.  Record \"adopt\" (compile.py --adopt-retail-meta) on that row and run "
-        f"again; refusing to write it")
 
 
 def record_counts(placed) -> tuple:
@@ -514,10 +472,9 @@ def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False,
     for their sizes.
 
     ``tidy`` is :func:`tidy`'s acceptance, which is stricter because the tidy moves lines:
-    the unit must record ``"adopt"`` when a line moved (the emitted ``.line`` is no longer
-    retail's), ``.text`` must be byte-identical, and the resulting ``.debug`` and ``.line``
-    must both be **retail's** bytes -- which the adoption step proves and substitutes
-    rather than the tool assuming it.
+    ``.text`` must be byte-identical, and the resulting ``.debug`` and ``.line`` must both
+    be **retail's** bytes -- which the adoption step proves and substitutes rather than the
+    tool assuming it.
 
     ``joins`` is how many block braces :func:`attach_braces` joined.  Blank-run collapse
     and header shrink must move line *numbers* only, so their result is held to
@@ -536,17 +493,13 @@ def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False,
     if pair is None:
         raise Refused(None, f"{tu.file} has no recorded compiler pair in tu_builds; measure "
                             f"it with tools/toolchain/select_build.py before stripping it")
-    compiler, flags, state = pair
-    if tidy:
-        _require_adoption(tu.file, state,
-                          _moves_lines(original.decode("latin-1"),
-                                       rewritten.decode("latin-1")))
+    compiler, flags = pair
     manifests = cc.Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
     command = shlex.split(flags)
-    normalise = state is True
-    adopt = state == "adopt"
+    normalise = False
+    adopt = True
     with tempfile.TemporaryDirectory(prefix="strip-comments-") as scratch:
         try:
             before = cc._place_source(tu, manifests, compiler_dir, wibo, command, original,
@@ -570,8 +523,8 @@ def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False,
         if not joins:
             compare_grouping(before, after)
         # The tidy's claim is stronger than "unchanged": the three parts it leaves are
-        # retail's.  Adoption returns retail's chunk and line; the non-adoption path has
-        # already required them, and this states the acceptance in the tool's own terms.
+        # retail's.  Adoption returns retail's chunk and line, and this states the
+        # acceptance in the tool's own terms.
         want = cc.retail_bytes(tu, target.elf, text_size=len(after.text))
         for part in ("text", "debug", "line"):
             got, expected = getattr(after, part), want[part]
@@ -600,19 +553,18 @@ def _report_attached(display: str, attached: "Attached") -> None:
         print(f"strip_comments.py: {display}: line {line}: brace not attached -- {reason}")
 
 
-def _recorded_state(source: pathlib.Path, target):
-    """``(unit file, tu_builds state)`` for ``source``, or ``(None, None)``.
+def _promoted_source(source: pathlib.Path, target):
+    """The ``tu_builds`` key for ``source``, or None when it is not a promoted unit.
 
-    ``--check`` asks this one row, so it reads ``tu_builds`` rather than building the
+    ``--check`` asks this one question, so it reads ``tu_builds`` rather than building the
     target's manifests.  The key is the repo-relative path, which is the row's ``file``
     spelling and the same name :func:`_unit` resolves the compiled unit from.
     """
     try:
         relative = source.resolve().relative_to(REPO_ROOT).as_posix()
     except ValueError:
-        return None, None
-    pair = target.build_pair(relative)
-    return (relative, pair[2]) if pair is not None else (None, None)
+        return None
+    return relative if target.build_pair(relative) is not None else None
 
 
 def _unit(source: pathlib.Path, target):
@@ -640,16 +592,15 @@ def _parser() -> argparse.ArgumentParser:
                              "(default: this tree's configured target)")
     parser.add_argument("--check", action="store_true",
                         help="write nothing and fail if the file still carries a comment or, "
-                             "unless its tu_builds row records False or True (whose blank "
-                             "lines inside a brace are the lines themselves), a blank line "
-                             "directly inside a brace (the gate that keeps a promoted source "
-                             "clean)")
+                             "unless it is a promoted source (whose blank lines inside a "
+                             "brace are the line numbers themselves), a blank line directly "
+                             "inside a brace (the gate that keeps a promoted source clean)")
     parser.add_argument("--collapse", action="store_true",
                         help="strip every comment, then tidy the layout: drop the blank "
                              "lines the header and notes leave, one blank line at most, no "
                              "trailing whitespace, and every block-opening brace joined to "
-                             "the line of its statement; moves statement lines, so the unit "
-                             "must record \"adopt\" in tu_builds")
+                             "the line of its statement; moves statement lines, which "
+                             "--adopt-retail-meta covers")
     parser.add_argument("--no-verify", action="store_true",
                         help="layout-only edit for a file that is not a promotion unit; "
                              "refused for a unit that has a recorded pair")
@@ -700,20 +651,12 @@ def main(argv=None) -> int:
         return 1
 
     if args.check:
-        # A comment is never evidence, but a blank line inside a brace can be.  A unit
-        # recording False or True compiles its own statement positions into .line, so the
-        # blank is the number retail gives the statement after it: the state ladder rests
-        # on that line, and the tidy that would delete it needs "adopt" recorded first.
-        unit, state = _recorded_state(source, target)
-        if brace_blanks_are_evidence(state):
-            found = _brace_edge_blanks(text.splitlines())
-            if found:
-                print(f"strip_comments.py: {_display(source)}: {len(found)} blank line(s) "
-                      f"directly inside a brace (first at line {found[0]}) are line "
-                      f"evidence for {unit} recording {state!r} in tu_builds, not padding; "
-                      f"dropping them needs \"adopt\" on that row, so --collapse refuses "
-                      f"until then")
-        else:
+        # A comment is never evidence, but a blank line inside a brace is for a promoted
+        # unit: its ``.line`` chunk pins the statements to retail's line numbers, so the
+        # blank holds one of them.  Any other file has no such evidence, so it is held to
+        # the tidy layout.
+        unit = _promoted_source(source, target)
+        if not brace_blanks_are_evidence(unit):
             try:
                 require_no_brace_padding(text, _display(source))
             except Refused as exc:
@@ -753,7 +696,7 @@ def main(argv=None) -> int:
         except Refused as exc:
             print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
             return 1
-        compiler, flags, _state = target.build_pair(tu.file)
+        compiler, flags = target.build_pair(tu.file)
         if args.collapse:
             comments = scan(text)
             print(f"strip_comments.py: {_display(source)}: tidied: "

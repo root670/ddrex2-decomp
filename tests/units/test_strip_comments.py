@@ -34,6 +34,21 @@ def run(*args):
                           capture_output=True, text=True)
 
 
+def _moves_lines(before: str, after: str) -> bool:
+    """Whether the tidy put a non-blank line on a different number.
+
+    ``collapse`` strips comments and then only ever deletes lines, so comparing the numbers
+    of the non-blank lines before and after is enough: they differ exactly when a deletion
+    happened above the last of them.  (The tool itself no longer needs this measure -- the
+    adoption step supplies retail's ``.line`` -- but the tidy's property is still tested.)
+    """
+    def numbers(text):
+        return tuple(number for number, line in enumerate(text.splitlines(), 1)
+                     if line.strip())
+
+    return numbers(before) != numbers(after)
+
+
 # ---------------------------------------------------------------------------
 # the lexical strip
 # ---------------------------------------------------------------------------
@@ -303,14 +318,14 @@ def _unit_and_compiler():
     tu = manifests.tu_named("src/sys/sys_scf.c")
     pair = target.build_pair(tu.file)
     assert pair is not None, "sys_scf.c must stay a recorded promotion"
-    compiler, flags, state = pair
+    compiler, flags = pair
     try:
         compiler_dir = fetch.compiler(compiler)
         wibo = fetch.wibo()
     except Exception as exc:                     # a checkout without the pinned toolchain
         pytest.skip(f"recorded compiler unavailable: {exc}")
     import shlex
-    return tu, manifests, compiler_dir, wibo, shlex.split(flags), state is True, state == "adopt"
+    return tu, manifests, compiler_dir, wibo, shlex.split(flags)
 
 
 def test_a_stripped_unit_compiles_byte_identically(tmp_path):
@@ -318,7 +333,7 @@ def test_a_stripped_unit_compiles_byte_identically(tmp_path):
     from config import targets
     from toolchain import compile as cc
 
-    tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
+    tu, manifests, compiler_dir, wibo, flags = _unit_and_compiler()
     committed = tu.source.read_bytes()
     # The promoted file is comment-free; put a comment back so this still exercises the
     # blanking (inline, so no line moves) rather than passing on an identity transform.
@@ -328,9 +343,9 @@ def test_a_stripped_unit_compiles_byte_identically(tmp_path):
     target = targets.get(targets.DEFAULT)
 
     before = cc._place_source(tu, manifests, compiler_dir, wibo, flags, original,
-                              tmp_path / "before.mw.o", normalise, adopt)
+                              tmp_path / "before.mw.o", False, True)
     after = cc._place_source(tu, manifests, compiler_dir, wibo, flags, stripped,
-                             tmp_path / "after.mw.o", normalise, adopt)
+                             tmp_path / "after.mw.o", False, True)
 
     assert (before.text, before.debug, before.line) == (after.text, after.debug, after.line)
 
@@ -362,7 +377,7 @@ def test_collapse_trims_trailing_whitespace_without_moving_a_line():
     tidied = sc.collapse(source)
 
     assert tidied == "int a;\nint b;\n\nint c;\n"
-    assert sc._moves_lines(source, tidied) is True, "the whitespace-only run collapsed"
+    assert _moves_lines(source, tidied) is True, "the whitespace-only run collapsed"
 
 
 def test_collapse_drops_the_header_block_and_the_notes_entirely():
@@ -476,44 +491,22 @@ def test_a_comment_sharing_its_line_with_code_leaves_the_code():
     assert sc.scan(tidied) == ()
 
 
-def test_a_tidy_that_moves_a_line_requires_an_adoption_state():
+def test_a_tidy_that_moves_a_line_needs_no_recorded_state():
+    """The tidy moves statement lines and adoption covers it; no row state gates the tidy."""
     source = "/* head */\n\n\nint a;\n"
     tidied = sc.collapse(source)
 
-    assert sc._moves_lines(source, tidied) is True
-    for state in (False, True):
-        with pytest.raises(sc.Refused) as excinfo:
-            sc._require_adoption("src/x.c", state, True)
-        assert "records" in str(excinfo.value)
-        assert "adopt" in str(excinfo.value)
-        assert "refusing to write it" in str(excinfo.value)
-    sc._require_adoption("src/x.c", "adopt", True)
-    sc._require_adoption("src/x.c", False, False)
+    assert _moves_lines(source, tidied) is True
+    assert tidied == "int a;\n"
 
 
-def test_verify_refuses_a_moved_tidy_without_an_adoption_row():
-    """The rule is enforced by the compile gate, not only by convention."""
-    from types import SimpleNamespace
-
-    target = SimpleNamespace(build_pair=lambda _file: ("3.0b38-030307", "-c -lang c", False))
-    tu = SimpleNamespace(file="src/x.c")
-
-    with pytest.raises(sc.Refused) as excinfo:
-        sc.verify(tu, b"/* head */\n\n\nint a;\n", b"\nint a;\n", target,
-                  tidy=True)
-
-    assert "src/x.c records False" in str(excinfo.value)
-    assert "adopt" in str(excinfo.value)
-    assert "refusing to write it" in str(excinfo.value)
-
-
-def test_a_tidy_that_moves_nothing_needs_no_adoption_state():
+def test_a_tidy_that_moves_nothing_still_needs_no_state():
     source = "int a;   \nint b;\t\n"
 
     tidied = sc.collapse(source)
 
-    assert sc._moves_lines(source, tidied) is False
-    sc._require_adoption("src/x.c", False, sc._moves_lines(source, tidied))
+    assert _moves_lines(source, tidied) is False
+    assert tidied == "int a;\nint b;\n"
 
 
 def test_a_tidied_source_whose_text_moves_is_refused():
@@ -571,47 +564,39 @@ def test_the_cli_check_fails_a_blank_line_inside_a_brace(tmp_path):
     assert source.read_text() == body, "--check writes nothing"
 
 
-def test_brace_blanks_are_evidence_only_for_a_line_bearing_row():
-    assert sc.brace_blanks_are_evidence(False)
-    assert sc.brace_blanks_are_evidence(True)
-    assert not sc.brace_blanks_are_evidence("adopt")
+def test_brace_blanks_are_evidence_only_for_a_promoted_source():
+    assert sc.brace_blanks_are_evidence("src/x.c")
     assert not sc.brace_blanks_are_evidence(None), "a file with no row is held to the tidy"
 
 
-def _check_a_unit(monkeypatch, capsys, source, state):
-    """Run ``--check`` in process with ``source`` recorded at ``state`` in tu_builds."""
+def _check_a_unit(monkeypatch, capsys, source, promoted):
+    """Run ``--check`` in process with ``source`` a promoted unit (or not)."""
     def recorded(path, _target):
-        if pathlib.Path(path).resolve() == source.resolve():
-            return "src/x.c", state
-        return None, None
+        if promoted and pathlib.Path(path).resolve() == source.resolve():
+            return "src/x.c"
+        return None
 
-    monkeypatch.setattr(sc, "_recorded_state", recorded)
+    monkeypatch.setattr(sc, "_promoted_source", recorded)
     code = sc.main(["--check", str(source)])
     return code, capsys.readouterr()
 
 
-@pytest.mark.parametrize("state", [False, True])
-def test_the_check_passes_brace_blanks_that_are_line_evidence(monkeypatch, capsys,
-                                                              tmp_path, state):
-    """A line-bearing row keeps retail's numbers in those blanks, so it must not fail."""
+def test_the_check_passes_a_promoted_units_brace_blanks(monkeypatch, capsys, tmp_path):
+    """A promoted unit keeps retail's numbers in those blanks, so it must not fail."""
     source = tmp_path / "unit.c"
     body = "void f(void) {\n\n    int a;\n}\n"
     source.write_text(body)
 
-    code, captured = _check_a_unit(monkeypatch, capsys, source, state)
+    code, captured = _check_a_unit(monkeypatch, capsys, source, True)
 
     assert code == 0, captured.err
-    assert "line evidence" in captured.out
-    assert f"recording {state!r}" in captured.out
-    assert '"adopt" on that row' in captured.out
-    assert "--collapse refuses" in captured.out
     assert "no comments remain" in captured.out
     assert source.read_text() == body, "--check writes nothing"
 
 
-def test_the_check_still_fails_a_line_bearing_unit_that_carries_a_comment(monkeypatch, capsys,
-                                                                          tmp_path):
-    """A comment is never evidence: only the blank-line rule bends to the state ladder."""
+def test_the_check_still_fails_a_promoted_unit_that_carries_a_comment(monkeypatch, capsys,
+                                                                      tmp_path):
+    """A comment is never evidence: only the blank-line rule bends for a promoted source."""
     source = tmp_path / "unit.c"
     body = "void f(void) {\n\n    int a; /* note */\n}\n"
     source.write_text(body)
@@ -620,17 +605,16 @@ def test_the_check_still_fails_a_line_bearing_unit_that_carries_a_comment(monkey
 
     assert code == 1
     assert "still carries 1 comment(s)" in captured.err
-    assert "line evidence" not in captured.out
     assert source.read_text() == body, "--check writes nothing"
 
 
-def test_the_check_still_fails_an_adopting_units_brace_blanks(monkeypatch, capsys, tmp_path):
-    """Adoption substitutes retail's .line, so the blank carries nothing and still fails."""
+def test_the_check_fails_a_non_units_brace_blanks(monkeypatch, capsys, tmp_path):
+    """A file with no tu_builds row has no line evidence, so the blank is padding."""
     source = tmp_path / "unit.c"
     body = "void f(void) {\n\n    int a;\n}\n"
     source.write_text(body)
 
-    code, captured = _check_a_unit(monkeypatch, capsys, source, "adopt")
+    code, captured = _check_a_unit(monkeypatch, capsys, source, False)
 
     assert code == 1
     assert "blank line directly inside a brace" in captured.err
@@ -638,13 +622,12 @@ def test_the_check_still_fails_an_adopting_units_brace_blanks(monkeypatch, capsy
 
 
 def test_the_cli_check_passes_the_line_bearing_units_brace_blanks():
-    """The file that named this rule: cws_wins.c records True and blanks its statements."""
+    """The file that named this rule: cws_wins.c blanks its statements on purpose."""
     from config import targets
 
     relative = "src/common/cws/cws_wins.c"
-    pair = targets.get(targets.DEFAULT).build_pair(relative)
-    if pair is None or not sc.brace_blanks_are_evidence(pair[2]):
-        pytest.skip(f"{relative} does not record a line-bearing state")
+    if targets.get(targets.DEFAULT).build_pair(relative) is None:
+        pytest.skip(f"{relative} has no tu_builds row")
     path = ROOT / relative
     blanks = sc._brace_edge_blanks(path.read_text().splitlines())
     if not blanks:
@@ -653,8 +636,7 @@ def test_the_cli_check_passes_the_line_bearing_units_brace_blanks():
     result = run("--check", str(path))
 
     assert result.returncode == 0, result.stderr
-    assert "line evidence" in result.stdout
-    assert f"first at line {blanks[0]}" in result.stdout
+    assert "no comments remain" in result.stdout
 
 
 def test_the_cli_collapse_check_fails_a_file_that_still_carries_a_header(tmp_path):
@@ -698,7 +680,7 @@ def test_a_tidied_unit_compiles_with_the_same_record_grouping(tmp_path):
     from config import targets
     from toolchain import compile as cc
 
-    tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
+    tu, manifests, compiler_dir, wibo, flags = _unit_and_compiler()
     committed = tu.source.read_bytes()
     # Re-dirty the comment-free file (a header and a note line) so the tidy really strips,
     # deletes those lines and shifts statements, instead of collapsing an identity.
@@ -706,13 +688,13 @@ def test_a_tidied_unit_compiles_with_the_same_record_grouping(tmp_path):
         b"\n", b"\n    /*! probe note */\n", 1)
     tidied = sc.collapse(original.decode("latin-1")).encode("latin-1")
     assert sc.scan(tidied.decode("latin-1")) == ()
-    assert sc._moves_lines(original.decode("latin-1"), tidied.decode("latin-1"))
+    assert _moves_lines(original.decode("latin-1"), tidied.decode("latin-1"))
     target = targets.get(targets.DEFAULT)
 
     before = cc._place_source(tu, manifests, compiler_dir, wibo, flags, original,
-                              tmp_path / "before.mw.o", normalise, adopt, allow_line=True)
+                              tmp_path / "before.mw.o", False, True, allow_line=True)
     after = cc._place_source(tu, manifests, compiler_dir, wibo, flags, tidied,
-                             tmp_path / "after.mw.o", normalise, adopt, allow_line=True)
+                             tmp_path / "after.mw.o", False, True, allow_line=True)
 
     assert before.text == after.text
     assert sc.record_counts(before) == sc.record_counts(after)

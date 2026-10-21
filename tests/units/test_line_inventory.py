@@ -8,7 +8,7 @@ has to get right --
 * a synthetic set's rows: the retail shape (bytes, tables, records, digest), the emitted record
   count, and the row differences / shape mismatch the note explains;
 * ``--check``: a current file passes, a stale one fails, and the CLI writes only when asked;
-* the control: an existing ``adopt`` unit whose committed source is reformatted still compiles
+* the control: an existing promoted unit whose committed source is reformatted still compiles
   to retail's ``.text``, adopts retail's ``.line``, and is recorded as a layout that no longer
   corresponds.  That one needs the retail ELF and the pinned compiler, so it skips without them.
 
@@ -55,7 +55,7 @@ class FakeTarget:
 
 
 def test_a_reproduced_layout_records_the_retail_shape():
-    row = li.record("src/sys/example.c", "adopt", "000-001", RETAIL, SAME)
+    row = li.record("src/sys/example.c", "000-001", RETAIL, SAME)
 
     assert (row.size, row.tables, row.records) == (len(RETAIL), 2, 3)
     assert row.emitted == 3
@@ -66,7 +66,7 @@ def test_a_reproduced_layout_records_the_retail_shape():
 
 
 def test_a_reformatted_layout_is_recorded_as_no_longer_corresponding():
-    row = li.record("src/sys/example.c", "adopt", "000-001", RETAIL, MOVED)
+    row = li.record("src/sys/example.c", "000-001", RETAIL, MOVED)
 
     assert row.emitted == 3
     assert row.differ == 3
@@ -75,7 +75,7 @@ def test_a_reformatted_layout_is_recorded_as_no_longer_corresponding():
 
 
 def test_a_different_table_shape_has_no_row_for_row_answer():
-    row = li.record("src/sys/example.c", "adopt", "000-001", RETAIL, SHORTER)
+    row = li.record("src/sys/example.c", "000-001", RETAIL, SHORTER)
 
     assert row.emitted == 1
     assert row.differ is None
@@ -83,15 +83,13 @@ def test_a_different_table_shape_has_no_row_for_row_answer():
     assert "retail's chunk is adopted" in row.note
 
 
-def test_false_and_true_claim_a_reproduced_layout_and_are_checked():
-    for state in (False, True):
-        row = li.record("src/sys/example.c", state, "000", RETAIL, SAME)
-        assert row.note == "our layout reproduces retail's table"
+def test_a_layout_that_no_longer_corresponds_is_described_not_refused():
+    """The inventory is descriptive: a moved table is recorded, not raised on."""
+    moved = li.record("src/sys/example.c", "000", RETAIL, MOVED)
+    shorter = li.record("src/sys/example.c", "000", RETAIL, SHORTER)
 
-        with pytest.raises(ValueError) as excinfo:
-            li.record("src/sys/example.c", state, "000", RETAIL, MOVED)
-        assert "tu_builds records" in str(excinfo.value)
-        assert "3 row(s) differ" in str(excinfo.value)
+    assert moved.differ == 3 and "row(s) differ" in moved.note
+    assert shorter.differ is None and "no longer corresponds" in shorter.note
 
 
 def test_the_chunk_label_names_contiguous_split_linetables_once():
@@ -108,8 +106,8 @@ def test_the_chunk_label_names_contiguous_split_linetables_once():
 
 def synthetic_rows():
     return [
-        li.record("src/sys/example.c", "adopt", "000-001", RETAIL, MOVED),
-        li.record("src/CS/other.c", True, "002", RETAIL, SAME),
+        li.record("src/sys/example.c", "000-001", RETAIL, MOVED),
+        li.record("src/CS/other.c", "002", RETAIL, SAME),
     ]
 
 
@@ -119,8 +117,10 @@ def test_render_is_deterministic_and_carries_the_policy():
 
     assert first == second
     assert "iteration gate, not a promotion gate" in first
-    assert "| `src/sys/example.c` | adopt | 000-001 | 0x2E | 2 | 3 |" in first
-    assert "| `src/CS/other.c` | True | 002 | 0x2E | 2 | 3 |" in first
+    assert "| `src/sys/example.c` | 000-001 | 0x2E | 2 | 3 |" in first
+    assert "| `src/CS/other.c` | 002 | 0x2E | 2 | 3 |" in first
+    assert "| unit | split line chunks | bytes |" in first
+    assert "| unit | state |" not in first
     assert "python3 tools/units/line_inventory.py --check" in first
 
 
@@ -149,7 +149,7 @@ def test_check_reports_a_missing_file_as_stale(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# the control: a reformatted adopt unit still verifies
+# the control: a reformatted promoted unit still verifies
 # ---------------------------------------------------------------------------
 
 CONTROL = "src/sys/sys_scf.c"
@@ -169,8 +169,7 @@ def _control_unit():
     tu = manifests.tu_named(CONTROL)
     pair = target.build_pair(CONTROL)
     assert pair is not None, "the control must stay a recorded promotion"
-    compiler, flags, state = pair
-    assert state == "adopt", "the control is the adopt unit the reformat relies on"
+    compiler, flags = pair
     try:
         compiler_dir = fetch.compiler(compiler)
         wibo = fetch.wibo()
@@ -180,7 +179,7 @@ def _control_unit():
     return tu, manifests, compiler_dir, wibo, shlex.split(flags)
 
 
-def test_a_reformatted_adopt_unit_still_compiles_to_retail(tmp_path):
+def test_a_reformatted_promoted_unit_still_compiles_to_retail(tmp_path):
     """Reformatting moves every line; `.text` is still retail's and `.line` is adopted."""
     from toolchain import compile as cc
 
@@ -204,7 +203,7 @@ def test_a_reformatted_adopt_unit_still_compiles_to_retail(tmp_path):
         "the reformat was supposed to move the emitted table; choose another control")
     assert all(ok for ok, _detail in cc.compare(tu, placed).values())
 
-    row = li.record(tu.file, "adopt", li._chunk_label(manifests.line_chunk_indices(tu)),
+    row = li.record(tu.file, li._chunk_label(manifests.line_chunk_indices(tu)),
                     retail["line"], placed.emitted_line)
     assert row.emitted > 0
     assert "no longer corresponds" in row.note

@@ -422,27 +422,28 @@ def test_the_registered_targets_promotions_agree_with_its_sources():
     assert {promotion.file for promotion in promoted} == present
 
 
-def test_the_cc_edge_carries_the_debug_step_recorded_for_each_unit():
-    """The pair's fourth element puts `--normalise-debug` or `--adopt-retail-meta` on the edge."""
+def test_the_cc_edge_carries_adoption_for_every_unit():
+    """Every promoted unit's `cc` edge carries `--adopt-retail-meta`, and nothing else.
+
+    Promotion is always adoption: `.text` byte equality is the proof and retail's inventory
+    supplies `.line`/`.debug`, so there is no per-row debug step to put on the edge.
+    """
     if not TARGET.cus.is_file():
         pytest.skip(f"{TARGET.name}: its config is generated in Task 4")
     promoted = {promotion.file: promotion for promotion in configure.promotions(target=TARGET)}
-    for file, _version, _flags, state in TARGET.tu_builds:
+    for file, _version, _flags in TARGET.tu_builds:
         flags = promoted[file].flags
-        assert ("--normalise-debug" in flags) is (state is True)
-        assert ("--adopt-retail-meta" in flags) is (state == "adopt")
-    # net_grf's row was `True` until its layout was tidied; the moved statement lines now need
-    # retail's `.line`, so the edge carries adoption (which normalises the DIE order itself).
+        assert flags.endswith("--adopt-retail-meta"), flags
+        assert "--normalise-debug" not in flags
+    # net_grf's 1592-byte chunk is normalised inside the adoption step itself, not by a flag.
     assert promoted["src/network/net_grf.c"].flags.endswith("--adopt-retail-meta")
 
 
-def test_a_row_without_a_state_is_an_adopting_unit():
-    """The default is adoption: a row omitting the fourth element configures as an adopting unit.
+def test_a_measured_row_configures_an_adopting_unit():
+    """A three-element row configures with `--adopt-retail-meta` on its `cc` edge.
 
-    The descriptor supplies `"adopt"` for an omitted element, so the generated `cc` edge carries
-    `--adopt-retail-meta` without the row spelling it -- `.text` byte equality is the proof and
-    retail's inventory supplies `.line`/`.debug`.  `False` and `True` remain opt-in stronger
-    claims and put nothing, respectively the normaliser, on the edge.
+    `.text` byte equality is the proof and retail's inventory supplies `.line`/`.debug`; the
+    row carries only the compiler build and flags it was measured with.
     """
     tu = type("Tu", (), {"address": 0x100000, "functions": ()})
     manifests = type("M", (), {
@@ -451,17 +452,21 @@ def test_a_row_without_a_state_is_an_adopting_unit():
         "debug_chunk_index": lambda self, unit: 0,
         "line_chunk_indices": lambda self, unit: [0],
     })()
+    (promotion,) = configure.promotions(
+        manifests, probe(tu_builds=(("src/sys/sys_scf.c", "3.0", "-g"),)))
 
-    def command(state):
-        row = ("src/sys/sys_scf.c", "3.0", "-g") if state is None \
-            else ("src/sys/sys_scf.c", "3.0", "-g", state)
-        (promotion,) = configure.promotions(manifests, probe(tu_builds=(row,)))
-        return promotion.flags
+    assert promotion.flags == "--compiler 3.0 -g --adopt-retail-meta"
 
-    assert command(None) == "--compiler 3.0 -g --adopt-retail-meta"
-    assert command("adopt") == "--compiler 3.0 -g --adopt-retail-meta"
-    assert command(False) == "--compiler 3.0 -g"
-    assert command(True) == "--compiler 3.0 -g --normalise-debug"
+
+def test_a_four_element_row_is_refused_before_anything_is_configured():
+    """The removed state ladder leaves a clear error, not a silently ignored element."""
+    for stale in (("src/sys/sys_scf.c", "3.0", "-g", "adopt"),
+                  ("src/sys/sys_scf.c", "3.0", "-g", True),
+                  ("src/sys/sys_scf.c", "3.0", "-g", False)):
+        with pytest.raises(ValueError) as excinfo:
+            probe(tu_builds=(stale,))
+        assert "three elements" in str(excinfo.value)
+        assert "--adopt-retail-meta" in str(excinfo.value)
 
 
 def test_a_promoted_source_with_directives_is_refused_and_a_clean_one_is_not(tmp_path):

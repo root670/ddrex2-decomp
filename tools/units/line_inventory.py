@@ -4,18 +4,17 @@
 ``.line`` equality is an **iteration gate, not a promotion gate**.  While the source is being
 recovered, its statements have to sit on retail's line numbers -- that is what tells an
 unwritten inline from a missing declaration.  At promotion the source may be reformatted
-freely and the chunk the image carries is reconstructed from retail's own inventory (the
-``"adopt"`` path, or the ``.line`` half of it); the promotion proof is ``.text`` byte equality,
-and the checksum that matters is the linked ELF's (``G1``).  This file is the evidence that
-survives that freedom: for each promoted unit it records
+freely and the chunk the image carries is reconstructed from retail's own inventory
+(``--adopt-retail-meta``, which every promoted unit goes through); the promotion proof is
+``.text`` byte equality, and the checksum that matters is the linked ELF's (``G1``).  This
+file is the evidence that survives that freedom: for each promoted unit it records
 
 * the retail ``.line`` chunk's size (the unit's contiguous run of split linetables), its table
   count and record count, and a digest of the bytes;
 * what our own layout emitted -- the record count, and how many rows differ from retail's --
-  measured by compiling the committed source through the unit's recorded pair with its recorded
-  debug step (:func:`toolchain.compile.place`), so the measurement is the compile path itself;
-* the unit's state (``tu_builds``' fourth element) and whether its emitted table still
-  reproduces retail's layout or no longer corresponds to it.
+  measured by compiling the committed source through the unit's recorded pair
+  (:func:`toolchain.compile.place`), so the measurement is the compile path itself;
+* whether its emitted table still reproduces retail's layout or no longer corresponds to it.
 
 The retail bytes are read from the split's ``.line`` chunk in the retail image (the same bytes
 ``configure.py`` cuts into ``build/assets/.line_NNN.databin.bin``), at the offset and size
@@ -57,7 +56,6 @@ class Record:
     """One promoted unit's line inventory, as measured."""
 
     unit: str
-    state: str
     chunks: str
     size: int
     tables: int
@@ -104,42 +102,28 @@ def _differ(emitted: bytes, retail: bytes) -> tuple:
     return len(changes), None
 
 
-def record(unit: str, state, chunks: str, retail: bytes, emitted: bytes) -> Record:
+def record(unit: str, chunks: str, retail: bytes, emitted: bytes) -> Record:
     """One inventory row from the retail chunk and the layout the source emitted.
 
-    The state is kept honest here: ``False`` and ``True`` claim our own layout reproduced
-    retail's ``.line``, so a measurement that contradicts that raises instead of being
-    recorded.  ``"adopt"`` claims retail's chunk was substituted, and the note says whether
-    the emitted table nevertheless reproduced it (adoption supplied ``.debug`` metadata only)
-    or no longer corresponds to it (the source was reformatted / re-laid-out).
+    The note is descriptive only: it says whether the committed layout still reproduces
+    retail's table (adoption then supplied ``.debug`` metadata only) or no longer corresponds
+    to it (the source was reformatted / re-laid-out, so retail's chunk is adopted).
     """
     from toolchain import debug_adopt
 
     tables, records = debug_adopt.line_shape(retail)
     emitted_records = debug_adopt.line_shape(emitted)[1]
     differ, because = _differ(emitted, retail)
-    reproduced = emitted == retail
-    if state in (False, True):
-        if not reproduced:
-            detail = because or f"{differ} row(s) differ"
-            raise ValueError(
-                f"{unit}: tu_builds records {state!r} -- our own layout reproduced retail's "
-                f".line -- but the emitted table has {emitted_records} record(s) against "
-                f"retail's {records}: {detail}")
-        note = "our layout reproduces retail's table"
-    elif state == "adopt":
-        if reproduced:
-            note = "layout reproduces retail's table; adoption supplied .debug metadata only"
-        elif differ is None:
-            note = (f"emitted table no longer corresponds to retail's layout: emitted "
-                    f"{emitted_records} record(s), retail {records} ({because}); retail's "
-                    f"chunk is adopted")
-        else:
-            note = (f"emitted table no longer corresponds to retail's layout: {differ} of "
-                    f"{records} row(s) differ; retail's chunk is adopted")
+    if emitted == retail:
+        note = "layout reproduces retail's table; adoption supplied .debug metadata only"
+    elif differ is None:
+        note = (f"emitted table no longer corresponds to retail's layout: emitted "
+                f"{emitted_records} record(s), retail {records} ({because}); retail's "
+                f"chunk is adopted")
     else:
-        raise ValueError(f"{unit}: unknown tu_builds state {state!r}")
-    return Record(unit, str(state), chunks, len(retail), tables, records, _digest(retail),
+        note = (f"emitted table no longer corresponds to retail's layout: {differ} of "
+                f"{records} row(s) differ; retail's chunk is adopted")
+    return Record(unit, chunks, len(retail), tables, records, _digest(retail),
                   emitted_records, differ, note)
 
 
@@ -147,9 +131,9 @@ def collect(target, verbose: bool = False) -> list:
     """Measure every promoted unit of ``target``, in address order.
 
     The compile is the unit's own path: its recorded compiler build, its recorded flags, and
-    the debug step its state names.  Under ``"adopt"`` the emitted table is the report's
-    pre-adoption measurement (:attr:`toolchain.compile.Placed.emitted_line`), which is exactly
-    what "what our own layout would produce" means.
+    ``--adopt-retail-meta``, so the emitted table is the report's pre-adoption measurement
+    (:attr:`toolchain.compile.Placed.emitted_line`), which is exactly what "what our own
+    layout would produce" means.
     """
     from toolchain import compile as cc, fetch
 
@@ -163,7 +147,7 @@ def collect(target, verbose: bool = False) -> list:
     with tempfile.TemporaryDirectory(prefix="line-inventory-") as scratch:
         scratch = pathlib.Path(scratch)
         for number, file in enumerate(sorted(builds, key=lambda name: manifests.tu_named(name).address)):
-            version, flags, state = builds[file]
+            version, flags = builds[file]
             if not (REPO_ROOT / file).is_file():
                 raise cc.Unusable(f"{file}: tu_builds names a source that does not exist")
             tu = manifests.tu_named(file)
@@ -178,14 +162,14 @@ def collect(target, verbose: bool = False) -> list:
                     placed = cc.place(
                         tu, manifests, compiler_dirs[version], wibo, shlex.split(flags),
                         keep=scratch / f"{number:03d}.mw.o",
-                        normalise=(state is True), adopt=(state == "adopt"))
+                        normalise=False, adopt=True)
             except Exception:
                 if captured.getvalue():
                     print(captured.getvalue().rstrip(), file=sys.stderr)
                 raise
             if verbose and captured.getvalue():
                 print(captured.getvalue().rstrip(), file=sys.stderr)
-            rows.append(record(tu.file, state,
+            rows.append(record(tu.file,
                                _chunk_label(manifests.line_chunk_indices(tu)),
                                retail, placed.emitted_line))
     return rows
@@ -209,24 +193,24 @@ def render(rows: list, target) -> str:
         "under its own rules); the checksum that matters is the linked ELF's, `G1`",
         f"`{target.elf_sha256[:8]}...{target.elf_sha256[-5:]}`.",
         "",
-        "`state` is `tu_builds`' fourth element: `False` means no debug step, `True` the DIE",
-        "order normaliser, `adopt` retail metadata adoption.  `False` and `True` are a claim",
-        "that our own emitted table reproduced retail's, so this generator fails when a",
-        "measurement contradicts them; an `adopt` unit whose layout no longer corresponds to",
-        "retail's says so in the note.  `emitted` and `differ` are measured by compiling the",
-        "committed source through the unit's recorded pair and debug step.  `differ` is `-`",
-        "when the two chunks are not the same run of tables with the same row counts, so no",
-        "row-for-row answer exists; the note explains the shape mismatch.",
+        "Every promoted unit is adopted: `configure.py` puts `--adopt-retail-meta` on its",
+        "`cc` edge, so the image carries retail's `.line` chunk and the emitted table is the",
+        "measurement of what the committed layout produced.  The note says whether that",
+        "layout still reproduces retail's table or no longer corresponds to it.  `emitted`",
+        "and `differ` are measured by compiling the committed source through the unit's",
+        "recorded pair with `--adopt-retail-meta`.  `differ` is `-` when the two chunks are",
+        "not the same run of tables with the same row counts, so no row-for-row answer",
+        "exists; the note explains the shape mismatch.",
         "",
         f"`python3 tools/units/line_inventory.py --check` fails when this file is stale.",
         "",
-        "| unit | state | split line chunks | bytes | tables | records | sha256 | emitted | differ | note |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| unit | split line chunks | bytes | tables | records | sha256 | emitted | differ | note |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     for row in rows:
         differ = "-" if row.differ is None else str(row.differ)
         lines.append(
-            f"| `{row.unit}` | {row.state} | {row.chunks} | 0x{row.size:X} | {row.tables} | "
+            f"| `{row.unit}` | {row.chunks} | 0x{row.size:X} | {row.tables} | "
             f"{row.records} | `{row.digest}` | {row.emitted} | {differ} | {row.note} |")
     lines.append("")
     return "\n".join(lines)

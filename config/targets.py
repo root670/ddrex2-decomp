@@ -185,31 +185,11 @@ class Target:
 
     ``geometry`` is that target's measured file/disc layout, or None until somebody measures it
     (:meth:`geometry_required`).  ``tu_builds`` is
-    ``((source, compiler build, flags[, state]), ...)``: the compiler/flag pair
+    ``((source, compiler build, flags), ...)``: the compiler/flag pair
     ``tools/toolchain/select_build.py`` *measured* as reproducing a promoted unit's retail
-    ``.text``/``.debug``/``.line`` bytes.  ``state`` (optional, **default ``"adopt"``**) is
-    the debug step the pair needs.  The promotion proof is ``.text`` byte equality, and
-    ``.line``/``.debug`` are reconstructed from retail's inventory, so adoption is what a
-    row gets unless the source earns a stronger claim at no cost.  The values are:
-
-    * absent or ``"adopt"`` -- adopt retail metadata: ``.text`` is byte-equal, and
-      ``compile.py --adopt-retail-meta`` adopts retail's ``.line`` chunk, the
-      ``AT_location`` values of locals whose records otherwise match, and a normalised DIE
-      order, accepting only when the whole ``.debug`` chunk is retail's bytes;
-    * ``False`` -- the unit's own emission is byte-equal on all three parts without a step:
-      an opt-in stronger claim, recorded only when the source reproduces retail's ``.line``
-      from its own layout;
-    * ``True`` -- ``compile.py --normalise-debug`` is part of the pair: the emitted
-      ``.debug`` chunk is retail's DIE *set* in another order and ``.line`` is still retail's
-      from our layout (rewrite into retail's order, accept only retail's bytes).  Also
-      opt-in, and a stronger claim than adoption.
-
-    The distinction is kept because the three states prove different things, in increasing
-    strength: adopt proves the instructions are retail's and the remaining debug metadata is
-    what retail recorded; normalise additionally proves the compiled chunk's DIE *order* was
-    the only difference; ``False`` additionally proves our own emission reproduced retail's
-    ``.line`` layout.  ``False`` and ``True`` are opt-in claims a unit earns at no cost --
-    never a default, because a reformatted source cannot honestly make them.  It is per
+    ``.text`` bytes.  Promotion is always adoption: ``.text`` byte equality is the proof,
+    and ``compile.py --adopt-retail-meta`` reconstructs ``.line``/``.debug`` from retail's
+    inventory, accepting only when the whole ``.debug`` chunk is retail's bytes.  It is per
     target because a pair measured against one retail binary says nothing about another, so a
     new target starts with an empty table and ``configure.py`` refuses to promote a source
     nobody has measured for *it*.
@@ -255,22 +235,18 @@ class Target:
             raise ValueError(f"target {self.name}: geometry is {self.geometry!r}, not a "
                              f"Geometry (or None, for a target nobody has measured yet)")
         seen = set()
-        rows = []
         for entry in self.tu_builds:
-            if not (isinstance(entry, tuple) and len(entry) in (3, 4)
-                    and all(isinstance(part, str) and part for part in entry[:3])
-                    and (len(entry) == 3 or isinstance(entry[3], bool)
-                         or entry[3] == "adopt")):
-                raise ValueError(f"target {self.name}: tu_builds entry {entry!r} is not "
-                                 f"(source, compiler build, flags[, 'adopt'|False|True])")
+            if not (isinstance(entry, tuple) and len(entry) == 3
+                    and all(isinstance(part, str) and part for part in entry)):
+                raise ValueError(
+                    f"target {self.name}: tu_builds entry {entry!r} is not "
+                    f"(source, compiler build, flags): promotion is always adoption "
+                    f"(--adopt-retail-meta, `.text` byte equality is the proof), so a row "
+                    f"has three elements -- drop the state from a four-element row")
             if entry[0] in seen:
                 raise ValueError(f"target {self.name}: tu_builds names {entry[0]!r} twice")
             seen.add(entry[0])
-            # Adoption is the promotion default: `.text` equality is the proof and the debug
-            # metadata is reconstructed from retail's inventory.  A row says False or True
-            # only when the unit proves the stronger claim.
-            rows.append(entry if len(entry) == 4 else entry + ("adopt",))
-        object.__setattr__(self, "tu_builds", tuple(rows))
+        object.__setattr__(self, "tu_builds", tuple(self.tu_builds))
         for entry in self.include_dirs:
             if not (isinstance(entry, str) and entry
                     and not pathlib.PurePosixPath(entry).is_absolute()):
@@ -367,16 +343,15 @@ class Target:
         return self.geometry
 
     def build_pair(self, source: str):
-        """``(compiler build, flags, state)`` measured for ``source``, or None."""
-        for file, version, flags, state in self.tu_builds:
+        """``(compiler build, flags)`` measured for ``source``, or None."""
+        for file, version, flags in self.tu_builds:
             if file == source:
-                return version, flags, state
+                return version, flags
         return None
 
     def build_table(self) -> dict:
-        """``tu_builds`` as ``{source: (compiler build, flags, state)}``, for ``configure.py``."""
-        return {file: (version, flags, state)
-                for file, version, flags, state in self.tu_builds}
+        """``tu_builds`` as ``{source: (compiler build, flags)}``, for ``configure.py``."""
+        return {file: (version, flags) for file, version, flags in self.tu_builds}
 
 
 class Registry:
@@ -465,8 +440,8 @@ def _display(path) -> str:
 #: ``sys_scf``'s ``.debug`` is byte-equal outright (the normaliser is inert), and
 #: ``net_grf``'s chunk -- the same DIE set in b38's order -- is rewritten into retail's DIE
 #: order and comes out byte-identical (41 DIEs, 31 moved, 8 references rewritten).  All five
-#: promoted units' layouts are now tidied, which moves their statement lines, so every row
-#: records ``"adopt"`` and ``--adopt-retail-meta`` supplies retail's ``.line`` (and applies
+#: promoted units' layouts are now tidied, which moves their statement lines, so promotion
+#: is always adoption and ``--adopt-retail-meta`` supplies retail's ``.line`` (and applies
 #: the normaliser itself where a chunk needs it).  b38
 #: writes ``(3.0.0)`` in ``.comment`` where retail writes ``(2.4.1.01)``; that string and the
 #: chunk order never reach the image (whose ``.comment`` and chunks are retail's), so the pair
@@ -520,42 +495,22 @@ DDREX2P = Target(
         line_size=0xEE546,          # .line (976,198 B)
         image_elf_offset=0x6D261000,  # LBA 894146 in the pinned image
     ),
-    # (source, compiler build, flags[, state]): measured, never inherited -- see the note
-    # above.  The fourth element is optional and defaults to `"adopt"`: `.text` byte
-    # equality is the promotion proof, and `.line`/`.debug` are reconstructed from retail's
-    # inventory (`--adopt-retail-meta`).  `False` and `True` are opt-in stronger claims a
-    # unit earns at no cost, recorded only when its own emission reproduces retail's `.line`
-    # (and, for `True`, needs only the DIE-order normaliser).  Existing rows keep their
-    # explicit element: each is the stronger evidence it was accepted on.
+    # (source, compiler build, flags): measured, never inherited -- see the note above.
+    # Promotion is always adoption: `.text` byte equality is the proof, and
+    # `--adopt-retail-meta` reconstructs `.line`/`.debug` from retail's inventory.
     #
     # A unit accepted under the anonymous-type DIE-order boundary (`docs/unit-work.md`,
     # "The one recorded `.debug` deviation") must say so in a comment on its row, quoting
     # the line `compile.py` prints: `.debug set-equal, not byte-equal (anonymous-type DIE
-    # order: N of M @anonN indices permuted)`.  The row itself carries no extra field: the
-    # gate re-measures the chunks on every build, and the comment is the record that a
-    # human made the promotion decision.  No unit is accepted this way yet.
-    # A unit whose `.debug` chunk the opt-in order normaliser rewrote records it in the
-    # row's fourth element (`normalise=True`) and, in the same convention, a comment
-    # quoting the line the step prints: `.debug DIE order normalised under
-    # --normalise-debug, byte-equal`.  `configure.py` puts `--normalise-debug` on that
-    # unit's `cc` edge and the step is strict: a chunk that does not come out retail's
-    # bytes fails the build.  `net_grf.c` was the one row that carried it under
-    # `3.0b38-030307`; its layout is now tidied, so the row records `"adopt"` instead (the
-    # adoption step applies the same normaliser internally), and no row carries `True`.
-    # `sys_scf.c` never needed it -- its chunk is byte-equal under that build, so the flag
-    # was inert -- and it is `"adopt"` for the same layout reason.
+    # order: N of M @anonN indices permuted)`.  The gate re-measures the chunks on every
+    # build, and the comment is the record that a human made the promotion decision.  No
+    # unit is accepted this way yet.
     #
-    # The default state is `"adopt"` (`--adopt-retail-meta`): the unit's
-    # `.text` is retail's byte for byte, and `.line` and `.debug` come from retail's
-    # inventory (a `.line` that is not row-for-row comparable is adopted whole, and a
-    # local's `AT_location` naming a different register is retail's).  The comment on that
-    # row quotes the report -- the number of `.line` rows changed, or that the emitted table
-    # is not row-for-row comparable and is adopted whole, and every adopted `local: before
-    # -> after` -- because the report is what says *what* was adopted; the step itself
-    # refuses unless the whole `.debug` chunk comes out retail's bytes.  `p_anime.c` carries
-    # it (`n` as `scratch -> $a2` in both functions; 4 anonymous names; 15 reference words;
-    # the normalised source's `.line` carries 4 more records than retail's, so the tables
-    # are not row-comparable and retail's chunk is adopted whole).
+    # The row's comment quotes the adoption report -- the number of `.line` rows changed, or
+    # that the emitted table is not row-for-row comparable and is adopted whole, and every
+    # adopted `local: before -> after` -- because the report is what says *what* was
+    # adopted; the step itself refuses unless the whole `.debug` chunk comes out retail's
+    # bytes.
     #
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
     # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both
@@ -591,80 +546,80 @@ DDREX2P = Target(
         # retail's 0x40 bytes and `.debug` its 0x28C bytes outright; adoption has
         # only `.line` to substitute.
         ("src/sys/sys_scf.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
-        # Layout tidied, so `.line` is adopted; the row was `True` while `.line` was
-        # still retail's.  Adoption applies the DIE-order normaliser internally (41
-        # DIEs, 31 moved, 8 references) and proves the chunk retail's 0x638 bytes.
+         "-c -lang c -O3 -opt full -g"),
+        # Layout tidied, so `.line` is adopted.  Adoption applies the DIE-order normaliser
+        # internally (41 DIEs, 31 moved, 8 references) and proves the chunk retail's 0x638
+        # bytes.
         ("src/network/net_grf.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # Layout tidied; `.line` adopted.  The emitted table keeps retail's 244
         # records in its 5 tables (104 + 2 + 123 + 12 + 3), so the grouping the old
         # `#line` layout encoded survived the tidy.
         ("src/AM/s573/play/p_anime.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # Layout tidied; `.line` adopted (33 records in one table, retail's).
         ("src/CS/dancemaster/dmm_chara.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # Layout tidied; `.line` adopted (7 records, retail's).
         ("src/CS/lang.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # Layout tidied; `.line` adopted (9 rows, 0x62 table); `.debug` byte-equal outright.
         ("src/CS/edit_lib/el_mes.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x350 with all three bodies word-exact; adoption supplies temp's AT_location
         # ($t1 -> $t7 / $t6) and 8 reference words.  ORIG_P/ORIG_S must be initialised
         # file-scope statics: only then does this build tag them local_variable.
         ("src/network/mio/blowfish.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x80, both bodies word-exact; .debug retail's 0x2C9 / 13 DIEs outright;
         # .line adopted (2 tables / 16 rows, sizes and offsets already retail's).
         ("src/CS/bk_load.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x130, three bodies word-exact; .line (27 rows) and the TU-level DIE order
         # adopted; .debug retail's after adoption.  tblMusicData must be initialised.
         ("src/music_all.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x1E0, three bodies word-exact; .line adopted after the tidy (35 of 38 rows);
         # .debug retail's 0x8B8 / 50 DIEs after 25 reference words (array-type order).
         ("src/CS/train/tra_str.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x4F0, all three bodies word-exact; .line adopted (emitted 143 records,
         # adopted 148); .debug retail's 0x846 / 50 DIEs after 34 ref words and d5's location.
         ("src/sound/vxdecode/decode.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x58, three bodies word-exact; .line grouping already retail's (11 records,
         # 3 tables; 8 numbers moved); .debug 0xB90 / 64 DIEs after 26 ref words and
         # warning0/warning1 locations.
         ("src/network/net_cnf/net_cnf_mes_e.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x58, three bodies word-exact; .line adopted (11 records / 3 tables, 8 numbers
         # moved); .debug 0xFC9 / 90 DIEs after AUTH_RUN/AUTH_OK locations and 68 ref words.
         ("src/network/net_auth/net_auth_mes_e.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x480 (0x43C + 0x38), both bodies word-exact.  The five corner values live in
         # a static inline helper, so they never reach DWARF; .line adopted whole (37 vs 93 rows);
         # .debug 0xC62 / 80 DIEs after 3 type-reference words.
         ("src/common/co_cursor.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0xE0, four bodies word-exact; .line adopted (19 records, 15 rows moved);
         # .debug retail's 0x125E / 125 DIEs after 31 reference words (0x72, 0x83, 0xA3).
         ("src/network/net_window/net_win_infoboard.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x208 (520 bytes), all five bodies word-exact.  .debug is retail's 0x1435
         # bytes / 134 DIEs byte for byte after adoption, including the form-3
         # AT_subscr_data element references (3 rewritten); .line (5 chunks, 540 bytes) and
         # AT_location adopted under --adopt-retail-meta.
         ("src/network/net_window/net_win_any.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0xF0, four bodies word-exact; .line exact before the tidy and adopted after;
         # .debug 0x3A7B / 368 DIEs set-equal (5 of 6 anon indices), adopted after 4 ref words.
         # Needs the `_pairs` fix (ddde799): the flag field sits at a non-zero offset.
         ("src/CS/ani_load.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x480, both bodies word-exact; .line exact before the tidy, adopted after (144
         # records, 142 rows); .debug retail's 0xD78 / 87 DIEs after 16 reference words.
         ("src/common/co_button.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x480 (0x474 + 0xC nop padding), all five bodies word-exact.  .line adopted
         # whole (emitted 141 records, adopted 131: table 1 holds 20 rows against retail's
         # 13); 20 anonymous names and 75 reference words adopted.  .debug is retail's
@@ -672,70 +627,70 @@ DDREX2P = Target(
         # array types are keyed by their subscript data, so [3][65536], [3][45568] and
         # [3][86784] pair by nested bound instead of cyclically.
         ("src/AM/s573/doll/model1.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x2B0, four bodies word-exact; .line byte-equal before the tidy, adopted after
         # (68 records, 4 tables); .debug retail's 0x10D9 / 108 DIEs after 2 anon names and 18
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x350, both bodies word-exact; .line byte-equal pre-tidy (56+20 rows) and
         # adopted after; .debug retail's 0x78DD / 785 DIEs (24 of 25 anon indices permuted).
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
-        # .text 0x778, six bodies word-exact; .text AND .line byte-equal outright, so state
-        # True: --normalise-debug alone makes .debug retail's 0x1969 / 161 DIEs.  No
+         "-c -lang c -O3 -opt full -g"),
+        # .text 0x778, six bodies word-exact; .text AND .line byte-equal outright, so
+        # --normalise-debug alone makes .debug retail's 0x1969 / 161 DIEs.  No
         # placements; the setters hold retail's emission-free lines with a trailing `return;`.
         ("src/network/net_window/net_win_item.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", True),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0xC30 in a 0xC34 extent, seven bodies word-exact; .line 0x998 and .debug
         # 0x4DFC / 496 DIEs adopted.  Needs the @13 jump-table placement (0x002D6860).
-        # Adopt rather than True: retail blanks eight lines before each closing brace.
+        # Adopted whole: retail blanks eight lines before each closing brace.
         ("src/CS/shop/shop_list.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
-        # .text 0x770, seven bodies word-exact; .line 0x5B0 byte-equal outright, so state
-        # True: --normalise-debug alone makes .debug retail's 0x179F / 153 DIEs.  Blank lines
+         "-c -lang c -O3 -opt full -g"),
+        # .text 0x770, seven bodies word-exact; .line 0x5B0 byte-equal outright, so
+        # --normalise-debug alone makes .debug retail's 0x179F / 153 DIEs.  Blank lines
         # are retail's statement positions; never --collapse, and brace-adjacent blanks stay.
         ("src/common/cws/cws_wins.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", True),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x300, five bodies word-exact; .text, .line 0x1F4 and .debug 0x6D4 / 33 DIEs
-        # are retail's outright, so the state is False.  The Create bodies need their matrix
+        # are retail's outright.  The Create bodies need their matrix
         # prototypes spelled through a typedef: five `float (*)[4]` declarators emit five
         # array_type DIEs (0x90 over).  Line-bearing layout; never --collapse.
-        ("src/AM/s573/doll/matrix.c", "3.0b38-030307", "-c -lang c -O3 -g", False),
+        ("src/AM/s573/doll/matrix.c", "3.0b38-030307", "-c -lang c -O3 -g"),
         # .text 0x7A0, five bodies word-exact; .line 0x348 byte-equal (blank-line padding,
         # no directives); .debug retail's 0x18DB / 160 DIEs via --normalise-debug.  Needs
         # the five @40..@44 placements; per-source preference resolves the shared names.
         ("src/network/net_window/net_win_listdtl3.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g -sdatathreshold 0", True),
-        # .text 0x2D0, six bodies word-exact; .text and .line byte-equal outright, so state
-        # True: --normalise-debug alone makes .debug retail's 0x16BD / 147 DIEs.  Needs the
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x2D0, six bodies word-exact; .text and .line byte-equal outright, so
+        # --normalise-debug alone makes .debug retail's 0x16BD / 147 DIEs.  Needs the
         # @62 jump-table placement in data_placements.txt.  The two `[3]` array DIEs behind
         # netwinmenu_plate_board_off/_on are structurally identical; the normaliser pairs
         # them by the local that names each (2026-10-21), which is what makes the chunk
         # byte-identical instead of swapping the two references.
         ("src/network/net_window/net_win_menu.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", True),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x3B8 in a 0x3C0 extent, six bodies word-exact; .text AND .line byte-equal
-        # outright, so the state is True: --normalise-debug alone makes .debug retail's
+        # outright, so --normalise-debug alone makes .debug retail's
         # 0x164D / 146 DIEs.  Layout keeps retail's blank gaps on purpose; never --collapse.
         ("src/network/net_window/net_win_watch.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g -sdatathreshold 0", True),
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x3F8 in a 0x400 extent, all seven bodies word-exact; .line adopted whole
         # (7 chunks; TabSetOff's ten straight-line masks alternate two lines); .debug retail's
         # 0x1E4B / 200 DIEs after 55 type refs and every AT_location.
         ("src/network/net_window/net_win_tab.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x4F0, three bodies word-exact; .line 91 records adopted (83 rows moved);
         # .debug retail's 0x46EF / 485 DIEs after 1 location, 21 names and 99 refs.
         ("src/CS/dancemaster/dmm_mess.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x3A0, five bodies word-exact; .line adopted whole (5 tables, 5 chunks), as
         # is .debug (retail's 0x12E7 / 136 DIEs).  `-sdatathreshold 0` keeps the "%05d" and
         # "%08d" literals in .data sections of their own instead of a shared 8-byte pool, so
         # each is placed at its retail slot (`@40`/`@41` in data_placements.txt).
         ("src/network/net_window/net_win_listdtl2.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g -sdatathreshold 0", "adopt")),
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

@@ -776,21 +776,14 @@ def check_promoted_sources(target=None, root=None) -> None:
             raise ConfigError(str(exc)) from exc
 
 
-def promotion_command(version: str, flags: str, state) -> str:
-    """The ``compile.py`` arguments for one measured pair, including its debug step.
+def promotion_command(version: str, flags: str) -> str:
+    """The ``compile.py`` arguments for one measured pair.
 
-    ``state`` is the ``tu_builds`` fourth element *after* the descriptor normalised it
-    (``config.targets.Target``): an omitted element is ``"adopt"``, so a new row carries
-    ``--adopt-retail-meta`` without spelling it -- ``.text`` byte equality is the promotion
-    proof and retail's inventory supplies ``.line``/``.debug``.  ``False`` adds nothing and
-    ``True`` adds the DIE-order normaliser, both opt-in stronger claims a unit earns.
+    Every promoted unit is adopted: ``--adopt-retail-meta`` reconstructs ``.line``/``.debug``
+    from retail's inventory and proves the whole ``.debug`` chunk is retail's bytes, with
+    ``.text`` byte equality as the precondition.  There is no other promotion step to name.
     """
-    command = f"--compiler {version} {flags}"
-    if state is True:
-        command += " --normalise-debug"
-    elif state == "adopt":
-        command += " --adopt-retail-meta"
-    return command
+    return f"--compiler {version} {flags} --adopt-retail-meta"
 
 
 def _promotions(manifests=None, target=None) -> list:
@@ -810,9 +803,9 @@ def _promotions(manifests=None, target=None) -> list:
             + ", ".join(sorted(set(builds) - present)))
     out = []
     segment = target.geometry_required().code_segment
-    for file, (version, flags, state) in sorted(builds.items()):
+    for file, (version, flags) in sorted(builds.items()):
         tu = manifests.tu_named(file)
-        command = promotion_command(version, flags, state)
+        command = promotion_command(version, flags)
         out.append(Promotion(
             file, tu.address, command,
             f"build/{file}.o", f"build/{file}.o.debug", f"build/{file}.o.line",
@@ -1186,7 +1179,7 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
     built_from = {promotion.file: promotion.object for promotion in promoted}
     data = placement_inputs(placements, built_from)
     data_sources = sorted({record["source"] for record in placements} - set(built_from))
-    versions = {version for version, _flags, _state in target.build_table().values()}
+    versions = {version for version, _flags in target.build_table().values()}
     data_compiler = (versions.pop() if len(versions) == 1 else cc.fetch.REQUIRED)
     write_if_different(target.ld_script,
                        pinned_ld_script(code, aliases, promoted, target, geometry,

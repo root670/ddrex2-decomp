@@ -13,47 +13,47 @@ from retail's inventory.  The promotion proof is `.text` byte equality (and `.de
 under its own rules); the checksum that matters is the linked ELF's, `G1`
 `ef31c90f...c02cd`.
 
-`state` is `tu_builds`' fourth element: `False` means no debug step, `True` the DIE
-order normaliser, `adopt` retail metadata adoption.  `False` and `True` are a claim
-that our own emitted table reproduced retail's, so this generator fails when a
-measurement contradicts them; an `adopt` unit whose layout no longer corresponds to
-retail's says so in the note.  `emitted` and `differ` are measured by compiling the
-committed source through the unit's recorded pair and debug step.  `differ` is `-`
-when the two chunks are not the same run of tables with the same row counts, so no
-row-for-row answer exists; the note explains the shape mismatch.
+Every promoted unit is adopted: `configure.py` puts `--adopt-retail-meta` on its
+`cc` edge, so the image carries retail's `.line` chunk and the emitted table is the
+measurement of what the committed layout produced.  The note says whether that
+layout still reproduces retail's table or no longer corresponds to it.  `emitted`
+and `differ` are measured by compiling the committed source through the unit's
+recorded pair with `--adopt-retail-meta`.  `differ` is `-` when the two chunks are
+not the same run of tables with the same row counts, so no row-for-row answer
+exists; the note explains the shape mismatch.
 
 `python3 tools/units/line_inventory.py --check` fails when this file is stale.
 
-| unit | state | split line chunks | bytes | tables | records | sha256 | emitted | differ | note |
-|---|---|---|---|---|---|---|---|---|---|
-| `src/sys/sys_scf.c` | adopt | 000-001 | 0x74 | 2 | 10 | `752f966b41c5c97d` | 10 | 8 | emitted table no longer corresponds to retail's layout: 8 of 10 row(s) differ; retail's chunk is adopted |
-| `src/music_all.c` | adopt | 038-040 | 0x126 | 3 | 27 | `1f28ffe8dc1dad8f` | 27 | 24 | emitted table no longer corresponds to retail's layout: 24 of 27 row(s) differ; retail's chunk is adopted |
-| `src/CS/bk_load.c` | adopt | 041-042 | 0xB0 | 2 | 16 | `4abf60e739e4ce95` | 16 | 14 | emitted table no longer corresponds to retail's layout: 14 of 16 row(s) differ; retail's chunk is adopted |
-| `src/CS/lang.c` | adopt | 043 | 0x4E | 1 | 7 | `a9ae61fac8368712` | 7 | 6 | emitted table no longer corresponds to retail's layout: 6 of 7 row(s) differ; retail's chunk is adopted |
-| `src/AM/s573/play/p_anime.c` | adopt | 061-065 | 0x9B0 | 5 | 244 | `6ac87d487e8c54f2` | 244 | 239 | emitted table no longer corresponds to retail's layout: 239 of 244 row(s) differ; retail's chunk is adopted |
-| `src/CS/ani_load.c` | adopt | 066-069 | 0x124 | 4 | 26 | `c446560b111d67af` | 26 | 22 | emitted table no longer corresponds to retail's layout: 22 of 26 row(s) differ; retail's chunk is adopted |
-| `src/AM/s573/doll/matrix.c` | False | 094-098 | 0x1F4 | 5 | 46 | `35b1ff57e4ad1174` | 46 | 0 | our layout reproduces retail's table |
-| `src/AM/s573/doll/model1.c` | adopt | 099-103 | 0x546 | 5 | 131 | `48e579bd16869928` | 141 | - | emitted table no longer corresponds to retail's layout: emitted 141 record(s), retail 131 (.line table 1 holds 20 rows against retail's 13); retail's chunk is adopted |
-| `src/CS/opening/openinglogo.c` | adopt | 168-171 | 0x2C8 | 4 | 68 | `27075a00178613bf` | 68 | 64 | emitted table no longer corresponds to retail's layout: 64 of 68 row(s) differ; retail's chunk is adopted |
-| `src/sound/vxdecode/decode.c` | adopt | 190-192 | 0x5E0 | 3 | 148 | `ea458022c6b3b0bd` | 143 | - | emitted table no longer corresponds to retail's layout: emitted 143 record(s), retail 148 (.line table 0 holds 135 rows against retail's 140); retail's chunk is adopted |
-| `src/network/net_grf.c` | adopt | 344-345 | 0x9C | 2 | 14 | `9bb47b0f6f6d79f5` | 14 | 12 | emitted table no longer corresponds to retail's layout: 12 of 14 row(s) differ; retail's chunk is adopted |
-| `src/common/cws/cws_wins.c` | True | 565-571 | 0x5B0 | 7 | 140 | `5fccc2e0c204f4ea` | 140 | 0 | our layout reproduces retail's table |
-| `src/network/net_cnf/net_cnf_mes_e.c` | adopt | 591-593 | 0x86 | 3 | 11 | `2cba00e3abddae4b` | 11 | 8 | emitted table no longer corresponds to retail's layout: 8 of 11 row(s) differ; retail's chunk is adopted |
-| `src/network/net_window/net_win_any.c` | adopt | 594-598 | 0x21C | 5 | 50 | `f726d0f4e0f4eba3` | 51 | - | emitted table no longer corresponds to retail's layout: emitted 51 record(s), retail 50 (.line table 4 holds 6 rows against retail's 5); retail's chunk is adopted |
-| `src/network/net_window/net_win_menu.c` | True | 753-758 | 0x274 | 6 | 58 | `d54de689de4311ef` | 58 | 0 | our layout reproduces retail's table |
-| `src/network/net_window/net_win_tab.c` | adopt | 849-855 | 0x466 | 7 | 107 | `791db03c84ebe4f9` | 108 | - | emitted table no longer corresponds to retail's layout: emitted 108 record(s), retail 107 (.line table 1 holds 10 rows against retail's 11); retail's chunk is adopted |
-| `src/network/net_window/net_win_watch.c` | True | 856-861 | 0x328 | 6 | 76 | `d0c81ee0b11c7715` | 76 | 0 | our layout reproduces retail's table |
-| `src/network/net_window/net_win_item.c` | True | 868-873 | 0x742 | 6 | 181 | `38bdc3823bbf2336` | 181 | 0 | our layout reproduces retail's table |
-| `src/common/co_cursor.c` | adopt | 998-999 | 0x402 | 2 | 101 | `e2f1254ba1b7d9f1` | 45 | - | emitted table no longer corresponds to retail's layout: emitted 45 record(s), retail 101 (.line table 0 holds 37 rows against retail's 93); retail's chunk is adopted |
-| `src/common/co_button.c` | adopt | 1000-1001 | 0x5B0 | 2 | 144 | `f2a314c9d18e4c56` | 144 | 142 | emitted table no longer corresponds to retail's layout: 142 of 144 row(s) differ; retail's chunk is adopted |
-| `src/CS/dancemaster/dmm_chara.c` | adopt | 1031 | 0x152 | 1 | 33 | `b6bc49effed4c4df` | 33 | 32 | emitted table no longer corresponds to retail's layout: 32 of 33 row(s) differ; retail's chunk is adopted |
-| `src/network/mio/blowfish.c` | adopt | 1113-1115 | 0x36A | 3 | 85 | `0f0472f0eaef51aa` | 80 | - | emitted table no longer corresponds to retail's layout: emitted 80 record(s), retail 85 (.line table 0 holds 42 rows against retail's 47); retail's chunk is adopted |
-| `src/network/net_auth/net_auth_mes_e.c` | adopt | 1145-1147 | 0x86 | 3 | 11 | `758413951d1f20b7` | 11 | 8 | emitted table no longer corresponds to retail's layout: 8 of 11 row(s) differ; retail's chunk is adopted |
-| `src/CS/shop/shop_init.c` | adopt | 1171-1172 | 0x308 | 2 | 76 | `6e3585dfed9c776a` | 76 | 74 | emitted table no longer corresponds to retail's layout: 74 of 76 row(s) differ; retail's chunk is adopted |
-| `src/CS/shop/shop_list.c` | adopt | 1173-1179 | 0x998 | 7 | 240 | `6b4e60a90e4b9998` | 213 | - | emitted table no longer corresponds to retail's layout: emitted 213 record(s), retail 240 (.line table 0 holds 36 rows against retail's 41); retail's chunk is adopted |
-| `src/CS/dancemaster/dmm_mess.c` | adopt | 1250-1252 | 0x3A6 | 3 | 91 | `78186d7b916dc06c` | 91 | 88 | emitted table no longer corresponds to retail's layout: 88 of 91 row(s) differ; retail's chunk is adopted |
-| `src/network/net_window/net_win_listdtl2.c` | adopt | 1334-1338 | 0x258 | 5 | 56 | `7c0070b699678988` | 56 | 50 | emitted table no longer corresponds to retail's layout: 50 of 56 row(s) differ; retail's chunk is adopted |
-| `src/network/net_window/net_win_listdtl3.c` | True | 1346-1350 | 0x348 | 5 | 80 | `1bab96ebceab0ba9` | 80 | 0 | our layout reproduces retail's table |
-| `src/network/net_window/net_win_infoboard.c` | adopt | 1351-1354 | 0xDE | 4 | 19 | `5b4afcd35eedfac4` | 19 | 15 | emitted table no longer corresponds to retail's layout: 15 of 19 row(s) differ; retail's chunk is adopted |
-| `src/CS/train/tra_str.c` | adopt | 1614-1616 | 0x194 | 3 | 38 | `ff45bb9e698ddb4a` | 38 | 35 | emitted table no longer corresponds to retail's layout: 35 of 38 row(s) differ; retail's chunk is adopted |
-| `src/CS/edit_lib/el_mes.c` | adopt | 1759 | 0x62 | 1 | 9 | `1e305cc6a711433b` | 9 | 8 | emitted table no longer corresponds to retail's layout: 8 of 9 row(s) differ; retail's chunk is adopted |
+| unit | split line chunks | bytes | tables | records | sha256 | emitted | differ | note |
+|---|---|---|---|---|---|---|---|---|
+| `src/sys/sys_scf.c` | 000-001 | 0x74 | 2 | 10 | `752f966b41c5c97d` | 10 | 8 | emitted table no longer corresponds to retail's layout: 8 of 10 row(s) differ; retail's chunk is adopted |
+| `src/music_all.c` | 038-040 | 0x126 | 3 | 27 | `1f28ffe8dc1dad8f` | 27 | 24 | emitted table no longer corresponds to retail's layout: 24 of 27 row(s) differ; retail's chunk is adopted |
+| `src/CS/bk_load.c` | 041-042 | 0xB0 | 2 | 16 | `4abf60e739e4ce95` | 16 | 14 | emitted table no longer corresponds to retail's layout: 14 of 16 row(s) differ; retail's chunk is adopted |
+| `src/CS/lang.c` | 043 | 0x4E | 1 | 7 | `a9ae61fac8368712` | 7 | 6 | emitted table no longer corresponds to retail's layout: 6 of 7 row(s) differ; retail's chunk is adopted |
+| `src/AM/s573/play/p_anime.c` | 061-065 | 0x9B0 | 5 | 244 | `6ac87d487e8c54f2` | 244 | 239 | emitted table no longer corresponds to retail's layout: 239 of 244 row(s) differ; retail's chunk is adopted |
+| `src/CS/ani_load.c` | 066-069 | 0x124 | 4 | 26 | `c446560b111d67af` | 26 | 22 | emitted table no longer corresponds to retail's layout: 22 of 26 row(s) differ; retail's chunk is adopted |
+| `src/AM/s573/doll/matrix.c` | 094-098 | 0x1F4 | 5 | 46 | `35b1ff57e4ad1174` | 46 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
+| `src/AM/s573/doll/model1.c` | 099-103 | 0x546 | 5 | 131 | `48e579bd16869928` | 141 | - | emitted table no longer corresponds to retail's layout: emitted 141 record(s), retail 131 (.line table 1 holds 20 rows against retail's 13); retail's chunk is adopted |
+| `src/CS/opening/openinglogo.c` | 168-171 | 0x2C8 | 4 | 68 | `27075a00178613bf` | 68 | 64 | emitted table no longer corresponds to retail's layout: 64 of 68 row(s) differ; retail's chunk is adopted |
+| `src/sound/vxdecode/decode.c` | 190-192 | 0x5E0 | 3 | 148 | `ea458022c6b3b0bd` | 143 | - | emitted table no longer corresponds to retail's layout: emitted 143 record(s), retail 148 (.line table 0 holds 135 rows against retail's 140); retail's chunk is adopted |
+| `src/network/net_grf.c` | 344-345 | 0x9C | 2 | 14 | `9bb47b0f6f6d79f5` | 14 | 12 | emitted table no longer corresponds to retail's layout: 12 of 14 row(s) differ; retail's chunk is adopted |
+| `src/common/cws/cws_wins.c` | 565-571 | 0x5B0 | 7 | 140 | `5fccc2e0c204f4ea` | 140 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
+| `src/network/net_cnf/net_cnf_mes_e.c` | 591-593 | 0x86 | 3 | 11 | `2cba00e3abddae4b` | 11 | 8 | emitted table no longer corresponds to retail's layout: 8 of 11 row(s) differ; retail's chunk is adopted |
+| `src/network/net_window/net_win_any.c` | 594-598 | 0x21C | 5 | 50 | `f726d0f4e0f4eba3` | 51 | - | emitted table no longer corresponds to retail's layout: emitted 51 record(s), retail 50 (.line table 4 holds 6 rows against retail's 5); retail's chunk is adopted |
+| `src/network/net_window/net_win_menu.c` | 753-758 | 0x274 | 6 | 58 | `d54de689de4311ef` | 58 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
+| `src/network/net_window/net_win_tab.c` | 849-855 | 0x466 | 7 | 107 | `791db03c84ebe4f9` | 108 | - | emitted table no longer corresponds to retail's layout: emitted 108 record(s), retail 107 (.line table 1 holds 10 rows against retail's 11); retail's chunk is adopted |
+| `src/network/net_window/net_win_watch.c` | 856-861 | 0x328 | 6 | 76 | `d0c81ee0b11c7715` | 76 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
+| `src/network/net_window/net_win_item.c` | 868-873 | 0x742 | 6 | 181 | `38bdc3823bbf2336` | 181 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
+| `src/common/co_cursor.c` | 998-999 | 0x402 | 2 | 101 | `e2f1254ba1b7d9f1` | 45 | - | emitted table no longer corresponds to retail's layout: emitted 45 record(s), retail 101 (.line table 0 holds 37 rows against retail's 93); retail's chunk is adopted |
+| `src/common/co_button.c` | 1000-1001 | 0x5B0 | 2 | 144 | `f2a314c9d18e4c56` | 144 | 142 | emitted table no longer corresponds to retail's layout: 142 of 144 row(s) differ; retail's chunk is adopted |
+| `src/CS/dancemaster/dmm_chara.c` | 1031 | 0x152 | 1 | 33 | `b6bc49effed4c4df` | 33 | 32 | emitted table no longer corresponds to retail's layout: 32 of 33 row(s) differ; retail's chunk is adopted |
+| `src/network/mio/blowfish.c` | 1113-1115 | 0x36A | 3 | 85 | `0f0472f0eaef51aa` | 80 | - | emitted table no longer corresponds to retail's layout: emitted 80 record(s), retail 85 (.line table 0 holds 42 rows against retail's 47); retail's chunk is adopted |
+| `src/network/net_auth/net_auth_mes_e.c` | 1145-1147 | 0x86 | 3 | 11 | `758413951d1f20b7` | 11 | 8 | emitted table no longer corresponds to retail's layout: 8 of 11 row(s) differ; retail's chunk is adopted |
+| `src/CS/shop/shop_init.c` | 1171-1172 | 0x308 | 2 | 76 | `6e3585dfed9c776a` | 76 | 74 | emitted table no longer corresponds to retail's layout: 74 of 76 row(s) differ; retail's chunk is adopted |
+| `src/CS/shop/shop_list.c` | 1173-1179 | 0x998 | 7 | 240 | `6b4e60a90e4b9998` | 213 | - | emitted table no longer corresponds to retail's layout: emitted 213 record(s), retail 240 (.line table 0 holds 36 rows against retail's 41); retail's chunk is adopted |
+| `src/CS/dancemaster/dmm_mess.c` | 1250-1252 | 0x3A6 | 3 | 91 | `78186d7b916dc06c` | 91 | 88 | emitted table no longer corresponds to retail's layout: 88 of 91 row(s) differ; retail's chunk is adopted |
+| `src/network/net_window/net_win_listdtl2.c` | 1334-1338 | 0x258 | 5 | 56 | `7c0070b699678988` | 56 | 50 | emitted table no longer corresponds to retail's layout: 50 of 56 row(s) differ; retail's chunk is adopted |
+| `src/network/net_window/net_win_listdtl3.c` | 1346-1350 | 0x348 | 5 | 80 | `1bab96ebceab0ba9` | 80 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
+| `src/network/net_window/net_win_infoboard.c` | 1351-1354 | 0xDE | 4 | 19 | `5b4afcd35eedfac4` | 19 | 15 | emitted table no longer corresponds to retail's layout: 15 of 19 row(s) differ; retail's chunk is adopted |
+| `src/CS/train/tra_str.c` | 1614-1616 | 0x194 | 3 | 38 | `ff45bb9e698ddb4a` | 38 | 35 | emitted table no longer corresponds to retail's layout: 35 of 38 row(s) differ; retail's chunk is adopted |
+| `src/CS/edit_lib/el_mes.c` | 1759 | 0x62 | 1 | 9 | `1e305cc6a711433b` | 9 | 8 | emitted table no longer corresponds to retail's layout: 8 of 9 row(s) differ; retail's chunk is adopted |

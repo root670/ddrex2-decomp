@@ -394,13 +394,13 @@ def verify(tu, original: bytes, rewritten: bytes, target):
     from toolchain import fetch
 
     pair = _pair(tu, target)
-    compiler, flags, state = pair
+    compiler, flags = pair
     manifests = cc.Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
     command = shlex.split(flags)
-    normalise = state is True
-    adopt = state == "adopt"
+    normalise = False
+    adopt = True
     with tempfile.TemporaryDirectory(prefix="line-reflow-") as scratch:
         before = cc._place_source(tu, manifests, compiler_dir, wibo, command, original,
                                   pathlib.Path(scratch) / "before.mw.o", normalise, adopt)
@@ -481,13 +481,13 @@ def verify_normalised(tu, original: bytes, rewritten: bytes, target):
     from toolchain import compile as cc
     from toolchain import fetch
 
-    compiler, flags, state = _pair(tu, target)
+    compiler, flags = _pair(tu, target)
     manifests = cc.Manifests(target)
     compiler_dir = fetch.compiler(compiler)
     wibo = fetch.wibo()
     command = shlex.split(flags)
-    normalise_debug = state is True
-    adopt = state == "adopt"
+    normalise_debug = False
+    adopt = True
     with tempfile.TemporaryDirectory(prefix="line-reflow-") as scratch:
         before = cc._place_source(tu, manifests, compiler_dir, wibo, command, original,
                                   pathlib.Path(scratch) / "before.mw.o", normalise_debug,
@@ -592,7 +592,7 @@ def main(argv=None) -> int:
         except Refused as exc:
             print(f"line_reflow.py: {_display(source)}: {exc}", file=sys.stderr)
             return 1
-        compiler, flags, _state = target.build_pair(tu.file)
+        compiler, flags = target.build_pair(tu.file)
         if note:
             detail = (f"the emitted .line is not row-for-row comparable with retail's "
                       f"({note}); retail's chunk is what --adopt-retail-meta takes whole")
@@ -608,7 +608,7 @@ def main(argv=None) -> int:
         except Refused as exc:
             print(f"line_reflow.py: {_display(source)}: {exc}", file=sys.stderr)
             return 1
-        compiler, flags, _state = target.build_pair(tu.file)
+        compiler, flags = target.build_pair(tu.file)
         print(f"line_reflow.py: {_display(source)}: {len(directives)} directive(s) reflowed; "
               f".text {len(after.text):#x}, .debug {len(after.debug):#x}, .line "
               f"{len(after.line):#x} bytes under {compiler} {flags} -- byte-identical")

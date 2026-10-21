@@ -77,9 +77,9 @@ def test_the_unit_keeps_retails_statement_grouping():
             f"{SOURCE}: {statement!r} (retail line {number}) is missing or out of order")
         index += 1
     pair = TARGET.build_pair(SOURCE)
-    assert pair is not None and pair[2] == "adopt", (
-        f"{SOURCE}: a moved statement line needs retail-metadata adoption recorded in "
-        f"tu_builds")
+    assert pair is not None, (
+        f"{SOURCE}: a moved statement line needs its measured pair recorded in tu_builds "
+        f"(promotion is always adoption, `--adopt-retail-meta`)")
 
 
 def test_the_descriptor_records_a_measured_compiler_for_the_unit():

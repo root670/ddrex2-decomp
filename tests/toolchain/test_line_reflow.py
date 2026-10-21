@@ -237,10 +237,10 @@ def _unit_and_compiler():
     tu = manifests.tu_named("src/sys/sys_scf.c")
     pair = target.build_pair(tu.file)
     assert pair is not None, "sys_scf.c must stay a recorded promotion"
-    compiler, flags, state = pair
-    # The row's fourth element is `False`, `True` (normalise) or `"adopt"`; the two
-    # stronger steps are separate arguments to the promotion path.
-    normalise, adopt = state is True, state == "adopt"
+    compiler, flags = pair
+    # Every promoted unit is adopted: the promotion path takes retail's `.line` and
+    # reconstructs `.debug` from retail's inventory.
+    normalise, adopt = False, True
     try:
         compiler_dir = fetch.compiler(compiler)
         wibo = fetch.wibo()
