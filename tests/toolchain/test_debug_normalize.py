@@ -223,6 +223,26 @@ def net_grf_types(ours):
     return Die(0x0011, [(AT_NAME, "net_grf.c")], [dancer] + order)
 
 
+def twin_types(ours):
+    """Two locals naming two structurally identical arrays, emitted in opposite orders.
+
+    Both arrays are ``[3]`` of the same aggregate: same tag, same ``AT_subscr_data``, same
+    length, so their signatures collide and emission order cannot pair them.  Only the local
+    that names each one tells them apart -- ``board_off``'s array is retail's first, ours'
+    second -- which is exactly the shape net_win_menu's ``netwinmenu_plate_board_off`` /
+    ``_on`` pair has.  Pairing the twins by emission order rewrites each local to the
+    other's array, and the chunk differs from retail's in those two reference words.
+    """
+    aggregate = Die(0x0013, [(AT_NAME, "@anon0"), (AT_BYTE_SIZE, 12)],
+                    [member("x", 0)])
+    first = Die(0x0001, [(AT_SUBSCR_DATA, subscript(2, aggregate))])
+    second = Die(0x0001, [(AT_SUBSCR_DATA, subscript(2, aggregate))])
+    off = Die(0x000C, [(AT_NAME, "board_off"), (AT_USER_DEF_TYPE, first)])
+    on = Die(0x000C, [(AT_NAME, "board_on"), (AT_USER_DEF_TYPE, second)])
+    order = [aggregate, second, first] if ours else [aggregate, first, second]
+    return Die(0x0011, [(AT_NAME, "net_win_menu.c")], [off, on] + order)
+
+
 def function_cu(ours, location=0x20):
     """A function CU whose lexical block's locals are the ``3.0`` family's reversed order."""
     array22 = Die(0x0001, [(AT_SUBSCR_DATA, subscript(21, 1))])
@@ -253,6 +273,21 @@ def _ref_position(chunk_bytes, name, code):
 
 
 # -- the rewrite: order, nesting, and the references that move with them -------------------
+
+
+def test_identical_twins_are_paired_by_the_record_that_names_them():
+    # Two arrays with the same signature in opposite orders: emission order pairs them
+    # cyclically, and each local's type reference then names the other's array.  The
+    # incoming reference from the (uniquely named) local is what tells the twins apart.
+    retail = build(twin_types(ours=False))
+    emitted = build(twin_types(ours=True))
+
+    assert len(emitted) == len(retail)
+    assert emitted != retail
+    result = dn.normalise(emitted, retail)
+
+    assert result.chunk == retail
+    assert result.references == 2        # both locals' AT_user_def_type values moved
 
 
 def test_a_types_block_is_rewritten_into_retails_order_byte_for_byte():

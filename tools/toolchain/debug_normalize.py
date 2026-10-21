@@ -218,6 +218,42 @@ def _block_references(code, payload):
     return None
 
 
+def _profiles(chunk, dies, base, key, ignore=None):
+    """``offset -> tuple of (code, key of the referring DIE)`` for in-chunk references.
+
+    Two records with the same signature are still told apart by *who points at them*: two
+    ``[3]`` arrays of the same element type, or two subroutine types with the same
+    parameters, are distinct DIEs, and each is named by a different record.  The profile is
+    the incoming edge list with the source's *key* (order-invariant) in place of its offset,
+    so the same structure produces the same profile in both chunks.
+
+    ``AT_sibling`` is not a reference and is excluded: it is an absolute position, and the
+    two chunks being compared put the same record at different positions.  ``ignore`` drops
+    the attributes the pairing signature drops as well, so a value being adopted from retail
+    cannot make a profile one-sided.
+    """
+    by_offset = {die.offset: die for die in dies}
+    profiles = {}
+    for die in dies:
+        record = chunk[die.offset - base:die.offset - base + die.length]
+        for code, form, at, size in _fields(record):
+            if code == AT_SIBLING or (ignore is not None and ignore(die, code)):
+                continue
+            if form == 2:
+                values = [_U32(record, at)[0]]
+            elif form in (3, 4) and size:
+                payload = record[at:at + size]
+                positions = _block_references(code, payload)
+                values = ([_U32(payload, position)[0] for position in positions]
+                          if positions else [])
+            else:
+                values = []
+            for value in values:
+                if value in by_offset:
+                    profiles.setdefault(value, []).append((code, repr(key(die))))
+    return {offset: tuple(sorted(edges)) for offset, edges in profiles.items()}
+
+
 def _signature_key(by_offset, ignore=None):
     """An order-invariant key for one DIE and its subtree; ``by_offset`` is its own map."""
     memo = {}
@@ -281,12 +317,15 @@ def _mismatch(ours, theirs, our_shallow, retail_shallow, base, where):
 
 
 def _pair(ours, theirs, our_key, retail_key, base, where, locator=None,
-          drop_extra=False, our_shallow=None, retail_shallow=None):
+          drop_extra=False, our_shallow=None, retail_shallow=None,
+          our_profiles=None, retail_profiles=None):
     """Pair two sibling lists one-to-one; refuse on a missing record, allow extra ones.
 
-    Identical signatures are paired in emission order -- the only pairing they admit, and
-    the same convention the gate's permutation count uses.  ``locator`` turns a refusal into
-    the *deepest* difference (see :func:`_mismatch`) instead of naming the container.
+    Identical signatures are paired by the references into them (:func:`_profiles`), and
+    where even those do not tell them apart, in emission order -- the only pairing they then
+    admit, and the same convention the gate's permutation count uses.  ``locator`` turns a
+    refusal into the *deepest* difference (see :func:`_mismatch`) instead of naming the
+    container.
 
     With ``drop_extra`` a DIE on *our* side that retail does not have is returned as a
     leftover instead of refusing: the adoption step drops it and proves the bytes.  A DIE
@@ -303,13 +342,42 @@ def _pair(ours, theirs, our_key, retail_key, base, where, locator=None,
     buckets = {}
     for die in ours:
         buckets.setdefault(our_key(die), []).append(die)
-    unmatched = []
+    # A key group with more than one record admits more than one pairing.  Retail emits
+    # structurally identical arrays and subroutine types as distinct DIEs -- ``[3]`` of the
+    # same element, the same signature -- and only the record that points at one of them
+    # tells them apart.  The profiles are that fact made explicit.
+    ambiguous = {key for key, bucket in buckets.items() if len(bucket) > 1}
+    groups = {}
     for die in theirs:
-        bucket = buckets.get(retail_key(die))
-        if bucket:
-            matched[die.offset] = bucket.pop(0)
+        groups.setdefault(retail_key(die), []).append(die)
+    for key, group in groups.items():
+        bucket = buckets.get(key)
+        if bucket is None:
+            continue
+        if (key in ambiguous and our_profiles is not None
+                and retail_profiles is not None):
+            remaining = list(bucket)
+            for die in group:
+                profile = retail_profiles.get(die.offset)
+                if not profile:
+                    continue
+                pick = next((candidate for candidate in remaining
+                             if our_profiles.get(candidate.offset) == profile), None)
+                if pick is not None:
+                    matched[die.offset] = pick
+                    remaining.remove(pick)
+            for die in group:
+                if die.offset in matched:
+                    continue
+                if remaining:
+                    matched[die.offset] = remaining.pop(0)
         else:
-            unmatched.append(die)
+            remaining = bucket
+            for die in group:
+                if remaining:
+                    matched[die.offset] = remaining.pop(0)
+        buckets[key] = remaining
+    unmatched = [die for die in theirs if die.offset not in matched]
 
     if drop_extra and unmatched:
         shallow = our_shallow or our_key
@@ -443,6 +511,8 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     retail_key = _signature_key(theirs_by_offset, ignore)
     our_shallow = _shallow_key(by_offset, ignore)
     retail_shallow = _shallow_key(theirs_by_offset, ignore)
+    our_profiles = _profiles(emitted, ours, base, our_key, ignore)
+    retail_profiles = _profiles(retail, theirs, base, retail_key, ignore)
     roots = [die for die in ours if die.parent is None]
     retail_roots = [die for die in theirs if die.parent is None]
 
@@ -459,7 +529,9 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
         pairs, leftovers = _pair(our_level, retail_level, our_key, retail_key, base, where,
                                  locator=locator(our_level, retail_level, where),
                                  drop_extra=drop_extra, our_shallow=our_shallow,
-                                 retail_shallow=retail_shallow)
+                                 retail_shallow=retail_shallow,
+                                 our_profiles=our_profiles,
+                                 retail_profiles=retail_profiles)
         for die in leftovers:
             span = subtree_end(die) - die.offset
             dropped.append((die, span))
