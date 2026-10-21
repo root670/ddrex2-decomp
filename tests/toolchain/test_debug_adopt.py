@@ -187,6 +187,31 @@ def test_a_line_table_of_a_different_shape_is_reported_and_retail_is_adopted():
     assert result.chunk == build(tree())
 
 
+def test_equal_debug_does_not_excuse_a_different_line_chunk():
+    """Every part the state advertises is checked; one part's equality cannot skip another.
+
+    A state-``True`` row claims ``.text``, ``.line`` and the normalised ``.debug`` are all
+    retail's.  When ``.debug`` is already equal, that claim about ``.line`` still has to be
+    proven: returning early on the ``.debug`` equality let a mistaken ``True`` row compile
+    while ``--compare`` reported ``line DIFFERS``.  Adoption is the state that substitutes
+    ``.line`` by design, so the same unit is accepted there.
+    """
+    debug = build(tree())
+
+    with pytest.raises(cc.Unusable) as excinfo:
+        cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=debug,
+                           retail_text=b"code", retail_line=RETAIL_LINE,
+                           retail_debug=debug, normalise=True)
+
+    assert "condition 1 (.text and .line byte-equal) failed: .line is" in str(excinfo.value)
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=debug,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=debug, adopt=True)
+
+    assert placed == debug
+
+
 def test_a_short_line_chunk_is_accepted_under_adopt_and_reported(capsys):
     """Adoption is independent of the emitted `.line` length: `.text` is the precondition.
 
