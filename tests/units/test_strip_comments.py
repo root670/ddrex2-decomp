@@ -571,6 +571,92 @@ def test_the_cli_check_fails_a_blank_line_inside_a_brace(tmp_path):
     assert source.read_text() == body, "--check writes nothing"
 
 
+def test_brace_blanks_are_evidence_only_for_a_line_bearing_row():
+    assert sc.brace_blanks_are_evidence(False)
+    assert sc.brace_blanks_are_evidence(True)
+    assert not sc.brace_blanks_are_evidence("adopt")
+    assert not sc.brace_blanks_are_evidence(None), "a file with no row is held to the tidy"
+
+
+def _check_a_unit(monkeypatch, capsys, source, state):
+    """Run ``--check`` in process with ``source`` recorded at ``state`` in tu_builds."""
+    def recorded(path, _target):
+        if pathlib.Path(path).resolve() == source.resolve():
+            return "src/x.c", state
+        return None, None
+
+    monkeypatch.setattr(sc, "_recorded_state", recorded)
+    code = sc.main(["--check", str(source)])
+    return code, capsys.readouterr()
+
+
+@pytest.mark.parametrize("state", [False, True])
+def test_the_check_passes_brace_blanks_that_are_line_evidence(monkeypatch, capsys,
+                                                              tmp_path, state):
+    """A line-bearing row keeps retail's numbers in those blanks, so it must not fail."""
+    source = tmp_path / "unit.c"
+    body = "void f(void) {\n\n    int a;\n}\n"
+    source.write_text(body)
+
+    code, captured = _check_a_unit(monkeypatch, capsys, source, state)
+
+    assert code == 0, captured.err
+    assert "line evidence" in captured.out
+    assert f"recording {state!r}" in captured.out
+    assert '"adopt" on that row' in captured.out
+    assert "--collapse refuses" in captured.out
+    assert "no comments remain" in captured.out
+    assert source.read_text() == body, "--check writes nothing"
+
+
+def test_the_check_still_fails_a_line_bearing_unit_that_carries_a_comment(monkeypatch, capsys,
+                                                                          tmp_path):
+    """A comment is never evidence: only the blank-line rule bends to the state ladder."""
+    source = tmp_path / "unit.c"
+    body = "void f(void) {\n\n    int a; /* note */\n}\n"
+    source.write_text(body)
+
+    code, captured = _check_a_unit(monkeypatch, capsys, source, True)
+
+    assert code == 1
+    assert "still carries 1 comment(s)" in captured.err
+    assert "line evidence" not in captured.out
+    assert source.read_text() == body, "--check writes nothing"
+
+
+def test_the_check_still_fails_an_adopting_units_brace_blanks(monkeypatch, capsys, tmp_path):
+    """Adoption substitutes retail's .line, so the blank carries nothing and still fails."""
+    source = tmp_path / "unit.c"
+    body = "void f(void) {\n\n    int a;\n}\n"
+    source.write_text(body)
+
+    code, captured = _check_a_unit(monkeypatch, capsys, source, "adopt")
+
+    assert code == 1
+    assert "blank line directly inside a brace" in captured.err
+    assert source.read_text() == body, "--check writes nothing"
+
+
+def test_the_cli_check_passes_the_line_bearing_units_brace_blanks():
+    """The file that named this rule: cws_wins.c records True and blanks its statements."""
+    from config import targets
+
+    relative = "src/common/cws/cws_wins.c"
+    pair = targets.get(targets.DEFAULT).build_pair(relative)
+    if pair is None or not sc.brace_blanks_are_evidence(pair[2]):
+        pytest.skip(f"{relative} does not record a line-bearing state")
+    path = ROOT / relative
+    blanks = sc._brace_edge_blanks(path.read_text().splitlines())
+    if not blanks:
+        pytest.skip(f"{relative} no longer has a blank line directly inside a brace")
+
+    result = run("--check", str(path))
+
+    assert result.returncode == 0, result.stderr
+    assert "line evidence" in result.stdout
+    assert f"first at line {blanks[0]}" in result.stdout
+
+
 def test_the_cli_collapse_check_fails_a_file_that_still_carries_a_header(tmp_path):
     source = tmp_path / "plain.c"
     body = "/* head\n * two lines */\n\n\nint a;\n"

@@ -84,8 +84,12 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 
    **A promoted source carries no comments, no blank line directly inside a brace, and no `#line`
    directive — and the build enforces all three.**  `tools/units/strip_comments.py --check` fails
-   on the first two; `configure.py` refuses a `tu_builds` source with a directive *before* it
-   writes `build.ninja`, and `compile.py` refuses the same unit before the compiler runs.  Both
+   on the first two, with one exception that follows the paragraph above: a unit whose
+   `tu_builds` row records `False` or `True` emits the source's own statement positions, so a
+   blank line inside a brace is the line itself — `--check` reports it as evidence, and
+   `--collapse` refuses until that row records `adopt`.  `configure.py` refuses a `tu_builds`
+   source with a directive *before* it writes `build.ninja`, and `compile.py` refuses the same
+   unit before the compiler runs.  Both
    name the file, the count and the remedy
    (`python3 tools/toolchain/line_reflow.py <file> --normalise`), so a directive-laden source can
    neither be configured nor built, and nothing rewrites a scratch copy the committed file does

@@ -191,8 +191,9 @@ def _brace_edge_blanks(lines) -> tuple:
     """The 1-based numbers of blank lines sitting directly inside a brace.
 
     A blank line immediately after a line ending in ``{`` or immediately before a line
-    starting with ``}`` is a line-number placeholder under the old ``#line`` layout.  With
-    ``.line`` adopted it carries nothing, so the tidy drops it and the gate refuses it.
+    starting with ``}`` is a line-number placeholder: under an adopting unit's ``.line`` it
+    carries nothing, so the tidy drops it and the gate refuses it, while under a row
+    recording ``False`` or ``True`` it holds the number itself and is kept.
     """
     found = []
     for index, line in enumerate(lines):
@@ -207,12 +208,30 @@ def _brace_edge_blanks(lines) -> tuple:
     return tuple(found)
 
 
+def brace_blanks_are_evidence(state) -> bool:
+    """Whether a blank line inside a brace is line evidence for a unit recording ``state``.
+
+    A unit recording ``False`` or ``True`` keeps the source's own ``.line`` (``True`` only
+    normalises the DIE order), so retail's statement numbers *are* the source's statement
+    positions: a blank line directly inside a brace is the placeholder that holds them, not
+    padding.  ``"adopt"`` is the one state that substitutes retail's ``.line`` wholesale, so
+    only there does such a blank carry nothing and fail the gate.  ``None`` -- a file that
+    is not a promotion unit -- has no row saying its blanks are evidence, so it is held to
+    the tidy layout like an adopting unit.
+    """
+    return state is False or state is True
+
+
 def require_no_brace_padding(text: str, what: str = "source") -> None:
     """Raise :class:`Refused` if a blank line sits directly inside a brace.
 
     This keeps a promoted file from looking accidental: a function or nested block opens
     and immediately reads its first statement, and its last statement is immediately
     followed by the closing brace.
+
+    Only a unit that adopts retail's ``.line`` can be held to this: a unit recording
+    ``False`` or ``True`` keeps retail's numbers in the blanks themselves, so ``--check``
+    asks :func:`brace_blanks_are_evidence` before it fails.
     """
     found = _brace_edge_blanks(text.splitlines())
     if not found:
@@ -581,6 +600,21 @@ def _report_attached(display: str, attached: "Attached") -> None:
         print(f"strip_comments.py: {display}: line {line}: brace not attached -- {reason}")
 
 
+def _recorded_state(source: pathlib.Path, target):
+    """``(unit file, tu_builds state)`` for ``source``, or ``(None, None)``.
+
+    ``--check`` asks this one row, so it reads ``tu_builds`` rather than building the
+    target's manifests.  The key is the repo-relative path, which is the row's ``file``
+    spelling and the same name :func:`_unit` resolves the compiled unit from.
+    """
+    try:
+        relative = source.resolve().relative_to(REPO_ROOT).as_posix()
+    except ValueError:
+        return None, None
+    pair = target.build_pair(relative)
+    return (relative, pair[2]) if pair is not None else (None, None)
+
+
 def _unit(source: pathlib.Path, target):
     """The configured translation unit ``source`` is, or None for any other file."""
     from toolchain import compile as cc
@@ -605,9 +639,11 @@ def _parser() -> argparse.ArgumentParser:
                         help="the target whose manifests and tu_builds name the unit "
                              "(default: this tree's configured target)")
     parser.add_argument("--check", action="store_true",
-                        help="write nothing and fail if the file still carries a comment or "
-                             "a blank line directly inside a brace (the gate that keeps a "
-                             "promoted source clean)")
+                        help="write nothing and fail if the file still carries a comment or, "
+                             "unless its tu_builds row records False or True (whose blank "
+                             "lines inside a brace are the lines themselves), a blank line "
+                             "directly inside a brace (the gate that keeps a promoted source "
+                             "clean)")
     parser.add_argument("--collapse", action="store_true",
                         help="strip every comment, then tidy the layout: drop the blank "
                              "lines the header and notes leave, one blank line at most, no "
@@ -657,12 +693,32 @@ def main(argv=None) -> int:
     try:
         if args.check:
             require_no_comments(text, _display(source))
-            require_no_brace_padding(text, _display(source))
         else:
             require_no_comments(rewritten, "rewritten source")
     except Refused as exc:
         print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
         return 1
+
+    if args.check:
+        # A comment is never evidence, but a blank line inside a brace can be.  A unit
+        # recording False or True compiles its own statement positions into .line, so the
+        # blank is the number retail gives the statement after it: the state ladder rests
+        # on that line, and the tidy that would delete it needs "adopt" recorded first.
+        unit, state = _recorded_state(source, target)
+        if brace_blanks_are_evidence(state):
+            found = _brace_edge_blanks(text.splitlines())
+            if found:
+                print(f"strip_comments.py: {_display(source)}: {len(found)} blank line(s) "
+                      f"directly inside a brace (first at line {found[0]}) are line "
+                      f"evidence for {unit} recording {state!r} in tu_builds, not padding; "
+                      f"dropping them needs \"adopt\" on that row, so --collapse refuses "
+                      f"until then")
+        else:
+            try:
+                require_no_brace_padding(text, _display(source))
+            except Refused as exc:
+                print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
+                return 1
 
     if rewritten == text:
         if args.check:

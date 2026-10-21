@@ -356,7 +356,10 @@ no comments and no blank line directly inside a brace (`tools/units/strip_commen
 `compile.py` at the `cc` edge, both naming the count and the remedy).  They exist because the
 source is evidence: a comment is an essay in the wrong place, a brace-padding blank is a style
 choice pretending to be layout, and a directive means the file a reader sees is not the file
-the compiler numbered.
+the compiler numbered.  The brace rule bends to the state ladder: a unit whose `tu_builds` row
+records `False` or `True` compiles its own statement positions, so a blank line inside a brace
+there *is* the line retail gives the statement after it, and `--check` reports it as evidence
+instead of failing; the blank only becomes padding once the row records `adopt`.
 
 **A committed promoted file carries no comments at all.**  The C is evidence, not an essay,
 and the evidence lives beside it, not in it:
@@ -520,8 +523,10 @@ writes only when `.text`, `.debug` and `.line` are byte-identical, and refuses (
 untouched) on any difference.  A unit with no recorded pair is refused rather than stripped
 unchecked.  A file that is not a promotion unit has nothing to compile and is edited only with
 `--no-verify`, with an explicit "nothing was compiled" line.  `--check` writes nothing and
-**fails while the file still carries a comment** (or a blank line directly inside a brace, the
-tidy rule below): it is the gate that keeps a promoted source clean, not a dry run.
+**fails while the file still carries a comment** -- never evidence -- or a blank line directly
+inside a brace, unless that unit's row records `False` or `True`, where the blank *is* the
+statement's line and the check says so instead (see the tidy rule below): it is the gate that
+keeps a promoted source clean, not a dry run.
 
 ```bash
 python3 tools/units/strip_comments.py src/sys/sys_scf.c          # strip + verify + write
@@ -557,8 +562,11 @@ the strip in exactly one way: it **deletes lines**, on purpose.
   immediately before a closing `}` is dropped, for functions and nested blocks alike; the same
   goes for `if (...) {`, `} else {` and a multi-line struct initialiser.  One blank line
   *between* statements inside a block stays.  Those inner blanks were line-number
-  placeholders under the `#line` layout; with `.line` adopted they carry nothing, and leaving
-  them makes tidy code look accidental.  The check path fails while one is present.
+  placeholders, and with `.line` adopted they carry nothing, so leaving them makes tidy code
+  look accidental.  The check path fails while one is present only when the unit's row records
+  `adopt` (or the file has no row at all); a row recording `False` or `True` keeps its own
+  statement positions, so there the blank is the line and `--check` reports it as evidence --
+  and this tidy, which would delete it, refuses until `"adopt"` is on that row.
 - **Comments are gone before the layout is considered.**  The tidy runs the strip first, so
   the leading header block and every `/*!`/`//!` note become blank lines and are dropped by
   the rules above -- there is no separate header rule and no surviving marker.  A promoted
@@ -591,8 +599,9 @@ byte-identical, and the resulting `.debug` and `.line` must be **retail's bytes*
 adoption step proves the chunk byte for byte and substitutes the line table, and the tool
 re-checks both against `retail_bytes` before writing.  A unit with no recorded pair, a
 non-unit without `--no-verify`, or a `#line`-carrying file is refused exactly as for the strip;
-`--check` writes nothing and fails if the file still carries a comment or a blank line directly
-inside a brace.
+`--check` writes nothing and fails if the file still carries a comment or -- unless that unit's
+row records `False` or `True`, where the blank is the line -- a blank line directly inside a
+brace.
 
 ```bash
 python3 tools/units/strip_comments.py --collapse src/sys/sys_scf.c          # tidy + verify + write
