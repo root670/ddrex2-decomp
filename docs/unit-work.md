@@ -91,7 +91,12 @@ structural signature (tag, attributes with references normalised to their target
 description, sorted child signatures), lays our records out in retail's sibling order --
 **recursively**, so a lexical block reorders its own children and not only the top level --
 recomputes every `AT_sibling` from the new layout, and rewrites every intra-chunk offset
-reference.  Which attributes carry one is enumerated from retail's whole `.debug` (118,116
+reference.  Records whose signature is identical (retail emits structurally identical arrays
+and subroutine types as distinct DIEs) are paired by the attribute code and signature of the
+record that references each one, and only when even that does not tell them apart, in
+emission order: pairing twins by position alone rewrites a local to its neighbour's array
+(`net_win_menu.c`'s two `[3]` board arrays are that case).  Which attributes carry a
+reference is enumerated from retail's whole `.debug` (118,116
 DIEs) rather than assumed: `0x0012` `AT_sibling` (recomputed positionally), `0x0072`
 `AT_user_def_type` (18,797 occurrences), `0x0142` (7), `AT_subscr_data`'s element and index
 types, `AT_mod_u_d_type`'s trailing reference, and the MW block `0x2303` (a bare reference in
