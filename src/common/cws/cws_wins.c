@@ -8,42 +8,22 @@ static int def_set_work_num[3][3] = {
     { 2, 16, 16 }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void WinsInit(void) { func_0011EEC0(wins, 0xA30); }
-
-
-
-
-
-
+void WinsInit(void) {
+    func_0011EEC0(wins, 0xA30);
+}
 
 unsigned int CwsWinsCreate(unsigned int _top_addr, int init_type) {
     int i;
 
     if (wins->status != 0) {
-
         func_0011EEC0(wins, 0xA30);
     }
+
     wins->top_addr = wins->end_addr = _top_addr;
     wins->size = 0;
     wins->win_max = def_set_work_num[init_type][0];
     wins->str_max = def_set_work_num[init_type][1];
     wins->obj_max = def_set_work_num[init_type][2];
-
-
 
     for (i = 0; i < wins->str_max; i++) {
         wins->str[i] = (struct _CWS_STR *)wins->end_addr;
@@ -65,30 +45,16 @@ unsigned int CwsWinsCreate(unsigned int _top_addr, int init_type) {
         wins->size += 0x158;
     }
 
-
-
-
     func_0011EEC0((void *)wins->top_addr, wins->size);
 
     wins->status |= 1;
 
-
     return wins->end_addr;
 }
 
-
-
-
-
-
-
-void CwsWinsDelete(void) { func_0011EEC0(wins, 0xA30); }
-
-
-
-
-
-
+void CwsWinsDelete(void) {
+    func_0011EEC0(wins, 0xA30);
+}
 
 void CwsWins_Func(void) {
     int i, n;
@@ -120,16 +86,12 @@ void CwsWins_Func(void) {
         for (i = 0; i < wins->win_max; i++) {
             if (wins->win[i] != 0) {
                 if (wins->win[i]->status & 0x4) {
-
                     CwsWinDelete(wins->win[i]);
                 } else if (wins->win[i]->status & 0x1) {
-
                     if (wins->win[i]->step[1] == 0) {
                         if ((wins->win[i]->code == 1 && !(wins->win[i]->status & 0x2)) ||
                             (wins->win[i]->code == 2 && (wins->win[i]->status & 0x2)) ||
                             (wins->win[i]->code == 3)) {
-
-
                             wins->win[i]->step[1] = wins->win[i]->code;
                             wins->win[i]->code = 0;
                         }
@@ -137,7 +99,6 @@ void CwsWins_Func(void) {
 
                     wins->win[i]->func(wins->win[i]);
                     if (wins->win[i]->status & 0x2) {
-
                         for (n = 0; n < 16; n++) {
                             if (wins->win[i]->obj[n] != 0) {
                                 if (wins->win[i]->obj[n]->def->func != 0)
@@ -153,44 +114,13 @@ void CwsWins_Func(void) {
                     }
                 }
             }
-
-
-
-
-
-
-
-
-
-
-
-
-
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
 }
 
-
-
-
-struct _CWS_WINS_W *GetWinsAddr(void) { return wins; }
-
-
-
+struct _CWS_WINS_W *GetWinsAddr(void) {
+    return wins;
+}
 
 char CwsWinsAllGetStatus(int flag) {
     int i;
@@ -213,24 +143,18 @@ char CwsWinsAllGetStatus(int flag) {
     return 1;
 }
 
-
-
 char CwsWinsAllDestroy(void) {
     int i, count;
     for (i = 0, count = 0; i < wins->win_max; i++) {
         if (wins->win[i] != 0) {
             if (CwsWinGetStatus(wins->win[i]) & 0x2) {
-
                 CwsWinSetCode(wins->win[i], 0x2);
                 count++;
             } else {
-
                 CwsWinDelete(wins->win[i]);
             }
         }
     }
 
     return count == 0;
-
-
 }
