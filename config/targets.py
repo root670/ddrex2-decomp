@@ -666,6 +666,11 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x3B8 in a 0x3C0 extent, six bodies word-exact; .text AND .line byte-equal
+        # outright, so the state is True: --normalise-debug alone makes .debug retail's
+        # 0x164D / 146 DIEs.  Layout keeps retail's blank gaps on purpose; never --collapse.
+        ("src/network/net_window/net_win_watch.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0", True),
         # .text 0x3F8 in a 0x400 extent, all seven bodies word-exact; .line adopted whole
         # (7 chunks; TabSetOff's ten straight-line masks alternate two lines); .debug retail's
         # 0x1E4B / 200 DIEs after 55 type refs and every AT_location.
