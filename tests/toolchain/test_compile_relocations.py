@@ -14,8 +14,9 @@ type-level, so they are pinned here rather than trusted:
   refusal messages are distinct: an overlay address says where it lives, an unknown name
   says it has no record at all.
 * a `lui`/`addiu` address pair relocates as `symbol + addend`, where the addend is the
-  *instruction's* own sign-extended low half.  A pair split any other way is refused with the
-  block's name, not approximated.
+  pair's own two halves -- `(hi << 16) + signed16(lo)` -- so a field at a constant offset
+  (a non-zero high half) reads exactly like a bare symbol.  A `lui` with no `%lo` partner is
+  refused with the block's name, not approximated.
 """
 import json
 import pathlib
@@ -314,12 +315,22 @@ def test_the_addend_is_the_instructions_own_sign_extended_low_half():
     assert struct.unpack_from("<I", out, 4)[0] == 0x244233BC     # 0x2B33C0 - 4
 
 
-def test_a_high_half_that_already_carries_a_constant_is_refused_not_approximated():
-    data = struct.pack("<II", 0x3C02002B, 0x24420000)     # a split this build cannot read
-    relocs = [(0, cc.R_MIPS_HI16, Symbol("mesLanguage")),
-              (4, cc.R_MIPS_LO16, Symbol("mesLanguage"))]
-    with pytest.raises(cc.Unusable, match="mesGetLanguage01.text"):
-        cc.relocate(data, relocs, lambda symbol: 0x2B33C0, "mesGetLanguage01.text", 0)
+def test_a_high_half_that_carries_a_constant_offset_is_read_off_the_pair():
+    """`g_game_w.anime2_load_flg`: `lui 0xB` / `sb 0xB516` is addend `0xAB516`, not a guess.
+
+    A field at a non-zero offset is the ordinary case this pair encodes: the compiler writes
+    the *addend*'s two halves into the two instructions, so `(hi << 16) + signed16(lo)` is
+    the addend and the pair relocates as `g_game_w + 0xAB516` -- retail's `lui 0x6B` /
+    `sb 0x2F86`, exactly what a zero-high-half pair against the field's own address would
+    give.
+    """
+    data = struct.pack("<II", 0x3C01000B, 0xA024B516)     # lui at,0xB ; sb a0,0xB516(at)
+    relocs = [(0, cc.R_MIPS_HI16, Symbol("g_game_w")),
+              (4, cc.R_MIPS_LO16, Symbol("g_game_w"))]
+    out = cc.relocate(data, relocs, lambda symbol: 0x607A70,
+                      "SetBeginnerFlg2p.text", 0)
+    assert struct.unpack_from("<I", out, 0)[0] == 0x3C01006B     # lui at,0x6B
+    assert struct.unpack_from("<I", out, 4)[0] == 0xA0242F86     # sb a0,0x2F86(at)
 
 
 def test_a_lone_high_half_is_refused():

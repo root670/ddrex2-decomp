@@ -703,11 +703,12 @@ def _pairs(data, relocs, what: str):
     A MIPS address over the small-data threshold is materialised by two instructions whose
     *addend* is split the same way: the compiler writes the high half in the ``lui`` and the
     low half in the ``%lo`` instruction, so the value to place is ``symbol + addend`` and the
-    two immediates are its halves.  Only one split can be read off the object without
-    guessing, and this is it: a ``lui`` whose own high half is zero (an address with no
-    constant offset, which is every reference that names an object rather than a field of
-    one) paired with the next ``%lo`` for the same symbol.  Anything else raises, because a
-    half-split address would be a *guess* at the layout rather than a read of it.
+    two immediates are its halves.  The addend is read off the pair, not guessed: the
+    ``lui``'s immediate is ``addend >> 16`` and the ``%lo`` immediate is the sign-extended
+    low half, so ``(hi << 16) + signed16(lo)`` is the addend exactly -- for a bare symbol
+    (high half zero) and for a field at a constant offset (high half carrying it) alike.  A
+    ``lui`` with no ``%lo`` for the same symbol raises, because a lone high half is not an
+    address.
     """
     lo = [(offset, _lo_addend(data, offset), symbol.name)
           for offset, rtype, symbol in relocs if rtype == R_MIPS_LO16]
@@ -715,12 +716,6 @@ def _pairs(data, relocs, what: str):
     for offset, rtype, symbol in relocs:
         if rtype != R_MIPS_HI16:
             continue
-        hi = struct.unpack_from("<I", data, offset)[0] & 0xFFFF
-        if hi:
-            raise Unusable(
-                f"{what}: the address at 0x{offset:X} has 0x{hi:X} in its high half, so its "
-                f"constant offset is split across a `lui`/`%lo` pair this build cannot read; "
-                f"the two immediates cannot be recomputed from {symbol.name}")
         partner = next((entry for entry in lo
                         if entry[2] == symbol.name and entry[0] > offset), None)
         if partner is None:
@@ -728,7 +723,8 @@ def _pairs(data, relocs, what: str):
                 f"{what}: the address of {symbol.name} at 0x{offset:X} is loaded with a "
                 f"`lui` whose `%lo` half is not in this section; a lone high half is not an "
                 f"address")
-        pairs[offset] = (partner[1], partner[2])
+        hi = struct.unpack_from("<I", data, offset)[0] & 0xFFFF
+        pairs[offset] = ((hi << 16) + partner[1], partner[2])
     return pairs
 
 
