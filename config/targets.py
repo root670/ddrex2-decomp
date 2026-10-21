@@ -614,6 +614,11 @@ DDREX2P = Target(
         # .text 0x4F0, all three bodies word-exact; .line adopted (emitted 143 records,
         # adopted 148); .debug retail's 0x846 / 50 DIEs after 34 ref words and d5's location.
         ("src/sound/vxdecode/decode.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x58, three bodies word-exact; .line grouping already retail's (11 records,
+        # 3 tables; 8 numbers moved); .debug 0xB90 / 64 DIEs after 26 ref words and
+        # warning0/warning1 locations.
+        ("src/network/net_cnf/net_cnf_mes_e.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
