@@ -1199,9 +1199,6 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
               f"adopted under --adopt-retail-meta, .debug byte-equal", file=sys.stderr)
         return adopted.chunk
 
-    if debug == retail_debug and not block_mismatches:
-        return debug
-
     if text != retail_text:
         at = _first_difference(text, retail_text)
         raise Unusable(
@@ -1214,6 +1211,13 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
             f"{unit}: condition 1 ({debug_set.LABEL[1]}) failed: .line is "
             f"0x{len(line):X} bytes against retail's 0x{len(retail_line):X}, first "
             f"differing byte at 0x{at:X}")
+
+    # A chunk that is already retail's needs no normalisation -- but the equality of one
+    # part cannot stand in for the others: ``.text`` and ``.line`` above are checked first,
+    # because the state this function stands for claims all three.  Only the ``adopt`` path
+    # substitutes ``.line`` by design, and it returned above.
+    if debug == retail_debug and not block_mismatches:
+        return debug
 
     if block_mismatches:
         label, emitted, pinned, block = block_mismatches[0]
