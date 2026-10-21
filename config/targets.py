@@ -668,9 +668,12 @@ DDREX2P = Target(
          "-c -lang c -O3 -opt full -g", "adopt"),
         # .text 0x2D0, six bodies word-exact; .text and .line byte-equal outright, so state
         # True: --normalise-debug alone makes .debug retail's 0x16BD / 147 DIEs.  Needs the
-        # @62 jump-table placement in data_placements.txt.
+        # @62 jump-table placement in data_placements.txt.  The two `[3]` array DIEs behind
+        # netwinmenu_plate_board_off/_on are structurally identical; the normaliser pairs
+        # them by the local that names each (2026-10-21), which is what makes the chunk
+        # byte-identical instead of swapping the two references.
         ("src/network/net_window/net_win_menu.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt"),
+         "-c -lang c -O3 -opt full -g", True),
         # .text 0x3B8 in a 0x3C0 extent, six bodies word-exact; .text AND .line byte-equal
         # outright, so the state is True: --normalise-debug alone makes .debug retail's
         # 0x164D / 146 DIEs.  Layout keeps retail's blank gaps on purpose; never --collapse.
