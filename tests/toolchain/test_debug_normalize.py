@@ -34,6 +34,7 @@ AT_NAME = 0x0038
 AT_FUND_TYPE = 0x0055
 AT_USER_DEF_TYPE = 0x0072
 AT_SUBSCR_DATA = 0x00A3
+AT_MOD_U_D_TYPE = 0x0083
 AT_BYTE_SIZE = 0x00B6
 AT_LOW_PC = 0x0111
 AT_HIGH_PC = 0x0121
@@ -131,6 +132,58 @@ def subscript(upper_bound, element):
     # ``FMT_ET`` (0x08) then an attribute code: form 2 is 4 bytes of reference, form 5 is a
     # 2-byte fundamental type.  Both passes see the same length.
     return Lazy(fixed + (4 if isinstance(element, Die) else 2), render)
+
+
+def subscript_mod_u_d(upper_bound, element):
+    """A subscript entry whose element type is a form-3 modifier block.
+
+    ``AT_mod_u_d_type`` (0x0083) has form 3, so its value is a block: the modifier flags,
+    then a 4-byte DIE reference.  The compiler writes an array of a user-defined type this
+    way; the reference moves with the DIE order exactly as the form-2 one above does, and
+    the flags stay put.
+    """
+    fixed = 1 + 2 + 4 + 4 + 1 + 2
+    block = 1 + 4                        # one flags byte, one DIE reference
+
+    def render():
+        payload = (struct.pack("<B", 0) + struct.pack("<H", 0x000A)
+                   + struct.pack("<I", 0) + struct.pack("<I", upper_bound)
+                   + struct.pack("<B", 8))
+        target = element.offset if isinstance(element, Die) else element
+        element_block = struct.pack("<B", 0) + struct.pack("<I", target)
+        return (payload + struct.pack("<HH", AT_MOD_U_D_TYPE, len(element_block))
+                + element_block)
+
+    return Lazy(fixed + 2 + block, render)
+
+
+def mod_u_d_types(ours, form3=True, ref=None):
+    """One array of a user-defined type, and the struct it holds.
+
+    ``ours`` puts the array before the aggregate, retail puts the aggregate first, so the
+    element reference inside ``AT_subscr_data`` names a DIE that moved.  ``ref`` replaces
+    the reference with a raw word, for the guard that refuses one naming no DIE.
+    """
+    aggregate = Die(0x0013, [(AT_NAME, "@anon0"), (AT_BYTE_SIZE, 12)],
+                    [member("x", 0)])
+    element = subscript_mod_u_d(2, aggregate if ref is None else ref)
+    if not form3:
+        element = subscript(2, aggregate if ref is None else ref)
+    array = Die(0x0001, [(AT_SUBSCR_DATA, element)])
+    table = Die(0x000C, [(AT_NAME, "table"), (AT_USER_DEF_TYPE, array)])
+    order = [array, aggregate] if ours else [aggregate, array]
+    return Die(0x0011, [(AT_NAME, "net_win_any.c")], [table] + order)
+
+
+def mixed_types(ours):
+    """A form-2 array and a form-3 array of the same aggregate, so both paths run at once."""
+    aggregate = Die(0x0013, [(AT_NAME, "@anon0"), (AT_BYTE_SIZE, 12)],
+                    [member("x", 0)])
+    form2 = Die(0x0001, [(AT_SUBSCR_DATA, subscript(2, aggregate))])
+    form3 = Die(0x0001, [(AT_SUBSCR_DATA, subscript_mod_u_d(2, aggregate))])
+    table = Die(0x000C, [(AT_NAME, "table"), (AT_USER_DEF_TYPE, form3)])
+    order = [form2, form3, aggregate] if ours else [aggregate, form2, form3]
+    return Die(0x0011, [(AT_NAME, "net_win_any.c")], [table] + order)
 
 
 def member(name, offset, fund_type=7):
@@ -258,6 +311,65 @@ def test_a_location_blocks_bytes_are_never_mistaken_for_a_reference():
     assert result.chunk == retail
     assert result.moved >= 1         # the block's children did move
     assert struct.pack("<I", literal) in emitted
+
+
+def test_a_form_3_element_reference_pairs_and_is_rewritten():
+    # The array's element type is a modifier block whose 4-byte reference names the
+    # aggregate; the two chunks differ only in where that aggregate sits.  Comparing the
+    # block's bytes would see two different arrays; resolving the reference pairs them.
+    retail = build(mod_u_d_types(ours=False))
+    emitted = build(mod_u_d_types(ours=True))
+
+    assert len(emitted) == len(retail)
+    assert emitted != retail
+    result = dn.normalise(emitted, retail)
+
+    assert result.chunk == retail
+    assert result.references >= 2       # the local's type and the embedded element ref
+
+
+def test_form_2_and_form_3_element_references_rewrite_together():
+    # One chunk carries both encodings, each naming the same aggregate.  The form-2 case is
+    # unchanged by the form-3 handling, and both references move with the aggregate.
+    retail = build(mixed_types(ours=False))
+    emitted = build(mixed_types(ours=True))
+
+    assert len(emitted) == len(retail)
+    assert emitted != retail
+    result = dn.normalise(emitted, retail)
+
+    assert result.chunk == retail
+    assert result.references >= 3       # the local's type and both element refs
+
+
+def test_a_form_3_element_reference_to_a_different_shape_refuses():
+    # The reference resolves, but to a structure whose size is not retail's: normalising
+    # the reference must not paper over an element type that genuinely differs.
+    retail = build(mod_u_d_types(ours=False))
+    ours = mod_u_d_types(ours=True)
+    ours.children[2].attrs[1] = (AT_BYTE_SIZE, 16)    # @anon0 is a different type
+
+    with pytest.raises(dn.Refusal) as excinfo:
+        dn.normalise(build(ours), retail)
+
+    assert "no counterpart" in str(excinfo.value)
+    assert "@anon0" in str(excinfo.value)
+
+
+def test_a_form_3_element_reference_that_names_no_die_refuses():
+    # Both chunks carry the same broken element reference -- an in-chunk word that names no
+    # DIE -- so the set comparison passes it and only the normaliser's guard refuses.
+    from toolchain import debug_set
+
+    retail = build(mod_u_d_types(ours=False, ref=1))
+    emitted = build(mod_u_d_types(ours=True, ref=1))
+    assert debug_set.classify(emitted, retail).ok
+
+    with pytest.raises(dn.Refusal) as excinfo:
+        dn.normalise(emitted, retail)
+
+    assert "names no DIE in the chunk" in str(excinfo.value)
+    assert "0x00000001" in str(excinfo.value)
 
 
 # -- refusals: a different set, a different size, a reference that names nothing ------------

@@ -249,9 +249,17 @@ def _subscript_key(block, by_offset):
         p += 1
         if fmt == 8:                                  # FMT_ET: element type attribute
             code = _U16(block, p)[0]
-            value, p = _form_value(block, p + 2, code & 0x0F)
-            if (code & 0x0F) == 2:
+            form = code & 0x0F
+            value, p = _form_value(block, p + 2, form)
+            if form == 2:
                 value = _target_key(value, by_offset)
+            elif form == 3 and isinstance(value, bytes) and len(value) >= 4:
+                # An array of a user-defined type encodes its element as a modifier
+                # block: flags, then a 4-byte DIE reference.  The reference names a DIE
+                # that moved with the anonymous order, so the raw block is not the
+                # element type's identity.
+                value = ("mod_u_d", value[:-4],
+                         _target_key(_U32(value, len(value) - 4)[0], by_offset))
             parts.append(("et", code, value))
             break
         if fmt & 4:                                   # user-defined index type

@@ -169,6 +169,18 @@ def _subscript_refs(payload):
                 p += 2 + 4
             elif form == 5:
                 p += 2 + 2
+            elif form == 3:
+                # A form-3 element type is a block: modifier flags, then a 4-byte DIE
+                # reference.  The array of a user-defined type is written this way, and
+                # that reference moves with the anonymous order like a form-2 one does.
+                if p + 4 > len(payload):
+                    raise Refusal("a subscript block ends inside its element type")
+                size = _U16(payload, p + 2)[0]
+                if p + 4 + size > len(payload):
+                    raise Refusal("a subscript block ends inside its element type")
+                if size >= 4:
+                    refs.append(p + size)
+                p += 4 + size
             else:
                 p = len(payload)
             break
