@@ -670,7 +670,7 @@ DDREX2P = Target(
         # True: --normalise-debug alone makes .debug retail's 0x16BD / 147 DIEs.  Needs the
         # @62 jump-table placement in data_placements.txt.
         ("src/network/net_window/net_win_menu.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", True),
+         "-c -lang c -O3 -opt full -g", "adopt"),
         # .text 0x3B8 in a 0x3C0 extent, six bodies word-exact; .text AND .line byte-equal
         # outright, so the state is True: --normalise-debug alone makes .debug retail's
         # 0x164D / 146 DIEs.  Layout keeps retail's blank gaps on purpose; never --collapse.
