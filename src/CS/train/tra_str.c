@@ -18,8 +18,7 @@ static unsigned char *tr_str_ck_menu[3] = { (unsigned char *)"MENU", (unsigned c
 static unsigned char *tr_str_ck_mode[2] = { (unsigned char *)"Judgement Color", (unsigned char *)"Timing Color" };
 static anon_0_158 tr_str_tbl[15] = { { .array = tr_str_play, .num = 3 }, { .array = tr_str_step, .num = 6 }, { .array = tr_str_mspeed, .num = 5 }, { .array = tr_str_op_speed, .num = 6 }, { .array = tr_str_offon, .num = 2 }, { .array = tr_str_op_appear, .num = 4 }, { .array = tr_str_op_turn, .num = 5 }, { .array = tr_str_offon, .num = 2 }, { .array = tr_str_offon, .num = 2 }, { .array = tr_str_op_simu, .num = 3 }, { .array = tr_str_op_scroll, .num = 2 }, { .array = tr_str_op_freeze, .num = 2 }, { .array = tr_str_rs_menu, .num = 4 }, { .array = tr_str_ck_menu, .num = 3 }, { .array = tr_str_ck_mode, .num = 2 } };
 
-unsigned char *Tr_get_str(int kind, int index)
-{
+unsigned char *Tr_get_str(int kind, int index) {
     if ((unsigned)kind >= 0xF) {
         return 0;
     }
@@ -30,15 +29,13 @@ unsigned char *Tr_get_str(int kind, int index)
     return tr_str_tbl[kind].array[index];
 }
 
-unsigned char Tr_get_lr_item_max(int kind)
-{
+unsigned char Tr_get_lr_item_max(int kind) {
     if ((unsigned)kind >= 0xF) return 0;
 
     return tr_str_tbl[kind].num;
 }
 
-void Tr_bar_digit_disp(float cx, float y0, unsigned char num, int pri)
-{
+void Tr_bar_digit_disp(float cx, float y0, unsigned char num, int pri) {
     unsigned char num_str[4];
 
     if (num < 10) {
