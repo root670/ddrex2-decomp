@@ -161,6 +161,17 @@ def line_changes(emitted: bytes, retail: bytes):
     return changes, len(ours), sum(len(rows) for _offset, _base, rows in ours)
 
 
+def line_shape(chunk: bytes) -> tuple:
+    """``(tables, records)``: the statement tables and rows one ``.line`` chunk carries.
+
+    This is the inventory shape a promoted unit records, and the same strict run-of-tables
+    read :func:`line_changes` uses: an unparseable chunk refuses rather than being counted
+    approximately.
+    """
+    tables = _line_tables(chunk) if chunk else []
+    return len(tables), sum(len(rows) for _offset, _base, rows in tables)
+
+
 def line_record_counts(emitted: bytes, retail: bytes) -> tuple:
     """``(emitted, adopted)``: the statement records each chunk carries.
 
@@ -169,10 +180,7 @@ def line_record_counts(emitted: bytes, retail: bytes) -> tuple:
     emitting extra ones -- says how far off it is.  Parsing is the same strict run-of-tables
     read :func:`line_changes` uses, so an unparseable chunk refuses here too.
     """
-    def rows(chunk):
-        return sum(len(rows) for _offset, _base, rows in _line_tables(chunk)) if chunk else 0
-
-    return rows(emitted), rows(retail)
+    return line_shape(emitted)[1], line_shape(retail)[1]
 
 
 def line_number_changes(emitted: bytes, retail: bytes):
