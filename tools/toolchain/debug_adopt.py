@@ -302,8 +302,10 @@ def _key_tree(dies):
 
     Two DIEs with the same tag, name, size and attributes are interchangeable for a
     reference -- and after the pairing they are in retail's order, so retail's choice among
-    identical records is the one adopted.  The final whole-chunk byte comparison is what
-    proves no real difference was hidden.
+    identical records is the one adopted.  An array's attributes include its subscript
+    data, recursed through its element type, so ``[3][65536]`` and ``[3][45568]`` are not
+    interchangeable.  The final whole-chunk byte comparison is what proves no real
+    difference was hidden.
     """
     by_offset = {die.offset: die for die in dies}
     key = debug_normalize._shallow_key(by_offset)

@@ -353,7 +353,101 @@ def test_a_form_3_element_reference_to_a_different_shape_refuses():
         dn.normalise(build(ours), retail)
 
     assert "no counterpart" in str(excinfo.value)
-    assert "@anon0" in str(excinfo.value)
+    # The array's key now carries its element's shape, so the array -- and the local that
+    # names it -- are what differ; the refusal is unchanged.
+    assert "local_variable 'table'" in str(excinfo.value)
+
+
+def nested_arrays(bounds, holder_bound=0x10000, outer_bound=2, element=1):
+    """One CU of ``[outer_bound][bound]`` chains, in the given order, plus a local naming one.
+
+    The chains are retail's shape: the outer array's ``AT_subscr_data`` names the inner
+    array by a form-2 DIE reference, so the only thing that separates ``[3][65536]`` from
+    ``[3][45568]`` is the key's recursion into the inner array's own bound.  Every chain
+    has the same tag, no name and no byte size -- a shallow key cannot tell them apart.
+    """
+    chains = []
+    for bound in bounds:
+        inner = Die(0x0001, [(AT_SUBSCR_DATA, subscript(bound, element))])
+        outer = Die(0x0001, [(AT_SUBSCR_DATA, subscript(outer_bound, inner))])
+        chains.append((bound, outer, inner))
+    holder = Die(0x000C, [(AT_NAME, "m"),
+                          (AT_USER_DEF_TYPE,
+                           next((outer for bound, outer, _inner in chains
+                                 if bound == holder_bound), chains[0][1]))])
+    return Die(0x0011, [(AT_NAME, "doll.c")],
+               [holder] + [die for _bound, outer, inner in chains
+                           for die in (outer, inner)])
+
+
+def _array_dies(chunk_bytes):
+    """``(outer, inner, by_offset)``: the array DIEs, split by what their element is."""
+    from toolchain import debug_set
+
+    dies = debug_set.parse(chunk_bytes, 0)
+    by_offset = {die.offset: die for die in dies}
+    outer, inner = [], []
+    for die in dies:
+        if die.tag != 0x0001:
+            continue
+        element = debug_set._subscript_key(die.attrs[AT_SUBSCR_DATA], by_offset)[1][-1][2]
+        (outer if isinstance(element, tuple) else inner).append(die)
+    return outer, inner, by_offset
+
+
+def test_arrays_differing_only_in_a_nested_bound_do_not_pair():
+    from toolchain import debug_set
+
+    low_outer, _low_inner, low_by_offset = _array_dies(build(nested_arrays([0x10000])))
+    high_outer, _high_inner, high_by_offset = _array_dies(build(nested_arrays([0xB200])))
+
+    # The shallow key's whole input is equal -- tag, absent name, absent byte size -- which
+    # is what used to make these two arrays interchangeable.
+    assert ((low_outer[0].tag, low_outer[0].name, low_outer[0].attrs.get(AT_BYTE_SIZE))
+            == (high_outer[0].tag, high_outer[0].name,
+                high_outer[0].attrs.get(AT_BYTE_SIZE)))
+
+    assert (debug_set._target_key(low_outer[0].offset, low_by_offset)
+            != debug_set._target_key(high_outer[0].offset, high_by_offset))
+    assert (dn._shallow_key(low_by_offset)(low_outer[0])
+            != dn._shallow_key(high_by_offset)(high_outer[0]))
+
+
+def test_identical_nested_arrays_pair_at_any_offset():
+    from toolchain import debug_set
+
+    outer, inner, by_offset = _array_dies(build(nested_arrays([0x10000, 0x10000])))
+
+    assert len(outer) == 2 and len(inner) == 2
+    assert outer[0].offset != outer[1].offset
+    assert (debug_set._target_key(outer[0].offset, by_offset)
+            == debug_set._target_key(outer[1].offset, by_offset))
+    assert dn._shallow_key(by_offset)(outer[0]) == dn._shallow_key(by_offset)(outer[1])
+
+
+def test_a_reordered_chain_of_nested_arrays_pairs_by_its_nested_bound():
+    # All three chains have the same shallow key, and only their inner bounds separate
+    # them: a shallow pairing would land each bound in another chain's slot and the
+    # rewritten chunk would not be retail's.
+    retail = build(nested_arrays([0x10000, 0xB200, 0x15300]))
+    emitted = build(nested_arrays([0xB200, 0x15300, 0x10000]))
+
+    assert len(emitted) == len(retail)
+    assert emitted != retail
+    result = dn.normalise(emitted, retail)
+
+    assert result.chunk == retail
+    assert result.references >= 3       # the local's type and two element references
+
+
+def test_a_genuine_array_shape_difference_still_refuses():
+    retail = build(nested_arrays([0x10000]))
+    ours = build(nested_arrays([0x10000], outer_bound=3))
+
+    with pytest.raises(dn.Refusal) as excinfo:
+        dn.normalise(ours, retail)
+
+    assert "no counterpart" in str(excinfo.value)
 
 
 def test_a_form_3_element_reference_that_names_no_die_refuses():

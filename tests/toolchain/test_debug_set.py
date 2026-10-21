@@ -224,6 +224,21 @@ def test_an_unparseable_chunk_refuses_as_condition_four():
     assert outcome.condition == 4
 
 
+def test_a_reordered_chain_of_nested_arrays_is_still_the_accepted_class():
+    # The gate's key recurses into an array's subscript data, so a permutation that moves
+    # [3][65536] past [3][45568] is still set-equal -- and no longer pairs them.
+    from tests.toolchain.test_debug_normalize import build, nested_arrays
+
+    retail = build(nested_arrays([0x10000, 0xB200]))
+    emitted = build(nested_arrays([0xB200, 0x10000]))
+
+    assert len(emitted) == len(retail)
+    outcome = debug_set.classify(emitted, retail)
+
+    assert outcome.ok
+    assert outcome.die_count == 6       # CU, one local, two outer and two inner arrays
+
+
 # -- condition 1: `.text` and `.line` are never relaxed ------------------------------------
 
 

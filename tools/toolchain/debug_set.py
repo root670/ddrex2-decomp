@@ -16,9 +16,12 @@ chunk in the image.
 A DIE's signature is ``(tag, parent-shape, attributes)``:
 
 * strings have ``@anonN`` replaced by ``@anon``;
-* reference-valued attributes (form 2) are replaced by a shallow description of their
-  target -- tag, normalised name, byte size, fundamental type -- so a permuted index does
-  not move the reference out of the set;
+* reference-valued attributes (form 2) are replaced by a description of their target --
+  tag, normalised name, byte size, fundamental type -- so a permuted index does not move
+  the reference out of the set.  An ``array_type`` target is described by its subscript
+  data as well (element type **and** bound, at every level the dialect nests), because its
+  shape is not in its tag or size: a shallow description pairs ``[3][65536]`` with
+  ``[3][45568]``, and retail's arrays are not in declaration order;
 * ``AT_sibling`` is dropped, because it is a positional offset and the class under test
   moves positions;
 * the parent's shape (tag, normalised name, size, and its direct children's brief
@@ -45,6 +48,8 @@ AT_SUBSCR_DATA = 0x00A3
 AT_MOD_U_D_TYPE = 0x0083
 #: The MW attribute measured as a block of 4-byte DIE references (one per element).
 AT_2303 = 0x2303
+#: ``array_type``: the one tag whose shape lives in ``AT_subscr_data`` instead of its size.
+TAG_ARRAY_TYPE = 0x0001
 
 TAG = {
     0x0001: "array_type", 0x0002: "class_type", 0x0003: "entry_point",
@@ -207,12 +212,34 @@ def _brief(die):
             die.attrs.get(AT_FUND_TYPE), die.attrs.get(AT_LOCATION), children)
 
 
-def _target_key(value, by_offset):
+def _target_key(value, by_offset, seen=None):
+    """What a reference names: tag, normalised name, size, and -- for an array -- its shape.
+
+    An ``array_type`` carries its shape in ``AT_subscr_data``, not in its tag or size, so a
+    shallow key pairs ``[3][65536]`` with ``[3][45568]``: both are nameless arrays of the
+    same tag and the same (absent) byte size.  Retail's arrays are emitted in an order that
+    is not the declaration order, so that shallow pairing is cyclic and the adoption step
+    rewrites a reference to the wrong array.  The key therefore recurses through the
+    subscript data -- element type *and* bound, at every level the dialect nests -- exactly
+    as :func:`_subscript_key` reads it.  ``seen`` breaks a reference cycle in a corrupt
+    chunk instead of recursing forever.
+    """
     target = by_offset.get(value)
     if target is None:
         return ("outside", value)
-    return ("die", target.tag, _normalise(target.name), target.attrs.get(AT_BYTE_SIZE),
-            target.attrs.get(AT_FUND_TYPE))
+    parts = [target.tag, _normalise(target.name), target.attrs.get(AT_BYTE_SIZE),
+             target.attrs.get(AT_FUND_TYPE)]
+    subscript = target.attrs.get(AT_SUBSCR_DATA)
+    if target.tag == TAG_ARRAY_TYPE and isinstance(subscript, bytes):
+        seen = seen or frozenset()
+        if target.offset in seen:
+            parts.append(("cycle",))
+        else:
+            try:
+                parts.append(_subscript_key(subscript, by_offset, seen | {target.offset}))
+            except (ValueError, IndexError, struct.error):
+                parts.append(("raw", subscript))   # a refusal, not a crash
+    return ("die",) + tuple(parts)
 
 
 def _form_value(block, p, form):
@@ -235,12 +262,14 @@ def _form_value(block, p, form):
     raise ValueError(f"form {form}")
 
 
-def _subscript_key(block, by_offset):
+def _subscript_key(block, by_offset, seen=None):
     """``AT_subscr_data`` as a structure, with its element type's reference normalised.
 
     The array's element type and a user-defined index type are encoded *inside the block*,
     so comparing the block's bytes verbatim would reject the anonymous-order class: the
-    reference names a DIE whose ``@anonN`` offset moved.
+    reference names a DIE whose ``@anonN`` offset moved.  ``seen`` is the chain of array
+    DIEs already being keyed: an element type that is itself an array is keyed by *its*
+    subscript data, which is what separates ``[3][65536]`` from ``[3][45568]``.
     """
     parts = []
     p = 0
@@ -252,18 +281,18 @@ def _subscript_key(block, by_offset):
             form = code & 0x0F
             value, p = _form_value(block, p + 2, form)
             if form == 2:
-                value = _target_key(value, by_offset)
+                value = _target_key(value, by_offset, seen)
             elif form == 3 and isinstance(value, bytes) and len(value) >= 4:
                 # An array of a user-defined type encodes its element as a modifier
                 # block: flags, then a 4-byte DIE reference.  The reference names a DIE
                 # that moved with the anonymous order, so the raw block is not the
                 # element type's identity.
                 value = ("mod_u_d", value[:-4],
-                         _target_key(_U32(value, len(value) - 4)[0], by_offset))
+                         _target_key(_U32(value, len(value) - 4)[0], by_offset, seen))
             parts.append(("et", code, value))
             break
         if fmt & 4:                                   # user-defined index type
-            parts.append(("index-ref", _target_key(_U32(block, p)[0], by_offset)))
+            parts.append(("index-ref", _target_key(_U32(block, p)[0], by_offset, seen)))
             p += 4
         else:                                         # fundamental index type
             parts.append(("index-ft", _U16(block, p)[0]))

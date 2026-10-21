@@ -15,9 +15,10 @@ What it does, in order:
 
 1. parse both chunks into DWARF 1 DIE trees (:func:`debug_set.parse`);
 2. match DIEs one-to-one at every level of the tree, by a structural signature --
-   ``(tag, attributes with references normalised to their target's shallow description,
-   sorted child signatures)``, so identical structures are paired in emission order and a
-   different set refuses (:mod:`toolchain.debug_set`'s signature, made recursive);
+   ``(tag, attributes with references normalised to their target's description -- recursed
+   through array subscripts -- sorted child signatures)``, so identical structures are
+   paired in emission order and a different set refuses (:mod:`toolchain.debug_set`'s
+   signature, made recursive);
 3. lay out our DIE records in retail's sibling order, recursively (a lexical block reorders
    its own children, not the top level only), keeping each chain's trailing bytes verbatim;
 4. recompute every ``AT_sibling`` from the new layout, and rewrite every intra-chunk offset
