@@ -629,6 +629,10 @@ DDREX2P = Target(
         # .debug 0xC62 / 80 DIEs after 3 type-reference words.
         ("src/common/co_cursor.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0xE0, four bodies word-exact; .line adopted (19 records, 15 rows moved);
+        # .debug retail's 0x125E / 125 DIEs after 31 reference words (0x72, 0x83, 0xA3).
+        ("src/network/net_window/net_win_infoboard.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt")),
         # .text 0x208 (520 bytes), all five bodies word-exact.  .debug is retail's 0x1435
         # bytes / 134 DIEs byte for byte after adoption, including the form-3
         # AT_subscr_data element references (3 rewritten); .line (5 chunks, 540 bytes) and
