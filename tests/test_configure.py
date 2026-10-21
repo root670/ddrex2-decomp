@@ -312,6 +312,31 @@ def test_the_linker_script_lists_its_inputs_in_address_order():
         configure.pinned_ld_script(ambiguous, [], [], target, target.geometry)
 
 
+def test_a_promoted_units_datum_is_selected_by_its_own_section():
+    """One placed datum per section: a unit with two would otherwise move both at once.
+
+    A data-only source is compiled raw and keeps its single ``.data``; a promoted source is
+    the emitted object whose every placed datum has a section of its own, named from the
+    symbol (``compile.data_section``), so the linker script can place ``@40`` and ``@41`` at
+    two different addresses out of one object.
+    """
+    placements = [
+        dict(name="@40", address=0x2D6D88, size=5, extent=8,
+             source="src/network/net_window/net_win_listdtl2.c"),
+        dict(name="@41", address=0x2D6D90, size=5, extent=8,
+             source="src/network/net_window/net_win_listdtl2.c"),
+        dict(name="bk_tm2_records", address=0x2DA260, size=0xDE8, extent=0xDE8,
+             source="data/bk_load_data.c"),
+    ]
+    promoted = {"src/network/net_window/net_win_listdtl2.c":
+                "build/src/network/net_window/net_win_listdtl2.c.o"}
+    assert configure.placement_inputs(placements, promoted) == [
+        (0x2D6D88, "build/src/network/net_window/net_win_listdtl2.c.o", ".datum._4040"),
+        (0x2D6D90, "build/src/network/net_window/net_win_listdtl2.c.o", ".datum._4041"),
+        (0x2DA260, "build/data/bk_load_data.c.o", ".data"),
+    ]
+
+
 def test_code_splits_reads_each_splits_own_address_comment():
     geo = geometry()
     good = {"asm/nonmatchings/main/a.s": "/* 80 00100000 00000000 */\nglabel a\n"}

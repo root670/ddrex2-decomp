@@ -20,6 +20,7 @@ type-level, so they are pinned here rather than trusted:
 """
 import json
 import pathlib
+import re
 import struct
 import sys
 import types
@@ -42,7 +43,7 @@ class Symbol:
         self.name = name
 
 
-def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=()):
+def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=(), placements=()):
     """A synthetic config: only the files a `Manifests` reads have to exist.
 
     `splits` are `(name, text)` under the code segment's split directory -- the objects the
@@ -50,11 +51,13 @@ def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=()):
     written under `tmp_path` on purpose: `Manifests` is given `root=tmp_path`, so a test can
     never see (or depend on) the repository's generated `asm/`.  `data` are the same, under
     `asm/data`: the data splits the link places (`g_game_w` lives in `bss.bss.s`).
+    `placements` are the target's own `data_placements.txt` lines.
     """
     (tmp_path / "cus.json").write_text(json.dumps([]))
     (tmp_path / "debug_chunks.json").write_text(json.dumps([]))
     (tmp_path / "symbol_addrs.txt").write_text("".join(placed))
     (tmp_path / "unplaced_symbols.txt").write_text("".join(unplaced))
+    (tmp_path / "data_placements.txt").write_text("".join(placements))
     for name, text in splits:
         path = tmp_path / "asm" / "nonmatchings" / "main" / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -250,6 +253,51 @@ def test_a_relocation_to_a_name_with_no_record_still_refuses(tmp_path):
                     "somebody.text", 0)
     assert "neverHeardOfIt" in str(refusal.value)
     assert "no record at all" in str(refusal.value)
+
+
+# -- the placement ledger's names -------------------------------------------------------
+
+
+def test_a_literal_pool_slot_is_a_datum_the_ledger_can_place(tmp_path):
+    """`@40`: Metrowerks numbers a literal the source never named.
+
+    The object relocates against that number (the ``.debug`` record's ``AT_location``, the
+    ``lui``/``%lo`` pair), so it is a datum at a retail address like any other: the ledger
+    spells it and the relocation resolves instead of refusing the unit.
+    """
+    m = manifests(tmp_path, placements=[
+        "@40 = 0x002D6D88; // size:0x5 extent:0x8 "
+        "source:src/network/net_window/net_win_listdtl2.c\n"])
+    assert m.address_of("@40") == 0x2D6D88
+    assert m.placed["@40"] == 0x2D6D88
+    assert m.by_address[0x2D6D88] == "@40"
+
+
+def test_a_placement_name_that_is_neither_an_identifier_nor_a_slot_is_refused(tmp_path):
+    """The ledger's name grammar is closed: a misspelled pool slot is a bad line, not a gap."""
+    with pytest.raises(cc.Unusable) as refusal:
+        manifests(tmp_path, placements=[
+            "@pool = 0x002D6D88; // size:0x5 extent:0x8 source:src/x.c\n"])
+    assert "data_placements.txt" in str(refusal.value)
+    assert "@pool" in str(refusal.value)
+
+
+def test_each_placed_datum_leaves_the_object_in_its_own_section():
+    """A unit may place several data symbols; the ld script selects a section by name."""
+    text = cc.assembly(0, [], b"", b"", data=[
+        ("@40", b"%05d\0", (), lambda symbol: 0),
+        ("@41", b"%08d\0", (), lambda symbol: 0),
+        ("xxxx_bk_tm2_tbl", b"\x00\x00\x00\x00", (), lambda symbol: 0),
+    ])
+    assert re.findall(r"^\t\.section ([^,]+),", text, re.M) == [
+        ".datum._4040", ".datum._4041", ".datum.xxxx_5fbk_5ftm2_5ftbl"]
+    assert "0x64353025" in text and "0x64383025" in text
+
+
+def test_the_section_encoding_cannot_collide():
+    """A C identifier that spells the escape is still a different section from the slot."""
+    assert cc.data_section("@40") == ".datum._4040"
+    assert cc.data_section("_4040") == ".datum._5f4040"
 
 
 #: The range the synthetic tests measure: the split bases above sit inside it, the overlay

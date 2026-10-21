@@ -485,6 +485,20 @@ def data_placements(target=None):
         raise ConfigError(str(exc)) from exc
 
 
+def placement_inputs(placements, built_from):
+    """``[(address, object, section)]``: the link inputs a placement ledger asks for.
+
+    A promoted unit is one object whose placed data symbols each own a section
+    (``compile.data_section``), so the section is named per record: selecting ``.data`` would
+    drag every other placed datum of the same unit along with it.  A data-only unit is
+    compiled raw and has exactly the one ``.data`` section its single datum occupies.
+    """
+    return [(record["address"],
+             built_from.get(record["source"], f"build/{record['source']}.o"),
+             cc.data_section(record["name"]) if record["source"] in built_from else ".data")
+            for record in placements]
+
+
 def cut_split(name, text, start, cuts):
     """Split one split's assembler text around the byte ranges a placement owns.
 
@@ -526,6 +540,11 @@ def cut_split(name, text, start, cuts):
     ranges.append((cursor, None))
     pieces, removed = [], []
     for piece_start, piece_end in ranges:
+        if piece_end is not None and piece_end <= piece_start:
+            # Two placements that touch leave no bytes between them; an empty piece would
+            # claim the same address as the second placement and make the link order
+            # ambiguous.
+            continue
         body = list(preamble) if piece_start != start else []
         for address, lineset in entries:
             if address is None:
@@ -589,7 +608,8 @@ def plan_data(sources, code, geometry, placements, replacements):
         aliases += removed
     pad_pieces = []
     for address, name in pads:
-        path = REPO_ROOT / "build" / "generated" / "data" / f"{name}.pad.s"
+        token = cc.data_section(name).rsplit(".", 1)[-1]
+        path = REPO_ROOT / "build" / "generated" / "data" / f"{token}.pad.s"
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\t.text\n\t.space\t%d\n" % pad_size(placements, name),
                         newline="\n")
@@ -1151,8 +1171,7 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
     pieces, pads, moved = plan_data(sources, code, geometry, placements, replacements)
     aliases = sorted(dict.fromkeys(aliases + moved), key=lambda item: (item[1], item[0]))
     built_from = {promotion.file: promotion.object for promotion in promoted}
-    data = [(record["address"], built_from.get(record["source"], f"build/{record['source']}.o"),
-             ".data") for record in placements]
+    data = placement_inputs(placements, built_from)
     data_sources = sorted({record["source"] for record in placements} - set(built_from))
     versions = {version for version, _flags, _state in target.build_table().values()}
     data_compiler = (versions.pop() if len(versions) == 1 else cc.fetch.REQUIRED)
