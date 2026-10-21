@@ -33,8 +33,7 @@ static struct _CWS_OBJ_SET netwintab[6] = {
     { .func = (int (*)(void *, void *))CwsObjDisp, .tex_num = 23, .ptex_obj = 0, .ptex = &netwinmenu_plate_tab_box[4], .r = 0x80, .g = 0x80, .b = 0x80, .a = 0x80 }
 };
 
-int NetWin_Tab(struct _CWS_WIN_W *win)
-{
+int NetWin_Tab(struct _CWS_WIN_W *win) {
     int rtn;
 
     if (NetWin_TabCode[win->step[1]] != 0) NetWin_TabCode[win->step[1]](win);
@@ -42,8 +41,7 @@ int NetWin_Tab(struct _CWS_WIN_W *win)
     return rtn;
 }
 
-static int NetWin_TabInit(struct _CWS_WIN_W *win)
-{
+static int NetWin_TabInit(struct _CWS_WIN_W *win) {
     int i;
     struct _net_win_tab_w *winw;
 
@@ -56,8 +54,7 @@ static int NetWin_TabInit(struct _CWS_WIN_W *win)
     return 0;
 }
 
-static int NetWin_TabMain(struct _CWS_WIN_W *win)
-{
+static int NetWin_TabMain(struct _CWS_WIN_W *win) {
     int i;
     struct _net_win_tab_w *winw;
     int st;
@@ -96,14 +93,12 @@ static int NetWin_TabMain(struct _CWS_WIN_W *win)
     return 0;
 }
 
-static int NetWin_TabEnd(struct _CWS_WIN_W *win)
-{
+static int NetWin_TabEnd(struct _CWS_WIN_W *win) {
     win->status |= 4;
     return 0;
 }
 
-void NetWin_TabSetSelect(struct _CWS_WIN_W *win, int tab_num)
-{
+void NetWin_TabSetSelect(struct _CWS_WIN_W *win, int tab_num) {
     int i;
     struct _net_win_tab_w *winw;
 
@@ -122,8 +117,7 @@ void NetWin_TabSetSelect(struct _CWS_WIN_W *win, int tab_num)
     CwsObjChangePlate(win->obj[0], &netwinmenu_plate_tab_line[tab_num]);
 }
 
-void NetWin_TabSetOn(struct _CWS_WIN_W *win, int tab_num)
-{
+void NetWin_TabSetOn(struct _CWS_WIN_W *win, int tab_num) {
     int i;
     struct _net_win_tab_w *winw;
 
@@ -138,8 +132,7 @@ void NetWin_TabSetOn(struct _CWS_WIN_W *win, int tab_num)
     winw->status |= 1;
 }
 
-void NetWin_TabSetOff(struct _CWS_WIN_W *win)
-{
+void NetWin_TabSetOff(struct _CWS_WIN_W *win) {
     struct _net_win_tab_w *winw;
 
     winw = (struct _net_win_tab_w *)win->work;
