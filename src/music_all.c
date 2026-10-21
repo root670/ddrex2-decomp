@@ -4,8 +4,7 @@ static struct _tag_cMusicData tblMusicData[674] = { { .link_num = 0, .base_name 
 
 int func_001BED10(unsigned char *a, unsigned char *b);
 
-struct _tag_cMusicData *GetMusicData_by_link_num(unsigned short link_num)
-{
+struct _tag_cMusicData *GetMusicData_by_link_num(unsigned short link_num) {
     struct _tag_cMusicData *ret = 0;
     int i;
 
@@ -19,8 +18,7 @@ struct _tag_cMusicData *GetMusicData_by_link_num(unsigned short link_num)
     return ret;
 }
 
-struct _tag_cMusicData *GetMusicData_by_index(int id)
-{
+struct _tag_cMusicData *GetMusicData_by_index(int id) {
     struct _tag_cMusicData *ret;
     ret = 0;
     if ((unsigned int)id < 674) {
@@ -29,8 +27,7 @@ struct _tag_cMusicData *GetMusicData_by_index(int id)
     return ret;
 }
 
-struct _tag_cMusicData *GetMusicData_by_base_name(unsigned char *base_name)
-{
+struct _tag_cMusicData *GetMusicData_by_base_name(unsigned char *base_name) {
     struct _tag_cMusicData *ret = 0;
     int i;
 
