@@ -4,9 +4,11 @@ The step's contract has three halves.  The rewrite is *byte-preserving*: every l
 not a directive comes out unchanged and the line a directive numbered lands on that number
 physically.  It *refuses* what it cannot express -- a target already behind the rewritten
 file, and a file name that is not the unit's own -- and refuses without producing a byte.
-And because those two properties are a claim about the compiler, the last test compiles a
-promoted unit before and after the rewrite through the promotion path and requires
-``.text``, ``.debug`` and ``.line`` to be identical.
+And because those two properties are a claim about the compiler, the compile tests build a
+promoted unit before and after the rewrite through the promotion path and require
+``.text``, ``.debug`` and ``.line`` to be identical, and require the promotion path itself to
+refuse a source that still carries a directive -- a promoted source never carries one
+(``docs/unit-work.md``: the refusal is the build's, the rewrite is the remedy).
 
 The pure tests need no compiler; the compile test skips (with a reason) when the retail
 ELF or the recorded compiler is not present in this checkout.
@@ -280,12 +282,15 @@ def test_a_recompiled_unit_is_byte_identical_after_the_rewrite(tmp_path):
     assert before.debug == after.debug, "the rewrite moved .debug"
     assert before.line == after.line, "the rewrite moved .line"
 
-    # And the promotion path itself runs the same comparison and accepts this spelling.
-    placed = cc.place(tu, manifests, compiler_dir, wibo, flags, keep=tmp_path / "placed.mw.o",
-                      normalise=normalise, adopt=adopt,
-                      source_text=variant.encode("latin-1"))
-    assert (placed.text, placed.debug, placed.line) == (before.text, before.debug,
-                                                        before.line)
+    # And the promotion path refuses the directive-laden spelling: the rewrite is a step
+    # *before* promotion, never a scratch copy the committed file does not show.
+    with pytest.raises(cc.Unusable) as excinfo:
+        cc.place(tu, manifests, compiler_dir, wibo, flags, keep=tmp_path / "placed.mw.o",
+                 normalise=normalise, adopt=adopt,
+                 source_text=variant.encode("latin-1"))
+    assert tu.file in str(excinfo.value)
+    assert "1 #line directive" in str(excinfo.value)
+    assert f"line_reflow.py {tu.file} --normalise" in str(excinfo.value)
 
 
 def test_normalising_keeps_text_and_reports_the_line_rows_that_diverge(tmp_path):
@@ -320,8 +325,8 @@ def test_normalising_keeps_text_and_reports_the_line_rows_that_diverge(tmp_path)
     assert all(one[0] != other[0] for _table, _row, (_, one), (_, other) in changes)
 
 
-def test_a_backward_unit_is_compiled_unrewritten_rather_than_refused(tmp_path, capsys):
-    """A layout the rewrite cannot express is skipped, not made a promotion failure."""
+def test_a_layout_the_rewrite_cannot_express_is_refused_by_the_build(tmp_path):
+    """Every directive is refused, expressible or not; the build never compiles one as written."""
     from toolchain import compile as cc
 
     tu, manifests, compiler_dir, wibo, flags, normalise, adopt = _unit_and_compiler()
@@ -329,17 +334,22 @@ def test_a_backward_unit_is_compiled_unrewritten_rather_than_refused(tmp_path, c
     text = original.decode("latin-1")
     # A directive after the last statement cannot move a record, but it does move the
     # rewritten file's numbering backwards -- `#line 1` where dozens of lines are already
-    # out -- so the rewrite refuses it and the build compiles it as written.
+    # out -- so the rewrite refuses it.  The build no longer falls back to compiling it as
+    # written: the refusal is about the committed file, not about the rewrite's success.
     variant = text + "#line 1\n"
     with pytest.raises(lr.Refused):
         lr.rewrite(variant, accept_paths=(tu.name, tu.file))
 
-    placed = cc.place(tu, manifests, compiler_dir, wibo, flags, keep=tmp_path / "skipped.mw.o",
-                      normalise=normalise, adopt=adopt,
-                      source_text=variant.encode("latin-1"))
+    with pytest.raises(cc.Unusable) as excinfo:
+        cc.place(tu, manifests, compiler_dir, wibo, flags, keep=tmp_path / "refused.mw.o",
+                 normalise=normalise, adopt=adopt,
+                 source_text=variant.encode("latin-1"))
 
-    assert "reflow skipped" in capsys.readouterr().err
+    assert "1 #line directive" in str(excinfo.value)
+    assert f"line_reflow.py {tu.file} --normalise" in str(excinfo.value)
+    # `_place_source` is the seam line_reflow still compiles the *before* spelling with, so
+    # the tool can check a rewrite of a layout it cannot itself express.
     plain = cc._place_source(tu, manifests, compiler_dir, wibo, flags,
                              variant.encode("latin-1"), tmp_path / "plain.mw.o", normalise,
                              adopt)
-    assert placed.text == plain.text
+    assert plain.text == cc.retail_bytes(tu)["text"]

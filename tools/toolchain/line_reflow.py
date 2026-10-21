@@ -27,9 +27,11 @@ faithful:
 For a translation unit with a recorded pair in ``tu_builds`` the strict rewrite is accepted
 only when compiling the source before and after through the promotion path
 (:func:`toolchain.compile.place`) with that pair gives byte-identical ``.text``, ``.debug``
-and ``.line``.  The same condition runs inside ``compile.py`` whenever a promoted source
-still carries a directive, so a promotion cannot silently compile a layout the rewrite
-would have changed.
+and ``.line``.  The build does **not** run this rewrite: a promoted source that still carries
+a directive is refused by :func:`toolchain.compile.refuse_line_directives` (and by
+``configure.py`` before it writes ``build.ninja``), and the refusal names this tool with
+``--normalise`` as the remedy.  So a promotion cannot silently compile a layout the committed
+file does not spell.
 
 **Normalising (``--normalise``).**  The directives are stripped and the file keeps its own,
 natural layout -- no padding standing in for lines nobody can know.  Two lines the
@@ -216,12 +218,23 @@ def scan(text: str) -> tuple[Directive, ...]:
     return tuple(found)
 
 
+def directive_count(text: str) -> int:
+    """How many lines of ``text`` look like a ``#line`` directive (a cheap, conservative count).
+
+    A ``#line`` inside a block comment counts here and resolves to no directive in
+    :func:`scan`; that is the right answer for the build's refusal, which is about what a
+    reader of the committed file sees rather than about what the compiler would honour.  The
+    count is what :class:`toolchain.compile.Unusable` reports, so the message says how many
+    directives the remedy will strip.
+    """
+    return len(_LIKE_DIRECTIVE.findall(text))
+
+
 def has_directives(text: str) -> bool:
     """Whether ``text`` may contain a ``#line`` directive (a cheap, conservative test).
 
-    A ``#line`` inside a block comment answers yes here and resolves to no directives in
-    :func:`scan`; the point of the test is only to keep the promotion path from paying for a
-    scan twice on every unit that has no directive at all.
+    See :func:`directive_count`: this is the test the promotion path uses to refuse a source,
+    and it answers yes to a directive a block comment hides rather than paying for a scan.
     """
     return bool(_LIKE_DIRECTIVE.search(text))
 

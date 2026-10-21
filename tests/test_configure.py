@@ -357,6 +357,51 @@ def test_the_cc_edge_carries_the_debug_step_recorded_for_each_unit():
     assert promoted["src/network/net_grf.c"].flags.endswith("--adopt-retail-meta")
 
 
+def test_a_promoted_source_with_directives_is_refused_and_a_clean_one_is_not(tmp_path):
+    """The `#line` rule of a committed promoted source, checked against a synthetic tree.
+
+    A directive renumbers what a reader sees, and the rewrite that removes it is a promotion
+    step, so `configure.py` refuses to write a graph over one: the message names the file, the
+    count and the remedy.  The same source without the directive is accepted.
+    """
+    source = tmp_path / "src" / "promoted.c"
+    source.parent.mkdir()
+    source.write_text("int f(void) {\n#line 20\n    return 0;\n#line 30\n}\n")
+    target = probe(tu_builds=(("src/promoted.c", "3.0-011126", "-c -g"),))
+
+    with pytest.raises(configure.ConfigError) as excinfo:
+        configure.check_promoted_sources(target, root=tmp_path)
+
+    message = str(excinfo.value)
+    assert "src/promoted.c" in message
+    assert "2 #line directive(s)" in message
+    assert ("python3 tools/toolchain/line_reflow.py src/promoted.c --normalise"
+            in message)
+
+    source.write_text("int f(void) {\n    return 0;\n}\n")
+    assert configure.check_promoted_sources(target, root=tmp_path) is None
+
+
+def test_configure_refuses_the_directive_before_it_writes_the_graph(tmp_path, monkeypatch):
+    """The check is first: a `#line` stops configure before `splat`, the manifests or a write.
+
+    `cus_path` does not exist and the graph on disk says `untouched` -- if the gate ran after
+    the writes, or after reading the manifests, one of those would be the first failure.
+    """
+    source = tmp_path / "src" / "promoted.c"
+    source.parent.mkdir()
+    source.write_text("#line 1\nint f(void) { return 0; }\n")
+    target = probe(tu_builds=(("src/promoted.c", "3.0-011126", "-c -g"),))
+    monkeypatch.setattr(configure, "REPO_ROOT", tmp_path)
+    graph = tmp_path / "build.ninja"
+    graph.write_text("untouched\n")
+
+    with pytest.raises(configure.ConfigError, match=r"src/promoted\.c: 1 #line directive"):
+        configure.configure(target, cus_path=tmp_path / "cus.json")
+
+    assert graph.read_text() == "untouched\n"
+
+
 def test_load_json_stops_on_a_missing_or_broken_manifest(tmp_path):
     """A manifest that is not there, or is not JSON, is a configuration error naming the file --
     reported before anything is written, never repaired and never defaulted."""

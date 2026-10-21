@@ -82,6 +82,15 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    and shows up as a `.line` chunk that no longer matches — that is the build telling you the
    source's shape is part of the target, not a style preference.
 
+   **A promoted source carries no comments, no blank line directly inside a brace, and no `#line`
+   directive — and the build enforces all three.**  `tools/units/strip_comments.py --check` fails
+   on the first two; `configure.py` refuses a `tu_builds` source with a directive *before* it
+   writes `build.ninja`, and `compile.py` refuses the same unit before the compiler runs.  Both
+   name the file, the count and the remedy
+   (`python3 tools/toolchain/line_reflow.py <file> --normalise`), so a directive-laden source can
+   neither be configured nor built, and nothing rewrites a scratch copy the committed file does
+   not show.
+
 5. **Retail binaries, disc images and toolchains never enter the repository.**  `orig/`, `disc/` and
    `toolchain/` are gitignored and stay that way; the user supplies the ELF and the image, and the
    compiler archives are fetched by `tools/toolchain/fetch.py` and hash-verified before they are

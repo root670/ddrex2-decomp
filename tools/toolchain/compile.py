@@ -57,6 +57,13 @@ MWCC has no parse-only mode -- ``-nocodegen`` skips the front end's own error re
 it exits 0 on a file it cannot parse -- so the check runs the ordinary compile and throws
 the object away.  What is left is the exit status and the compiler's own diagnostics.
 
+A promoted source carries **no ``#line`` directive**, and this program is where the ``cc``
+edge enforces it: :func:`refuse_line_directives` stops the build before the compiler runs,
+naming the file, the count and the remedy
+(``python3 tools/toolchain/line_reflow.py <file> --normalise``).  ``configure.py`` refuses the
+same source even earlier, before it writes ``build.ninja``.  The rewrite is a promotion step,
+never something the build does to a scratch copy the committed file does not show.
+
 Exit codes: 0 the object was written (or ``--syntax-only`` accepted the file), 1 the compiler
 or the assembler failed, 2 the source, a manifest, a host tool or a name the object needs is
 not something this build can place.
@@ -1203,6 +1210,30 @@ def include_flags(target) -> list:
     return flags
 
 
+#: What a promoted source that still carries a ``#line`` directive is told to run.  The
+#: rewrite is a step *before* promotion, never something the build does behind the caller's
+#: back: `place` used to reflow such a source in a staged copy, which meant a directive-laden
+#: file could be committed and built while the file a reader sees was not the one compiled.
+LINE_REMEDY = "python3 tools/toolchain/line_reflow.py {file} --normalise"
+
+
+def refuse_line_directives(file: str, text: str) -> None:
+    """Refuse a promoted source that still carries ``#line`` directives.
+
+    A promoted source is the evidence for the bytes: the file says what the compiler saw.  A
+    ``#line`` directive renumbers what a reader -- and ``git diff`` -- sees, and the rewrite
+    that removes it can move ``.line`` rows (which only retail adoption may hide), so the
+    build refuses rather than rewriting a scratch copy the caller never sees.  The message
+    names the file, how many directives are there, and the one command that removes them.
+    """
+    count = line_reflow.directive_count(text)
+    if not count:
+        return
+    raise Unusable(
+        f"{file}: {count} #line directive(s); a promoted source carries none: run "
+        + LINE_REMEDY.format(file=file))
+
+
 def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
           normalise: bool = False, adopt: bool = False,
           source_text: bytes | None = None) -> Placed:
@@ -1212,55 +1243,18 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
     :mod:`toolchain.line_reflow` use it); the staged path, and therefore the source name
     the compiler records, is the same either way.
 
-    A source that still carries ``#line`` directives is first rewritten into physical line
-    numbers (:mod:`toolchain.line_reflow`) and the un-rewritten source is compiled beside
-    it: the rewrite is accepted only when both compile to byte-identical ``.text``,
-    ``.debug`` and ``.line`` under the pair this call was given.  The failure path writes
-    nothing, so a promotion cannot carry a layout the rewrite would have changed.
+    A source that carries ``#line`` directives is refused by
+    :func:`refuse_line_directives`, before the compiler, the manifests or the toolchain are
+    touched: the directive's removal is a promotion step (``line_reflow.py``), and the build
+    must compile the bytes the committed file spells.
     """
     if source_text is None:
         if not tu.source.is_file():
             raise Unusable(f"{tu.source.relative_to(REPO_ROOT)} does not exist")
         source_text = tu.source.read_bytes()
-    text = source_text.decode("latin-1")
-    if not line_reflow.has_directives(text):
-        return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
-                             normalise, adopt)
-
-    try:
-        rewritten, directives = line_reflow.rewrite(
-            text, accept_paths=(tu.name, tu.file))
-    except line_reflow.Refused as exc:
-        # The rewrite is a normalisation, not a condition on the source: a unit whose
-        # directives run backwards (or name another file) still promotes, compiled exactly
-        # as written.  The standalone tool refuses this input; the build only declines to
-        # rewrite it, and says so rather than compile something the caller cannot see.
-        print(f"compile: {tu.file}: #line reflow skipped ({exc}); compiling the directives "
-              f"as written", file=sys.stderr)
-        return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
-                             normalise, adopt)
-    if not directives:
-        return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
-                             normalise, adopt)
-
-    with tempfile.TemporaryDirectory(prefix="line-reflow-") as scratch:
-        before = _place_source(tu, manifests, compiler_dir, wibo, flags, source_text,
-                               pathlib.Path(scratch) / "before.mw.o", normalise, adopt)
-    reflowed = rewritten.encode("latin-1")
-    after = _place_source(tu, manifests, compiler_dir, wibo, flags, reflowed, keep,
-                          normalise, adopt)
-    for part in ("text", "debug", "line"):
-        mine, theirs = getattr(before, part), getattr(after, part)
-        if mine == theirs:
-            continue
-        at = _first_difference(mine, theirs)
-        raise Unusable(
-            f"{tu.file}: refusing the #line reflow: the rewritten source does not compile "
-            f"to the same {part} (0x{len(mine):X} bytes against 0x{len(theirs):X}, first "
-            f"difference at 0x{at:X}); the file was not rewritten")
-    print(f"compile: {tu.file}: reflowed {len(directives)} #line directive(s) into physical "
-          f"layout; .text, .debug and .line are byte-identical", file=sys.stderr)
-    return after
+    refuse_line_directives(tu.file, source_text.decode("latin-1"))
+    return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
+                         normalise, adopt)
 
 
 def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, source: bytes,
@@ -1268,7 +1262,10 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
                   allow_line: bool = False) -> Placed:
     """Compile one spelling of the unit's source and place its bytes.
 
-    :func:`place` owns the file/reflow decision; this is the promotion itself, unchanged.
+    :func:`place` owns the refusal of ``#line`` directives and the read of the file; this is
+    the promotion itself, unchanged, and it is also what :mod:`toolchain.line_reflow` calls to
+    compile the *before* spelling -- the one still carrying directives -- that its rewrite is
+    checked against.
     """
     staged = staged_path(tu)
     staged.parent.mkdir(parents=True, exist_ok=True)

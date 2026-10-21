@@ -219,12 +219,15 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    git add <explicit paths> && git commit -m "ddrex2p: promote <tu>"
    ```
 
-   If the source still carries `#line` directives, run
-   `python3 tools/toolchain/line_reflow.py <src>` before committing and commit the rewritten
-   file: the step turns the directives into physical lines and proves by recompilation that
-   nothing moved (see "The `#line` reflow step").  `compile.py` runs the same rewrite and the
-   same check on its staged copy, so an un-reflowed unit still promotes; the committed file
-   should be the one without directives.
+   A promoted source carries **no `#line` directive**, and the build is what enforces it:
+   `configure.py` refuses a `tu_builds` source that still has one *before* it writes
+   `build.ninja`, and `compile.py` (the `cc` edge) refuses the same unit before the compiler
+   runs.  Both name the file, the count and the remedy.  Run
+   `python3 tools/toolchain/line_reflow.py <src> --normalise` before committing and commit the
+   rewritten file: the tool strips the directives, proves `.text` byte-identical, and reports
+   the `.line` rows that adoption takes from retail (see "The `#line` reflow step").  There is
+   no silent path: a directive-laden source can neither be configured nor built, and its
+   staged copy is never rewritten behind the committed file's back.
 
    Promoted C is committed with **no comments at all**.  Run
    `python3 tools/units/strip_comments.py <src>` (it recompiles before and after under the
@@ -327,6 +330,14 @@ The rule to follow is tww's, and it is a good one: **no names are better than in
 
 ## Comment style
 
+**Three source-form rules cover a promoted file, and each has a mechanism that enforces it:**
+no comments and no blank line directly inside a brace (`tools/units/strip_comments.py
+--check`), and no `#line` directive (`configure.py` before it writes `build.ninja`, and
+`compile.py` at the `cc` edge, both naming the count and the remedy).  They exist because the
+source is evidence: a comment is an essay in the wrong place, a brace-padding blank is a style
+choice pretending to be layout, and a directive means the file a reader sees is not the file
+the compiler numbered.
+
 **A committed promoted file carries no comments at all.**  The C is evidence, not an essay,
 and the evidence lives beside it, not in it:
 
@@ -349,14 +360,13 @@ statement lines must not move; what fills the space between them is your choice.
 `"adopt"` is the exception: retail's `.line` is substituted, so the *grouping* is what must survive
 (see "Tidying a promoted source") and the physical numbers are free.
 
-**A better answer than padding when the file must carry more than the statements.** A `#line N`
-directive makes the line that *follows* it number `N`, so statements land on retail's line
-numbers directly and the blank-line dance disappears: the file can hold an `#include`, a type block
-or a `#define` between two statements without forty empty lines
-standing in for them.  Measured on UnitC's `AM/s573/doll/dexport.c`, whose statements are at
-lines 61–105 while its type closure is 1,111 lines over 28 headers — the generated headers are
-the only way to declare `SaveData` (0x1FF50 B) and `g_game_w` (0xACDC4) without moving the
-statements, and the emitted `.line` numbers stayed retail's.  Two rules come with it:
+**A `#line N` directive is a drafting aid, and a commit never takes that form.** A directive
+makes the line that *follows* it number `N`, so a draft can carry an `#include`, a type block
+or a `#define` between two statements without forty empty lines standing in for them.
+Measured on a draft of UnitC's `AM/s573/doll/dexport.c`, whose statements are at lines 61–105
+while its type closure is 1,111 lines over 28 headers — the generated headers are the only way
+to declare `SaveData` (0x1FF50 B) and `g_game_w` (0xACDC4) without moving the statements, and
+the emitted `.line` numbers stayed retail's.  While it is a draft, three rules come with it:
 
 - the directive numbers the *next* line, so the statement after it must be the one retail puts
   on `N`; put it immediately before that statement, not before a block of declarations;
@@ -372,6 +382,14 @@ statements, and the emitted `.line` numbers stayed retail's.  Two rules come wit
   records the `n++` and the test on line 9.  So when the line a `#line` must reach is a loop's,
   it is the brace's line that has to be right, and both of UnitC's candidate units are only
   explicable with that rule.
+
+**A promoted source carries none.**  `configure.py` refuses a `tu_builds` source that still
+has a directive before it writes `build.ninja`, and `compile.py` refuses the same unit at the
+`cc` edge; both print the file, the count and the remedy
+(`python3 tools/toolchain/line_reflow.py <file> --normalise`), never a silent rewrite of a
+scratch copy.  The rules above are the ones the *rewrite* has to satisfy: the strict mode puts
+the statement back on the physical line the directive named, so a draft that broke them does not
+reflow strictly, and the normalising mode (`.line` adopted from retail) is the way out.
 
 ### The `#line` reflow step (part of promotion)
 
@@ -403,11 +421,20 @@ expressed:
 For a unit with a recorded pair in `tu_builds`, the strict rewrite is accepted only after the
 source is compiled **before and after** through the promotion path with that pair and `.text`,
 `.debug` and `.line` come out **byte-identical**; any difference refuses and the file is left
-untouched.  The same condition runs inside `compile.py` whenever a promoted source still carries a
-directive: it rewrites its staged copy, compiles the un-rewritten spelling beside it, and accepts
-only the identical result.  A source whose rewrite is not expressible is compiled as written, with
-an explicit `#line reflow skipped (...)` line — the step is a normalisation, never a condition on
-the source.
+untouched.
+
+**The build does not run this rewrite.**  A `tu_builds` source that still carries a directive is
+refused, with a non-zero exit, by `configure.py` (before it writes `build.ninja`) and by
+`compile.py` (before the compiler runs) alike:
+
+```
+src/<dir>/<tu>.c: 89 #line directive(s); a promoted source carries none: run
+python3 tools/toolchain/line_reflow.py src/<dir>/<tu>.c --normalise
+```
+
+So a directive cannot reach a commit and be silently normalised at build time: the file a reader
+sees is the file the compiler saw, or the unit does not build.  The rewrite is a step *before*
+promotion, and this tool is the remedy the refusal names.
 
 **Normalising (`--normalise`)** strips the directives and keeps the file's own, natural layout —
 no padding standing in for comment blocks or blank lines nobody can know.  The guarantee changes:
@@ -430,12 +457,14 @@ statement table is what the image carries.
 -g`, `"adopt"`): 189 directives, 454 lines before and 265 after, zero left.  The normalised source
 compiles to `.text` 0x950 bytes byte-identical to retail's; its emitted `.line` gains 4 records
 (`play_anime_step_inst` +1, `play_anime_step` +3), so the table is adopted whole.  Before and after
-compile through `place` to identical `.text` (0x950), `.debug` (0x4273) and `.line` (0x9B0).  The
-strict/backwards refusal is exercised by `src/CS/dancemaster/dmm_chara.c`'s draft (`line 80:
+compile through `_place_source` to identical `.text` (0x950), `.debug` (0x4273) and `.line` (0x9B0).
+The strict/backwards refusal is exercised by `src/CS/dancemaster/dmm_chara.c`'s draft (`line 80:
 #line 33 moves backwards…`); the strict compile check by `tests/toolchain/test_line_reflow.py`,
 which recompiles `sys_scf.c` with a no-op directive inserted and requires the three parts identical
 before and after, and the normalising check by the same file's normalise case (`.text` identical,
-the diverging rows counted).
+the diverging rows counted).  The build's refusal of a directive -- count, file and remedy -- is
+`tests/toolchain/test_compile_directives.py` for the `cc` edge and `tests/test_configure.py` for
+`configure.py`, which asserts the graph on disk is untouched when the refusal fires.
 
 ### Stripping comments from a promoted source (part of promotion)
 

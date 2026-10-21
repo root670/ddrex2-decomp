@@ -591,6 +591,31 @@ def promotions(manifests=None, target=None) -> list:
         raise ConfigError(str(exc)) from exc
 
 
+def check_promoted_sources(target=None, root=None) -> None:
+    """Refuse a ``tu_builds`` source that still carries ``#line``, before anything is written.
+
+    A promoted source is the evidence for the bytes the image carries, so a directive -- which
+    renumbers what a reader sees -- is not something the build may quietly rewrite away.  This
+    runs first in :func:`configure`, while ``build.ninja`` is still the previous file: a source
+    that was promoted with directives left in it stops the run instead of producing a graph
+    that hides the problem.  ``compile.py`` refuses the same source at the ``cc`` edge, so even
+    a stale graph cannot build it.
+
+    ``root`` is the tree the ``tu_builds`` paths are relative to; it is a parameter only so a
+    test can point the same rule at a synthetic tree.
+    """
+    target = target or TARGET
+    root = pathlib.Path(root) if root is not None else REPO_ROOT
+    for file in sorted(target.build_table()):
+        path = root / file
+        if not path.is_file():
+            continue        # a missing source is promotions()' error, and it names it there
+        try:
+            cc.refuse_line_directives(file, path.read_bytes().decode("latin-1"))
+        except cc.Unusable as exc:
+            raise ConfigError(str(exc)) from exc
+
+
 def _promotions(manifests=None, target=None) -> list:
     target = target or TARGET
     manifests = manifests or cc.Manifests(target)
@@ -888,9 +913,14 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
 
     The geometry is resolved first and on purpose: a target whose segment list nobody has
     measured stops here, before anything is written, rather than producing a split of one
-    file at another file's addresses.
+    file at another file's addresses.  The promoted sources are checked on the same principle
+    and nearly as early: a ``tu_builds`` source still carrying a ``#line`` directive stops the
+    run before ``splat`` runs and before ``build.ninja`` is written (see
+    :func:`check_promoted_sources`), which is the only moment a reader can still see the file
+    the build would hide.
     """
     geometry = target.geometry_required()
+    check_promoted_sources(target)
     config_dir = target.config_dir
     cus_path = pathlib.Path(cus_path) if cus_path else target.cus
     chunks_path = pathlib.Path(chunks_path) if chunks_path else target.chunks
