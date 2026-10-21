@@ -30,4 +30,5 @@ xxxx_bk_tm2_tbl = 0x002AF6F0; // size:0x12C extent:0x130 source:src/CS/bk_load.c
 @40 = 0x002D6D88; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl2.c
 @36 = 0x002D4938; // size:0x3 extent:0x8 source:src/network/net_window/net_win_watch.c
 @37 = 0x002D4940; // size:0xa extent:0x10 source:src/network/net_window/net_win_watch.c
+@62 = 0x002D4740; // size:0x18 extent:0x20 source:src/network/net_window/net_win_menu.c
 @41 = 0x002D6D90; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl2.c
