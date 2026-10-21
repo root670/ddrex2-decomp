@@ -643,6 +643,10 @@ DDREX2P = Target(
         # .debug 0x3A7B / 368 DIEs set-equal (5 of 6 anon indices), adopted after 4 ref words.
         # Needs the `_pairs` fix (ddde799): the flag field sits at a non-zero offset.
         ("src/CS/ani_load.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x480, both bodies word-exact; .line exact before the tidy, adopted after (144
+        # records, 142 rows); .debug retail's 0xD78 / 87 DIEs after 16 reference words.
+        ("src/common/co_button.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
