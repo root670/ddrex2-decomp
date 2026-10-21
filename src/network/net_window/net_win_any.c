@@ -12,8 +12,7 @@ static int (*NetWin_AnyFunc[3])(struct _CWS_WIN_W *) = { NetWin_AnyInit, NetWin_
 static void (*NetWin_AnyCode[4])(struct _CWS_WIN_W *) = { 0, CwsWinOpen, CwsWinClose, CwsWinDestroy };
 static struct _CWS_OBJ_SET netwinany[2] = { { .func = (int (*)(void *, void *))CwsObjDisp, .tex_num = -1, .ptex_obj = 0, .ptex = 0, .r = 0x80, .g = 0x80, .b = 0x80, .a = 0x80 }, { .func = (int (*)(void *, void *))CwsObjDisp, .tex_num = -1, .ptex_obj = 0, .ptex = 0, .r = 0x80, .g = 0x80, .b = 0x80, .a = 0x80 } };
 
-int NetWin_Any(struct _CWS_WIN_W *win)
-{
+int NetWin_Any(struct _CWS_WIN_W *win) {
     int rtn;
 
     if (NetWin_AnyCode[win->step[1]] != 0)
@@ -22,8 +21,7 @@ int NetWin_Any(struct _CWS_WIN_W *win)
     return rtn;
 }
 
-static int NetWin_AnyInit(struct _CWS_WIN_W *win)
-{
+static int NetWin_AnyInit(struct _CWS_WIN_W *win) {
     int i;
 
     for (i = 0; i < 2; i++) {
@@ -34,8 +32,7 @@ static int NetWin_AnyInit(struct _CWS_WIN_W *win)
     return 0;
 }
 
-static int NetWin_AnyMain(struct _CWS_WIN_W *win)
-{
+static int NetWin_AnyMain(struct _CWS_WIN_W *win) {
     win->obj[0]->x = 0;
     win->obj[0]->y = 0;
     win->obj[0]->w = win->v.w;
@@ -48,14 +45,12 @@ static int NetWin_AnyMain(struct _CWS_WIN_W *win)
     return 0;
 }
 
-static int NetWin_AnyEnd(struct _CWS_WIN_W *win)
-{
+static int NetWin_AnyEnd(struct _CWS_WIN_W *win) {
     win->status |= 4;
     return 0;
 }
 
-void NetWin_AnySetTexture(struct _CWS_WIN_W *win, int _tex_id, int _tu, int _tv, int _tw, int _th)
-{
+void NetWin_AnySetTexture(struct _CWS_WIN_W *win, int _tex_id, int _tu, int _tv, int _tw, int _th) {
     CwsObjChangeTex(win->obj[0], _tex_id);
     win->obj[0]->tu = _tu;
     win->obj[0]->tv = _tv;
