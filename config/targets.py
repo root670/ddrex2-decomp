@@ -666,6 +666,11 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x770, seven bodies word-exact; .line 0x5B0 byte-equal outright, so state
+        # True: --normalise-debug alone makes .debug retail's 0x179F / 153 DIEs.  Blank lines
+        # are retail's statement positions; never --collapse, and brace-adjacent blanks stay.
+        ("src/common/cws/cws_wins.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", True),
         # .text 0x300, five bodies word-exact; .text, .line 0x1F4 and .debug 0x6D4 / 33 DIEs
         # are retail's outright, so the state is False.  The Create bodies need their matrix
         # prototypes spelled through a typedef: five `float (*)[4]` declarators emit five
