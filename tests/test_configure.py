@@ -437,27 +437,31 @@ def test_the_cc_edge_carries_the_debug_step_recorded_for_each_unit():
 
 
 def test_a_row_without_a_state_is_an_adopting_unit():
-    """The default is adoption: a new row omits the fourth element and still configures.
+    """The default is adoption: a row omitting the fourth element configures as an adopting unit.
 
-    The descriptor supplies `"adopt"` for an omitted element, so the edge carries
-    `--adopt-retail-meta` without the row spelling it -- `.text` byte equality is the proof
-    and retail's inventory supplies `.line`/`.debug`.  `False` and `True` remain opt-in
-    stronger claims and put nothing, respectively the normaliser, on the edge.
+    The descriptor supplies `"adopt"` for an omitted element, so the generated `cc` edge carries
+    `--adopt-retail-meta` without the row spelling it -- `.text` byte equality is the proof and
+    retail's inventory supplies `.line`/`.debug`.  `False` and `True` remain opt-in stronger
+    claims and put nothing, respectively the normaliser, on the edge.
     """
-    default = targets.Target(
-        name="probe", config_dir=ROOT / "config" / "probe", elf=ROOT / "orig" / "PROBE",
-        elf_sha256="0" * 64, image=pathlib.Path("/tmp/probe.iso"), image_sha256="1" * 64,
-        tu_builds=(("src/a.c", "3.0", "-g"),))
-    state = default.build_table()["src/a.c"][2]
-    assert state == "adopt"
-    assert configure.promotion_command("3.0", "-g", state) == \
-        "--compiler 3.0 -g --adopt-retail-meta"
+    tu = type("Tu", (), {"address": 0x100000, "functions": ()})
+    manifests = type("M", (), {
+        "tu_files": lambda self: {"src/sys/sys_scf.c"},
+        "tu_named": lambda self, name: tu,
+        "debug_chunk_index": lambda self, unit: 0,
+        "line_chunk_indices": lambda self, unit: [0],
+    })()
 
-    assert configure.promotion_command("3.0", "-g", False) == "--compiler 3.0 -g"
-    assert configure.promotion_command("3.0", "-g", True) == \
-        "--compiler 3.0 -g --normalise-debug"
-    assert configure.promotion_command("3.0", "-g", "adopt") == \
-        "--compiler 3.0 -g --adopt-retail-meta"
+    def command(state):
+        row = ("src/sys/sys_scf.c", "3.0", "-g") if state is None \
+            else ("src/sys/sys_scf.c", "3.0", "-g", state)
+        (promotion,) = configure.promotions(manifests, probe(tu_builds=(row,)))
+        return promotion.flags
+
+    assert command(None) == "--compiler 3.0 -g --adopt-retail-meta"
+    assert command("adopt") == "--compiler 3.0 -g --adopt-retail-meta"
+    assert command(False) == "--compiler 3.0 -g"
+    assert command(True) == "--compiler 3.0 -g --normalise-debug"
 
 
 def test_a_promoted_source_with_directives_is_refused_and_a_clean_one_is_not(tmp_path):
