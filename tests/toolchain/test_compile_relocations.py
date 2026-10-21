@@ -273,6 +273,49 @@ def test_a_literal_pool_slot_is_a_datum_the_ledger_can_place(tmp_path):
     assert m.by_address[0x2D6D88] == "@40"
 
 
+def test_two_units_naming_one_literal_slot_resolve_to_their_own_record(tmp_path):
+    """One name, two objects: `@40` is numbered per object, not shared between units.
+
+    Measured on `net_win_listdtl2.c` and `net_win_listdtl3.c`: alike-shaped units, so both
+    objects number their pool from `@40`, but retail has a separate slot for each unit's
+    literal.  The ledger carries both records, the first stays the default (a unit with no
+    records of its own can only be reading another unit's datum), and
+    :meth:`Manifests.prefer_source` lets the unit being compiled see its own address.
+    """
+    m = manifests(tmp_path, placements=[
+        "@40 = 0x002D6D88; // size:0x5 extent:0x8 "
+        "source:src/network/net_window/net_win_listdtl2.c\n",
+        "@40 = 0x002D6DA8; // size:0x5 extent:0x8 "
+        "source:src/network/net_window/net_win_listdtl3.c\n",
+    ])
+    # The ledger's first record, unchanged: the old behaviour, and what a unit without a
+    # record of its own still gets.
+    assert m.address_of("@40") == 0x2D6D88
+    m.prefer_source("src/network/net_window/net_win_listdtl3.c")
+    assert m.address_of("@40") == 0x2D6DA8
+    assert m.placed["@40"] == 0x2D6DA8
+    assert m.by_address[0x2D6DA8] == "@40"
+    # ...and the other unit still sees its own.
+    m.prefer_source("src/network/net_window/net_win_listdtl2.c")
+    assert m.address_of("@40") == 0x2D6D88
+    # A unit with no records of its own changes nothing.
+    m.prefer_source("src/somewhere/else.c")
+    assert m.address_of("@40") == 0x2D6D88
+
+
+def test_prefer_source_leaves_every_other_name_alone(tmp_path):
+    """The preference is per record, not a wipe: shared data still resolves as before."""
+    m = manifests(tmp_path, placements=[
+        "@40 = 0x002D6D88; // size:0x5 extent:0x8 "
+        "source:src/network/net_window/net_win_listdtl2.c\n",
+        "g_game_w = 0x002E0000; // size:0x4 extent:0x4 "
+        "source:data/bk_load_data.c\n",
+    ])
+    m.prefer_source("src/network/net_window/net_win_listdtl3.c")
+    assert m.address_of("@40") == 0x2D6D88
+    assert m.address_of("g_game_w") == 0x2E0000
+
+
 def test_a_placement_name_that_is_neither_an_identifier_nor_a_slot_is_refused(tmp_path):
     """The ledger's name grammar is closed: a misspelled pool slot is a bad line, not a gap."""
     with pytest.raises(cc.Unusable) as refusal:

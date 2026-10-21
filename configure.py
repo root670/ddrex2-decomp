@@ -41,6 +41,7 @@ Exit codes: 0 ok, 1 a build step failed, 2 the configuration or a manifest is un
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import pathlib
 import re
@@ -570,6 +571,8 @@ def plan_data(sources, code, geometry, placements, replacements):
     ``replacements`` maps a split path to the pieces that replace it, in address order.  The
     returned ``(pieces, pads, aliases)`` are the files to assemble and the labels to keep
     defined; the caller adds the compiled datum's own object section at the same addresses.
+    A pad piece is named from its datum *and* its ``source``: a literal-pool index is numbered
+    per object, so two units of alike shape both place ``@40`` and their pads are two pieces.
     """
     rows = sorted(code)
     per_split = {}
@@ -590,7 +593,8 @@ def plan_data(sources, code, geometry, placements, replacements):
                 f"one split")
         per_split.setdefault(split, []).append((begin, end))
         if record["extent"] > record["size"]:
-            pads.append((begin + record["size"], record["name"]))
+            pads.append((begin + record["size"], record["name"], record["source"],
+                         record["extent"] - record["size"]))
     pieces = []
     for split, cuts in per_split.items():
         cuts.sort()
@@ -607,12 +611,15 @@ def plan_data(sources, code, geometry, placements, replacements):
             pieces.append(relative)
         aliases += removed
     pad_pieces = []
-    for address, name in pads:
-        token = cc.data_section(name).rsplit(".", 1)[-1]
+    for address, name, source, size in pads:
+        # The piece is named from the datum *and* the source it belongs to: a literal-pool
+        # index is numbered per object, so two units of alike shape can both place `@40` at
+        # their own address.  One name for both would be two ninja rules writing one file.
+        token = cc.data_section(name).rsplit(".", 1)[-1] + "_" + \
+            hashlib.sha1(source.encode()).hexdigest()[:8]
         path = REPO_ROOT / "build" / "generated" / "data" / f"{token}.pad.s"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("\t.text\n\t.space\t%d\n" % pad_size(placements, name),
-                        newline="\n")
+        path.write_text("\t.text\n\t.space\t%d\n" % size, newline="\n")
         relative = path.relative_to(REPO_ROOT).as_posix()
         pad_pieces.append((address, relative))
     return pieces, pad_pieces, aliases
@@ -624,13 +631,6 @@ def rows_of(split, rows):
         if name == split:
             return address
     raise ConfigError(f"{split} is not a code split; a data placement names it")
-
-
-def pad_size(placements, name):
-    for record in placements:
-        if record["name"] == name:
-            return record["extent"] - record["size"]
-    raise ConfigError(f"no placement record for {name}")
 
 
 def symbol_table(path) -> dict:

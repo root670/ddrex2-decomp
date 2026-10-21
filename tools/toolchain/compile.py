@@ -326,7 +326,14 @@ class Manifests:
         # evidence the link places the object's section at, so the unit's DWARF relocations to
         # that datum resolve here instead of missing the ledger (`symbol_addrs.txt` is the
         # oracle's DWARF output and cannot carry a symbol retail never declared).
-        for record in data_placements(self.target):
+        #
+        # The name is not unique across units: a Metrowerks literal-pool index (`@40`) is
+        # numbered per object, so two units compiled from alike-shaped sources both emit
+        # `@40`, at different retail slots.  Every record is kept -- `prefer_source` lets the
+        # unit being compiled select its own -- and the ledger's first record stays the
+        # default, which is what a unit with no records of its own can only be reading.
+        self.placements = data_placements(self.target)
+        for record in self.placements:
             self.placed.setdefault(record["name"], record["address"])
             self.by_address.setdefault(record["address"], record["name"])
         # The split objects the ld script places define their own global labels, and those are
@@ -443,6 +450,25 @@ class Manifests:
         if not path.is_file():
             raise Unusable(f"{path.relative_to(REPO_ROOT)} is missing; run ./ddr oracle")
         return json.loads(path.read_text())
+
+    def prefer_source(self, source: str) -> None:
+        """Let ``source``'s own placement records win over another unit's of the same name.
+
+        A record names the source that defines it, and the name alone cannot carry the
+        identity of a datum: `@40` is whatever literal pool slot that *object* numbered
+        first, so `net_win_listdtl2.c`'s `@40` ("%05d" at 0x002D6D88) and
+        `net_win_listdtl3.c`'s (`"%05d"` at 0x002D6DA8) are two different slots wearing one
+        name.  The ledger keeps both; this decides which one a same-named relocation means.
+
+        Called with the unit's source path before its relocations are resolved.  Nothing is
+        invented: both records are already derived from retail's bytes by :func:`verify_data`,
+        so the choice is between measured addresses, not between a measurement and a guess.
+        A unit with no records of its own changes nothing -- the ledger default stands.
+        """
+        for record in self.placements:
+            if record["source"] == source:
+                self.placed[record["name"]] = record["address"]
+                self.by_address[record["address"]] = record["name"]
 
     def address_of(self, name) -> int:
         if name in self.symbols:
@@ -1405,6 +1431,7 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
 
     mw = MWObject(obj, manifests)
     gp = gp_value(manifests.target.elf)
+    manifests.prefer_source(tu.file)
     placed_data = []
     for name, address, size, extent, relocs in verify_data(mw, manifests, tu.file,
                                                            manifests.target):

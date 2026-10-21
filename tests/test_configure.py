@@ -337,6 +337,60 @@ def test_a_promoted_units_datum_is_selected_by_its_own_section():
     ]
 
 
+def data_split_text():
+    """A data split with words at every edge the two `@40` placements cut on."""
+    rows = [(0x002D6D80, "00000000"), (0x002D6D88, "25303564"),
+            (0x002D6D8C, "00000000"), (0x002D6D90, "00000000"),
+            (0x002D6DA8, "25303564"), (0x002D6DAC, "00000000"),
+            (0x002D6DB0, "00000000"), (0x002D6DB8, "00000000")]
+    lines = []
+    for address, word in rows:
+        if address in (0x002D6D80, 0x002D6D88, 0x002D6DA8):
+            lines.append(f"dlabel D_{address:08X}\n")
+            lines.append(f"nonmatching D_{address:08X}\n")
+        lines.append(f"    /* 1 {address:08X} {word} */ .word 0x{word}\n")
+    return "".join(lines)
+
+
+def test_two_units_that_both_place_at_40_get_distinct_pad_pieces(tmp_path, monkeypatch):
+    """One literal index, two units: each pad piece is its own file and its own size.
+
+    `net_win_listdtl2.c`'s `@40` sits at 0x002D6D88 and `net_win_listdtl3.c`'s at
+    0x002D6DA8 -- the same index because a pool is numbered per *object*, and the units are
+    alike enough that both start at `@40`.  A pad named from the symbol alone is one ninja
+    output claimed by two rules, which `ninja` refuses to load; and a size looked up by name
+    would give the second unit the first unit's pad.
+    """
+    monkeypatch.setattr(configure, "REPO_ROOT", tmp_path)
+    split = "asm/nonmatchings/main/data.s"
+    sources = {split: data_split_text()}
+    code = [(0x002D6D80, split), (0x002D6DC0, "asm/data/next.s")]
+    placements = [
+        dict(name="@40", address=0x2D6D88, size=5, extent=0x8, source="src/a.c"),
+        dict(name="@40", address=0x2D6DA8, size=5, extent=0x10, source="src/b.c"),
+    ]
+    pieces, pads, aliases = configure.plan_data(sources, code, geometry(), placements, {})
+    assert [address for address, _ in pads] == [0x2D6D8D, 0x2D6DAD]
+    assert len({path for _, path in pads}) == 2, pads
+    bodies = [pathlib.Path(tmp_path / path).read_text() for _, path in pads]
+    assert [body.split()[-1] for body in bodies] == ["3", "11"], "each record's own extent"
+    assert all("_4040_" in path for _, path in pads)
+
+
+def test_one_unit_placing_at_40_still_yields_one_pad_piece(tmp_path, monkeypatch):
+    """The preference is for collisions: a lone placement keeps one piece of its own size."""
+    monkeypatch.setattr(configure, "REPO_ROOT", tmp_path)
+    split = "asm/nonmatchings/main/data.s"
+    placements = [dict(name="@40", address=0x2D6D88, size=5, extent=0x8, source="src/a.c")]
+    pieces, pads, aliases = configure.plan_data(
+        {split: data_split_text()}, [(0x002D6D80, split), (0x002D6DC0, "asm/data/next.s")],
+        geometry(), placements, {})
+    assert len(pads) == 1
+    address, path = pads[0]
+    assert address == 0x2D6D8D
+    assert pathlib.Path(tmp_path / path).read_text().split()[-1] == "3"
+
+
 def test_code_splits_reads_each_splits_own_address_comment():
     geo = geometry()
     good = {"asm/nonmatchings/main/a.s": "/* 80 00100000 00000000 */\nglabel a\n"}
