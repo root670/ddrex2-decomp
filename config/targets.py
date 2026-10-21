@@ -606,6 +606,10 @@ DDREX2P = Target(
         # .text 0x130, three bodies word-exact; .line (27 rows) and the TU-level DIE order
         # adopted; .debug retail's after adoption.  tblMusicData must be initialised.
         ("src/music_all.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x1E0, three bodies word-exact; .line adopted after the tidy (35 of 38 rows);
+        # .debug retail's 0x8B8 / 50 DIEs after 25 reference words (array-type order).
+        ("src/CS/train/tra_str.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
