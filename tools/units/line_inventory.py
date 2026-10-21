@@ -151,7 +151,7 @@ def collect(target, verbose: bool = False) -> list:
     pre-adoption measurement (:attr:`toolchain.compile.Placed.emitted_line`), which is exactly
     what "what our own layout would produce" means.
     """
-    from toolchain import check_deps, compile as cc, fetch
+    from toolchain import compile as cc, fetch
 
     manifests = cc.Manifests(target)
     builds = target.build_table()
