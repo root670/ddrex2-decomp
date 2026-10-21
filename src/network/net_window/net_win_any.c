@@ -8,9 +8,39 @@ void CwsWinClose(struct _CWS_WIN_W *win);
 void CwsWinDestroy(struct _CWS_WIN_W *win);
 void CwsObjDisp(struct _CWS_WIN_W *win, struct _CWS_OBJ *objw);
 
-static int (*NetWin_AnyFunc[3])(struct _CWS_WIN_W *) = { NetWin_AnyInit, NetWin_AnyMain, NetWin_AnyEnd };
-static void (*NetWin_AnyCode[4])(struct _CWS_WIN_W *) = { 0, CwsWinOpen, CwsWinClose, CwsWinDestroy };
-static struct _CWS_OBJ_SET netwinany[2] = { { .func = (int (*)(void *, void *))CwsObjDisp, .tex_num = -1, .ptex_obj = 0, .ptex = 0, .r = 0x80, .g = 0x80, .b = 0x80, .a = 0x80 }, { .func = (int (*)(void *, void *))CwsObjDisp, .tex_num = -1, .ptex_obj = 0, .ptex = 0, .r = 0x80, .g = 0x80, .b = 0x80, .a = 0x80 } };
+static int (*NetWin_AnyFunc[3])(struct _CWS_WIN_W *) = {
+    NetWin_AnyInit,
+    NetWin_AnyMain,
+    NetWin_AnyEnd,
+};
+static void (*NetWin_AnyCode[4])(struct _CWS_WIN_W *) = {
+    0,
+    CwsWinOpen,
+    CwsWinClose,
+    CwsWinDestroy,
+};
+static struct _CWS_OBJ_SET netwinany[2] = {
+    {
+        .func = (int (*)(void *, void *))CwsObjDisp,
+        .tex_num = -1,
+        .ptex_obj = 0,
+        .ptex = 0,
+        .r = 0x80,
+        .g = 0x80,
+        .b = 0x80,
+        .a = 0x80,
+    },
+    {
+        .func = (int (*)(void *, void *))CwsObjDisp,
+        .tex_num = -1,
+        .ptex_obj = 0,
+        .ptex = 0,
+        .r = 0x80,
+        .g = 0x80,
+        .b = 0x80,
+        .a = 0x80,
+    },
+};
 
 int NetWin_Any(struct _CWS_WIN_W *win) {
     int rtn;
