@@ -131,11 +131,11 @@ def record(unit: str, state, chunks: str, retail: bytes, emitted: bytes) -> Reco
         if reproduced:
             note = "layout reproduces retail's table; adoption supplied .debug metadata only"
         elif differ is None:
-            note = (f"layout no longer corresponds to retail's table: emitted "
+            note = (f"emitted table no longer corresponds to retail's layout: emitted "
                     f"{emitted_records} record(s), retail {records} ({because}); retail's "
                     f"chunk is adopted")
         else:
-            note = (f"layout no longer corresponds to retail's table: {differ} of "
+            note = (f"emitted table no longer corresponds to retail's layout: {differ} of "
                     f"{records} row(s) differ; retail's chunk is adopted")
     else:
         raise ValueError(f"{unit}: unknown tu_builds state {state!r}")
