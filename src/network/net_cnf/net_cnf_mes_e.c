@@ -25,8 +25,7 @@ static unsigned char *IRX_LOAD_ERR[2] = { (unsigned char *)"Setup failed.", 0 };
 unsigned char **ncMessageTbl_ENGLISH[22];
 unsigned char *cmes_yesno_str_english[];
 
-unsigned char **ncmesGetMessageTable(int id)
-{
+unsigned char **ncmesGetMessageTable(int id) {
     unsigned char **ret;
 
     ret = 0;
@@ -36,12 +35,10 @@ unsigned char **ncmesGetMessageTable(int id)
     return ret;
 }
 
-unsigned char *ncmesGetYes(void)
-{
+unsigned char *ncmesGetYes(void) {
     return cmes_yesno_str_english[1];
 }
 
-unsigned char *ncmesGetNo(void)
-{
+unsigned char *ncmesGetNo(void) {
     return cmes_yesno_str_english[0];
 }
