@@ -187,25 +187,32 @@ class Target:
     (:meth:`geometry_required`).  ``tu_builds`` is
     ``((source, compiler build, flags[, state]), ...)``: the compiler/flag pair
     ``tools/toolchain/select_build.py`` *measured* as reproducing a promoted unit's retail
-    ``.text``/``.debug``/``.line`` bytes.  ``state`` (optional, default ``False``) is the
-    debug step the pair needs: ``False`` (or an absent element) means none, ``True`` means
-    the order normaliser, and ``"adopt"`` means retail-metadata adoption.  The values are:
+    ``.text``/``.debug``/``.line`` bytes.  ``state`` (optional, **default ``"adopt"``**) is
+    the debug step the pair needs.  The promotion proof is ``.text`` byte equality, and
+    ``.line``/``.debug`` are reconstructed from retail's inventory, so adoption is what a
+    row gets unless the source earns a stronger claim at no cost.  The values are:
 
-    * absent or ``False`` -- the unit is byte-equal without a step;
-    * ``True`` -- normalise: the emitted ``.debug`` chunk is retail's DIE *set* in another
-      order, and ``compile.py --normalise-debug`` is part of the pair (rewrite into retail's
-      order, accept only retail's bytes);
-    * ``"adopt"`` -- adopt retail metadata: ``.text`` is byte-equal, ``.line`` is not, and
-      ``compile.py --adopt-retail-meta`` adopts retail's ``.line`` chunk and the
-      ``AT_location`` values of locals whose records otherwise match, accepting only when
-      the whole ``.debug`` chunk is retail's bytes.
+    * absent or ``"adopt"`` -- adopt retail metadata: ``.text`` is byte-equal, and
+      ``compile.py --adopt-retail-meta`` adopts retail's ``.line`` chunk, the
+      ``AT_location`` values of locals whose records otherwise match, and a normalised DIE
+      order, accepting only when the whole ``.debug`` chunk is retail's bytes;
+    * ``False`` -- the unit's own emission is byte-equal on all three parts without a step:
+      an opt-in stronger claim, recorded only when the source reproduces retail's ``.line``
+      from its own layout;
+    * ``True`` -- ``compile.py --normalise-debug`` is part of the pair: the emitted
+      ``.debug`` chunk is retail's DIE *set* in another order and ``.line`` is still retail's
+      from our layout (rewrite into retail's order, accept only retail's bytes).  Also
+      opt-in, and a stronger claim than adoption.
 
-    The distinction is kept because the two steps prove different things: normalise proves
-    the compiled chunk's DIE *order* was the only difference, while adopt proves the
-    instructions are retail's and the remaining debug metadata is what retail recorded.  It
-    is per target because a pair measured against one retail binary says nothing about
-    another, so a new target starts with an empty table and ``configure.py`` refuses to
-    promote a source nobody has measured for *it*.
+    The distinction is kept because the three states prove different things, in increasing
+    strength: adopt proves the instructions are retail's and the remaining debug metadata is
+    what retail recorded; normalise additionally proves the compiled chunk's DIE *order* was
+    the only difference; ``False`` additionally proves our own emission reproduced retail's
+    ``.line`` layout.  ``False`` and ``True`` are opt-in claims a unit earns at no cost --
+    never a default, because a reformatted source cannot honestly make them.  It is per
+    target because a pair measured against one retail binary says nothing about another, so a
+    new target starts with an empty table and ``configure.py`` refuses to promote a source
+    nobody has measured for *it*.
 
     ``include_dirs`` is the repo-relative search path the C units are compiled with, in
     order: where the oracle writes the generated headers this target's sources include.  It
@@ -255,11 +262,14 @@ class Target:
                     and (len(entry) == 3 or isinstance(entry[3], bool)
                          or entry[3] == "adopt")):
                 raise ValueError(f"target {self.name}: tu_builds entry {entry!r} is not "
-                                 f"(source, compiler build, flags[, False|True|'adopt'])")
+                                 f"(source, compiler build, flags[, 'adopt'|False|True])")
             if entry[0] in seen:
                 raise ValueError(f"target {self.name}: tu_builds names {entry[0]!r} twice")
             seen.add(entry[0])
-            rows.append(entry if len(entry) == 4 else entry + (False,))
+            # Adoption is the promotion default: `.text` equality is the proof and the debug
+            # metadata is reconstructed from retail's inventory.  A row says False or True
+            # only when the unit proves the stronger claim.
+            rows.append(entry if len(entry) == 4 else entry + ("adopt",))
         object.__setattr__(self, "tu_builds", tuple(rows))
         for entry in self.include_dirs:
             if not (isinstance(entry, str) and entry
@@ -510,7 +520,13 @@ DDREX2P = Target(
         line_size=0xEE546,          # .line (976,198 B)
         image_elf_offset=0x6D261000,  # LBA 894146 in the pinned image
     ),
-    # (source, compiler build, flags): measured, never inherited -- see the note above.
+    # (source, compiler build, flags[, state]): measured, never inherited -- see the note
+    # above.  The fourth element is optional and defaults to `"adopt"`: `.text` byte
+    # equality is the promotion proof, and `.line`/`.debug` are reconstructed from retail's
+    # inventory (`--adopt-retail-meta`).  `False` and `True` are opt-in stronger claims a
+    # unit earns at no cost, recorded only when its own emission reproduces retail's `.line`
+    # (and, for `True`, needs only the DIE-order normaliser).  Existing rows keep their
+    # explicit element: each is the stronger evidence it was accepted on.
     #
     # A unit accepted under the anonymous-type DIE-order boundary (`docs/unit-work.md`,
     # "The one recorded `.debug` deviation") must say so in a comment on its row, quoting
@@ -529,16 +545,17 @@ DDREX2P = Target(
     # `sys_scf.c` never needed it -- its chunk is byte-equal under that build, so the flag
     # was inert -- and it is `"adopt"` for the same layout reason.
     #
-    # The fourth element's other state is `"adopt"` (`--adopt-retail-meta`): the unit's
-    # `.text` is retail's byte for byte, but `.line` is not and a local's `AT_location`
-    # names a different register.  The comment on that row quotes the report -- the number
-    # of `.line` rows changed, or that the emitted table is not row-for-row comparable and
-    # is adopted whole, and every adopted `local: before -> after` -- because the report is
-    # what says *what* was adopted; the step itself refuses unless the whole `.debug` chunk
-    # comes out retail's bytes.  `p_anime.c` carries it (`n` as `scratch -> $a2` in both
-    # functions; 4 anonymous names; 15 reference words; the normalised source's `.line`
-    # carries 4 more records than retail's, so the tables are not row-comparable and
-    # retail's chunk is adopted whole).
+    # The default state is `"adopt"` (`--adopt-retail-meta`): the unit's
+    # `.text` is retail's byte for byte, and `.line` and `.debug` come from retail's
+    # inventory (a `.line` that is not row-for-row comparable is adopted whole, and a
+    # local's `AT_location` naming a different register is retail's).  The comment on that
+    # row quotes the report -- the number of `.line` rows changed, or that the emitted table
+    # is not row-for-row comparable and is adopted whole, and every adopted `local: before
+    # -> after` -- because the report is what says *what* was adopted; the step itself
+    # refuses unless the whole `.debug` chunk comes out retail's bytes.  `p_anime.c` carries
+    # it (`n` as `scratch -> $a2` in both functions; 4 anonymous names; 15 reference words;
+    # the normalised source's `.line` carries 4 more records than retail's, so the tables
+    # are not row-comparable and retail's chunk is adopted whole).
     #
     # Measured 2026-10-19 through the promotion path (`place()` + `compare()`), all five
     # installed builds x both recorded flag strings: `sys_scf.c` and `net_grf.c` are both

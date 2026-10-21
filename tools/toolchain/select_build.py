@@ -75,8 +75,7 @@ def measure(tu: cc.Tu, version: str, flags, manifests, root=fetch.TOOLCHAIN_ROOT
     return cc.compare(tu, placed)
 
 
-def choose(name="sys_scf.c", manifests=None, compilers=None, sets=None, report=print,
-           first=False):
+def choose(name, manifests=None, compilers=None, sets=None, report=print, first=False):
     """The first ``(version, flags)`` whose text, debug and line all match retail.
 
     Every candidate is measured -- the printed table is the evidence for the choice -- and
@@ -108,8 +107,9 @@ def choose(name="sys_scf.c", manifests=None, compilers=None, sets=None, report=p
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="select_build.py", description=__doc__.splitlines()[0])
-    parser.add_argument("--tu", default="sys_scf.c",
-                        help="the translation unit to select for (default: sys_scf.c)")
+    parser.add_argument("--tu", required=True,
+                        help="the translation unit to select for (repo-relative, e.g. "
+                             "src/<dir>/<unit>.c)")
     parser.add_argument("--all", action="store_true",
                         help="measure every candidate, not just up to the first match")
     parser.add_argument("--first", action="store_true", default=False,

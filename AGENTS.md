@@ -115,9 +115,12 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    *measured*: `python3 tools/toolchain/select_build.py --tu <file>` prints every candidate with its
    verdict for text/debug/line, and the pair that wins is recorded next to the source it belongs to
    in the *target's* `tu_builds` (`config/targets.py`) — per target, because a pair measured against
-   one retail binary says nothing about another.  The same holds for the geometry, which lives in the
-   same descriptor: those numbers were read out of that target's retail ELF's own headers, not
-   chosen.  A target whose geometry has not been measured yet cannot be configured at all —
+   one retail binary says nothing about another.  A row's fourth element is optional and defaults to
+   adoption: `.text` byte equality is the promotion proof and `.line`/`.debug` are reconstructed
+   from retail's inventory (`--adopt-retail-meta`).  `False` and `True` are opt-in stronger claims,
+   recorded only when the unit earns them at no cost.  The same holds for the geometry, which
+   lives in the same descriptor: those numbers were read out of that target's retail ELF's own
+   headers, not chosen.  A target whose geometry has not been measured yet cannot be configured at all —
    `geometry_required()` stops the tool and names it, rather than splitting one game's bytes at
    another game's addresses.
 

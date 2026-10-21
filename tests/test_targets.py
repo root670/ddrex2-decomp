@@ -274,17 +274,24 @@ def test_an_unknown_target_name_fails_loudly():
 # ---------------------------------------------------------------------------
 
 
-def test_tu_builds_carries_the_debug_step_as_an_optional_fourth_element():
-    """A pair may say the unit's `.debug` needs the opt-in normaliser or metadata adoption.
+def test_tu_builds_defaults_to_adoption_and_records_stronger_claims_explicitly():
+    """An omitted fourth element means `--adopt-retail-meta`; `False`/`True` are opt-in.
 
-    The fourth element is a fact of the measurement, not a build setting a caller improvises:
-    ``configure.py`` puts ``--normalise-debug`` or ``--adopt-retail-meta`` on that unit's edge
-    and the step refuses unless the result is retail's bytes.  The two states are kept
-    distinct because they prove different things.
+    Adoption is the promotion default because `.text` byte equality is the proof and the
+    debug metadata (`.line`, `AT_location`s, DIE order) is reconstructed from retail's
+    inventory.  A row says `False` or `True` only when the unit proves the stronger claim,
+    so the two explicit states behave exactly as before: nothing, or the order normaliser.
+    The state is a fact of the measurement, not a build setting a caller improvises:
+    ``configure.py`` puts the step on that unit's edge and it refuses unless the result is
+    retail's bytes.
     """
-    plain = probe_target(tu_builds=(("src/a.c", "3.0", "-g"),))
-    assert plain.build_pair("src/a.c") == ("3.0", "-g", False)
-    assert plain.build_table() == {"src/a.c": ("3.0", "-g", False)}
+    default = probe_target(tu_builds=(("src/a.c", "3.0", "-g"),))
+    assert default.build_pair("src/a.c") == ("3.0", "-g", "adopt")
+    assert default.build_table() == {"src/a.c": ("3.0", "-g", "adopt")}
+
+    untouched = probe_target(tu_builds=(("src/a.c", "3.0", "-g", False),))
+    assert untouched.build_pair("src/a.c") == ("3.0", "-g", False)
+    assert untouched.build_table() == {"src/a.c": ("3.0", "-g", False)}
 
     normalised = probe_target(tu_builds=(("src/a.c", "3.0", "-g", True),))
     assert normalised.build_pair("src/a.c") == ("3.0", "-g", True)

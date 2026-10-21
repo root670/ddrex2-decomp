@@ -776,6 +776,23 @@ def check_promoted_sources(target=None, root=None) -> None:
             raise ConfigError(str(exc)) from exc
 
 
+def promotion_command(version: str, flags: str, state) -> str:
+    """The ``compile.py`` arguments for one measured pair, including its debug step.
+
+    ``state`` is the ``tu_builds`` fourth element *after* the descriptor normalised it
+    (``config.targets.Target``): an omitted element is ``"adopt"``, so a new row carries
+    ``--adopt-retail-meta`` without spelling it -- ``.text`` byte equality is the promotion
+    proof and retail's inventory supplies ``.line``/``.debug``.  ``False`` adds nothing and
+    ``True`` adds the DIE-order normaliser, both opt-in stronger claims a unit earns.
+    """
+    command = f"--compiler {version} {flags}"
+    if state is True:
+        command += " --normalise-debug"
+    elif state == "adopt":
+        command += " --adopt-retail-meta"
+    return command
+
+
 def _promotions(manifests=None, target=None) -> list:
     target = target or TARGET
     manifests = manifests or cc.Manifests(target)
@@ -795,11 +812,7 @@ def _promotions(manifests=None, target=None) -> list:
     segment = target.geometry_required().code_segment
     for file, (version, flags, state) in sorted(builds.items()):
         tu = manifests.tu_named(file)
-        command = f"--compiler {version} {flags}"
-        if state is True:
-            command += " --normalise-debug"
-        elif state == "adopt":
-            command += " --adopt-retail-meta"
+        command = promotion_command(version, flags, state)
         out.append(Promotion(
             file, tu.address, command,
             f"build/{file}.o", f"build/{file}.o.debug", f"build/{file}.o.line",
