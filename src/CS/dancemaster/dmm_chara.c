@@ -1,6 +1,6 @@
 #include "src/CS/dancemaster/dmm_chara.h"
 
-#define DMM_LAST_DATA (*(unsigned char **)0x6B2F58)
+#define DMM_LAST_DATA (g_game_w.last_data_addr)
 
 anon_7_109 *dmm_get_work(void);
 void func_00128600(void);
