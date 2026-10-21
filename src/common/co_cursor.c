@@ -6,15 +6,13 @@ void func_00127F60(anon_0_105 *info, int tex_id);
 void func_001234E0(anon_2_105 *ft4);
 void func_001B7C30(void *p, int n);
 
-void co_cursor01_init(struct _tag_cCoCursor01 *p)
-{
+void co_cursor01_init(struct _tag_cCoCursor01 *p) {
     func_001B7C30(p, 0xC);
     p->old_x = 2764.0f;
     p->old_y = 2764.0f;
 }
 
-static inline void co_cursor01_quad(anon_2_105 *ft4, anon_0_105 *info, int dir, float x, float y, float mxy, float u, float v, int pri, int bri, int a, int tex_id)
-{
+static inline void co_cursor01_quad(anon_2_105 *ft4, anon_0_105 *info, int dir, float x, float y, float mxy, float u, float v, int pri, int bri, int a, int tex_id) {
     float x0;
     float y0;
     float x1;
@@ -80,8 +78,7 @@ static inline void co_cursor01_quad(anon_2_105 *ft4, anon_0_105 *info, int dir, 
     func_001234E0(ft4);
 }
 
-void co_cursor01_disp(struct _tag_cCoCursor01 *p, float x, float y, int a, int bri, int pri, int tex_id, int flag)
-{
+void co_cursor01_disp(struct _tag_cCoCursor01 *p, float x, float y, int a, int bri, int pri, int tex_id, int flag) {
     anon_0_105 info;
     anon_2_105 ft4;
     int anime;
