@@ -38,3 +38,4 @@ xxxx_bk_tm2_tbl = 0x002AF6F0; // size:0x12C extent:0x130 source:src/CS/bk_load.c
 @43 = 0x002D6DC0; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl3.c
 @44 = 0x002D6DC8; // size:0x2 extent:0x8 source:src/network/net_window/net_win_listdtl3.c
 wins = 0x002DDAE8; // size:0x4 extent:0x4 source:src/common/cws/cws_wins.c
+@13 = 0x002D6860; // size:0x18 extent:0x18 source:src/CS/shop/shop_list.c

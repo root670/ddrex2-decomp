@@ -666,6 +666,11 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0xC30 in a 0xC34 extent, seven bodies word-exact; .line 0x998 and .debug
+        # 0x4DFC / 496 DIEs adopted.  Needs the @13 jump-table placement (0x002D6860).
+        # Adopt rather than True: retail blanks eight lines before each closing brace.
+        ("src/CS/shop/shop_list.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
         # .text 0x770, seven bodies word-exact; .line 0x5B0 byte-equal outright, so state
         # True: --normalise-debug alone makes .debug retail's 0x179F / 153 DIEs.  Blank lines
         # are retail's statement positions; never --collapse, and brace-adjacent blanks stay.
