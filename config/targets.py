@@ -638,6 +638,11 @@ DDREX2P = Target(
         # AT_subscr_data element references (3 rewritten); .line (5 chunks, 540 bytes) and
         # AT_location adopted under --adopt-retail-meta.
         ("src/network/net_window/net_win_any.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0xF0, four bodies word-exact; .line exact before the tidy and adopted after;
+        # .debug 0x3A7B / 368 DIEs set-equal (5 of 6 anon indices), adopted after 4 ref words.
+        # Needs the `_pairs` fix (ddde799): the flag field sits at a non-zero offset.
+        ("src/CS/ani_load.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
