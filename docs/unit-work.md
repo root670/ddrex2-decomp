@@ -328,6 +328,21 @@ Invented, with provenance recorded — because DWARF does not carry it:
 
 The rule to follow is tww's, and it is a good one: **no names are better than incorrect names.**
 
+## An initialiser is the recoverable truth, never a `{ 0 }` placeholder
+
+A file-scope object's initialiser is written out from retail's bytes whenever they give it, because
+the promoted source is the only place that evidence lives and rule 9 makes it free: `compile.py`
+links only the object's `.text`, so the compiled `.data`/`.rodata` never reach the image and cannot
+move a gate. Measured on `tra_str.c` (13 pointer tables plus `tr_str_tbl`, 40 pooled literals):
+`.text` came out byte-identical, the placed `.debug` and `.line` chunks were byte-identical, and
+the only raw-`.debug` change was the documented DIE-order class (same length, same 50 DIEs, absorbed
+by `--adopt-retail-meta`). The initialiser must still be *recovered*, not guessed: retail's databin
+pinpoints every entry (`tr_str_play[0]` points at `0x002D7390`, `tr_str_ck_menu[1]` at `BACK`, not
+`CHECK`), and a wrong literal is invisible to `.text`/`.debug`/`.line` and only surfaces when the
+data itself is compared against the databin. Keep the initialiser even where only `{ 0 }` is known:
+a static's *having* one is what makes MWCC tag it `.local_variable` (see the blocker table), so the
+placeholder's presence is load-bearing even though its contents are not.
+
 ## Comment style
 
 **Three source-form rules cover a promoted file, and each has a mechanism that enforces it:**
