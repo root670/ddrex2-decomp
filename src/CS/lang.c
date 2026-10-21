@@ -8,8 +8,7 @@ static unsigned char **mesLanguage[6] = { mesLanguageJAPANESE, mesLanguageENGLIS
 static unsigned char *mesLanguageOK[6] = { 0 };
 static unsigned char *mesLanguageCANCEL[6] = { 0 };
 
-unsigned char *mesGetLanguage01(int id0, int id1)
-{
+unsigned char *mesGetLanguage01(int id0, int id1) {
     if (id0 >= 7)
         id0 = 2;
 
