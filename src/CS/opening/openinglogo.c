@@ -11,8 +11,7 @@ static int logo_tex_num[1] = { 0 };
 struct _tag_cOpening *pOpening = (struct _tag_cOpening *)0x006D33A0;
 static struct _tag_cOpeninglogo _pOpeninglogo = { 0 };
 
-int Init_Openinglogo(void)
-{
+int Init_Openinglogo(void) {
     pOpening->cWait = 0;
 
     func_001B7C30(pOpeninglogo, 0x1C);
@@ -26,21 +25,18 @@ int Init_Openinglogo(void)
     return 1;
 }
 
-int Control_Openinglogo(void)
-{
+int Control_Openinglogo(void) {
     int counter;
     int count2;
 
     counter = pOpening->cWait;
     count2 = pOpeninglogo->fi_count + pOpeninglogo->disp_count + pOpeninglogo->fo_count;
 
-    if (counter < pOpeninglogo->fi_count)
-    {
+    if (counter < pOpeninglogo->fi_count) {
         pOpeninglogo->bright = counter * 128 / pOpeninglogo->fi_count;
     } else if (counter < pOpeninglogo->fi_count + pOpeninglogo->disp_count) {
         pOpeninglogo->bright = 0x80;
-    } else if (counter < count2)
-    {
+    } else if (counter < count2) {
         pOpeninglogo->bright = 0x80 + -(counter - (pOpeninglogo->fi_count + pOpeninglogo->disp_count)) * 128 / pOpeninglogo->fo_count;
     } else {
         pOpeninglogo->bright = 0;
@@ -57,8 +53,7 @@ int Control_Openinglogo(void)
     return 1;
 }
 
-int View_Openinglogo(void)
-{
+int View_Openinglogo(void) {
     anon_0_25 info;
     anon_1_25 sp;
     int bright;
@@ -78,8 +73,7 @@ int View_Openinglogo(void)
     return 1;
 }
 
-int Update_Openinglogo(void)
-{
+int Update_Openinglogo(void) {
     pOpening->cWait++;
 
     return 1;
