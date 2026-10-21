@@ -163,8 +163,13 @@ LINK_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 #: One address-driven data placement (``config/<target>/data_placements.txt``): the compiled
 #: symbol, the retail address its bytes were matched to, the compiled length, the retail span
 #: (including the zero fill retail shows), and which source defines it.
+#:
+#: The symbol is a C identifier, or Metrowerks' literal-pool name ``@N``: a literal the source
+#: never named is numbered by the compiler, and that number is what the object's relocations
+#: carry.  A pool slot is a datum like any other -- the address is the pool entry's, proved by
+#: the same byte comparison -- so the ledger has to be able to spell one.
 DATA_PLACEMENT = re.compile(
-    r"^(?P<name>[A-Za-z_]\w*)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*"
+    r"^(?P<name>[A-Za-z_]\w*|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*"
     r"size:0x(?P<size>[0-9A-Fa-f]+)\s+extent:0x(?P<extent>[0-9A-Fa-f]+)\s+"
     r"source:(?P<source>\S+)\s*$")
 
@@ -938,12 +943,40 @@ def _data_words(body: bytes, relocs, resolve, what: str) -> list[str]:
     return lines
 
 
+def data_section(name: str) -> str:
+    """The section a placed datum ``name`` is emitted in: one per symbol, in one object.
+
+    A placement is per symbol -- the link puts *this* datum at *this* address -- but a unit
+    can define several placed data symbols (a literal pool contributes ``@40`` and ``@41``
+    as two sections), and a linker script selects an input section by name alone.  So each
+    datum leaves the emitted object in a section of its own, named from the symbol: ``.``
+    for Metrowerks' ``@N`` spells neither a label nor a section any other way.
+
+    The encoding is injective (every character outside ``[A-Za-z0-9]``, the underscore
+    included, becomes ``_`` and two hex digits), so two symbols can never name one section.
+    """
+    encoded = []
+    for character in name:
+        if character.isascii() and character.isalnum():
+            encoded.append(character)
+        elif ord(character) < 0x100:
+            encoded.append(f"_{ord(character):02x}")
+        else:
+            raise Unusable(f"{name!r} is not a name a placed datum can carry")
+    return ".datum." + "".join(encoded)
+
+
 def assembly(size: int, labels, debug: bytes, line: bytes, data=()) -> str:
     """The GNU assembler source for the placed split extent and the payloads.
 
     Each function's bytes follow its label, and the layout's own inter-function padding --
     the retail image aligns them, and the gap is zeros there -- is a ``.space`` between
     them.  The final ``.space`` fills any trailing split padding accepted by ``place``.
+
+    Every placed datum gets its own section (:func:`data_section`): the linker places the
+    section a ledger row names, so one datum per section is what makes a per-symbol address
+    expressible at all -- a unit with two placed data symbols otherwise moves both whenever
+    it places one.
     """
     out = ["\t.text"]
     cursor = 0
@@ -959,12 +992,8 @@ def assembly(size: int, labels, debug: bytes, line: bytes, data=()) -> str:
         if payload:
             out.append(f'\t.section {name},"",@progbits')
             out += _words(payload)
-    if data:
-        if len(data) > 1:
-            raise Unusable("two placed data symbols in one object would share a section; "
-                           "the placement is per symbol and cannot be expressed that way")
-        name, body, relocs, resolve = data[0]
-        out.append('\t.section .data,"aw",@progbits')
+    for name, body, relocs, resolve in data:
+        out.append(f'\t.section {data_section(name)},"aw",@progbits')
         out += _data_words(body, relocs, resolve, f"{name}.data")
     return "\n".join(out) + "\n"
 

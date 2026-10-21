@@ -3,10 +3,14 @@
 struct _CWS_OBJ *CwsObjCreate(struct _CWS_OBJ_SET *data);
 char CwsObjChangeTex(struct _CWS_OBJ *work, int tex_num);
 char cws_win_move_xywh(struct _CWS_WIN_W *work, int _end_time);
+void CwsWinOpen(struct _CWS_WIN_W *win);
+void CwsWinClose(struct _CWS_WIN_W *win);
+void CwsWinDestroy(struct _CWS_WIN_W *win);
+void CwsObjDisp(struct _CWS_WIN_W *win, struct _CWS_OBJ *objw);
 
 static int (*NetWin_AnyFunc[3])(struct _CWS_WIN_W *) = { NetWin_AnyInit, NetWin_AnyMain, NetWin_AnyEnd };
-static void (*NetWin_AnyCode[4])(struct _CWS_WIN_W *) = { 0, (void (*)(struct _CWS_WIN_W *))0x00207360, (void (*)(struct _CWS_WIN_W *))0x00206E60, (void (*)(struct _CWS_WIN_W *))0x00206E50 };
-static struct _CWS_OBJ_SET netwinany[2] = { { (int (*)(void *, void *))0x002046C0, -1, 0, 0, 0x80, 0x80, 0x80, 0x80 }, { (int (*)(void *, void *))0x002046C0, -1, 0, 0, 0x80, 0x80, 0x80, 0x80 } };
+static void (*NetWin_AnyCode[4])(struct _CWS_WIN_W *) = { 0, CwsWinOpen, CwsWinClose, CwsWinDestroy };
+static struct _CWS_OBJ_SET netwinany[2] = { { (int (*)(void *, void *))CwsObjDisp, -1, 0, 0, 0x80, 0x80, 0x80, 0x80 }, { (int (*)(void *, void *))CwsObjDisp, -1, 0, 0, 0x80, 0x80, 0x80, 0x80 } };
 
 int NetWin_Any(struct _CWS_WIN_W *win)
 {

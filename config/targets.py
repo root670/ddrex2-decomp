@@ -647,6 +647,24 @@ DDREX2P = Target(
         # .text 0x480, both bodies word-exact; .line exact before the tidy, adopted after (144
         # records, 142 rows); .debug retail's 0xD78 / 87 DIEs after 16 reference words.
         ("src/common/co_button.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x480 (0x474 + 0xC nop padding), all five bodies word-exact.  .line adopted
+        # whole (emitted 141 records, adopted 131: table 1 holds 20 rows against retail's
+        # 13); 20 anonymous names and 75 reference words adopted.  .debug is retail's
+        # 0x2E67 bytes / 321 DIEs byte for byte after the normaliser moved 266 records: the
+        # array types are keyed by their subscript data, so [3][65536], [3][45568] and
+        # [3][86784] pair by nested bound instead of cyclically.
+        ("src/AM/s573/doll/model1.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x2B0, four bodies word-exact; .line byte-equal before the tidy, adopted after
+        # (68 records, 4 tables); .debug retail's 0x10D9 / 108 DIEs after 2 anon names and 18
+        # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
+        ("src/CS/opening/openinglogo.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x3F8 in a 0x400 extent, all seven bodies word-exact; .line adopted whole
+        # (7 chunks; TabSetOff's ten straight-line masks alternate two lines); .debug retail's
+        # 0x1E4B / 200 DIEs after 55 type refs and every AT_location.
+        ("src/network/net_window/net_win_tab.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
