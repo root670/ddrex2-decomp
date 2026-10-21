@@ -661,6 +661,11 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x350, both bodies word-exact; .line byte-equal pre-tidy (56+20 rows) and
+        # adopted after; .debug retail's 0x78DD / 785 DIEs (24 of 25 anon indices permuted).
+        # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
+        ("src/CS/shop/shop_init.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
         # .text 0x490, six bodies word-exact; .line adopted whole (6 chunks); .debug retail's
         # 0x19DA / 173 DIEs after 2 anon names and 42 refs.  Needs -sdatathreshold 0 and the
         # @36 literal row; block-scope temps emit no DIEs in this build.

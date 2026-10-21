@@ -26,6 +26,7 @@
 // against the image before the link places it.
 bk_tm2_records = 0x002DA260; // size:0xDE8 extent:0xDE8 source:data/bk_load_data.c
 xxxx_bk_tm2_tbl = 0x002AF6F0; // size:0x12C extent:0x130 source:src/CS/bk_load.c
+@33 = 0x002D6830; // size:0x28 extent:0x28 source:src/CS/shop/shop_init.c
 @40 = 0x002D6D88; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl2.c
 @41 = 0x002D6D90; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl2.c
 @36 = 0x002D77B0; // size:0x1 extent:0x4 source:src/network/net_window/net_win_base.c
