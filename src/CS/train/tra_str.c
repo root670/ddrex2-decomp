@@ -14,7 +14,7 @@ static unsigned char *tr_str_op_simu[3] = { (unsigned char *)"ON", (unsigned cha
 static unsigned char *tr_str_op_scroll[2] = { (unsigned char *)"STANDARD", (unsigned char *)"REVERSE" };
 static unsigned char *tr_str_op_freeze[2] = { (unsigned char *)"ON", (unsigned char *)"OFF" };
 static unsigned char *tr_str_rs_menu[4] = { (unsigned char *)"AGAIN", (unsigned char *)"CHECK", (unsigned char *)"MENU", (unsigned char *)"CANCEL" };
-static unsigned char *tr_str_ck_menu[3] = { (unsigned char *)"MENU", (unsigned char *)"CANCEL", (unsigned char *)"CHECK" };
+static unsigned char *tr_str_ck_menu[3] = { (unsigned char *)"MENU", (unsigned char *)"BACK", (unsigned char *)"CANCEL" };
 static unsigned char *tr_str_ck_mode[2] = { (unsigned char *)"Judgement Color", (unsigned char *)"Timing Color" };
 static anon_0_158 tr_str_tbl[15] = { { tr_str_play, 3 }, { tr_str_step, 6 }, { tr_str_mspeed, 5 }, { tr_str_op_speed, 6 }, { tr_str_offon, 2 }, { tr_str_op_appear, 4 }, { tr_str_op_turn, 5 }, { tr_str_offon, 2 }, { tr_str_offon, 2 }, { tr_str_op_simu, 3 }, { tr_str_op_scroll, 2 }, { tr_str_op_freeze, 2 }, { tr_str_rs_menu, 4 }, { tr_str_ck_menu, 3 }, { tr_str_ck_mode, 2 } };
 
