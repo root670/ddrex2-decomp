@@ -17,8 +17,8 @@ retail image -- one chunk per function, so no compile is needed::
 Each record is ``(line, position, address delta)``; the last record of every table is the
 line-0 end marker.  ``--raw`` prints every record in order, ``--json`` the same map for
 tooling.  Brace hints compare the numbers with the unit's current source, and are omitted
-when that source is absent or still carries ``#line`` directives (the numbers would then be
-retail's, not the file's).
+when that source is absent, still carries ``#line`` directives, or no longer answers to
+retail's numbers (functions reordered, lines moved) -- the hint is never a guess.
 """
 
 from __future__ import annotations
