@@ -619,6 +619,10 @@ DDREX2P = Target(
         # 3 tables; 8 numbers moved); .debug 0xB90 / 64 DIEs after 26 ref words and
         # warning0/warning1 locations.
         ("src/network/net_cnf/net_cnf_mes_e.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x58, three bodies word-exact; .line adopted (11 records / 3 tables, 8 numbers
+        # moved); .debug 0xFC9 / 90 DIEs after AUTH_RUN/AUTH_OK locations and 68 ref words.
+        ("src/network/net_auth/net_auth_mes_e.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
