@@ -669,7 +669,7 @@ DDREX2P = Target(
         # .text 0x4F0, three bodies word-exact; .line 91 records adopted (83 rows moved);
         # .debug retail's 0x46EF / 485 DIEs after 1 location, 21 names and 99 refs.
         ("src/CS/dancemaster/dmm_mess.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt")),
+         "-c -lang c -O3 -opt full -g", "adopt"),
         # .text 0x3A0, five bodies word-exact; .line adopted whole (5 tables, 5 chunks), as
         # is .debug (retail's 0x12E7 / 136 DIEs).  `-sdatathreshold 0` keeps the "%05d" and
         # "%08d" literals in .data sections of their own instead of a shared 8-byte pool, so
