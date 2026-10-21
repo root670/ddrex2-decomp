@@ -638,6 +638,12 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x3B8 in a 0x3C0 extent, eight bodies word-exact; .text AND .line
+        # byte-equal outright, so --normalise-debug alone makes .debug retail's 0x1817 /
+        # 152 DIEs.  Needs -sdatathreshold 0 and six static placements.  `_point` is a
+        # vararg in the "%06d"/"%08d" cases, which puts it in $a3 at entry.
+        ("src/network/net_window/net_win_infosel.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x778, six bodies word-exact; .text AND .line byte-equal outright, so
         # --normalise-debug alone makes .debug retail's 0x1969 / 161 DIEs.  No
         # placements; the setters hold retail's emission-free lines with a trailing `return;`.
