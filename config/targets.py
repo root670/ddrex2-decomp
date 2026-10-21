@@ -623,6 +623,11 @@ DDREX2P = Target(
         # .text 0x58, three bodies word-exact; .line adopted (11 records / 3 tables, 8 numbers
         # moved); .debug 0xFC9 / 90 DIEs after AUTH_RUN/AUTH_OK locations and 68 ref words.
         ("src/network/net_auth/net_auth_mes_e.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x480 (0x43C + 0x38), both bodies word-exact.  The five corner values live in
+        # a static inline helper, so they never reach DWARF; .line adopted whole (37 vs 93 rows);
+        # .debug 0xC62 / 80 DIEs after 3 type-reference words.
+        ("src/common/co_cursor.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
