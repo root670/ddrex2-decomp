@@ -435,19 +435,19 @@ def _display(path) -> str:
 #: byte on ``.text``/``.debug``/``.line`` (0x40/652/116 and 0xc0/1592/156 bytes).  ``-opt
 #: full`` is not a per-file exception: it is compatible with the code that already matched,
 #: so one compiler and one flag set explain every believed-correct unit.  The pair recorded
-#: now is ``3.0b38-030307 -c -lang c -O3 -opt full -g``, with the opt-in ``.debug`` DIE-order
-#: normaliser for ``net_grf``: b38 takes both units' ``.text``/``.line`` byte-exactly,
-#: ``sys_scf``'s ``.debug`` is byte-equal outright (the normaliser is inert), and
-#: ``net_grf``'s chunk -- the same DIE set in b38's order -- is rewritten into retail's DIE
-#: order and comes out byte-identical (41 DIEs, 31 moved, 8 references rewritten).  All five
-#: promoted units' layouts are now tidied, which moves their statement lines, so promotion
-#: is always adoption and ``--adopt-retail-meta`` supplies retail's ``.line`` (and applies
-#: the normaliser itself where a chunk needs it).  b38
-#: writes ``(3.0.0)`` in ``.comment`` where retail writes ``(2.4.1.01)``; that string and the
-#: chunk order never reach the image (whose ``.comment`` and chunks are retail's), so the pair
-#: is a reproduction recipe, not a claim that b38 is the original compiler.  ``2.4-001213``
-#: is ruled out by its frame instructions (``sq``/``lq`` where retail has ``sd``/``ld``) and
-#: by ``net_grf``'s short ``.line``.
+#: now is ``3.0b38-030307 -c -lang c -O3 -opt full -g``, with the ``.debug`` DIE-order
+#: normaliser that adoption applies for ``net_grf``: b38 takes both units'
+#: ``.text``/``.line`` byte-exactly, ``sys_scf``'s ``.debug`` is byte-equal outright (the
+#: normaliser is inert), and ``net_grf``'s chunk -- the same DIE set in b38's order -- is
+#: rewritten into retail's DIE order and comes out byte-identical (41 DIEs, 31 moved, 8
+#: references rewritten).  All five promoted units' layouts are now tidied, which moves
+#: their statement lines, so promotion is always adoption and ``--adopt-retail-meta``
+#: supplies retail's ``.line`` (and applies the normaliser itself where a chunk needs it).
+#: b38 writes ``(3.0.0)`` in ``.comment`` where retail writes ``(2.4.1.01)``; that string and
+#: the chunk order never reach the image (whose ``.comment`` and chunks are retail's), so the
+#: pair is a reproduction recipe, not a claim that b38 is the original compiler.
+#: ``2.4-001213`` is ruled out by its frame instructions (``sq``/``lq`` where retail has
+#: ``sd``/``ld``) and by ``net_grf``'s short ``.line``.
 #: A pair measured against one retail binary says nothing about another, so this table starts
 #: empty on a new target and ``configure.py`` refuses to promote a source nobody has measured.
 #: A guessed *geometry* would be a split of one game at another game's addresses;
