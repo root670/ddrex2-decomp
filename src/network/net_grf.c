@@ -29,8 +29,28 @@ typedef struct {
 } grf_element;
 
 static char dancer_num[22] = {
-    5, 4, 7, 6, 3, 2, 1, 0, 14, 15, 13, 12,
-    10, 11, 8, 9, 23, 22, 21, 20, 19, 18,
+    5,
+    4,
+    7,
+    6,
+    3,
+    2,
+    1,
+    0,
+    14,
+    15,
+    13,
+    12,
+    10,
+    11,
+    8,
+    9,
+    23,
+    22,
+    21,
+    20,
+    19,
+    18,
 };
 static void unused_grf_types(grf_element *p) { p->flg = 1; }
 
