@@ -628,6 +628,12 @@ DDREX2P = Target(
         # a static inline helper, so they never reach DWARF; .line adopted whole (37 vs 93 rows);
         # .debug 0xC62 / 80 DIEs after 3 type-reference words.
         ("src/common/co_cursor.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x208 (520 bytes), all five bodies word-exact.  .debug is retail's 0x1435
+        # bytes / 134 DIEs byte for byte after adoption, including the form-3
+        # AT_subscr_data element references (3 rewritten); .line (5 chunks, 540 bytes) and
+        # AT_location adopted under --adopt-retail-meta.
+        ("src/network/net_window/net_win_any.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
