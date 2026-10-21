@@ -660,6 +660,11 @@ DDREX2P = Target(
         # (68 records, 4 tables); .debug retail's 0x10D9 / 108 DIEs after 2 anon names and 18
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x3F8 in a 0x400 extent, all seven bodies word-exact; .line adopted whole
+        # (7 chunks; TabSetOff's ten straight-line masks alternate two lines); .debug retail's
+        # 0x1E4B / 200 DIEs after 55 type refs and every AT_location.
+        ("src/network/net_window/net_win_tab.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
