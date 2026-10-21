@@ -161,6 +161,16 @@ def line_changes(emitted: bytes, retail: bytes):
     return changes, len(ours), sum(len(rows) for _offset, _base, rows in ours)
 
 
+def line_rows(chunk: bytes) -> list:
+    """``[(offset, base, [(line, position, address delta), ...]), ...]``: the rows themselves.
+
+    The public spelling of the strict read the comparison paths share, for a reader that needs
+    the statement sites rather than a count (the per-unit line map).  An unparseable chunk
+    refuses exactly as it does for adoption.
+    """
+    return _line_tables(chunk)
+
+
 def line_shape(chunk: bytes) -> tuple:
     """``(tables, records)``: the statement tables and rows one ``.line`` chunk carries.
 

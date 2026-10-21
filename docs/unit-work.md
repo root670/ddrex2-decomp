@@ -25,7 +25,7 @@ A translation unit counts as promoted only when `./ddr --target ddrex2p verify -
 |---|---|
 | `.text` | the compiled instructions, byte for byte — **this is the promotion proof** |
 | `.debug` | the debug chunk for that unit, reconstructed from retail's inventory under `"adopt"` (types, member order, visibility) |
-| `.line` | the statement→address line table. **During iteration** your statements must sit on retail's line numbers; at promotion the chunk is reconstructed from retail's inventory, so a reformatted source is allowed (see "`.line`: an iteration gate, not a promotion gate") |
+| `.line` | the statement→address line table. It is a structural hint and a localiser (`tools/units/line_map.py`), never a gate; the chunk is reconstructed from retail's inventory at promotion, so a reformatted source is allowed (see "`.line`: corroboration and a localiser, never a gate") |
 
 **Adoption is the default.** A `tu_builds` row may omit the fourth element, and that means
 `"adopt"`: `configure.py` puts `--adopt-retail-meta` on the unit's `cc` edge, which proves
@@ -43,11 +43,16 @@ claims**, recorded only when a unit earns them at no cost:
 Existing rows keep the element they were accepted on — an explicit `False`/`True` is stronger
 evidence than adoption, so it is never rewritten to the default.
 
-### `.line`: an iteration gate, not a promotion gate
+### `.line`: corroboration and a localiser, never a gate
 
-Line numbers are **recovery evidence**, not part of the promotion proof. While a unit is being
-written, matching retail's statement lines is the cheapest check that every statement, inline and
-declaration has a counterpart, and that check is required throughout the loop. At promotion:
+Line numbers are **recovery evidence**, never part of the promotion proof. Before writing code,
+read the map -- `python3 tools/units/line_map.py --tu <tu>` -- for retail's statement shape per
+function: the span, the lines carrying more than one statement, the lines carrying none, and
+where the braces are. Use it as a structural hint. A gap is a blank line, a comment, a
+declaration with no code, or a statement that produced nothing; an unexpectedly large gap is
+where an inline hides. Chase `.text` first. A byte-equal function whose lines then match is
+corroboration, and where they do not, the moved row localises the guess. A `.line` difference
+never blocks a promotion, because:
 
 - the **promotion proof** is `.text` byte equality, with `.debug` under the conditions below;
 - the `.line` chunk the image carries is **reconstructed from retail's inventory** -- the unit's
@@ -226,7 +231,8 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    - **no large unreferenced file-scope tables** (the `mes_*` blocker class);
    - calls either absent or already named in `config/ddrex2p/borrowed_symbols.txt`, so no library name
      has to be imported mid-unit;
-   - plenty of DWARF line records, because `.line` is the gate that punishes guesswork hardest.
+   - plenty of DWARF line records, because the statement map is richest there and a moved row
+     localises guesswork fastest.
 
    **Time-box it: about thirty minutes.** If it is not green by then, commit it as WIP with what you
    learned and take the next one. A unit that resists is a finding; three hours on one is a lost
@@ -242,12 +248,24 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    cat asm/nonmatchings/main/<symbol>.s                               # the disassembly to reverse
    ```
 
-3. **Write the C on retail's line numbers.** The line numbers are evidence, not a suggestion. If the
+3. **Read the line map before writing code — it is retail's statement structure.** One command
+   prints, per function, the retail VA range, word count, line span, and the lines that carry
+   more than one statement or none at all:
+
+   ```bash
+   python3 tools/units/line_map.py --tu <tu>          # --raw every row; --json for tooling
+   ```
+
+   The shape says where a `switch` dispatch, a chained assignment, or an inline you have not
+   written sits, before the compiler says anything. A `.line` mismatch is corroboration or a
+   localiser, never a gate: chase `.text` first.
+
+4. **Write the C on retail's line numbers.** The line numbers are evidence, not a suggestion. If the
    generated header spells a tag bare (`_tag_X`, C++ syntax), write `struct _tag_X` in the C; if a
    gap between two statements is large, the original had lines you have not reproduced yet — often an
-   inline, sometimes a declaration — and `.line` will fail until they are accounted for.
+   inline, sometimes a declaration — and the map will show the hole until they are accounted for.
 
-4. **Iterate with the diff, not with the gate.** The gate compiles the whole unit; the diff scores one
+5. **Iterate with the diff, not with the gate.** The gate compiles the whole unit; the diff scores one
    function against **retail's bytes**:
 
    ```bash
@@ -258,7 +276,7 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    split's own bytes when the unit has no C). A 100.0% on an unpromoted function is normal and is the
    signal to move on.
 
-5. **Gate the unit**, then commit it alone:
+6. **Gate the unit**, then commit it alone:
 
    ```bash
    ./ddr --target ddrex2p verify --tu <tu>
@@ -307,7 +325,7 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    gate.  The file covers every promoted unit, so it is a shared document: the controller
    updates it with the `tu_builds` row rather than each unit agent committing its own copy.
 
-6. **Record the compiler.** Measure the pair that reproduces this unit with
+7. **Record the compiler.** Measure the pair that reproduces this unit with
    `tools/toolchain/select_build.py --tu <tu>` and add it to `tu_builds` in `config/targets.py`.
    `configure.py` refuses to promote a source nobody has measured.  Record
    `("src/<path>.c", "<build>", "<flags>")` -- no fourth element -- and the row is an adopting
