@@ -25,13 +25,12 @@ faithful:
 * **a ``#line`` spelling this tool does not parse** -- macros, continuations, junk.
 
 For a translation unit with a recorded pair in ``tu_builds`` the strict rewrite is accepted
-only when compiling the source before and after through the promotion path
-(:func:`toolchain.compile.place`) with that pair gives byte-identical ``.text``, ``.debug``
-and ``.line``.  The build does **not** run this rewrite: a promoted source that still carries
-a directive is refused by :func:`toolchain.compile.refuse_line_directives` (and by
-``configure.py`` before it writes ``build.ninja``), and the refusal names this tool with
-``--normalise`` as the remedy.  So a promotion cannot silently compile a layout the committed
-file does not spell.
+only when compiling the source before and after through the promotion placement machinery
+with that pair gives byte-identical ``.text``, ``.debug`` and ``.line``.  The build does
+**not** run this rewrite: a promoted source that still carries a directive is refused by
+``toolchain.compile.refuse_line_directives`` (and by ``configure.py`` before it writes
+``build.ninja``), and the refusal names this tool with ``--normalise`` as the remedy.  So a
+promotion cannot silently compile a layout the committed file does not spell.
 
 **Normalising (``--normalise``).**  The directives are stripped and the file keeps its own,
 natural layout -- no padding standing in for lines nobody can know.  Two lines the
