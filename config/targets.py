@@ -666,6 +666,11 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x300, five bodies word-exact; .text, .line 0x1F4 and .debug 0x6D4 / 33 DIEs
+        # are retail's outright, so the state is False.  The Create bodies need their matrix
+        # prototypes spelled through a typedef: five `float (*)[4]` declarators emit five
+        # array_type DIEs (0x90 over).  Line-bearing layout; never --collapse.
+        ("src/AM/s573/doll/matrix.c", "3.0b38-030307", "-c -lang c -O3 -g", False),
         # .text 0x7A0, five bodies word-exact; .line 0x348 byte-equal (blank-line padding,
         # no directives); .debug retail's 0x18DB / 160 DIEs via --normalise-debug.  Needs
         # the five @40..@44 placements; per-source preference resolves the shared names.
