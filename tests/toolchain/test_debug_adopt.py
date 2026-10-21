@@ -76,7 +76,8 @@ def test_metadata_is_adopted_and_every_value_is_reported(capsys):
 
     assert placed == retail
     error = capsys.readouterr().err
-    assert "adopted retail's .line (1 row(s) changed by statement line" in error
+    assert "adopted retail's .line (emitted 3 record(s), adopted 3;" in error
+    assert "1 row(s) changed by statement line" in error
     assert "first at .line+0x12: 12 -> 11" in error
     assert "1 of 3 rows byte-different" in error
     assert "adopted AT_location n (in f): scratch -> $a2" in error
@@ -94,6 +95,7 @@ def test_the_adoption_returns_retails_line_chunk_whole():
 
     assert adopted.chunk == retail_debug
     assert adopted.line == RETAIL_LINE
+    assert adopted.line_emitted == 3 and adopted.line_total == 3
     assert adopted.line_changed == 1
     assert adopted.first_line_row == (0, 1, 0x12, 12, 11)
     assert len(adopted.line_rows) == 1
@@ -179,6 +181,29 @@ def test_a_line_table_of_a_different_shape_is_reported_and_retail_is_adopted():
     result = da.adopt(build(tree()), build(tree()), 0, other, RETAIL_LINE)
 
     assert "holds 2 rows against retail's 3" in (result.line_note or "")
-    assert result.line_rows == [] and result.line_total == 0
+    assert result.line_rows == []
+    assert result.line_emitted == 2 and result.line_total == 3
     assert result.line == RETAIL_LINE, "the emitted table is replaced whole"
     assert result.chunk == build(tree())
+
+
+def test_a_short_line_chunk_is_accepted_under_adopt_and_reported(capsys):
+    """Adoption is independent of the emitted `.line` length: `.text` is the precondition.
+
+    The emitted table carries 2 records against retail's 3 (the measured decodeVAG shape:
+    MWCC sinks a record into the next statement's line).  The unit is accepted because its
+    `.text` is retail's, retail's chunk is placed, and the report says how short it was.
+    """
+    debug = build(tree(location=6, anon="@anon1"))
+    short = line_chunk([(10, 0, 0), (11, 0, 4)])
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=short, debug=debug,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=debug, adopt=True)
+
+    assert placed == debug
+    error = capsys.readouterr().err
+    assert "emitted 2 record(s), adopted 3" in error
+    assert "not row-for-row comparable" in error
+    assert "retail's chunk is adopted whole" in error
+    assert "byte for byte after adoption" in error

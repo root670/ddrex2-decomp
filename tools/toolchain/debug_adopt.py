@@ -81,19 +81,20 @@ class Adopted:
     """Retail's metadata, and what had to change to make it ours."""
 
     __slots__ = ("chunk", "line", "line_rows", "line_tables", "line_total",
-                 "line_changed", "first_line_row", "line_note", "locations", "anon_names",
-                 "references", "reference_changes", "dropped", "adopted_attributes",
-                 "dies")
+                 "line_emitted", "line_changed", "first_line_row", "line_note", "locations",
+                 "anon_names", "references", "reference_changes", "dropped",
+                 "adopted_attributes", "dies")
 
     def __init__(self, chunk, line, line_rows, line_tables, line_total, line_changed,
                  first_line_row, locations, anon_names, references, dies,
                  line_note=None, reference_changes=(), dropped=(),
-                 adopted_attributes=()):
+                 adopted_attributes=(), line_emitted=0):
         self.chunk = chunk              # retail's .debug chunk, byte-equal to the proof
         self.line = line                # retail's .line chunk, adopted whole
         self.line_rows = line_rows      # [(table, row, before, after)] byte-different rows
         self.line_tables = line_tables  # sub-tables compared
         self.line_total = line_total    # rows in the adopted chunk
+        self.line_emitted = line_emitted  # rows the emitted table carried
         self.line_changed = line_changed  # rows whose statement line moved, aligned
         self.first_line_row = first_line_row  # (table, row, offset, ours, retail) or None
         self.line_note = line_note      # why the emitted table is not row-comparable, or None
@@ -158,6 +159,20 @@ def line_changes(emitted: bytes, retail: bytes):
             if one != other:
                 changes.append((index, row, (base_a, one), (base_b, other)))
     return changes, len(ours), sum(len(rows) for _offset, _base, rows in ours)
+
+
+def line_record_counts(emitted: bytes, retail: bytes) -> tuple:
+    """``(emitted, adopted)``: the statement records each chunk carries.
+
+    The report quotes this pair so a unit whose emitted table is a different shape -- the
+    compiler sinking a record into the next statement's line, or a normalised layout
+    emitting extra ones -- says how far off it is.  Parsing is the same strict run-of-tables
+    read :func:`line_changes` uses, so an unparseable chunk refuses here too.
+    """
+    def rows(chunk):
+        return sum(len(rows) for _offset, _base, rows in _line_tables(chunk)) if chunk else 0
+
+    return rows(emitted), rows(retail)
 
 
 def line_number_changes(emitted: bytes, retail: bytes):
@@ -299,19 +314,30 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
           retail_line: bytes = b"") -> Adopted:
     """Retail's metadata in our chunk, accepted only when the bytes are retail's."""
     # The report is best-effort: retail's chunk is adopted whole either way, and a source
-    # whose layout was normalised (``#line`` directives stripped) can emit a different
-    # number of statement records while its .text stays retail's.  A table that is not
-    # row-for-row comparable is recorded in ``line_note`` instead of refusing the adoption.
+    # whose layout was normalised (``#line`` directives stripped) -- or whose compiler sinks
+    # a record into the next statement's line -- can emit a different number of statement
+    # records while its .text stays retail's.  A table that is not row-for-row comparable is
+    # recorded in ``line_note`` instead of refusing the adoption, and the emitted/adopted
+    # record counts are still measured so the report names the size of the difference.
     line_note = None
-    try:
-        line_diff, line_table_count, line_total = line_changes(emitted_line, retail_line) \
-            if emitted_line or retail_line else ([], 0, 0)
-        line_changed, first_line_row = line_number_changes(emitted_line, retail_line) \
-            if emitted_line or retail_line else (0, None)
-    except Refused as exc:
-        line_note = str(exc)
-        line_diff, line_table_count, line_total = [], 0, 0
-        line_changed, first_line_row = 0, None
+    line_diff, line_table_count, line_total = [], 0, 0
+    line_changed, first_line_row, line_emitted = 0, None, 0
+    if emitted_line or retail_line:
+        try:
+            line_diff, line_table_count, line_total = line_changes(emitted_line, retail_line)
+            line_changed, first_line_row = line_number_changes(emitted_line, retail_line)
+            line_emitted = line_total
+        except Refused as exc:
+            line_note = str(exc)
+            try:
+                line_emitted, line_total = line_record_counts(emitted_line, retail_line)
+            except Refused:
+                pass
+            try:
+                line_changed, first_line_row = line_number_changes(emitted_line, retail_line)
+            except Refused:
+                pass
+
 
     if len(emitted) < len(retail):
         raise Refused(f".debug is 0x{len(emitted):X} bytes against retail's "
@@ -424,4 +450,5 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
     return Adopted(retail, retail_line, line_diff, line_table_count, line_total,
                    line_changed, first_line_row, locations, anon_names,
                    len(reference_changes), len(ours), line_note,
-                   reference_changes, ordering.dropped, ordering.adopted_attributes)
+                   reference_changes, ordering.dropped, ordering.adopted_attributes,
+                   line_emitted)

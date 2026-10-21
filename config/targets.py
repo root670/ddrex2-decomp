@@ -610,6 +610,10 @@ DDREX2P = Target(
         # .text 0x1E0, three bodies word-exact; .line adopted after the tidy (35 of 38 rows);
         # .debug retail's 0x8B8 / 50 DIEs after 25 reference words (array-type order).
         ("src/CS/train/tra_str.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x4F0, all three bodies word-exact; .line adopted (emitted 143 records,
+        # adopted 148); .debug retail's 0x846 / 50 DIEs after 34 ref words and d5's location.
+        ("src/sound/vxdecode/decode.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 

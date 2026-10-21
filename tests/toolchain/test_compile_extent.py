@@ -166,3 +166,30 @@ def test_a_short_debug_or_line_chunk_is_refused(section):
     assert str(excinfo.value) == (
         f"src/example.c: the unit's types {section} is short by 0x2 bytes; "
         f"C is incomplete (cannot pad {section})")
+
+
+def test_adoption_measures_a_short_line_block_instead_of_refusing_it():
+    """Under ``adopt`` the emitted ``.line`` is the report's measurement, not the placed chunk.
+
+    The blocks are joined end to end rather than padded into retail's pinned offsets: one
+    is 2 bytes short of its slot (MWCC sinking a statement record), and zero fill would
+    leave a run of statement tables that does not parse -- so the counts could not be
+    reported at all.  :func:`cc._fill` still refuses the same block (the test above).
+    """
+    class _Blocks:
+        relocs = {}
+
+        @staticmethod
+        def data(index):
+            return b"\xAA\xBB" if index == 0 else b"\xCC\xDD\xEE\xFF"
+
+        @staticmethod
+        def resolve(_tu, _symbol):
+            return 0
+
+    chunk, sizes = cc._adopted_line(
+        _Blocks(), _SmallTu(), [(0, 4, 0, "a"), (4, 4, 1, "b")], 0)
+
+    assert chunk == b"\xAA\xBB\xCC\xDD\xEE\xFF"
+    assert sizes == [("a", ".line", 2, 4), ("b", ".line", 4, 4)]
+

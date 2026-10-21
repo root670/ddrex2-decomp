@@ -944,6 +944,31 @@ def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: 
     return bytes(out), sizes
 
 
+def _adopted_line(mw: MWObject, tu: Tu, blocks, gp: int) -> tuple[bytes, list]:
+    """The emitted ``.line`` as the adoption report reads it: the blocks end to end.
+
+    Under ``--adopt-retail-meta`` retail's chunk is what the image carries, so the emitted
+    table is only the *measurement* of how many statement records the source produced.
+    A compiler that sinks a record (MWCC folds ``d7 = nLow[*a0]`` into the next statement's
+    line) leaves a block shorter than retail's, and a normalised layout can leave one
+    longer; neither is an incomplete unit once ``.text`` is retail's.  The blocks are
+    therefore concatenated in retail's function order instead of being padded into retail's
+    pinned offsets: a pinned-length slot would need zero fill, and a zero-filled gap is not
+    a parseable run of statement tables.
+
+    ``blocks`` is the same ``[(offset, pinned size, section index, label)]`` :func:`_fill`
+    takes; the offsets are not used, because the report compares row counts, not placement.
+    """
+    sizes = []
+    bodies = []
+    for _offset, pinned, index, label in blocks:
+        body = relocate(mw.data(index), mw.relocs.get(index, ()),
+                        lambda symbol: mw.resolve(tu, symbol), f"{label}.line", gp)
+        sizes.append((label, ".line", len(body), pinned))
+        bodies.append(body)
+    return b"".join(bodies), sizes
+
+
 def _retail_chunk(image, section: str, offset: int, size: int) -> bytes:
     """``size`` bytes of retail's ``section`` at the unit's pinned chunk ``offset``."""
     entry = next((s for s in image.sections if s.name == section), None)
@@ -1012,20 +1037,24 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
             adopted = debug_adopt.adopt(debug, retail_debug, base, line, retail_line)
         except debug_adopt.Refused as exc:
             raise Unusable(f"{unit}: condition 6 (retail metadata adoption) failed: {exc}")
+        if adopted.line != retail_line:
+            raise Unusable(f"{unit}: condition 6 (retail metadata adoption) failed: the "
+                           f"adopted .line is not retail's {len(retail_line):#x} bytes")
+        counts = f"emitted {adopted.line_emitted} record(s), adopted {adopted.line_total}"
         if adopted.line_note:
             print(f"compile: {unit}: the emitted .line is not row-for-row comparable with "
-                  f"retail's ({adopted.line_note}); retail's chunk is adopted whole",
-                  file=sys.stderr)
+                  f"retail's ({counts}: {adopted.line_note}); retail's chunk is adopted "
+                  f"whole", file=sys.stderr)
         else:
             first = ""
             if adopted.first_line_row is not None:
                 _table, _row, offset, before, after = adopted.first_line_row
                 first = (f", first at .line+0x{offset:X}: {before}"
                          + (f" -> {after}" if after is not None else " (absent in retail)"))
-            print(f"compile: {unit}: adopted retail's .line ({adopted.line_changed} row(s) "
-                  f"changed by statement line{first}; {len(adopted.line_rows)} of "
-                  f"{adopted.line_total} rows byte-different in {adopted.line_tables} "
-                  f"statement table(s))", file=sys.stderr)
+            print(f"compile: {unit}: adopted retail's .line ({counts}; "
+                  f"{adopted.line_changed} row(s) changed by statement line{first}; "
+                  f"{len(adopted.line_rows)} of {adopted.line_total} rows byte-different "
+                  f"in {adopted.line_tables} statement table(s))", file=sys.stderr)
         for change in adopted.locations:
             print(f"compile: {unit}: adopted AT_location {change}", file=sys.stderr)
         for change in adopted.anon_names:
@@ -1289,10 +1318,15 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
 
     types = manifests.cus[tu.records[0]]
     # `.line` first: condition 1 pairs it with `.text`, and the `.debug` policy needs both.
-    line, line_sizes = _fill(
-        mw, tu, tu.line_offset, tu.line_size,
-        [(f.line_offset, f.line_size, groups[f.name][2], f.name) for f in tu.functions],
-        gp, ".line", unit_file=tu.file)
+    # Under adoption the emitted table is only the report's measurement (retail's chunk is
+    # placed), so a block that is not retail's length is measured rather than refused.
+    line_blocks = [(f.line_offset, f.line_size, groups[f.name][2], f.name)
+                   for f in tu.functions]
+    if adopt:
+        line, line_sizes = _adopted_line(mw, tu, line_blocks, gp)
+    else:
+        line, line_sizes = _fill(mw, tu, tu.line_offset, tu.line_size, line_blocks, gp,
+                                 ".line", unit_file=tu.file)
     retail_debug = _retail_chunk(retail, ".debug", tu.debug_offset, tu.debug_size)
     retail_line = _retail_chunk(retail, ".line", tu.line_offset, tu.line_size)
     emitted_debug, debug_sizes, debug_mismatches = _fill_debug(
