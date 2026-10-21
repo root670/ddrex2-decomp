@@ -598,6 +598,10 @@ DDREX2P = Target(
         # ($t1 -> $t7 / $t6) and 8 reference words.  ORIG_P/ORIG_S must be initialised
         # file-scope statics: only then does this build tag them local_variable.
         ("src/network/mio/blowfish.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x80, both bodies word-exact; .debug retail's 0x2C9 / 13 DIEs outright;
+        # .line adopted (2 tables / 16 rows, sizes and offsets already retail's).
+        ("src/CS/bk_load.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
