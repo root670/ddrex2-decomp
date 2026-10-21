@@ -30,9 +30,14 @@ when the file's comment structure is not well formed:
 ``--collapse`` is the tidy step that follows the strip.  It strips first, so the comments
 are already gone, and then deliberately *moves* lines: runs of blank lines (including the
 blank lines a stripped header and stripped notes became) become one, trailing whitespace
-goes, and a blank line directly after an opening ``{`` or before a closing ``}`` is dropped
--- those were line-number placeholders and carry nothing once ``.line`` is adopted.  A
-promoted file starts with its first declaration or ``#include``, and its measurements live
+goes, a blank line directly after an opening ``{`` or before a closing ``}`` is dropped
+-- those were line-number placeholders and carry nothing once ``.line`` is adopted -- and
+every block-opening brace is joined to the line of its statement (a brace alone on the
+next line, ``if (x)\\n{``, and a brace that opens a block inline, ``do\\n{ x = 1;``).  The
+brace pass refuses a site it cannot read: a brace after a declaration or a closed block,
+an aggregate-initializer row, and a block whose first statement is itself a declaration
+are left on their own lines and reported.  A promoted file starts with its first
+declaration or ``#include``, and its measurements live
 in the unit's ``tu_builds`` comment and the unit report.
 Statements therefore sit on new line numbers, so the emitted ``.line`` is no longer
 retail's and only retail-metadata adoption can accept the result: the tool refuses a unit
@@ -56,6 +61,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import shlex
 import sys
 import tempfile
@@ -238,7 +244,123 @@ def strip(text: str) -> str:
     return stripped
 
 
-def collapse(text: str) -> str:
+class Attached(NamedTuple):
+    """The brace-attach result: the text, the joins made, and the sites left alone.
+
+    ``skipped`` holds ``(line, reason)`` for every block brace the pass deliberately did
+    not join: a brace after a declaration or a closed block, an aggregate initializer row,
+    or a block whose first statement is itself a declaration (moving that statement would
+    move the declaration's recorded line).
+    """
+
+    text: str
+    joined: int
+    skipped: tuple
+
+
+#: The first token of a declaration, which the attach pass must not pull onto a brace line.
+_DECLARATION = re.compile(
+    r"^(?:typedef|extern|static|const|volatile|register|auto|unsigned|signed|"
+    r"int|char|short|long|float|double|void|struct|union|enum)\b")
+
+#: ``TYPE name`` / ``TYPE *name`` / ``TYPE name[N]`` followed by ``=`` or ``;`` -- a
+#: declaration spelled with a typedef name rather than a keyword (``anon_0_114 *p;``).
+_TYPED_DECLARATION = re.compile(
+    r"^[A-Za-z_]\w*\s+\**[A-Za-z_]\w*\s*(?:\[[^\]]*\])?\s*(?:=|;)")
+
+
+def _block_statement_header(line: str) -> bool:
+    """Whether ``line`` is the statement a following block brace belongs to.
+
+    The accepted shapes are a control header ending in ``)`` (``for``/``while``/``if``/
+    ``else if``/``switch``), the bare ``do``/``else`` keywords, and a function signature
+    -- which is a declarator ending in ``)`` too.  A line ending in ``;`` is a declaration
+    or a finished statement and keeps its line; so does a preprocessor directive and a
+    line ending in ``{`` or ``,`` (an aggregate initializer).
+    """
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    if stripped.endswith(";"):
+        return False
+    if stripped in ("do", "else") or stripped.endswith(" else"):
+        return True
+    if stripped.endswith(")") and not stripped.startswith((")", ",")):
+        return True
+    return False
+
+
+def _carries_declaration(statement: str) -> bool:
+    """Whether ``statement`` is a declaration, which keeps the line the evidence gave it."""
+    return bool(_DECLARATION.match(statement) or _TYPED_DECLARATION.match(statement))
+
+
+def _skip_reason(previous: str | None) -> str:
+    """Why the brace on the next line cannot be attached to ``previous``."""
+    if previous is None:
+        return "the brace is the file's first line; there is no statement to attach it to"
+    stripped = previous.strip()
+    if not stripped:
+        return "the line before it is blank; a blank separates the statement from its brace"
+    if stripped.startswith("#"):
+        return "it follows a preprocessor directive"
+    if stripped.endswith(",") or stripped.endswith("{"):
+        return ("it opens an aggregate initializer, not a block; the initializer rows keep "
+                "their own lines")
+    if stripped.endswith(";"):
+        return ("it follows a declaration that must keep its line; a bare block after a "
+                "declaration is not that declaration's body")
+    if stripped.endswith("}"):
+        return "it follows a closed block; there is no statement to attach it to"
+    return (f"the line before it ({stripped[:40]!r}) is not a control statement or a "
+            f"function signature")
+
+
+def attach_braces(text: str) -> Attached:
+    """Join every block-opening brace to the line of its statement.
+
+    A brace alone on a line (``if (x)\\n{``), and a brace that opens a block and carries
+    its first statement or control statement inline (``do\\n{ Xl = ...;``, ``for (i...)\\n
+    { for (j...``), moves up to the statement it belongs to: ``if (x) {``, ``do { Xl =
+    ...;``.  A ``} else {`` already reads that way and is left alone.
+
+    The pass refuses a site rather than guessing: a brace after a declaration (``int a;
+    \\n{``), after a closed block, after a preprocessor directive, a blank line between the
+    statement and its brace, an aggregate-initializer row (``{ .x = 0, ... }``), and a
+    block whose first statement is a declaration.  Those are reported in ``skipped`` with
+    the line the source spells them on.  Attaching never changes the token stream, but it
+    deletes lines, so the caller's acceptance is the tidy's: adoption, ``.text``
+    byte-identical, ``.debug``/``.line`` retail's.
+    """
+    if not text:
+        return Attached(text, 0, ())
+    newline = "\r\n" if "\r\n" in text else "\n"
+    output: list[str] = []
+    joined = 0
+    skipped: list[tuple[int, str]] = []
+    for number, line in enumerate(text.split(newline), 1):
+        match = re.fullmatch(r"\{(?:\s+(.*))?", line.strip())
+        if match is None:
+            output.append(line)
+            continue
+        remainder = (match.group(1) or "").strip()
+        previous = output[-1] if output else None
+        if previous is None or not _block_statement_header(previous):
+            skipped.append((number, _skip_reason(previous)))
+            output.append(line)
+            continue
+        if remainder and _carries_declaration(remainder):
+            skipped.append((number, "the block's first statement is a declaration "
+                                    f"({remainder[:40]!r}) and keeps its line"))
+            output.append(line)
+            continue
+        tail = f" {remainder}" if remainder else ""
+        output[-1] = previous.rstrip() + " {" + tail
+        joined += 1
+    return Attached(newline.join(output), joined, tuple(skipped))
+
+
+def tidy(text: str) -> Attached:
     """``text`` stripped and tidied: no comment, one blank line at most, no trailing space.
 
     Unlike :func:`strip`, this step **deletes lines** and therefore moves every statement
@@ -251,12 +373,13 @@ def collapse(text: str) -> str:
     drops them.  Runs of blank lines collapse to one, with leading blank lines dropped and
     the file ending in exactly one newline.  Trailing spaces and tabs are removed from
     every line (a line that was only spaces therefore becomes blank and joins the run).
-    Finally a blank line directly after an opening ``{`` or before a closing ``}`` is
-    dropped (:func:`_brace_edge_blanks`): those were ``#line`` placeholders and carry
-    nothing once ``.line`` is adopted.
+    A blank line directly after an opening ``{`` or before a closing ``}`` is dropped
+    (:func:`_brace_edge_blanks`): those were ``#line`` placeholders and carry nothing once
+    ``.line`` is adopted.  Finally :func:`attach_braces` joins every block-opening brace to
+    its statement and reports the sites it refused to join.
     """
     if not text:
-        return text
+        return Attached(text, 0, ())
     _check_splices(text)
     text = strip(text)
     newline = "\r\n" if "\r\n" in text else "\n"
@@ -275,7 +398,12 @@ def collapse(text: str) -> str:
     edge = set(_brace_edge_blanks(output))
     if edge:
         output = [line for number, line in enumerate(output, 1) if number not in edge]
-    return newline.join(output) + newline
+    return attach_braces(newline.join(output) + newline)
+
+
+def collapse(text: str) -> str:
+    """The text half of :func:`tidy`; the brace-attach result is discarded."""
+    return tidy(text).text
 
 
 def _nonblank_lines(text: str) -> tuple:
@@ -357,7 +485,8 @@ def compare(before, after, what: str = "stripped") -> None:
             f"0x{at:X}; refusing to write it")
 
 
-def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False):
+def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False,
+           joins: int = 0):
     """Compile both spellings under the unit's recorded pair and compare the three parts.
 
     ``tu`` is the :class:`toolchain.compile.Tu`, ``target`` the configured target whose
@@ -365,11 +494,17 @@ def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False)
     :class:`Refused` and the caller writes nothing.  Returns the before/after placements
     for their sizes.
 
-    ``tidy`` is :func:`collapse`'s acceptance, which is stricter because the tidy moves
-    lines: the unit must record ``"adopt"`` when a line moved (the emitted ``.line`` is no
-    longer retail's), ``.text`` must be byte-identical, and the resulting ``.debug`` and
-    ``.line`` must both be **retail's** bytes -- which the adoption step proves and
-    substitutes rather than the tool assuming it.
+    ``tidy`` is :func:`tidy`'s acceptance, which is stricter because the tidy moves lines:
+    the unit must record ``"adopt"`` when a line moved (the emitted ``.line`` is no longer
+    retail's), ``.text`` must be byte-identical, and the resulting ``.debug`` and ``.line``
+    must both be **retail's** bytes -- which the adoption step proves and substitutes
+    rather than the tool assuming it.
+
+    ``joins`` is how many block braces :func:`attach_braces` joined.  Blank-run collapse
+    and header shrink must move line *numbers* only, so their result is held to
+    :func:`compare_grouping`; a brace join deliberately shares one line between statements
+    and therefore changes the emitted ``.line`` record count, which adoption then replaces
+    wholesale, so the grouping check would refuse a faithful rewrite.
 
     ``rewritten`` is also held to :func:`require_no_comments`: a rewrite that still carries
     a comment (a kept header, a ``/*!`` note) is refused before anything is compiled.
@@ -410,8 +545,11 @@ def verify(tu, original: bytes, rewritten: bytes, target, *, tidy: bool = False)
     if tidy:
         # The layout encoded which statements share a line.  Blank-run collapse and header
         # shrink must move line *numbers* only: every function's record count stays equal,
-        # which is what proves no two statements were joined or separated.
-        compare_grouping(before, after)
+        # which is what proves no two statements were joined or separated.  A brace join
+        # is the one deliberate exception -- it puts two statements on one line, the
+        # emitted .line count drops, and adoption supplies retail's chunk whole.
+        if not joins:
+            compare_grouping(before, after)
         # The tidy's claim is stronger than "unchanged": the three parts it leaves are
         # retail's.  Adoption returns retail's chunk and line; the non-adoption path has
         # already required them, and this states the acceptance in the tool's own terms.
@@ -434,6 +572,13 @@ def _display(path) -> str:
         return str(path.relative_to(REPO_ROOT))
     except ValueError:
         return str(path)
+
+
+def _report_attached(display: str, attached: "Attached") -> None:
+    """Print the brace-attach tally and every site the pass refused to join."""
+    print(f"strip_comments.py: {display}: {attached.joined} block-opening brace(s) attached")
+    for line, reason in attached.skipped:
+        print(f"strip_comments.py: {display}: line {line}: brace not attached -- {reason}")
 
 
 def _unit(source: pathlib.Path, target):
@@ -466,8 +611,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--collapse", action="store_true",
                         help="strip every comment, then tidy the layout: drop the blank "
                              "lines the header and notes leave, one blank line at most, no "
-                             "trailing whitespace; moves statement lines, so the unit must "
-                             "record \"adopt\" in tu_builds")
+                             "trailing whitespace, and every block-opening brace joined to "
+                             "the line of its statement; moves statement lines, so the unit "
+                             "must record \"adopt\" in tu_builds")
     parser.add_argument("--no-verify", action="store_true",
                         help="layout-only edit for a file that is not a promotion unit; "
                              "refused for a unit that has a recorded pair")
@@ -490,12 +636,14 @@ def main(argv=None) -> int:
     original = source.read_bytes()
     text = original.decode("latin-1")       # one byte <-> one character: exact round trip
 
+    attached = None
     if args.collapse:
         try:
-            rewritten = collapse(text)
+            attached = tidy(text)
         except Refused as exc:
             print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
             return 1
+        rewritten = attached.text
     else:
         try:
             rewritten = strip(text)
@@ -523,6 +671,8 @@ def main(argv=None) -> int:
             return 0
         print(f"strip_comments.py: {_display(source)}: nothing to "
               f"{'tidy' if args.collapse else 'strip'}; nothing to do")
+        if attached is not None:
+            _report_attached(_display(source), attached)
         return 0
 
     tu = _unit(source, target)
@@ -542,7 +692,8 @@ def main(argv=None) -> int:
     else:
         try:
             before, after = verify(tu, original, rewritten.encode("latin-1"), target,
-                                   tidy=args.collapse)
+                                   tidy=args.collapse,
+                                   joins=attached.joined if attached else 0)
         except Refused as exc:
             print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
             return 1
@@ -577,6 +728,8 @@ def main(argv=None) -> int:
         print(f"strip_comments.py: {_display(source)}: --check: no comments remain; "
               f"nothing written")
         return 0
+    if attached is not None:
+        _report_attached(_display(source), attached)
     source.write_bytes(rewritten.encode("latin-1"))
     print(f"strip_comments.py: {_display(source)}: written")
     return 0

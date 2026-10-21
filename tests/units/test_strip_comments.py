@@ -634,3 +634,200 @@ def test_a_tidied_unit_compiles_with_the_same_record_grouping(tmp_path):
     retail = cc.retail_bytes(tu, text_size=len(checked[1].text))
     assert (checked[1].text, checked[1].debug, checked[1].line) == (
         retail["text"], retail["debug"], retail["line"])
+
+
+# ---------------------------------------------------------------------------
+# the brace-attach pass: every block-opening brace joins its statement
+# ---------------------------------------------------------------------------
+
+
+def test_attach_joins_a_brace_alone_on_the_next_line():
+    source = ("void f(void)\n"
+              "{\n"
+              "    if (a)\n"
+              "    {\n"
+              "        b();\n"
+              "    }\n"
+              "}\n")
+
+    attached = sc.attach_braces(source)
+
+    assert attached.text == ("void f(void) {\n"
+                             "    if (a) {\n"
+                             "        b();\n"
+                             "    }\n"
+                             "}\n")
+    assert attached.joined == 2
+    assert attached.skipped == ()
+
+
+def test_attach_joins_a_nested_inline_block_and_keeps_its_statement():
+    source = ("void f(void)\n"
+              "{\n"
+              "    do\n"
+              "    { x = 1;\n"
+              "        for (i = 0; i < 2; i++)\n"
+              "        { for (j = 0; j < 2; j++)\n"
+              "            { a[i][j] = 0;\n"
+              "            } }\n"
+              "    } while (x);\n"
+              "}\n")
+
+    attached = sc.attach_braces(source)
+
+    assert attached.text == ("void f(void) {\n"
+                             "    do { x = 1;\n"
+                             "        for (i = 0; i < 2; i++) { for (j = 0; j < 2; j++) "
+                             "{ a[i][j] = 0;\n"
+                             "            } }\n"
+                             "    } while (x);\n"
+                             "}\n")
+    assert attached.joined == 4
+
+
+def test_attach_leaves_an_else_brace_that_already_reads_that_way():
+    source = ("void f(void) {\n"
+              "    if (a) {\n"
+              "        b();\n"
+              "    } else {\n"
+              "        c();\n"
+              "    }\n"
+              "}\n")
+
+    attached = sc.attach_braces(source)
+
+    assert attached.text == source
+    assert attached.joined == 0
+
+
+def test_attach_joins_a_brace_after_a_bare_else_and_do():
+    source = ("void f(void)\n"
+              "{\n"
+              "    if (a)\n"
+              "        b();\n"
+              "    else\n"
+              "    {\n"
+              "        c();\n"
+              "    }\n"
+              "    do\n"
+              "    {\n"
+              "        d();\n"
+              "    } while (a);\n"
+              "}\n")
+
+    attached = sc.attach_braces(source)
+
+    assert "    else {" in attached.text
+    assert "    do {" in attached.text
+    assert attached.joined == 3
+
+
+def test_attach_skips_a_brace_after_a_declaration():
+    source = ("int a;\n"
+              "{\n"
+              "    a = 1;\n"
+              "}\n")
+
+    attached = sc.attach_braces(source)
+
+    assert attached.text == source, "the declaration keeps its line and the brace stays"
+    assert attached.joined == 0
+    assert len(attached.skipped) == 1
+    line, reason = attached.skipped[0]
+    assert line == 2
+    assert "declaration that must keep its line" in reason
+
+
+def test_attach_skips_a_block_whose_first_statement_is_a_declaration():
+    source = ("void f(void)\n"
+              "{\n"
+              "    if (a)\n"
+              "    { int b; b = 1; }\n"
+              "}\n")
+
+    attached = sc.attach_braces(source)
+
+    assert attached.text == ("void f(void) {\n"
+                             "    if (a)\n"
+                             "    { int b; b = 1; }\n"
+                             "}\n")
+    assert attached.joined == 1
+    assert attached.skipped and "first statement is a declaration" in attached.skipped[0][1]
+
+
+def test_attach_skips_an_aggregate_initializer_row():
+    source = ("static int t[] = {\n"
+              "    { 1, 2 },\n"
+              "    { 3, 4 },\n"
+              "};\n")
+
+    attached = sc.attach_braces(source)
+
+    assert attached.text == source
+    assert attached.joined == 0
+    assert len(attached.skipped) == 2
+    assert all("aggregate initializer" in reason for _line, reason in attached.skipped)
+
+
+def test_attach_is_idempotent():
+    source = ("void f(void)\n"
+              "{\n"
+              "    for (i = 0; i < 2; i++)\n"
+              "    { for (j = 0; j < 2; j++)\n"
+              "        { a[i][j] = 0;\n"
+              "        } }\n"
+              "}\n")
+
+    once = sc.attach_braces(source)
+
+    assert sc.attach_braces(once.text) == sc.Attached(once.text, 0, ())
+
+
+def test_the_tidy_attaches_braces_and_reports_the_joins():
+    source = "void f(void)\n{\n    return;\n}\n"
+
+    tidied = sc.tidy(source)
+
+    assert tidied.text == "void f(void) {\n    return;\n}\n"
+    assert tidied.joined == 1
+    assert sc.collapse(source) == tidied.text
+
+
+@pytest.mark.parametrize("part", ["text", "debug", "line"])
+def test_a_brace_attached_source_whose_part_moves_is_refused(part):
+    from types import SimpleNamespace
+
+    before = SimpleNamespace(text=b"\x01\x02", debug=b"d", line=b"l")
+    after = SimpleNamespace(**{**vars(before),
+                               part: bytes([getattr(before, part)[0] ^ 1])})
+
+    with pytest.raises(sc.Refused) as excinfo:
+        sc.compare(before, after, "brace-attached")
+
+    assert f"same {part}" in str(excinfo.value)
+    assert "refusing to write it" in str(excinfo.value)
+
+
+def test_the_cli_reports_the_braces_it_attached(tmp_path):
+    source = tmp_path / "plain.c"
+    source.write_text("void f(void)\n{\n    return;\n}\n")
+
+    result = run("--collapse", "--no-verify", str(source))
+
+    assert result.returncode == 0, result.stderr
+    assert "1 block-opening brace(s) attached" in result.stdout
+    assert source.read_text() == "void f(void) {\n    return;\n}\n"
+
+
+def test_the_cli_reports_a_skipped_brace(tmp_path):
+    source = tmp_path / "plain.c"
+    body = "int a;\n{\n    a = 1;\n}\n"
+    source.write_text(body)
+
+    result = run("--collapse", "--no-verify", str(source))
+
+    assert result.returncode == 0, result.stderr
+    assert "0 block-opening brace(s) attached" in result.stdout
+    assert "line 2: brace not attached" in result.stdout
+    assert "declaration that must keep its line" in result.stdout
+    assert source.read_text() == body
