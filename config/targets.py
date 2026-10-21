@@ -665,7 +665,13 @@ DDREX2P = Target(
         # (7 chunks; TabSetOff's ten straight-line masks alternate two lines); .debug retail's
         # 0x1E4B / 200 DIEs after 55 type refs and every AT_location.
         ("src/network/net_window/net_win_tab.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g", "adopt")),
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x3A0, five bodies word-exact; .line adopted whole (5 tables, 5 chunks), as
+        # is .debug (retail's 0x12E7 / 136 DIEs).  `-sdatathreshold 0` keeps the "%05d" and
+        # "%08d" literals in .data sections of their own instead of a shared 8-byte pool, so
+        # each is placed at its retail slot (`@40`/`@41` in data_placements.txt).
+        ("src/network/net_window/net_win_listdtl2.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0", "adopt")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention

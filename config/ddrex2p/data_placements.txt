@@ -15,5 +15,16 @@
 // (8 bytes each: number:16, sector:24, size:24) whose sectors chain `sector + size` into the
 // next record across all 445 entries; `xxxx_bk_tm2_tbl` is the retail symbol of that name
 // (0x130 extent = the 0x12C table plus the four zero bytes before the next split label).
+//
+// A name may also be a Metrowerks literal-pool slot (`@N`): a literal the source never named
+// is numbered by the compiler, and the object's relocations carry that number, so it is a
+// datum like any other and this is where its address is recorded.  The addresses below are
+// retail's own pool labels, not choices: `asm/nonmatchings/main/func_002C3FE0.s` defines
+// `dlabel D_002D6D88` over `.word 0x64353025, func_0` and `dlabel D_002D6D90` over
+// `.word 0x64383025, func_0`, i.e. "%05d\0\0\0" and "%08d\0\0\0" in an 8-byte pool slot each
+// (extent 8 to the next slot, which is zero in retail).  `cc` still proves every one of these
+// against the image before the link places it.
 bk_tm2_records = 0x002DA260; // size:0xDE8 extent:0xDE8 source:data/bk_load_data.c
 xxxx_bk_tm2_tbl = 0x002AF6F0; // size:0x12C extent:0x130 source:src/CS/bk_load.c
+@40 = 0x002D6D88; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl2.c
+@41 = 0x002D6D90; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listdtl2.c
