@@ -160,6 +160,13 @@ DATA_ADDRESS = re.compile(r"/\*\s+([0-9A-Fa-f]+)\s+\*/")
 #: the aliases ``configure.py`` writes into the ld script itself.  These are the link's other
 #: symbol source, and the ones ``symbol_addrs.txt`` does not carry.
 LINK_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
+#: One address-driven data placement (``config/<target>/data_placements.txt``): the compiled
+#: symbol, the retail address its bytes were matched to, the compiled length, the retail span
+#: (including the zero fill retail shows), and which source defines it.
+DATA_PLACEMENT = re.compile(
+    r"^(?P<name>[A-Za-z_]\w*)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*"
+    r"size:0x(?P<size>[0-9A-Fa-f]+)\s+extent:0x(?P<extent>[0-9A-Fa-f]+)\s+"
+    r"source:(?P<source>\S+)\s*$")
 
 
 class Unusable(Exception):
@@ -222,6 +229,39 @@ class Tu:
         return next((f for f in self.functions if f.name == name), None)
 
 
+# ---------------------------------------------------------------------------
+# address-driven data placement
+# ---------------------------------------------------------------------------
+
+
+def data_placements(target=None) -> list:
+    """``[dict]`` from the target's ``data_placements.txt``: the derived data ledger.
+
+    The file is checked in, not generated at build time: an address is evidence, and the one
+    thing a build must never do is invent it.  ``configure.py`` reads the same file to cut the
+    retail split and place the compiled object's section; :class:`Manifests` reads it so the
+    unit's own DWARF relocations resolve to the same address.
+    """
+    target = target or DEFAULT_TARGET
+    path = target.config_dir / "data_placements.txt"
+    if not path.is_file():
+        return []
+    out = []
+    for number, line in enumerate(path.read_text().splitlines(), start=1):
+        text = line.strip()
+        if not text or text.startswith("//"):
+            continue
+        match = DATA_PLACEMENT.match(text)
+        if match is None:
+            raise Unusable(
+                f"{_display(path)} line {number} is not `name = 0xADDR; // size:0xS "
+                f"extent:0xE source:FILE`: {text}")
+        out.append(dict(name=match["name"], address=int(match["address"], 16),
+                        size=int(match["size"], 16), extent=int(match["extent"], 16),
+                        source=match["source"]))
+    return out
+
+
 class Manifests:
     """A target's manifests, plus the symbol set its generated link actually resolves.
 
@@ -277,6 +317,13 @@ class Manifests:
             if known is None or (attrs.get("provenance") == "dwarf"
                                  and self.symbols[known][1].get("provenance") != "dwarf"):
                 self.by_address[address] = match["name"]
+        # A data placement is the address a compiled datum was matched to.  It is the same
+        # evidence the link places the object's section at, so the unit's DWARF relocations to
+        # that datum resolve here instead of missing the ledger (`symbol_addrs.txt` is the
+        # oracle's DWARF output and cannot carry a symbol retail never declared).
+        for record in data_placements(self.target):
+            self.placed.setdefault(record["name"], record["address"])
+            self.by_address.setdefault(record["address"], record["name"])
         # The split objects the ld script places define their own global labels, and those are
         # in neither ledger: `func_001C43E8` has a split and no DWARF record, so the link
         # resolves it while the symbol file never mentions it.  Read last, so a ledger name
@@ -855,7 +902,43 @@ def _words(data: bytes) -> list[str]:
     return lines
 
 
-def assembly(size: int, labels, debug: bytes, line: bytes) -> str:
+def _data_words(body: bytes, relocs, resolve, what: str) -> list[str]:
+    """``.word`` lines for one datum, keeping its relocations symbolic.
+
+    Retailing's addresses are not baked into the source: an ``R_MIPS_32`` against a name the
+    link defines (another placement's symbol) is emitted as ``name + addend``, so the linker
+    does the arithmetic.  A relocation against a name this layout only knows by address is
+    emitted as that address; any other relocation kind is refused rather than approximated.
+    """
+    by_offset = {}
+    for offset, rtype, symbol in relocs:
+        if rtype == R_MIPS_NONE:
+            continue
+        if rtype != R_MIPS_32:
+            raise Unusable(f"{what}: relocation {RELOC_NAMES.get(rtype, rtype)!r} at "
+                           f"0x{offset:X} is not one a placed datum carries")
+        addend = struct.unpack_from("<I", body, offset)[0]
+        if symbol.type != STT_SECTION and symbol.shndx == 0:
+            text = symbol.name + (f" + {addend}" if addend else "")
+        else:
+            text = f"0x{(resolve(symbol) + addend) & 0xFFFFFFFF:08X}"
+        by_offset[offset] = text
+    lines = []
+    for start in range(0, len(body), 16):
+        chunk = body[start:start + 16]
+        words = []
+        for at in range(0, len(chunk) - len(chunk) % 4, 4):
+            offset = start + at
+            words.append(by_offset.get(offset)
+                         or f"0x{struct.unpack_from('<I', chunk, at)[0]:08X}")
+        line = "\t.word\t" + ", ".join(words)
+        if len(chunk) % 4:
+            line += "\n\t.byte\t" + ", ".join(f"0x{b:02X}" for b in chunk[len(chunk) - len(chunk) % 4:])
+        lines.append(line)
+    return lines
+
+
+def assembly(size: int, labels, debug: bytes, line: bytes, data=()) -> str:
     """The GNU assembler source for the placed split extent and the payloads.
 
     Each function's bytes follow its label, and the layout's own inter-function padding --
@@ -876,6 +959,13 @@ def assembly(size: int, labels, debug: bytes, line: bytes) -> str:
         if payload:
             out.append(f'\t.section {name},"",@progbits')
             out += _words(payload)
+    if data:
+        if len(data) > 1:
+            raise Unusable("two placed data symbols in one object would share a section; "
+                           "the placement is per symbol and cannot be expressed that way")
+        name, body, relocs, resolve = data[0]
+        out.append('\t.section .data,"aw",@progbits')
+        out += _data_words(body, relocs, resolve, f"{name}.data")
     return "\n".join(out) + "\n"
 
 
@@ -901,10 +991,10 @@ class Placed:
     """What a promoted unit contributes to the pinned build."""
 
     __slots__ = ("text", "debug", "line", "labels", "sizes", "normalised", "adopted",
-                 "emitted_line")
+                 "emitted_line", "data")
 
     def __init__(self, text, debug, line, labels, sizes, normalised=False, adopted=False,
-                 emitted_line=None):
+                 emitted_line=None, data=()):
         self.text = text        # the promoted run of code splits, including its tail padding
         self.debug = debug      # the unit's .debug chunk
         self.line = line        # the unit's run of .line chunks (retail's when adopted)
@@ -913,6 +1003,7 @@ class Placed:
         self.normalised = normalised  # the .debug chunk came out of the order normaliser
         self.adopted = adopted  # retail's .line and AT_location values were adopted
         self.emitted_line = line if emitted_line is None else emitted_line  # what we wrote
+        self.data = data        # [(symbol, bytes, relocations, resolve)] placed per symbol
 
 
 def _fill(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int, section: str,
@@ -1281,6 +1372,15 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
 
     mw = MWObject(obj, manifests)
     gp = gp_value(manifests.target.elf)
+    placed_data = []
+    for name, address, size, extent, relocs in verify_data(mw, manifests, tu.file,
+                                                           manifests.target):
+        body, section_relocs = _data_only_section(mw, name)
+        placed_data.append((name, body, section_relocs,
+                            lambda symbol: manifests.address_of(symbol.name)))
+        print(f"compile: {tu.file}: {name} at 0x{address:08X} is the retail datum "
+              f"({size:#x} bytes, {relocs} relocation(s), extent {extent:#x})",
+              file=sys.stderr)
     groups = mw.groups(tu)
 
     text_start, text_end = _split_extent(tu, manifests)
@@ -1335,7 +1435,7 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
     return Placed(bytes(text), debug, retail_line if adopt else line, labels,
                   sizes + debug_sizes + line_sizes,
                   normalised=normalise and emitted_debug != retail_debug,
-                  adopted=adopt, emitted_line=line)
+                  adopted=adopt, emitted_line=line, data=placed_data)
 
 
 def retail_bytes(tu: Tu, retail=RETAIL, text_size=None) -> dict:
@@ -1385,6 +1485,87 @@ def _display(path) -> str:
         return str(path)
 
 
+def _data_only_section(mw: MWObject, name: str):
+    """The section a data placement's symbol alone occupies, and its relocations.
+
+    A placement is *per symbol*: the link places this section at the symbol's retail address,
+    so the section must carry that symbol and nothing else (offset 0, whole extent).  A section
+    with another datum in it would move that datum too, which is exactly the section-driven
+    placement this path exists to avoid.
+    """
+    symbol = next((s for s in mw.elf.symbols if s.name == name and s.shndx != 0), None)
+    if symbol is None:
+        raise Unusable(f"{_display(mw.path)}: no definition of the data symbol {name!r}")
+    index = symbol.shndx
+    body = mw.data(index)
+    others = [s.name for s in mw.elf.symbols
+              if s.shndx == index and s.name not in (name, "")]
+    if symbol.value != 0 or len(body) != symbol.size or others:
+        raise Unusable(
+            f"{_display(mw.path)}: {name} shares its section ({len(body):#x} bytes) with "
+            f"{', '.join(others) or 'a non-zero offset'}; a data placement must own the "
+            f"section it places")
+    return body, mw.relocs.get(index, ())
+
+
+def verify_data(mw: MWObject, manifests: Manifests, source: str, target=None) -> list:
+    """Check every data placement ``source`` defines against the retail bytes it names.
+
+    The object's bytes are relocated symbolically (its relocations are not patched with retail
+    addresses in the file), then compared byte for byte with the retail image at the recorded
+    address, and the zero fill retail shows to the recorded extent is required to be zero.
+    This is the local proof; G1 remains the whole-image backstop.
+    """
+    target = target or manifests.target
+    records = [r for r in data_placements(target) if r["source"] == source]
+    if not records:
+        return []
+    image = elf.Elf(str(target.elf))
+    gp = gp_value(target.elf)
+    report = []
+    for record in records:
+        body, relocs = _data_only_section(mw, record["name"])
+        if len(body) != record["size"]:
+            raise Unusable(
+                f"{source}: {record['name']} is {len(body):#x} bytes, the placement records "
+                f"{record['size']:#x}; the placement ledger and the C disagree")
+        placed = relocate(body, relocs,
+                          lambda symbol: manifests.address_of(symbol.name),
+                          f"{record['name']}.data", gp)
+        retail = image.read(record["address"], record["size"])
+        if placed != retail:
+            at = _first_difference(placed, retail)
+            raise Unusable(
+                f"{source}: {record['name']} is not the retail datum at "
+                f"0x{record['address']:08X}: first differing byte at +0x{at:X} "
+                f"({placed[at]:#04x} against {retail[at]:#04x})")
+        pad = record["extent"] - record["size"]
+        fill = image.read(record["address"] + record["size"], pad)
+        if any(fill):
+            raise Unusable(
+                f"{source}: the {pad:#x}-byte extent after {record['name']} is not zero in "
+                f"retail; the placement must not claim another datum's bytes")
+        report.append((record["name"], record["address"], record["size"], record["extent"],
+                       len(relocs)))
+    return report
+
+
+def data_build(source, out, flags, compiler: str, target=None, manifests=None) -> list:
+    """Compile a data-only source and verify its placements (the ``--data`` rule).
+
+    Data-only sources carry no retail DWARF -- they are compiled without ``-g`` on purpose, so
+    the unit whose data they define keeps retail's ``.debug`` chunk unchanged.  The object is
+    written raw: the link places the section itself, it is not wrapped in a placed object.
+    """
+    target = target or DEFAULT_TARGET
+    manifests = manifests if manifests is not None else Manifests(target)
+    if not [r for r in data_placements(target) if r["source"] == source]:
+        raise Unusable(f"{source}: no data placement record names it")
+    probe.compile(source, out, fetch.compiler(compiler), fetch.wibo(),
+                  [*flags, *include_flags(target)])
+    return verify_data(MWObject(out, manifests), manifests, source, target)
+
+
 def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
           keep=None, target=None, normalise: bool = False,
           adopt: bool = False) -> Placed:
@@ -1395,7 +1576,8 @@ def build(tu: Tu, out: pathlib.Path, flags, compiler: str, manifests=None,
     wibo = fetch.wibo()
     placed = place(tu, manifests, compiler_dir, wibo, flags, keep=keep,
                    normalise=normalise, adopt=adopt)
-    assemble(assembly(len(placed.text), placed.labels, placed.debug, placed.line), out)
+    assemble(assembly(len(placed.text), placed.labels, placed.debug, placed.line,
+                      placed.data), out)
     return placed
 
 
@@ -1445,6 +1627,10 @@ def _parser(with_out: bool) -> argparse.ArgumentParser:
         parser.add_argument("out", type=pathlib.Path, help="the object to write")
     parser.add_argument("--syntax-only", action="store_true",
                         help="ask the compiler whether the source is C and write nothing")
+    parser.add_argument("--data", action="store_true",
+                        help="compile a data-only source to a raw object and verify each of "
+                             "its data placements against retail (no DWARF, no placement "
+                             "wrapper)")
     parser.add_argument("--include", action="append", default=[], metavar="DIR",
                         help="add DIR to the compiler's include search path (repeatable; "
                              "with --syntax-only)")
@@ -1482,6 +1668,13 @@ def main(argv=None) -> int:
         target = targets.get(args.target)
         if args.syntax_only:
             return syntax_only(args.source, flags, args.compiler, args.include)
+        if args.data:
+            report = data_build(args.source, args.out, flags or DEFAULT_FLAGS,
+                                args.compiler, target)
+            for name, address, size, extent, relocs in report:
+                print(f"cc {args.source}: {name} at 0x{address:08X} is the retail datum "
+                      f"({size:#x} bytes, {relocs} relocation(s), extent {extent:#x})")
+            return 0
         manifests = Manifests(target)
         tu = manifests.tu_named(args.source)
         placed = build(tu, args.out, flags or DEFAULT_FLAGS, args.compiler, manifests,

@@ -473,6 +473,146 @@ def code_splits(sources, geometry=None):
     return rows
 
 
+#: A split line that defines a label (the macro splat emits: `dlabel`/`alabel`/...).
+SPLIT_LABEL_LINE = re.compile(r"^\s*(?:glabel|alabel|ehlabel|jlabel|dlabel)\s+(\S+)")
+
+
+def data_placements(target=None):
+    """The target's address-driven data ledger (see `toolchain.compile.data_placements`)."""
+    try:
+        return cc.data_placements(target or TARGET)
+    except cc.Unusable as exc:
+        raise ConfigError(str(exc)) from exc
+
+
+def cut_split(name, text, start, cuts):
+    """Split one split's assembler text around the byte ranges a placement owns.
+
+    Returns ``([(piece address, text)], [(removed label, address)])``.  The cut happens on
+    word boundaries, which is where splat writes every data line; a continuation piece gets
+    the original preamble (`.include`/`.set`/`.align`) again, and every label inside a cut
+    is reported so the linker script can keep defining it as an absolute symbol.  A cut that
+    does not land on an emitted word is refused rather than approximated.
+    """
+    lines = text.splitlines(keepends=True)
+    entries = []                 # [(address, [lines])] -- the lines since the previous word
+    pending = []
+    for line in lines:
+        match = SPLIT_COMMENT.search(line)
+        if match is None:
+            pending.append(line)
+            continue
+        entries.append((int(match.group(2), 16), pending + [line]))
+        pending = []
+    if pending:
+        entries.append((None, pending))
+    first_label = next((i for i, line in enumerate(lines) if SPLIT_LABEL_LINE.match(line)),
+                       None)
+    if first_label is None:
+        raise ConfigError(f"{name}: a data placement cuts a split with no label to keep")
+    preamble = [line for line in lines[:first_label]
+                if not line.lstrip().startswith("nonmatching")]
+    starts = {address for address, _ in entries if address is not None}
+    for begin, end in cuts:
+        for edge in (begin, end):
+            if edge not in starts:
+                raise ConfigError(
+                    f"{name}: the data placement boundary 0x{edge:X} is not a word the split "
+                    f"emits; the cut would move bytes")
+    ranges, cursor = [], start
+    for begin, end in cuts:
+        ranges.append((cursor, begin))
+        cursor = end
+    ranges.append((cursor, None))
+    pieces, removed = [], []
+    for piece_start, piece_end in ranges:
+        body = list(preamble) if piece_start != start else []
+        for address, lineset in entries:
+            if address is None:
+                continue
+            if address < piece_start or (piece_end is not None and address >= piece_end):
+                continue
+            body += lineset
+        pieces.append((piece_start, "".join(body)))
+    for begin, end in cuts:
+        for address, lineset in entries:
+            if address is None or not (begin <= address < end):
+                continue
+            for line in lineset:
+                match = SPLIT_LABEL_LINE.match(line)
+                if match:
+                    removed.append((match.group(1), address))
+    return pieces, removed
+
+
+def plan_data(sources, code, geometry, placements, replacements):
+    """Emit the per-region pieces a data placement's split no longer supplies.
+
+    ``replacements`` maps a split path to the pieces that replace it, in address order.  The
+    returned ``(pieces, pads, aliases)`` are the files to assemble and the labels to keep
+    defined; the caller adds the compiled datum's own object section at the same addresses.
+    """
+    rows = sorted(code)
+    per_split = {}
+    pads, aliases = [], []
+    for record in placements:
+        owners = [i for i, (address, _) in enumerate(rows) if address <= record["address"]]
+        if not owners:
+            raise ConfigError(f"{record['name']} at 0x{record['address']:X} precedes every "
+                              f"split; no split carries it")
+        index = owners[-1]
+        split_address, split = rows[index]
+        split_end = rows[index + 1][0] if index + 1 < len(rows) else geometry.loadable_end
+        begin, end = record["address"], record["address"] + record["extent"]
+        if not (split_address <= begin < end <= split_end):
+            raise ConfigError(
+                f"{record['name']} spans 0x{begin:X}..0x{end:X}, which crosses the split "
+                f"{split} (0x{split_address:X}..0x{split_end:X}); a placement must be inside "
+                f"one split")
+        per_split.setdefault(split, []).append((begin, end))
+        if record["extent"] > record["size"]:
+            pads.append((begin + record["size"], record["name"]))
+    pieces = []
+    for split, cuts in per_split.items():
+        cuts.sort()
+        stem = pathlib.Path(split).relative_to("asm").with_suffix("")
+        split_pieces, removed = cut_split(split, sources[split], rows_of(split, rows), cuts)
+        replacements[split] = []
+        for number, (address, text) in enumerate(split_pieces):
+            path = REPO_ROOT / "build" / "generated" / stem.parent / \
+                   f"{stem.name}.part{number}.s"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, newline="\n")
+            relative = path.relative_to(REPO_ROOT).as_posix()
+            replacements[split].append((address, relative))
+            pieces.append(relative)
+        aliases += removed
+    pad_pieces = []
+    for address, name in pads:
+        path = REPO_ROOT / "build" / "generated" / "data" / f"{name}.pad.s"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\t.text\n\t.space\t%d\n" % pad_size(placements, name),
+                        newline="\n")
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        pad_pieces.append((address, relative))
+    return pieces, pad_pieces, aliases
+
+
+def rows_of(split, rows):
+    """The retail address a split starts at."""
+    for address, name in rows:
+        if name == split:
+            return address
+    raise ConfigError(f"{split} is not a code split; a data placement names it")
+
+
+def pad_size(placements, name):
+    for record in placements:
+        if record["name"] == name:
+            return record["extent"] - record["size"]
+    raise ConfigError(f"no placement record for {name}")
+
+
 def symbol_table(path) -> dict:
     """``name -> address`` from a splat symbol file (ours or splat's own auto files).
 
@@ -696,13 +836,23 @@ LD_HEADER = """\
 """
 
 
-def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None) -> str:
+def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None,
+                     replacements=None, data=(), pads=()) -> str:
     """The linker script that pins the loadable image to the retail file's addresses.
 
     A promoted unit contributes one object where its splits used to be, at the address its
     first function sits at; every other split is listed exactly as before, so the object
     order still *is* the layout.
+
+    ``replacements`` carries a split whose bytes a data placement owns: ``{split: [(address,
+    piece path)]}``, the split's remaining text as per-region pieces in address order.
+    ``data`` is ``[(address, object, section)]`` for the compiled datum placed at its retail
+    address, and ``pads`` ``[(address, piece path)]`` for the zero fill retail shows to the
+    recorded extent.  Every entry is listed by address, so the script still *is* the layout.
     """
+    replacements = replacements or {}
+    data = list(data)
+    pads = list(pads)
     target = target or TARGET
     geometry = geometry or target.geometry_required()
     lines = [LD_HEADER.format(target=target.name, elf=f"orig/{target.elf.name}",
@@ -723,14 +873,25 @@ def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None) -
     lines.append(f"  .{geometry.code_segment} 0x{geometry.loadable_vram:X} : "
                  f"AT(0x{geometry.loadable_rom:X}) SUBALIGN(1)\n  {{\n")
     promoted = {name for promotion in promotions for name in promotion.splits}
-    listed = [(address, object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix())
-              for address, name in code if name not in promoted]
-    listed += [(promotion.address, promotion.object) for promotion in promotions]
+    listed = []
+    for address, name in code:
+        if name in promoted:
+            continue
+        if name in replacements:
+            listed += [(piece_address, piece_object(piece), ".text")
+                       for piece_address, piece in replacements[name]]
+        else:
+            listed.append((address,
+                           object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix(),
+                           ".text"))
+    listed += [(promotion.address, promotion.object, ".text") for promotion in promotions]
+    listed += [(address, name, section) for address, name, section in data]
+    listed += [(address, piece_object(piece), ".text") for address, piece in pads]
     listed.sort()
-    if len({address for address, _ in listed}) != len(listed):
+    if len({address for address, _, _ in listed}) != len(listed):
         raise ConfigError("two inputs claim the same address; the link order is ambiguous")
-    for _, name in listed:
-        lines.append(f"    {name}(.text)\n")
+    for _, name, section in listed:
+        lines.append(f"    {name}({section})\n")
     lines.append("  }\n")
     lines.append(f"  ASSERT(SIZEOF(.{geometry.code_segment}) == 0x{geometry.code_size:X}, "
                  f"\"the code splits are not the retail {geometry.code_size:,} bytes\")\n\n")
@@ -752,6 +913,12 @@ def object_path(split: pathlib.Path) -> pathlib.Path:
     and this graph agree: the .s path under the build dir, with ``.o`` appended."""
     return REPO_ROOT / "build" / split.relative_to(REPO_ROOT).with_name(
         split.name + ".o")
+
+
+def piece_object(path) -> str:
+    """The object a generated piece assembles to (the piece path plus ``.o``)."""
+    path = pathlib.Path(path)
+    return path.with_name(path.name + ".o").as_posix()
 
 
 def generated_by(*inputs) -> str:
@@ -788,7 +955,7 @@ def objdiff_json(code, promotions, geometry=None) -> str:
 
 
 def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
-               geometry=None) -> str:
+               geometry=None, pieces=(), pads=(), data_sources=(), data_compiler=None) -> str:
     target = target or TARGET
     geometry = geometry or target.geometry_required()
     elf = target.elf.name
@@ -855,6 +1022,20 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         obj = object_path(split).relative_to(REPO_ROOT).as_posix()
         lines.append(f"build {obj}: as {rel}{generated_by(*GENERATED_BY)}\n")
         objects.append(obj)
+    # A data placement's split pieces are generated by configure itself, not splat; the as
+    # rule assembles them exactly like a split, because a piece *is* a split's remaining text.
+    for path in list(pieces) + [path for _, path in pads]:
+        obj = piece_object(path)
+        lines.append(f"build {obj}: as {path}{generated_by(*GENERATED_BY)}\n")
+        objects.append(obj)
+    for source in data_sources:
+        # `--data`: compile a data-only source raw (no `-g`, so it contributes no DWARF) and
+        # verify each of its placements against retail.  The link places the section itself.
+        lines.append(f"build build/{source}.o: cc {source}"
+                     f"{generated_by(*COMPILE_EDGE_INPUTS)}\n")
+        lines.append(f"  flags = --data --compiler {data_compiler} "
+                     f"-c -lang c -O3 -opt full\n")
+        objects.append(f"build/{source}.o")
     for promotion in promotions:
         lines.append(f"build {promotion.object}: cc {promotion.file}"
                      f"{generated_by(*COMPILE_EDGE_INPUTS)}\n")
@@ -965,10 +1146,23 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
     aliases = link_aliases(
         sources, target.splat_symbols,
         [target.undefined_syms, target.undefined_funcs])
+    placements = data_placements(target)
+    replacements = {}
+    pieces, pads, moved = plan_data(sources, code, geometry, placements, replacements)
+    aliases = sorted(dict.fromkeys(aliases + moved), key=lambda item: (item[1], item[0]))
+    built_from = {promotion.file: promotion.object for promotion in promoted}
+    data = [(record["address"], built_from.get(record["source"], f"build/{record['source']}.o"),
+             ".data") for record in placements]
+    data_sources = sorted({record["source"] for record in placements} - set(built_from))
+    versions = {version for version, _flags, _state in target.build_table().values()}
+    data_compiler = (versions.pop() if len(versions) == 1 else cc.fetch.REQUIRED)
     write_if_different(target.ld_script,
-                       pinned_ld_script(code, aliases, promoted, target, geometry))
+                       pinned_ld_script(code, aliases, promoted, target, geometry,
+                                        replacements=replacements, data=data, pads=pads))
 
-    ninja = ninja_text(splits, databins, objects_only, promoted, target, geometry)
+    ninja = ninja_text(splits, databins, objects_only, promoted, target, geometry,
+                       pieces=pieces, pads=pads, data_sources=data_sources,
+                       data_compiler=data_compiler)
     write_if_different(REPO_ROOT / "build.ninja", ninja)
     write_if_different(REPO_ROOT / "objdiff.json",
                        objdiff_json(code, promoted, geometry))

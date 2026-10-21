@@ -1,0 +1,19 @@
+// Address-driven data placements for this target.
+//
+// A promoted unit's compiled data is not linked by section name: retail's ELF loads one
+// `main` segment and has no section table beyond `.comment`, so nothing records whether a
+// byte was `.data` or `.rodata`.  This ledger is the derived placement instead: each symbol
+// the C defines is placed at the retail address its bytes were matched to, with the extent
+// covering the zero fill retail shows between it and the next label.
+//
+// `size:` is the compiled symbol's length (what the object must carry); `extent:` is the
+// retail span the link reserves at `address` (size + any zero padding retail has there).
+// `source:` names the C file that defines the symbol: a promoted unit's own object, or a
+// data-only unit compiled without `-g` (so it contributes no DWARF records).
+//
+// Derived by matching the bytes, not guessed: `bk_tm2_records` is the 445-record TIM2 map
+// (8 bytes each: number:16, sector:24, size:24) whose sectors chain `sector + size` into the
+// next record across all 445 entries; `xxxx_bk_tm2_tbl` is the retail symbol of that name
+// (0x130 extent = the 0x12C table plus the four zero bytes before the next split label).
+bk_tm2_records = 0x002DA260; // size:0xDE8 extent:0xDE8 source:data/bk_load_data.c
+xxxx_bk_tm2_tbl = 0x002AF6F0; // size:0x12C extent:0x130 source:src/CS/bk_load.c
