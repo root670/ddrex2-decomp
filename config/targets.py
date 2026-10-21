@@ -655,6 +655,11 @@ DDREX2P = Target(
         # array types are keyed by their subscript data, so [3][65536], [3][45568] and
         # [3][86784] pair by nested bound instead of cyclically.
         ("src/AM/s573/doll/model1.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x2B0, four bodies word-exact; .line byte-equal before the tidy, adopted after
+        # (68 records, 4 tables); .debug retail's 0x10D9 / 108 DIEs after 2 anon names and 18
+        # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
+        ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt")),
 )
 
