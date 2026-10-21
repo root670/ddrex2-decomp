@@ -34,8 +34,7 @@ static char dancer_num[22] = {
 };
 static void unused_grf_types(grf_element *p) { p->flg = 1; }
 
-int NetGrfGetDancerIDToNumberPoint(int dancer_id)
-{
+int NetGrfGetDancerIDToNumberPoint(int dancer_id) {
     return dancer_num[dancer_id / 2] + (dancer_id % 2) * 24;
 }
 
