@@ -30,20 +30,17 @@ void setL(void);
 void setR(void);
 long decodeVAG(unsigned char *s, short *d, long p_len);
 
-void setL(void)
-{
+void setL(void) {
     pWork = work;
     pWorkf = workf;
 }
 
-void setR(void)
-{
+void setR(void) {
     pWork = &work[1];
     pWorkf = &workf[1];
 }
 
-long decodeVAG(unsigned char *s, short *d, long p_len)
-{
+long decodeVAG(unsigned char *s, short *d, long p_len) {
     long d1;
     long d7;
     long d2, d2L, d5, d6;
