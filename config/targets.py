@@ -666,6 +666,11 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g", "adopt"),
+        # .text 0x7A0, five bodies word-exact; .line 0x348 byte-equal (blank-line padding,
+        # no directives); .debug retail's 0x18DB / 160 DIEs via --normalise-debug.  Needs
+        # the five @40..@44 placements; per-source preference resolves the shared names.
+        ("src/network/net_window/net_win_listdtl3.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0", True),
         # .text 0x2D0, six bodies word-exact; .text and .line byte-equal outright, so state
         # True: --normalise-debug alone makes .debug retail's 0x16BD / 147 DIEs.  Needs the
         # @62 jump-table placement in data_placements.txt.  The two `[3]` array DIEs behind
