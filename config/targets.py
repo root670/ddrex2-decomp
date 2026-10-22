@@ -652,6 +652,10 @@ DDREX2P = Target(
         # pooled literal @33 at 0x2D3CE0, not an extern (a global_variable DIE costs too).
         ("src/common/cws/cws_obj.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x2A8, three bodies word-exact; .line and .debug adopted.  Nine statics (seven
+        # tables in the 0x2BF2C8 band, three one-string tables in sdata) need placements.
+        ("src/network/net_auth/net_auth_errmes_e.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x810, six bodies word-exact; .debug retail's 0x8111 / 835 DIEs byte-equal
         # after adoption; .line adopted whole (161 records vs retail's 154).  Needs @87
         # ("eye stat %d"), which sits in the last code split.  ti_cnt needs `= 0` to stay a
