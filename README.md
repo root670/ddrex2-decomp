@@ -39,7 +39,7 @@ why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before edit
 
 <!-- status:start -->
 
-**Overall: 38 / 249 translation units promoted (15.3%); 169 / 4,463 functions reconstructed (3.79%); 33,824 / 1,631,596 code bytes reconstructed (2.07%).**
+**Overall: 39 / 249 translation units promoted (15.7%); 179 / 4,463 functions reconstructed (4.01%); 34,944 / 1,631,596 code bytes reconstructed (2.14%).**
 
 Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
 
@@ -55,14 +55,14 @@ Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python
 | `eyetoy` | 3 | 0 | 30 | 0 | 13,300 | 0 | 0.0% | 0.00% | 0.00% |
 | `fft` | 1 | 0 | 9 | 0 | 12,084 | 0 | 0.0% | 0.00% | 0.00% |
 | `gs` | 2 | 0 | 18 | 0 | 3,172 | 0 | 0.0% | 0.00% | 0.00% |
-| `network` | 82 | 18 | 542 | 103 | 208,732 | 14,928 | 22.0% | 19.00% | 7.15% |
+| `network` | 82 | 19 | 542 | 113 | 208,732 | 16,048 | 23.2% | 20.85% | 7.69% |
 | `sound` | 4 | 1 | 20 | 3 | 7,520 | 1,264 | 25.0% | 15.00% | 16.81% |
 | `sys` | 2 | 1 | 4 | 2 | 80 | 64 | 50.0% | 50.00% | 80.00% |
 | `(root)` | 3 | 1 | 43 | 3 | 7,232 | 304 | 33.3% | 6.98% | 4.20% |
 | `(external)` | 1 | 0 | 7 | 0 | 1,420 | 0 | 0.0% | 0.00% | 0.00% |
 | `(library)` | 0 | 0 | 439 | 0 | 117,800 | 0 | 0.0% | 0.00% | 0.00% |
 | `(unattributed)` | 0 | 0 | 2,208 | 0 | 713,896 | 0 | 0.0% | 0.00% | 0.00% |
-| **total** | **249** | **38** | **4,463** | **169** | **1,631,596** | **33,824** | **15.3%** | **3.79%** | **2.07%** |
+| **total** | **249** | **39** | **4,463** | **179** | **1,631,596** | **34,944** | **15.7%** | **4.01%** | **2.14%** |
 
 Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
 
