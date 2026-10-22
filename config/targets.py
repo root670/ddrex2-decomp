@@ -633,6 +633,14 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xEB4, five bodies word-exact; .debug retail's 0x1FE8 / 211 DIEs byte-equal
+        # after adoption (9 anon names, 37 refs, rtv_sel's location); .line 0xBE0 adopted
+        # (309 records vs retail's 300).  Needs -sdatathreshold 0 and five placements.
+        # The two dy frame tests are spelled asymmetrically: `< -0x3B ? 4 : 0x14` but
+        # `>= 0x3C ? 4 : 0x14`; the dy branch's set_frame must be if/else (a ternary drops
+        # its local DIE).  ctrl's dispatch is `if (dx == 0 && dy == 0) … else …`.
+        ("src/CS/shop/shop_select.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x560, four bodies word-exact.  case 0 binds shop_get_work() through an int
         # cast rather than a declared temp (a temp adds a third local DIE); disp regained
         # retail's sixth local ofsx.  Needs the @31 jump table.
