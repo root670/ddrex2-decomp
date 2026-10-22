@@ -571,6 +571,12 @@ DDREX2P = Target(
         # file-scope statics: only then does this build tag them local_variable.
         ("src/network/mio/blowfish.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x141C of four bodies word-exact; .debug retail's 0x82D / 42 DIEs after
+        # adoption; .line adopted whole.  Encode/Decode/MD5_memset are `static inline`
+        # helpers (no DIE of their own); MD5_memset((char *)x, 0, sizeof(x)) after the
+        # state adds is the 21-word tail and the 0x10 of frame.  MD5_memcpy is a call.
+        ("src/network/mio/md5.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x80, both bodies word-exact; .debug retail's 0x2C9 / 13 DIEs outright;
         # .line adopted (2 tables / 16 rows, sizes and offsets already retail's).
         ("src/CS/bk_load.c", "3.0b38-030307",
