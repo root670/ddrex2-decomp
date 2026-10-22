@@ -139,3 +139,4 @@ fp_ms_qm_edi_eye = 0x002C1BB0; // size:0x10 extent:0x10 source:src/CS/freeplay/f
 pCmes = 0x002DA1D4; // size:0x4 extent:0x4 source:src/CS/freeplay/fp_qmenu.c
 qmsw = 0x002DDE0C; // size:0x4 extent:0x4 source:src/CS/freeplay/fp_qmenu.c
 fp_nms_qm = 0x002DDE10; // size:0x8 extent:0x8 source:src/CS/freeplay/fp_qmenu.c
+@87 = 0x002D3CD0; // size:0xc extent:0x10 source:src/CS/bk_disp/bk_disp.c

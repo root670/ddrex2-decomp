@@ -633,6 +633,13 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x810, six bodies word-exact; .debug retail's 0x8111 / 835 DIEs byte-equal
+        # after adoption; .line adopted whole (161 records vs retail's 154).  Needs @87
+        # ("eye stat %d"), which sits in the last code split.  ti_cnt needs `= 0` to stay a
+        # local_variable; address literals must be casts, since an extern declaration costs
+        # a global_variable DIE plus an array_type.  `(x & 0x20) ? 1 : 0` for sltu.
+        ("src/CS/bk_disp/bk_disp.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0xDE0 (0x24C + 0x2D4 + 0x300 + 0x5AC), four bodies word-exact; .line adopted
         # (2782 bytes); .debug retail's 0x6052 / 635 DIEs after adoption.  pad_type is one
         # 62-instruction line whose `= 1` test and `? -1 : 0` arm are load-bearing; init's
