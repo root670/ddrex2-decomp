@@ -148,3 +148,4 @@ netwinrccssel_plate_num6_10 = 0x002C0940; // size:0x64 extent:0x70 source:src/ne
 netwinrccssel_plate_nm = 0x002C09B0; // size:0x14 extent:0x20 source:src/network/net_window/net_win_rccssel.c
 netwinrccssel = 0x002C09D0; // size:0x8c extent:0x8c source:src/network/net_window/net_win_rccssel.c
 @420 = 0x002D7260; // size:0x18 extent:0x18 source:src/network/net_window/net_win_rccssel.c
+@33 = 0x002D3CE0; // size:0x2c extent:0x30 source:src/common/cws/cws_obj.c

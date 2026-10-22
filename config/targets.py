@@ -633,6 +633,13 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xE50, eight bodies word-exact; .line byte-equal outright (8 tables, 26/16/
+        # 9/7/8/15/15/218 records); .debug retail's 0x234E / 242 DIEs after adoption.
+        # Function order must be retail's DIE order; a dead `int i = 0;` creates i's vreg
+        # first and fixes the spill slots without touching .text.  The error string is the
+        # pooled literal @33 at 0x2D3CE0, not an extern (a global_variable DIE costs too).
+        ("src/common/cws/cws_obj.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x810, six bodies word-exact; .debug retail's 0x8111 / 835 DIEs byte-equal
         # after adoption; .line adopted whole (161 records vs retail's 154).  Needs @87
         # ("eye stat %d"), which sits in the last code split.  ti_cnt needs `= 0` to stay a
