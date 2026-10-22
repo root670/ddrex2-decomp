@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_auth_net_auth_main_c_H
 #define DDR_UNIT_src_network_net_auth_net_auth_main_c_H
@@ -21,74 +22,7 @@
 #include "types/_tag_cNetAuth.h"
 #include "types/oni_course.h"
 
-/* anonymous types (11) */
-
-/* anon_16_208 -- @anon16, 0xC bytes, net_auth_main.c (DIE 0x3AD837) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_16_208;
-
-/* anon_0_208 -- @anon0, 0x12E0 bytes, net_auth_main.c (DIE 0x3A33DF) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_16_208 history[400];             // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_0_208;
-
-/* anon_1_208 -- @anon1, 0xD40 bytes, net_auth_main.c (DIE 0x3A3A7F) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_1_208;
-
-/* anon_3_208 -- @anon3, 0x4 bytes, net_auth_main.c (DIE 0x3A4C07) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char s_b1;                   // 0x1
-    /* 0x001 */ unsigned char s_b2;                   // 0x1
-    /* 0x002 */ unsigned char s_b3;                   // 0x1
-    /* 0x003 */ unsigned char s_b4;                   // 0x1
-} anon_3_208;
-
-/* anon_6_208 -- @anon6, 0x4 bytes, net_auth_main.c (DIE 0x3A60E0) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short s_w1;                  // 0x2
-    /* 0x002 */ unsigned short s_w2;                  // 0x2
-} anon_6_208;
-
-/* anon_4_208 -- @anon4, 0x14 bytes, net_auth_main.c (DIE 0x3A5730) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_4_208;
-
-/* anon_9_208 -- @anon9, 0x4 bytes, net_auth_main.c (DIE 0x3A7339) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_9_208;
-
-/* anon_8_208 -- @anon8, 0x4 bytes, net_auth_main.c (DIE 0x3A7208) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_9_208 s;                         // 0x4
-} anon_8_208;
+/* anonymous types (3) */
 
 /* anon_14_208 -- @anon14, 0x48 bytes, net_auth_main.c (DIE 0x3AB393) */
 typedef struct {   // size 0x48

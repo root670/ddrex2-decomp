@@ -5,43 +5,25 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct _GsCOORDINATE2 *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: dancer.c (DIE 0x20FFC), model1.c (DIE 0x2659C), model2.c (DIE 0x275FD), motion1.c (DIE 0x2D925), motion2.c (DIE 0x2EF14), ps1lib.c (DIE 0x31034), dcamera.c (DIE 0x354A5), dinit.c (DIE 0x4093F)
  */
 #ifndef DDR_types__GsCOORDINATE2_H
 #define DDR_types__GsCOORDINATE2_H
 
+#include "types/anon_9e9126627b05.h"
+#include "types/anon_b6ba1fe93475.h"
+
 struct _GsCOORDINATE2 {   // size 0x50
     /* 0x000 */ unsigned int flg;                     // 0x4
-    /* 0x004, 0x024 */ struct {   // size 0x20
-        /* 0x000 */ short m[3][3];                        // 0x12
-        /* 0x012 */ // 0x2 bytes padding
-        /* 0x014 */ int t[3];                             // 0xC
-    } coord, workm;                               // 0x20 each
-    /* 0x044 */ struct {   // size 0x28
-        /* 0x000 */ struct {   // size 0x10
-            /* 0x000 */ int vx;                               // 0x4
-            /* 0x004 */ int vy;                               // 0x4
-            /* 0x008 */ int vz;                               // 0x4
-            /* 0x00C */ int pad;                              // 0x4
-        } scale;
-        /* 0x010 */ struct {   // size 0x8
-            /* 0x000 */ short vx;                             // 0x2
-            /* 0x002 */ short vy;                             // 0x2
-            /* 0x004 */ short vz;                             // 0x2
-            /* 0x006 */ short pad;                            // 0x2
-        } rotate;
-        /* 0x018 */ struct {   // size 0x10
-            /* 0x000 */ int vx;                               // 0x4
-            /* 0x004 */ int vy;                               // 0x4
-            /* 0x008 */ int vz;                               // 0x4
-            /* 0x00C */ int pad;                              // 0x4
-        } trans;
-    } *param;
+    /* 0x004 */ anon_b6ba1fe93475 coord;              // 0x20
+    /* 0x024 */ anon_b6ba1fe93475 workm;              // 0x20
+    /* 0x044 */ anon_9e9126627b05 *param;             // 0x4
     /* 0x048 */ struct _GsCOORDINATE2 *super;         // 0x4
     /* 0x04C */ struct _GsCOORDINATE2 *sub;           // 0x4
 };

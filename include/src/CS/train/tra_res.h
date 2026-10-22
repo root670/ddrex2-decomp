@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_train_tra_res_c_H
 #define DDR_UNIT_src_CS_train_tra_res_c_H
@@ -19,7 +20,7 @@
 #include "types/g_game_w.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (16) */
+/* anonymous types (14) */
 
 /* anon_1_161 -- @anon1, 0x8 bytes, tra_res.c (DIE 0x2E418F) */
 typedef struct {   // size 0x8
@@ -216,23 +217,6 @@ typedef struct {   // size 0x7E0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
 } anon_2_161;
 
-/* anon_5_161 -- @anon5, 0x4 bytes, tra_res.c (DIE 0x2E4EB2) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_5_161;
-
-/* anon_6_161 -- @anon6, 0x10 bytes, tra_res.c (DIE 0x2E5AE5) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_5_161 x0;                        // 0x4
-    /* 0x004 */ anon_5_161 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_6_161;
-
 /* anon_8_161 -- @anon8, 0xB8 bytes, tra_res.c (DIE 0x2E5EF7) */
 typedef struct {   // size 0xB8
     /* 0x000 */ unsigned char step;                   // 0x1
@@ -315,10 +299,10 @@ typedef struct {   // size 0x10
 
 /* anon_13_161 -- @anon13, 0x24 bytes, tra_res.c (DIE 0x2E6E78) */
 typedef struct {   // size 0x24
-    /* 0x000 */ anon_5_161 x0;                        // 0x4
-    /* 0x004 */ anon_5_161 y0;                        // 0x4
-    /* 0x008 */ anon_5_161 x1;                        // 0x4
-    /* 0x00C */ anon_5_161 y1;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ unsigned char r0;                     // 0x1

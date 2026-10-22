@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct G_DRAW_W_ *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: les_play.c (DIE 0x37A2DF)
  */
@@ -18,18 +19,14 @@
 struct double_buffer;
 
 #include "types/double_buffer.h"
+#include "types/anon_b14b78a0b5d3.h"
 
 struct G_DRAW_W_ {   // size 0xDE8
     /* 0x000 */ int buffer_id;                        // 0x4
     /* 0x004 */ // 0x4 bytes padding
     /* 0x008 */ struct double_buffer double_buffer[2];  // 0xC50
     /* 0xC58 */ struct double_buffer *cur_db;         // 0x4
-    /* 0xC5C */ struct {   // size 0x8
-        /* 0x000 */ short x;                              // 0x2
-        /* 0x002 */ short y;                              // 0x2
-        /* 0x004 */ short w;                              // 0x2
-        /* 0x006 */ short h;                              // 0x2
-    } li_rect[32];
+    /* 0xC5C */ anon_b14b78a0b5d3 li_rect[32];        // 0x100
     /* 0xD5C */ unsigned int *li_buff[32];            // 0x80
     /* 0xDDC */ signed char clear_flag;               // 0x1
     /* 0xDDD */ signed char cancel_flag;              // 0x1

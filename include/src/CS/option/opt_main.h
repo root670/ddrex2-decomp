@@ -8,8 +8,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_option_opt_main_c_H
 #define DDR_UNIT_src_CS_option_opt_main_c_H
@@ -19,7 +20,7 @@
 #include "types/_OPTSYS_W.h"
 #include "types/g_game_w.h"
 
-/* anonymous types (10) */
+/* anonymous types (6) */
 
 /* anon_0_229 -- @anon0, 0x44 bytes, opt_main.c (DIE 0x43D785) */
 typedef struct {   // size 0x44
@@ -27,16 +28,10 @@ typedef struct {   // size 0x44
     /* 0x040 */ char *str_help_message;               // 0x4
 } anon_0_229;
 
-/* anon_3_229 -- @anon3, 0x4 bytes, opt_main.c (DIE 0x43E2C2) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_3_229;
-
 /* anon_1_229 -- @anon1, 0x1C bytes, opt_main.c (DIE 0x43D7F8) */
 typedef struct {   // size 0x1C
-    /* 0x000 */ anon_3_229 x0;                        // 0x4
-    /* 0x004 */ anon_3_229 y0;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -46,17 +41,6 @@ typedef struct {   // size 0x1C
     /* 0x017 */ unsigned char a0;                     // 0x1
     /* 0x018 */ int flg;                              // 0x4
 } anon_1_229;
-
-/* anon_4_229 -- @anon4, 0x10 bytes, opt_main.c (DIE 0x43F141) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_3_229 x0;                        // 0x4
-    /* 0x004 */ anon_3_229 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_4_229;
 
 /* anon_5_229 -- @anon5, 0x4 bytes, opt_main.c (DIE 0x43F3F4) */
 typedef struct {   // size 0x4
@@ -77,14 +61,6 @@ typedef struct {   // size 0x18
     /* 0x017 */ unsigned char dummy;                  // 0x1
 } anon_6_229;
 
-/* anon_7_229 -- @anon7, 0x8 bytes, opt_main.c (DIE 0x43FE64) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-} anon_7_229;
-
 /* anon_9_229 -- @anon9, 0x10 bytes, opt_main.c (DIE 0x4407D1) */
 typedef struct {   // size 0x10
     /* 0x000 */ float alpha;                          // 0x4
@@ -93,22 +69,14 @@ typedef struct {   // size 0x10
     /* 0x00C */ float fw;                             // 0x4
 } anon_9_229;
 
-/* anon_10_229 -- @anon10, 0x10 bytes, opt_main.c (DIE 0x440B02) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int (*appr)(void *);                  // 0x4
-    /* 0x004 */ int (*exec)(void *);                  // 0x4
-    /* 0x008 */ int (*disap)(void *);                 // 0x4
-    /* 0x00C */ int (*disp)(void *);                  // 0x4
-} anon_10_229;
-
 /* anon_12_229 -- @anon12, 0x34 bytes, opt_main.c (DIE 0x442BF2) */
 typedef struct {   // size 0x34
-    /* 0x000 */ anon_3_229 x0;                        // 0x4
-    /* 0x004 */ anon_3_229 y0;                        // 0x4
-    /* 0x008 */ anon_3_229 x1;                        // 0x4
-    /* 0x00C */ anon_3_229 y1;                        // 0x4
-    /* 0x010 */ anon_3_229 x2;                        // 0x4
-    /* 0x014 */ anon_3_229 y2;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
+    /* 0x010 */ anon_d075beaabcd0 x2;                 // 0x4
+    /* 0x014 */ anon_d075beaabcd0 y2;                 // 0x4
     /* 0x018 */ unsigned int z0;                      // 0x4
     /* 0x01C */ unsigned int z1;                      // 0x4
     /* 0x020 */ unsigned int z2;                      // 0x4
@@ -131,7 +99,7 @@ typedef struct {   // size 0x34
 /* variables (8) */
 struct _OPTSYS_W *OPTSYSW;                                       /* @0x002DDEF0 size 0x4 */
 anon_0_229 *optex2w;                                             /* @0x002DDEF4 size 0x4 */
-static anon_10_229 option_obj_f[3];                              /* @0x007F82C0 size 0x30 */
+static anon_1fa6d74458f3 option_obj_f[3];                        /* @0x007F82C0 size 0x30 */
 char udp_port_number[5];                                         /* @0x002DE678 size 0x5 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 struct CO_OBJ_W co_obj_addr[64];                                 /* @0x007F9770 size 0xA000 */
@@ -145,7 +113,7 @@ void OptMenuInit(struct _OPTSYS_W *);                            /* @0x007F5EA0 
 /* functions defined (19) */
 
 /* opt_ex2.c */
-void Option_Board_Disp(anon_7_229 r, int pri_add, unsigned char flag); /* 0x007F1FC0-0x007F2208 lines 367-402 */
+void Option_Board_Disp(anon_b14b78a0b5d3 r, int pri_add, unsigned char flag); /* 0x007F1FC0-0x007F2208 lines 367-402 */
 int Option_base00_disp(void *wp);                                /* 0x007F2210-0x007F2288 lines 331-357 */
 int Option_base00_disap(void *wp);                               /* 0x007F2290-0x007F2448 lines 287-329 */
 int Option_base00_appear(void *wp);                              /* 0x007F2450-0x007F2714 lines 238-284 */

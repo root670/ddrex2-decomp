@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_advanced_adv_endless_obj_c_H
 #define DDR_UNIT_src_CS_advanced_adv_endless_obj_c_H
@@ -28,7 +29,7 @@
 #include "types/play_w.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (27) */
+/* anonymous types (19) */
 
 /* anon_0_148 -- @anon0, 0xC bytes, adv_endless_obj.c (DIE 0x27C95C) */
 typedef struct {   // size 0xC
@@ -311,16 +312,10 @@ typedef struct {   // size 0x48
     /* 0x044 */ // 0x4 bytes padding
 } anon_9_148;
 
-/* anon_12_148 -- @anon12, 0x4 bytes, adv_endless_obj.c (DIE 0x282C16) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_12_148;
-
 /* anon_10_148 -- @anon10, 0x1C bytes, adv_endless_obj.c (DIE 0x280D3F) */
 typedef struct {   // size 0x1C
-    /* 0x000 */ anon_12_148 x0;                       // 0x4
-    /* 0x004 */ anon_12_148 y0;                       // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -331,23 +326,12 @@ typedef struct {   // size 0x1C
     /* 0x018 */ int flg;                              // 0x4
 } anon_10_148;
 
-/* anon_16_148 -- @anon16, 0x10 bytes, adv_endless_obj.c (DIE 0x283F28) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_12_148 x0;                       // 0x4
-    /* 0x004 */ anon_12_148 y0;                       // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_16_148;
-
 /* anon_13_148 -- @anon13, 0x30 bytes, adv_endless_obj.c (DIE 0x2837C6) */
 typedef struct {   // size 0x30
-    /* 0x000 */ anon_12_148 x0;                       // 0x4
-    /* 0x004 */ anon_12_148 y0;                       // 0x4
-    /* 0x008 */ anon_12_148 x1;                       // 0x4
-    /* 0x00C */ anon_12_148 y1;                       // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -360,59 +344,6 @@ typedef struct {   // size 0x30
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
 } anon_13_148;
-
-/* anon_15_148 -- @anon15, 0xD40 bytes, adv_endless_obj.c (DIE 0x283E28) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_15_148;
-
-/* anon_19_148 -- @anon19, 0x14 bytes, adv_endless_obj.c (DIE 0x284653) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_19_148;
-
-/* anon_20_148 -- @anon20, 0xC bytes, adv_endless_obj.c (DIE 0x284B08) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_20_148;
-
-/* anon_25_148 -- @anon25, 0x4 bytes, adv_endless_obj.c (DIE 0x2854F3) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_25_148;
-
-/* anon_23_148 -- @anon23, 0x4 bytes, adv_endless_obj.c (DIE 0x2852CD) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_25_148 s;                        // 0x4
-} anon_23_148;
-
-/* anon_24_148 -- @anon24, 0x12E0 bytes, adv_endless_obj.c (DIE 0x285374) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_20_148 history[400];             // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_24_148;
 
 /* anon_27_148 -- @anon27, 0x8 bytes, adv_endless_obj.c (DIE 0x2859F7) */
 typedef struct {   // size 0x8

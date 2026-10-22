@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct _net_win_rccssel_w *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: net_win_rccssel.c (DIE 0x2A2BA9)
  */
@@ -18,18 +19,14 @@
 struct _nsv_rc_table_param_work;
 
 #include "types/_nsv_rc_table_param_work.h"
+#include "types/anon_a57f91ef029f.h"
 
 struct _net_win_rccssel_w {   // size 0x80
     /* 0x000 */ struct _nsv_rc_table_param_work *RcData;  // 0x4
     /* 0x004 */ int counter;                          // 0x4
     /* 0x008 */ int move_time[5];                     // 0x14
     /* 0x01C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x020 */ struct {   // size 0x10
-        /* 0x000 */ int x;                                // 0x4
-        /* 0x004 */ int y;                                // 0x4
-        /* 0x008 */ int w;                                // 0x4
-        /* 0x00C */ int h;                                // 0x4
-    } line_pos[5];
+    /* 0x020 */ anon_a57f91ef029f line_pos[5];        // 0x50
     /* 0x070 */ char line_disp_flag[5];               // 0x5
     /* 0x075 */ char line_step;                       // 0x1
     /* 0x076 */ char nm_page;                         // 0x1

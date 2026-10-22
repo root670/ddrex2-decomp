@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct _tag_cInfo *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: infosel.c (DIE 0x32ED8B), info.c (DIE 0x33763C), infoshow.c (DIE 0x341D2F)
  */
@@ -32,6 +33,7 @@ struct _tag_cModeData;
 #include "types/_tag_cInfoText.h"
 #include "types/_tag_cInfoTitle.h"
 #include "types/_tag_cModeData.h"
+#include "types/anon_09669fc426c8.h"
 
 struct _tag_cInfo {   // size 0x370
     /* 0x000 */ int StepInfo;                         // 0x4
@@ -79,23 +81,7 @@ struct _tag_cInfo {   // size 0x370
     /* 0x318 */ struct _COM_SCROLLBAR_WORK sb;        // 0x28
     /* 0x340 */ struct _tag_cCoCursor01 cur_left_w;   // 0xC
     /* 0x34C */ struct _tag_cCoCursor01 cur_right_w;  // 0xC
-    /* 0x358 */ struct {   // size 0x18
-        /* 0x000 */ unsigned long arrow_clut_ct;          // 0x8
-        /* 0x008 */ short ny_music_num;                   // 0x2
-        /* 0x00A */ short scroll_ct;                      // 0x2
-        /* 0x00C */ unsigned char scroll_spd;             // 0x1
-        /* 0x00D */ unsigned char special_bar;            // 0x1
-        /* 0x00E */ unsigned char adjust_bar;             // 0x1
-        /* 0x00F */ unsigned char bar_start;              // 0x1
-        /* 0x010 */ unsigned char bar_end;                // 0x1
-        /* 0x011 */ unsigned char bar_max;                // 0x1
-        /* 0x012 */ unsigned char c_bar_max;              // 0x1
-        /* 0x013 */ unsigned char c_bar_adjust;           // 0x1
-        /* 0x014 */ unsigned char train_alpha0;           // 0x1
-        /* 0x015 */ unsigned char player;                 // 0x1
-        /* 0x016 */ unsigned char level;                  // 0x1
-        /* 0x017 */ unsigned char dummy;                  // 0x1
-    } extra_arrow_w;
+    /* 0x358 */ anon_09669fc426c8 extra_arrow_w;      // 0x18
 };
 
 #endif /* DDR_types__tag_cInfo_H */

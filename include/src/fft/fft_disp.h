@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_fft_fft_disp_c_H
 #define DDR_UNIT_src_fft_fft_disp_c_H
@@ -17,18 +18,12 @@
 #include "types/g_game_w.h"
 #include "types/oni_course.h"
 
-/* anonymous types (17) */
-
-/* anon_7_39 -- @anon7, 0x4 bytes, fft_disp.c (DIE 0x62FCB) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_7_39;
+/* anonymous types (9) */
 
 /* anon_0_39 -- @anon0, 0xC bytes, fft_disp.c (DIE 0x5E636) */
 typedef struct {   // size 0xC
-    /* 0x000 */ anon_7_39 x0;                         // 0x4
-    /* 0x004 */ anon_7_39 y0;                         // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
 } anon_0_39;
 
@@ -79,8 +74,8 @@ typedef struct {   // size 0x1CA0
 
 /* anon_5_39 -- @anon5, 0x1C bytes, fft_disp.c (DIE 0x61AC6) */
 typedef struct {   // size 0x1C
-    /* 0x000 */ anon_7_39 x0;                         // 0x4
-    /* 0x004 */ anon_7_39 y0;                         // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -115,37 +110,6 @@ typedef struct {   // size 0x5140
     /* 0x4FB0 */ float Lch_peak_sp[100];              // 0x190
 } anon_6_39;
 
-/* anon_8_39 -- @anon8, 0xD40 bytes, fft_disp.c (DIE 0x63098) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_8_39;
-
-/* anon_9_39 -- @anon9, 0x10 bytes, fft_disp.c (DIE 0x6353A) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_7_39 x0;                         // 0x4
-    /* 0x004 */ anon_7_39 y0;                         // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_9_39;
-
-/* anon_10_39 -- @anon10, 0x14 bytes, fft_disp.c (DIE 0x6365A) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_10_39;
-
 /* anon_11_39 -- @anon11, 0x960 bytes, fft_disp.c (DIE 0x638BB) */
 typedef struct {   // size 0x960
     /* 0x000 */ int peak_time[200];                   // 0x320
@@ -155,15 +119,6 @@ typedef struct {   // size 0x960
     /* 0x7D0 */ float down_speed_r[100];              // 0x190
 } anon_11_39;
 
-/* anon_12_39 -- @anon12, 0xC bytes, fft_disp.c (DIE 0x63B39) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_12_39;
-
 /* anon_13_39 -- @anon13, 0x640 bytes, fft_disp.c (DIE 0x63C80) */
 typedef struct {   // size 0x640
     /* 0x000 */ float Rch_peak[100];                  // 0x190
@@ -171,30 +126,6 @@ typedef struct {   // size 0x640
     /* 0x320 */ float Rch_peak_sp[100];               // 0x190
     /* 0x4B0 */ float Lch_peak_sp[100];               // 0x190
 } anon_13_39;
-
-/* anon_16_39 -- @anon16, 0x4 bytes, fft_disp.c (DIE 0x6428C) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_16_39;
-
-/* anon_15_39 -- @anon15, 0x4 bytes, fft_disp.c (DIE 0x641E5) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_16_39 s;                         // 0x4
-} anon_15_39;
-
-/* anon_17_39 -- @anon17, 0x12E0 bytes, fft_disp.c (DIE 0x64506) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_12_39 history[400];              // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_17_39;
 
 
 /* variables (5) */

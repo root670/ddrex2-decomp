@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_prg_c_H
 #define DDR_UNIT_src_network_net_prg_c_H
@@ -23,23 +24,6 @@
 #include "types/_nsv_rc_table_param_work.h"
 #include "types/_tag_cNetAuth.h"
 #include "types/ddrnet_rc_music.h"
-
-/* anonymous types (2) */
-
-/* anon_1_46 -- @anon1, 0x4 bytes, net_prg.c (DIE 0x88F6F) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char s_b1;                   // 0x1
-    /* 0x001 */ unsigned char s_b2;                   // 0x1
-    /* 0x002 */ unsigned char s_b3;                   // 0x1
-    /* 0x003 */ unsigned char s_b4;                   // 0x1
-} anon_1_46;
-
-/* anon_2_46 -- @anon2, 0x4 bytes, net_prg.c (DIE 0x8977E) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short s_w1;                  // 0x2
-    /* 0x002 */ unsigned short s_w2;                  // 0x2
-} anon_2_46;
-
 
 /* variables (1) */
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */

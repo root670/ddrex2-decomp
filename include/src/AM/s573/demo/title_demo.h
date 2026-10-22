@@ -7,15 +7,16 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_demo_title_demo_c_H
 #define DDR_UNIT_src_AM_s573_demo_title_demo_c_H
 
 #include "types/g_game_w.h"
 
-/* anonymous types (10) */
+/* anonymous types (8) */
 
 /* anon_1_41 -- @anon1, 0x10 bytes, title_demo.c (DIE 0x6AB84) */
 typedef union {   // size 0x10
@@ -66,16 +67,10 @@ typedef struct {   // size 0x48
     /* 0x044 */ // 0x4 bytes padding
 } anon_4_41;
 
-/* anon_7_41 -- @anon7, 0x4 bytes, title_demo.c (DIE 0x6C0F0) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_7_41;
-
 /* anon_5_41 -- @anon5, 0x1C bytes, title_demo.c (DIE 0x6BCFE) */
 typedef struct {   // size 0x1C
-    /* 0x000 */ anon_7_41 x0;                         // 0x4
-    /* 0x004 */ anon_7_41 y0;                         // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -97,27 +92,16 @@ typedef struct {   // size 0x1C
     /* 0x018 */ int colors;                           // 0x4
 } anon_6_41;
 
-/* anon_8_41 -- @anon8, 0x10 bytes, title_demo.c (DIE 0x6C4D9) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_7_41 x0;                         // 0x4
-    /* 0x004 */ anon_7_41 y0;                         // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_8_41;
-
 /* anon_10_41 -- @anon10, 0x68 bytes, title_demo.c (DIE 0x6C6AD) */
 typedef struct {   // size 0x68
-    /* 0x000 */ anon_7_41 x0;                         // 0x4
-    /* 0x004 */ anon_7_41 y0;                         // 0x4
-    /* 0x008 */ anon_7_41 x1;                         // 0x4
-    /* 0x00C */ anon_7_41 y1;                         // 0x4
-    /* 0x010 */ anon_7_41 x2;                         // 0x4
-    /* 0x014 */ anon_7_41 y2;                         // 0x4
-    /* 0x018 */ anon_7_41 x3;                         // 0x4
-    /* 0x01C */ anon_7_41 y3;                         // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
+    /* 0x010 */ anon_d075beaabcd0 x2;                 // 0x4
+    /* 0x014 */ anon_d075beaabcd0 y2;                 // 0x4
+    /* 0x018 */ anon_d075beaabcd0 x3;                 // 0x4
+    /* 0x01C */ anon_d075beaabcd0 y3;                 // 0x4
     /* 0x020 */ unsigned int z0;                      // 0x4
     /* 0x024 */ unsigned int z1;                      // 0x4
     /* 0x028 */ unsigned int z2;                      // 0x4

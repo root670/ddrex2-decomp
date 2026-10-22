@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_staffroll_cs_staffroll_mov_c_H
 #define DDR_UNIT_src_CS_staffroll_cs_staffroll_mov_c_H
@@ -32,12 +33,12 @@ typedef struct {   // size 0x30
 } anon_0_188;
 
 /* anon_x3552c7_188 -- @enum, 0x1 bytes, cs_staffroll_mov.c (DIE 0x3552C7) */
-enum anon_x3552c7_188 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_MV_STEP_INIT = 0,
     SRE_MV_STEP_READ = 1,
     SRE_MV_STEP_WAIT = 2,
     SRE_MV_STEP_TERMINATE = 3,
-};
+} anon_x3552c7_188;
 
 /* anon_1_188 -- @anon1, 0x78 bytes, cs_staffroll_mov.c (DIE 0x355334) */
 typedef struct {   // size 0x78
@@ -71,13 +72,13 @@ typedef struct {   // size 0x78
 } anon_1_188;
 
 /* anon_x355751_188 -- @enum, 0x1 bytes, cs_staffroll_mov.c (DIE 0x355751) */
-enum anon_x355751_188 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_MVREAD_STEP_WAIT = 0,
     SRE_MVREAD_STEP_INIT = 1,
     SRE_MVREAD_STEP_READ = 2,
     SRE_MVREAD_STEP_SET = 3,
     SRE_MVREAD_STEP_TERMINATE = 4,
-};
+} anon_x355751_188;
 
 /* anon_2_188 -- @anon2, 0x4 bytes, cs_staffroll_mov.c (DIE 0x35584F) */
 typedef union {   // size 0x4
@@ -148,8 +149,8 @@ static int current_buff;                                         /* @0x002DE5B8 
 unsigned char *sre_ip[11];                                       /* @0x00800540 size 0x2C */
 anon_4_188 sre_mvseq[12];                                        /* @0x00800570 size 0x60 */
 int mv_enable;                                                   /* @0x002DE5C0 size 0x4 */
-enum anon_x355751_188 SRE_MVREAD_STEP;                           /* not allocated size 0x1 */
-enum anon_x3552c7_188 SRE_MV_STEP;                               /* not allocated size 0x1 */
+anon_x355751_188 SRE_MVREAD_STEP;                                /* not allocated size 0x1 */
+anon_x3552c7_188 SRE_MV_STEP;                                    /* not allocated size 0x1 */
 
 /* functions defined (4) */
 void csStaffRollMovieDraw(anon_1_188 *pstf);                     /* 0x007FD770-0x007FDB5C lines 239-312 */

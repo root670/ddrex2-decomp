@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_doll_dinit_c_H
 #define DDR_UNIT_src_AM_s573_doll_dinit_c_H
@@ -20,43 +21,7 @@
 #include "types/dancer_motion_w.h"
 #include "types/oni_course.h"
 
-/* anonymous types (18) */
-
-/* anon_22_27 -- @anon22, 0x14 bytes, dinit.c (DIE 0x433CA) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_22_27;
-
-/* anon_1_27 -- @anon1, 0x10 bytes, dinit.c (DIE 0x3ECC4) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int vx;                               // 0x4
-    /* 0x004 */ int vy;                               // 0x4
-    /* 0x008 */ int vz;                               // 0x4
-    /* 0x00C */ int pad;                              // 0x4
-} anon_1_27;
-
-/* anon_2_27 -- @anon2, 0x2 bytes, dinit.c (DIE 0x3ED60) */
-typedef struct {   // size 0x2
-    /* 0x000 */ unsigned short offset;                // 0x2
-} anon_2_27;
-
-/* anon_5_27 -- @anon5, 0x4 bytes, dinit.c (DIE 0x3F285) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_5_27;
-
-/* anon_3_27 -- @anon3, 0x4 bytes, dinit.c (DIE 0x3EDC8) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_5_27 s;                          // 0x4
-} anon_3_27;
+/* anonymous types (4) */
 
 /* anon_4_27 -- @anon4, 0x80 bytes, dinit.c (DIE 0x3EE26) */
 typedef struct {   // size 0x80
@@ -92,87 +57,12 @@ typedef struct {   // size 0x80
     /* 0x07C */ int common_rand;                      // 0x4
 } anon_4_27;
 
-/* anon_6_27 -- @anon6, 0x4 bytes, dinit.c (DIE 0x3F4B6) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short shift_bit;             // 0x2
-    /* 0x002 */ anon_2_27 tbl[1];                     // 0x2
-} anon_6_27;
-
-/* anon_24_27 -- @anon24, 0xC bytes, dinit.c (DIE 0x4364D) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_24_27;
-
-/* anon_7_27 -- @anon7, 0x12E0 bytes, dinit.c (DIE 0x3F51D) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_24_27 history[400];              // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_7_27;
-
-/* anon_8_27 -- @anon8, 0x8 bytes, dinit.c (DIE 0x3F801) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short vx;                             // 0x2
-    /* 0x002 */ short vy;                             // 0x2
-    /* 0x004 */ short vz;                             // 0x2
-    /* 0x006 */ short pad;                            // 0x2
-} anon_8_27;
-
-/* anon_21_27 -- @anon21, 0xD40 bytes, dinit.c (DIE 0x42F73) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_21_27;
-
-/* anon_18_27 -- @anon18, 0x8 bytes, dinit.c (DIE 0x42A20) */
-typedef struct {   // size 0x8
-    /* 0x000 */ unsigned char kind;                   // 0x1
-    /* 0x001 */ unsigned char pad[3];                 // 0x3
-    /* 0x004 */ anon_6_27 data;                       // 0x4
-} anon_18_27;
-
-/* anon_20_27 -- @anon20, 0xC bytes, dinit.c (DIE 0x42D78) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned char id;                     // 0x1
-    /* 0x001 */ unsigned char format;                 // 0x1
-    /* 0x002 */ unsigned char hastrans;               // 0x1
-    /* 0x003 */ unsigned char parent_id;              // 0x1
-    /* 0x004 */ unsigned int nbwave;                  // 0x4
-    /* 0x008 */ anon_18_27 **offset;                  // 0x4
-} anon_20_27;
-
-/* anon_10_27 -- @anon10, 0xC bytes, dinit.c (DIE 0x3FB11) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned int size;                    // 0x4
-    /* 0x004 */ unsigned short nbparts;               // 0x2
-    /* 0x006 */ unsigned short nbframe;               // 0x2
-    /* 0x008 */ anon_20_27 **offset;                  // 0x4
-} anon_10_27;
-
 /* anon_13_27 -- @anon13, 0x8 bytes, dinit.c (DIE 0x40072) */
 typedef struct {   // size 0x8
     /* 0x000 */ unsigned long number : 16;            // bits 0..15
     /* 0x000 */ unsigned long sector : 24;            // bits 16..39
     /* 0x000 */ unsigned long size : 24;              // bits 40..63
 } anon_13_27;
-
-/* anon_23_27 -- @anon23, 0x8 bytes, dinit.c (DIE 0x435E1) */
-typedef struct {   // size 0x8
-    /* 0x000 */ char *name;                           // 0x4
-    /* 0x004 */ anon_10_27 *offset;                   // 0x4
-} anon_23_27;
 
 /* anon_16_27 -- @anon16, 0x246380 bytes, dinit.c (DIE 0x41CAF) */
 typedef struct {   // size 0x246380

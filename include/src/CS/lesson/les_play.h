@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_lesson_les_play_c_H
 #define DDR_UNIT_src_CS_lesson_les_play_c_H
@@ -26,7 +27,7 @@
 #include "types/sequence.h"
 #include "types/sq_standard.h"
 
-/* anonymous types (26) */
+/* anonymous types (16) */
 
 /* anon_0_197 -- @anon0, 0x88 bytes, les_play.c (DIE 0x37171D) */
 typedef struct {   // size 0x88
@@ -94,14 +95,6 @@ typedef struct {   // size 0x88
     /* 0x087 */ // 0x1 bytes padding
 } anon_0_197;
 
-/* anon_2_197 -- @anon2, 0x4 bytes, les_play.c (DIE 0x3725B9) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char old_stat;               // 0x1
-    /* 0x001 */ unsigned char cur_stat;               // 0x1
-    /* 0x002 */ unsigned char release_ct;             // 0x1
-    /* 0x003 */ unsigned char warning;                // 0x1
-} anon_2_197;
-
 /* anon_32_197 -- @anon32, 0x10 bytes, les_play.c (DIE 0x37B466) */
 typedef struct {   // size 0x10
     /* 0x000 */ float vx;                             // 0x4
@@ -141,12 +134,6 @@ typedef struct {   // size 0x10
     /* 0x00C */ int type;                             // 0x4
 } anon_5_197;
 
-/* anon_6_197 -- @anon6, 0x4 bytes, les_play.c (DIE 0x373AA3) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_6_197;
-
 /* anon_7_197 -- @anon7, 0x8 bytes, les_play.c (DIE 0x373B00) */
 typedef struct {   // size 0x8
     /* 0x000 */ int frame;                            // 0x4
@@ -169,17 +156,6 @@ typedef struct {   // size 0x8
     /* 0x006 */ unsigned char step;                   // 0x1
     /* 0x007 */ unsigned char type;                   // 0x1
 } anon_9_197;
-
-/* anon_10_197 -- @anon10, 0x10 bytes, les_play.c (DIE 0x374E97) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_6_197 x0;                        // 0x4
-    /* 0x004 */ anon_6_197 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_10_197;
 
 /* anon_11_197 -- @anon11, 0x20 bytes, les_play.c (DIE 0x375266) */
 typedef struct {   // size 0x20
@@ -238,15 +214,6 @@ typedef struct {   // size 0xC
     /* 0x00B */ char pos;                             // 0x1
 } anon_16_197;
 
-/* anon_17_197 -- @anon17, 0xC bytes, les_play.c (DIE 0x376350) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_17_197;
-
 /* anon_18_197 -- @anon18, 0x8 bytes, les_play.c (DIE 0x378259) */
 typedef struct {   // size 0x8
     /* 0x000 */ short msg_num;                        // 0x2
@@ -256,27 +223,6 @@ typedef struct {   // size 0x8
     /* 0x007 */ char pad[1];                          // 0x1
 } anon_18_197;
 
-/* anon_19_197 -- @anon19, 0x12E0 bytes, les_play.c (DIE 0x378715) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_17_197 history[400];             // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_19_197;
-
-/* anon_20_197 -- @anon20, 0xD40 bytes, les_play.c (DIE 0x3788B8) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_20_197;
-
 /* anon_21_197 -- @anon21, 0x10 bytes, les_play.c (DIE 0x378990) */
 typedef struct {   // size 0x10
     /* 0x000 */ unsigned int beat_count;              // 0x4
@@ -285,35 +231,6 @@ typedef struct {   // size 0x10
     /* 0x00E */ unsigned char msg_flg;                // 0x1
     /* 0x00F */ unsigned char pad[1];                 // 0x1
 } anon_21_197;
-
-/* anon_22_197 -- @anon22, 0x14 bytes, les_play.c (DIE 0x378CAD) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_22_197;
-
-/* anon_26_197 -- @anon26, 0x4 bytes, les_play.c (DIE 0x3798F9) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_26_197;
-
-/* anon_25_197 -- @anon25, 0x4 bytes, les_play.c (DIE 0x379866) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_26_197 s;                        // 0x4
-} anon_25_197;
-
-/* anon_28_197 -- @anon28, 0x4 bytes, les_play.c (DIE 0x37A26D) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned int p : 24;                  // bits 0..23
-    /* 0x003 */ unsigned char num : 8;                // bits 0..7
-} anon_28_197;
 
 /* anon_29_197 -- @anon29, 0x8 bytes, les_play.c (DIE 0x37A90D) */
 typedef struct {   // size 0x8

@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_staffroll_cs_staffroll_pic_c_H
 #define DDR_UNIT_src_CS_staffroll_cs_staffroll_pic_c_H
@@ -47,26 +48,26 @@ typedef struct {   // size 0x78
 } anon_0_189;
 
 /* anon_x356bd4_189 -- @enum, 0x1 bytes, cs_staffroll_pic.c (DIE 0x356BD4) */
-enum anon_x356bd4_189 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_PIC_STEP_INIT = 0,
     SRE_PIC_STEP_MAIN = 1,
     SRE_PIC_STEP_TERMINATE = 2,
-};
+} anon_x356bd4_189;
 
 /* anon_x356c32_189 -- @enum, 0x1 bytes, cs_staffroll_pic.c (DIE 0x356C32) */
-enum anon_x356c32_189 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_PIC_INIT_STEP_PARAM = 0,
     SRE_PIC_INIT_STEP_READ = 1,
     SRE_PIC_INIT_STEP_TERMINATE = 2,
-};
+} anon_x356c32_189;
 
 /* anon_x356ca0_189 -- @enum, 0x1 bytes, cs_staffroll_pic.c (DIE 0x356CA0) */
-enum anon_x356ca0_189 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_PIC_COM_STEP_INIT = 0,
     SRE_PIC_COM_STEP_WAIT = 1,
     SRE_PIC_COM_STEP_MAIN = 2,
     SRE_PIC_COM_STEP_TERMINATE = 3,
-};
+} anon_x356ca0_189;
 
 /* anon_1_189 -- @anon1, 0x18 bytes, cs_staffroll_pic.c (DIE 0x356D21) */
 typedef struct {   // size 0x18
@@ -106,14 +107,14 @@ typedef struct {   // size 0x48
 } anon_2_189;
 
 /* anon_x3570e4_189 -- @enum, 0x1 bytes, cs_staffroll_pic.c (DIE 0x3570E4) */
-enum anon_x3570e4_189 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_PICBACK_FI_STEP_MAIN = 0,
     SRE_PICBACK_FI_STEP_TERMINATE = 1,
     SRE_PICBACK_FO_STEP_INIT = 1,
     SRE_PICBACK_FO_STEP_MAIN = 2,
     SRE_PICBACK_FO_STEP_TERMINATE = 3,
     SRE_PICBACK_FI_STEP_INIT = 3,
-};
+} anon_x3570e4_189;
 
 /* anon_5_189 -- @anon5, 0x4 bytes, cs_staffroll_pic.c (DIE 0x357506) */
 typedef union {   // size 0x4
@@ -191,10 +192,10 @@ anon_1_189 d_fade;                                               /* @0x00807E00 
 unsigned int current_pic;                                        /* @0x002DE5E8 size 0x4 */
 anon_4_189 picInfo[2];                                           /* @0x00807E20 size 0x30 */
 unsigned int com_step;                                           /* @0x002DE5E4 size 0x4 */
-enum anon_x3570e4_189 SRE_PICBACK_STEP;                          /* not allocated size 0x1 */
-enum anon_x356ca0_189 SRE_PIC_COM_STEP;                          /* not allocated size 0x1 */
-enum anon_x356c32_189 SRE_PIC_INIT_STEP;                         /* not allocated size 0x1 */
-enum anon_x356bd4_189 SRE_PIC_STEP;                              /* not allocated size 0x1 */
+anon_x3570e4_189 SRE_PICBACK_STEP;                               /* not allocated size 0x1 */
+anon_x356ca0_189 SRE_PIC_COM_STEP;                               /* not allocated size 0x1 */
+anon_x356c32_189 SRE_PIC_INIT_STEP;                              /* not allocated size 0x1 */
+anon_x356bd4_189 SRE_PIC_STEP;                                   /* not allocated size 0x1 */
 
 /* functions defined (12) */
 int csStaffRollFadeCheck(void);                                  /* 0x007FE060-0x007FE06C lines 1023-1024 */

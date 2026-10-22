@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_doll_dancer_c_H
 #define DDR_UNIT_src_AM_s573_doll_dancer_c_H
@@ -18,7 +19,7 @@
 #include "types/dancer_model_w.h"
 #include "types/dancer_motion_w.h"
 
-/* anonymous types (12) */
+/* anonymous types (4) */
 
 /* anon_0_14 -- @anon0, 0x80 bytes, dancer.c (DIE 0x1FE3E) */
 typedef struct {   // size 0x80
@@ -53,58 +54,6 @@ typedef struct {   // size 0x80
     /* 0x078 */ unsigned int vcnt;                    // 0x4
     /* 0x07C */ int common_rand;                      // 0x4
 } anon_0_14;
-
-/* anon_1_14 -- @anon1, 0x10 bytes, dancer.c (DIE 0x2029D) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int vx;                               // 0x4
-    /* 0x004 */ int vy;                               // 0x4
-    /* 0x008 */ int vz;                               // 0x4
-    /* 0x00C */ int pad;                              // 0x4
-} anon_1_14;
-
-/* anon_2_14 -- @anon2, 0x2 bytes, dancer.c (DIE 0x20339) */
-typedef struct {   // size 0x2
-    /* 0x000 */ unsigned short offset;                // 0x2
-} anon_2_14;
-
-/* anon_3_14 -- @anon3, 0x4 bytes, dancer.c (DIE 0x203A1) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short shift_bit;             // 0x2
-    /* 0x002 */ anon_2_14 tbl[1];                     // 0x2
-} anon_3_14;
-
-/* anon_4_14 -- @anon4, 0x8 bytes, dancer.c (DIE 0x20502) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short vx;                             // 0x2
-    /* 0x002 */ short vy;                             // 0x2
-    /* 0x004 */ short vz;                             // 0x2
-    /* 0x006 */ short pad;                            // 0x2
-} anon_4_14;
-
-/* anon_13_14 -- @anon13, 0x8 bytes, dancer.c (DIE 0x2171D) */
-typedef struct {   // size 0x8
-    /* 0x000 */ unsigned char kind;                   // 0x1
-    /* 0x001 */ unsigned char pad[3];                 // 0x3
-    /* 0x004 */ anon_3_14 data;                       // 0x4
-} anon_13_14;
-
-/* anon_14_14 -- @anon14, 0xC bytes, dancer.c (DIE 0x21835) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned char id;                     // 0x1
-    /* 0x001 */ unsigned char format;                 // 0x1
-    /* 0x002 */ unsigned char hastrans;               // 0x1
-    /* 0x003 */ unsigned char parent_id;              // 0x1
-    /* 0x004 */ unsigned int nbwave;                  // 0x4
-    /* 0x008 */ anon_13_14 **offset;                  // 0x4
-} anon_14_14;
-
-/* anon_5_14 -- @anon5, 0xC bytes, dancer.c (DIE 0x205E8) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned int size;                    // 0x4
-    /* 0x004 */ unsigned short nbparts;               // 0x2
-    /* 0x006 */ unsigned short nbframe;               // 0x2
-    /* 0x008 */ anon_14_14 **offset;                  // 0x4
-} anon_5_14;
 
 /* anon_6_14 -- @anon6, 0x320 bytes, dancer.c (DIE 0x20871) */
 typedef struct {   // size 0x320
@@ -149,12 +98,6 @@ typedef union {   // size 0x10
     /* 0x000 */ float fv[4];                          // 0x10
     /* 0x000 */ int iv[4];                            // 0x10
 } anon_8_14;
-
-/* anon_15_14 -- @anon15, 0x8 bytes, dancer.c (DIE 0x21A58) */
-typedef struct {   // size 0x8
-    /* 0x000 */ char *name;                           // 0x4
-    /* 0x004 */ anon_5_14 *offset;                    // 0x4
-} anon_15_14;
 
 /* anon_11_14 -- @anon11, 0x246380 bytes, dancer.c (DIE 0x21368) */
 typedef struct {   // size 0x246380

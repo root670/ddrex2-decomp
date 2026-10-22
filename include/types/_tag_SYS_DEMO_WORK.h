@@ -5,15 +5,18 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct _tag_SYS_DEMO_WORK *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: sys_demo.c (DIE 0x325)
  */
 #ifndef DDR_types__tag_SYS_DEMO_WORK_H
 #define DDR_types__tag_SYS_DEMO_WORK_H
+
+#include "types/anon_31c7db27763e.h"
 
 struct _tag_SYS_DEMO_WORK {   // size 0x54
     /* 0x000 */ int mode;                             // 0x4
@@ -23,13 +26,7 @@ struct _tag_SYS_DEMO_WORK {   // size 0x54
     /* 0x010 */ int gameplay_counter;                 // 0x4
     /* 0x014 */ int end_screen_request;               // 0x4
     /* 0x018 */ int main_loop_break_request;          // 0x4
-    /* 0x01C */ struct {   // size 0x24
-        /* 0x000 */ unsigned int lsn;                     // 0x4
-        /* 0x004 */ unsigned int size;                    // 0x4
-        /* 0x008 */ char name[16];                        // 0x10
-        /* 0x018 */ unsigned char date[8];                // 0x8
-        /* 0x020 */ unsigned int flag;                    // 0x4
-    } cdl_file;
+    /* 0x01C */ anon_31c7db27763e cdl_file;           // 0x24
     /* 0x040 */ unsigned short language;              // 0x2
     /* 0x042 */ unsigned short aspect;                // 0x2
     /* 0x044 */ unsigned short playmode;              // 0x2

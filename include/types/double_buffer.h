@@ -5,36 +5,23 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct double_buffer *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: les_play.c (DIE 0x379BBB)
  */
 #ifndef DDR_types_double_buffer_H
 #define DDR_types_double_buffer_H
 
+#include "types/anon_271abd9b3a92.h"
+#include "types/anon_91122355aec6.h"
+
 struct double_buffer {   // size 0x628
-    /* 0x000 */ struct {   // size 0x28
-        /* 0x000 */ unsigned long length;                 // 0x8
-        /* 0x008 */ struct {   // size 0x4
-            /* 0x000 */ unsigned int p : 24;                  // bits 0..23
-            /* 0x003 */ unsigned char num : 8;                // bits 0..7
-        } *org;
-        /* 0x00C */ // 0x4 bytes padding
-        /* 0x010 */ unsigned long offset;                 // 0x8
-        /* 0x018 */ unsigned long point;                  // 0x8
-        /* 0x020 */ struct {   // size 0x4
-            /* 0x000 */ unsigned int p : 24;                  // bits 0..23
-            /* 0x003 */ unsigned char num : 8;                // bits 0..7
-        } *tag;
-        /* 0x024 */ // 0x4 bytes padding
-    } gs_ot;
-    /* 0x028 */ struct {   // size 0x4
-        /* 0x000 */ unsigned int p : 24;                  // bits 0..23
-        /* 0x003 */ unsigned char num : 8;                // bits 0..7
-    } z_sort[256];
+    /* 0x000 */ anon_271abd9b3a92 gs_ot;              // 0x28
+    /* 0x028 */ anon_91122355aec6 z_sort[256];        // 0x400
     /* 0x428 */ unsigned char packet[512];            // 0x200
 };
 

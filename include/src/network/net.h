@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_c_H
 #define DDR_UNIT_src_network_net_c_H
@@ -18,46 +19,15 @@
 #include "types/g_game_w.h"
 #include "types/sockaddr_in.h"
 
-/* anonymous types (5) */
+/* anonymous types (1) */
 
-/* anon_0_42 -- @anon0, 0x10 bytes, net.c (DIE 0x6DA2D) */
+/* anon_2_42 -- @anon2, 0x10 bytes, net.c (DIE 0x6E948) */
 typedef struct {   // size 0x10
     /* 0x000 */ int rtv;                              // 0x4
     /* 0x004 */ int ip_addr;                          // 0x4
     /* 0x008 */ int netmask;                          // 0x4
     /* 0x00C */ int broadcast;                        // 0x4
-} anon_0_42;
-
-/* anon_6_42 -- @anon6, 0x4 bytes, net.c (DIE 0x717B2) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char s_b1;                   // 0x1
-    /* 0x001 */ unsigned char s_b2;                   // 0x1
-    /* 0x002 */ unsigned char s_b3;                   // 0x1
-    /* 0x003 */ unsigned char s_b4;                   // 0x1
-} anon_6_42;
-
-/* anon_8_42 -- @anon8, 0x4 bytes, net.c (DIE 0x71E5B) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short s_w1;                  // 0x2
-    /* 0x002 */ unsigned short s_w2;                  // 0x2
-} anon_8_42;
-
-/* anon_9_42 -- @anon9, 0x4 bytes, net.c (DIE 0x73EFA) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_9_42;
-
-/* anon_10_42 -- @anon10, 0x10 bytes, net.c (DIE 0x74761) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_9_42 x0;                         // 0x4
-    /* 0x004 */ anon_9_42 y0;                         // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_10_42;
+} anon_2_42;
 
 
 /* variables (9) */

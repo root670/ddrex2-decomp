@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_usa_client_ddrex2_usa_account_c_H
 #define DDR_UNIT_src_network_usa_client_ddrex2_usa_account_c_H
@@ -19,21 +20,7 @@
 #include "types/_ddrnet_playerselectlist.h"
 #include "types/_mio_message.h"
 
-/* anonymous types (3) */
-
-/* anon_2_201 -- @anon2, 0x4 bytes, ddrex2_usa_account.c (DIE 0x38C3FC) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char s_b1;                   // 0x1
-    /* 0x001 */ unsigned char s_b2;                   // 0x1
-    /* 0x002 */ unsigned char s_b3;                   // 0x1
-    /* 0x003 */ unsigned char s_b4;                   // 0x1
-} anon_2_201;
-
-/* anon_3_201 -- @anon3, 0x4 bytes, ddrex2_usa_account.c (DIE 0x38C531) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short s_w1;                  // 0x2
-    /* 0x002 */ unsigned short s_w2;                  // 0x2
-} anon_3_201;
+/* anonymous types (1) */
 
 /* anon_4_201 -- @anon4, 0x58 bytes, ddrex2_usa_account.c (DIE 0x38DB77) */
 typedef struct {   // size 0x58

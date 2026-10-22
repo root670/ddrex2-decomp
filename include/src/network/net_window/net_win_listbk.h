@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_window_net_win_listbk_c_H
 #define DDR_UNIT_src_network_net_window_net_win_listbk_c_H
@@ -18,15 +19,7 @@
 #include "types/_CWS_OBJ_TEX.h"
 #include "types/_CWS_WIN_W.h"
 
-/* anonymous types (4) */
-
-/* anon_0_136 -- @anon0, 0x8 bytes, net_win_listbk.c (DIE 0x253285) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-} anon_0_136;
+/* anonymous types (3) */
 
 /* anon_1_136 -- @anon1, 0x48 bytes, net_win_listbk.c (DIE 0x2536C8) */
 typedef struct {   // size 0x48

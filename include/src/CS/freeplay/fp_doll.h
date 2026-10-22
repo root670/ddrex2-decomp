@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_freeplay_fp_doll_c_H
 #define DDR_UNIT_src_CS_freeplay_fp_doll_c_H
@@ -17,7 +18,7 @@
 #include "types/g_game_w.h"
 #include "types/oni_course.h"
 
-/* anonymous types (22) */
+/* anonymous types (14) */
 
 /* anon_0_98 -- @anon0, 0x10 bytes, fp_doll.c (DIE 0x1AFD2C) */
 typedef struct {   // size 0x10
@@ -59,23 +60,6 @@ typedef struct {   // size 0x320
     /* 0x310 */ float (*cp)[4];                       // 0x4
     /* 0x314 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
 } anon_1_98;
-
-/* anon_10_98 -- @anon10, 0x4 bytes, fp_doll.c (DIE 0x1B38F3) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_10_98;
-
-/* anon_14_98 -- @anon14, 0x10 bytes, fp_doll.c (DIE 0x1B3F11) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_10_98 x0;                        // 0x4
-    /* 0x004 */ anon_10_98 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_14_98;
 
 /* anon_3_98 -- @anon3, 0x8 bytes, fp_doll.c (DIE 0x1B277B) */
 typedef struct {   // size 0x8
@@ -271,59 +255,6 @@ typedef struct {   // size 0x7E0
     /* 0x738 */ anon_22_98 result;                    // 0xA0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
 } anon_4_98;
-
-/* anon_8_98 -- @anon8, 0xD40 bytes, fp_doll.c (DIE 0x1B331C) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_8_98;
-
-/* anon_12_98 -- @anon12, 0x14 bytes, fp_doll.c (DIE 0x1B3AD7) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_12_98;
-
-/* anon_13_98 -- @anon13, 0xC bytes, fp_doll.c (DIE 0x1B3DC8) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_13_98;
-
-/* anon_18_98 -- @anon18, 0x4 bytes, fp_doll.c (DIE 0x1B46C7) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_18_98;
-
-/* anon_17_98 -- @anon17, 0x4 bytes, fp_doll.c (DIE 0x1B4620) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_18_98 s;                         // 0x4
-} anon_17_98;
-
-/* anon_19_98 -- @anon19, 0x12E0 bytes, fp_doll.c (DIE 0x1B4989) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_13_98 history[400];              // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_19_98;
 
 /* anon_24_98 -- @anon24, 0x10 bytes, fp_doll.c (DIE 0x1B5C8D) */
 typedef struct {   // size 0x10

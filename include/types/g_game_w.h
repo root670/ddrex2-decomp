@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct g_game_w *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: onimode.c (DIE 0x63BF), b_anime.c (DIE 0x116CC), p_anime.c (DIE 0x18B9E), ani_load.c (DIE 0x1BE4A), dexport.c (DIE 0x3851A), eye_system.c (DIE 0x4CB9E), fft_disp.c (DIE 0x5EA67), title_demo.c (DIE 0x68F2B), net.c (DIE 0x72157), net_main.c (DIE 0x7D2B0), net_read_data.c (DIE 0x96B9E), net_game_main.c (DIE 0x9FB14), workout.c (DIE 0xAE9D8), bk_disp_sub.c (DIE 0xDE7F9), bk_disp.c (DIE 0xEC1D2), fp_msel.c (DIE 0xFE4F6), fp_eyetoy.c (DIE 0x1091A4), fp_chara.c (DIE 0x110326), freeplay.c (DIE 0x11D9FC), fp_style.c (DIE 0x125CD6), fp_res.c (DIE 0x130891), fp_opt.c (DIE 0x144B0D), net_sys_main.c (DIE 0x14F69B), net_sys_new.c (DIE 0x15A8AD), dmm_init.c (DIE 0x19024B), dmm_main.c (DIE 0x1963DB), fp_doll.c (DIE 0x1B095A), net_play_main.c (DIE 0x1BEDC5), net_game_vs.c (DIE 0x1CD8A2), point.c (DIE 0x1E4A16), dmm_chara.c (DIE 0x1EB1FD), fp_hand.c (DIE 0x1FF5D1), shop_init.c (DIE 0x211FB7), shop_main.c (DIE 0x21AAFD), shop_obj.c (DIE 0x222612), shop_disp.c (DIE 0x23264F), dmm_mc.c (DIE 0x24B897), net_game_challenge.c (DIE 0x26F4E2), adv_topmenu_obj.c (DIE 0x274A69), adv_endless_obj.c (DIE 0x281B2A), adv_main.c (DIE 0x28DE9B), adv_nonstop_obj.c (DIE 0x29924E), tra_menu.c (DIE 0x2A50B2), tra_main.c (DIE 0x2AD917), tra_msel.c (DIE 0x2B8445), net_game_vs_win.c (DIE 0x2C0F24), dmm_func.c (DIE 0x2C911C), tra_func.c (DIE 0x2D1169), tra_play.c (DIE 0x2DBC7B), tra_res.c (DIE 0x2E1795), net_game_prg.c (DIE 0x2ED096), ed_edit.c (DIE 0x30AF2C), info.c (DIE 0x339168), infoshow.c (DIE 0x3451CA), kn_lfunc.c (DIE 0x3648FD), les.c (DIE 0x36CEC7), les_play.c (DIE 0x37644D), les_sel_lv.c (DIE 0x37EFFB), dmm_event_cond.c (DIE 0x3D2963), dmm_event_exe.c (DIE 0x3DE951), dmm_judge.c (DIE 0x3E7B2B), dmm_play.c (DIE 0x3EF3DD), dmm_play_course.c (DIE 0x3FA49F), dmm_qmenu.c (DIE 0x402EBB), dmm_result.c (DIE 0x40FDE1), dmm_select.c (DIE 0x41C7DA), dmm_style.c (DIE 0x429B14), opt_main.c (DIE 0x441085), rec_main.c (DIE 0x471844)
  */
@@ -22,6 +23,8 @@ struct note_status;
 #include "types/g_each_w.h"
 #include "types/music_info.h"
 #include "types/note_status.h"
+#include "types/anon_2e94f6ba7a86.h"
+#include "types/anon_5e4dacf47895.h"
 
 struct g_game_w {   // size 0xACDC4
     /* 0x000 */ short state;                          // 0x2
@@ -56,12 +59,7 @@ struct g_game_w {   // size 0xACDC4
     /* 0x02C */ struct g_each_w player[2];            // 0xA8518
     /* 0xA8544 */ signed char music_table[128];       // 0x80
     /* 0xA85C4 */ struct note_status note_status_table[300];  // 0x2EE0
-    /* 0xAB4A4 */ struct {   // size 0x4
-        /* 0x000 */ unsigned char old_stat;               // 0x1
-        /* 0x001 */ unsigned char cur_stat;               // 0x1
-        /* 0x002 */ unsigned char release_ct;             // 0x1
-        /* 0x003 */ unsigned char warning;                // 0x1
-    } hc_work[8];
+    /* 0xAB4A4 */ anon_2e94f6ba7a86 hc_work[8];       // 0x20
     /* 0xAB4C4 */ int mode_quit_ct[2];                // 0x8
     /* 0xAB4CC */ int force_exit_ct[2];               // 0x8
     /* 0xAB4D4 */ int workout_play_time;              // 0x4
@@ -116,20 +114,7 @@ struct g_game_w {   // size 0xACDC4
     /* 0xAB535 */ char nonstop_selopt_flag;           // 0x1
     /* 0xAB536 */ unsigned char dancer_id[3];         // 0x3
     /* 0xAB539 */ // 0x3 bytes padding
-    /* 0xAB53C */ struct {   // size 0x184
-        /* 0x000, 0x080, 0x100 */ struct {   // size 0x10
-            /* 0x000, 0x004 */ union {   // size 0x4
-                /* 0x000 */ int id;                               // 0x4
-                /* 0x000 */ float fd;                             // 0x4
-            } x0, y0;                             // 0x4 each
-            /* 0x008 */ unsigned int z0;                      // 0x4
-            /* 0x00C */ unsigned char r0;                     // 0x1
-            /* 0x00D */ unsigned char g0;                     // 0x1
-            /* 0x00E */ unsigned char b0;                     // 0x1
-            /* 0x00F */ unsigned char a0;                     // 0x1
-        } line_a[8], line_b[8], line_c[8];        // 0x80 each
-        /* 0x180 */ int num;                              // 0x4
-    } line_data[16];
+    /* 0xAB53C */ anon_5e4dacf47895 line_data[16];    // 0x1840
     /* 0xACD7C */ int line_speed;                     // 0x4
     /* 0xACD80 */ int bk_ef_kind;                     // 0x4
     /* 0xACD84 */ int bk_ef_colset[3];                // 0xC

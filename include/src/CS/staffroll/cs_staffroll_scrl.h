@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_staffroll_cs_staffroll_scrl_c_H
 #define DDR_UNIT_src_CS_staffroll_cs_staffroll_scrl_c_H
@@ -71,10 +72,10 @@ typedef struct {   // size 0x48
 } anon_1_190;
 
 /* anon_x358f78_190 -- @enum, 0x1 bytes, cs_staffroll_scrl.c (DIE 0x358F78) */
-enum anon_x358f78_190 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_SCRL_STEP_KANJI_FONT_SETUP_INIT = 0,
     SRE_SCRL_STEP_KANJI_FONT_SETUP = 1,
-};
+} anon_x358f78_190;
 
 /* anon_3_190 -- @anon3, 0x4 bytes, cs_staffroll_scrl.c (DIE 0x35921A) */
 typedef union {   // size 0x4
@@ -99,11 +100,11 @@ typedef struct {   // size 0x24
 } anon_2_190;
 
 /* anon_x3591b9_190 -- @enum, 0x1 bytes, cs_staffroll_scrl.c (DIE 0x3591B9) */
-enum anon_x3591b9_190 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_SCRL_STEP_INIT = 0,
     SRE_SCRL_STEP_MAIN = 1,
     SRE_SCRL_STEP_TERMINATE = 2,
-};
+} anon_x3591b9_190;
 
 /* anon_4_190 -- @anon4, 0x30 bytes, cs_staffroll_scrl.c (DIE 0x359277) */
 typedef struct {   // size 0x30
@@ -139,8 +140,8 @@ static unsigned char isreMainStep;                               /* @0x002DE5F0 
 static float fsreScrollSpd;                                      /* @0x002DE5F4 size 0x4 */
 void (*csStaffRollScrlDrawFunc[10])(float, unsigned char *);     /* @0x00800F30 size 0x28 */
 anon_0_190 *ll_pstf;                                             /* @0x002DE5F8 size 0x4 */
-enum anon_x3591b9_190 SRE_SCRL_STEP;                             /* not allocated size 0x1 */
-enum anon_x358f78_190 SRE_FONT_READ_STEP;                        /* not allocated size 0x1 */
+anon_x3591b9_190 SRE_SCRL_STEP;                                  /* not allocated size 0x1 */
+anon_x358f78_190 SRE_FONT_READ_STEP;                             /* not allocated size 0x1 */
 
 /* functions defined (13) */
 void *csStaffRollScrlDrawFunc_Copyright(float pos_y);            /* 0x007FF250-0x007FF3D0 lines 812-839 */

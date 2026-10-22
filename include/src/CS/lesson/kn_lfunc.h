@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_lesson_kn_lfunc_c_H
 #define DDR_UNIT_src_CS_lesson_kn_lfunc_c_H
@@ -18,7 +19,7 @@
 #include "types/sequence.h"
 #include "types/sq_standard.h"
 
-/* anonymous types (13) */
+/* anonymous types (11) */
 
 /* anon_0_194 -- @anon0, 0x88 bytes, kn_lfunc.c (DIE 0x3617F3) */
 typedef struct {   // size 0x88
@@ -113,23 +114,6 @@ typedef struct {   // size 0x10
     /* 0x00E */ unsigned char msg_flg;                // 0x1
     /* 0x00F */ unsigned char pad[1];                 // 0x1
 } anon_4_194;
-
-/* anon_5_194 -- @anon5, 0x4 bytes, kn_lfunc.c (DIE 0x3634BC) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_5_194;
-
-/* anon_6_194 -- @anon6, 0x10 bytes, kn_lfunc.c (DIE 0x363561) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_5_194 x0;                        // 0x4
-    /* 0x004 */ anon_5_194 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_6_194;
 
 /* anon_14_194 -- @anon14, 0x10 bytes, kn_lfunc.c (DIE 0x366445) */
 typedef struct {   // size 0x10

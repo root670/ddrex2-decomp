@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_play_p_anime_c_H
 #define DDR_UNIT_src_AM_s573_play_p_anime_c_H
@@ -19,26 +20,6 @@
 #include "types/play_anime_work.h"
 #include "types/play_w.h"
 #include "types/sequence.h"
-
-/* anonymous types (2) */
-
-/* anon_2_11 -- @anon2, 0x4 bytes, p_anime.c (DIE 0x1A929) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_2_11;
-
-/* anon_3_11 -- @anon3, 0x10 bytes, p_anime.c (DIE 0x1A9AA) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_2_11 x0;                         // 0x4
-    /* 0x004 */ anon_2_11 y0;                         // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_3_11;
-
 
 /* variables (6) */
 static int anime_id_tbl[11];                                     /* @0x002D0B60 size 0x2C */

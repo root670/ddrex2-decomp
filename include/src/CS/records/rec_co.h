@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_records_rec_co_c_H
 #define DDR_UNIT_src_CS_records_rec_co_c_H
@@ -18,7 +19,7 @@
 #include "types/_tag_cCoCursor01.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (16) */
+/* anonymous types (15) */
 
 /* anon_9_243 -- @anon9, 0x4 bytes, rec_co.c (DIE 0x476127) */
 typedef union {   // size 0x4
@@ -75,14 +76,6 @@ typedef struct {   // size 0x48
     /* 0x042 */ unsigned short colors;                // 0x2
     /* 0x044 */ // 0x4 bytes padding
 } anon_1_243;
-
-/* anon_2_243 -- @anon2, 0x8 bytes, rec_co.c (DIE 0x474F7F) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short x;                              // 0x2
-    /* 0x002 */ short y;                              // 0x2
-    /* 0x004 */ short w;                              // 0x2
-    /* 0x006 */ short h;                              // 0x2
-} anon_2_243;
 
 /* anon_3_243 -- @anon3, 0x10 bytes, rec_co.c (DIE 0x47516E) */
 typedef struct {   // size 0x10
@@ -285,7 +278,7 @@ void RCObj_fadeset(anon_3_243 *w, float wait, int kind);         /* 0x007F2980-0
 void Rec_PutZBuffBoard(float y, float h);                        /* 0x007F29C0-0x007F2A80 lines 594-612 */
 void Rec_obj_board_disp(float x, float len);                     /* 0x007F2A80-0x007F2CA0 lines 545-584 */
 void Rec_line_disp(float x, float y, float w);                   /* 0x007F2CA0-0x007F2D24 lines 484-495 */
-void Rec_Board_Disp(anon_2_243 r, int pri_add, unsigned char flag); /* 0x007F2D30-0x007F2F78 lines 442-477 */
+void Rec_Board_Disp(anon_b14b78a0b5d3 r, int pri_add, unsigned char flag); /* 0x007F2D30-0x007F2F78 lines 442-477 */
 void Rec_DetailItemDisp(float cx, float cy, unsigned char kind, unsigned char bri, unsigned char alpha, unsigned char flag); /* 0x007F2F80-0x007F3158 lines 400-434 */
 void Rec_DanceLevelDisp(float x, float y, unsigned char level, int pri, unsigned char flag, unsigned char alpha, unsigned char bri); /* 0x007F3160-0x007F34D0 lines 307-390 */
 void Rec_res_slash_disp(float x0, float y0, int pri, unsigned char type, unsigned char alpha, unsigned char bri); /* 0x007F34D0-0x007F3618 lines 277-295 */

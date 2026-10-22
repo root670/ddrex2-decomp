@@ -5,37 +5,34 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct _tag_cLesSelLevelCursor *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: les_sel_lv.c (DIE 0x37CC41)
  */
 #ifndef DDR_types__tag_cLesSelLevelCursor_H
 #define DDR_types__tag_cLesSelLevelCursor_H
 
+#include "types/anon_fa86f3882d77.h"
+
 struct _tag_cLesSelLevelCursor {   // size 0xA0
     /* 0x000 */ int pmode;                            // 0x4
     /* 0x004 */ int pcount;                           // 0x4
     /* 0x008 */ int pcounter;                         // 0x4
     /* 0x00C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x010, 0x020, 0x030 */ struct {   // size 0x10
-        /* 0x000 */ float vx;                             // 0x4
-        /* 0x004 */ float vy;                             // 0x4
-        /* 0x008 */ float vz;                             // 0x4
-        /* 0x00C */ float vw;                             // 0x4
-    } pos, npos, ipos;                            // 0x10 each
+    /* 0x010 */ anon_fa86f3882d77 pos;                // 0x10
+    /* 0x020 */ anon_fa86f3882d77 npos;               // 0x10
+    /* 0x030 */ anon_fa86f3882d77 ipos;               // 0x10
     /* 0x040 */ int amode;                            // 0x4
     /* 0x044 */ int acount;                           // 0x4
     /* 0x048 */ int acounter;                         // 0x4
     /* 0x04C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x050, 0x060, 0x070 */ struct {   // size 0x10
-        /* 0x000 */ float vx;                             // 0x4
-        /* 0x004 */ float vy;                             // 0x4
-        /* 0x008 */ float vz;                             // 0x4
-        /* 0x00C */ float vw;                             // 0x4
-    } angle, nangle, iangle;                      // 0x10 each
+    /* 0x050 */ anon_fa86f3882d77 angle;              // 0x10
+    /* 0x060 */ anon_fa86f3882d77 nangle;             // 0x10
+    /* 0x070 */ anon_fa86f3882d77 iangle;             // 0x10
     /* 0x080 */ int step;                             // 0x4
     /* 0x084 */ int can_select;                       // 0x4
     /* 0x088 */ int bright;                           // 0x4

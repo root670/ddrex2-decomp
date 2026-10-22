@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_option_opt_kconfig_c_H
 #define DDR_UNIT_src_CS_option_opt_kconfig_c_H
@@ -21,60 +22,7 @@
 #include "types/_tag_cKeyConfigLR.h"
 #include "types/oni_course.h"
 
-/* anonymous types (10) */
-
-/* anon_10_227 -- @anon10, 0x14 bytes, opt_kconfig.c (DIE 0x43A6DB) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_10_227;
-
-/* anon_3_227 -- @anon3, 0x4 bytes, opt_kconfig.c (DIE 0x43619A) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_3_227;
-
-/* anon_1_227 -- @anon1, 0x4 bytes, opt_kconfig.c (DIE 0x435FBE) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_3_227 s;                         // 0x4
-} anon_1_227;
-
-/* anon_12_227 -- @anon12, 0xC bytes, opt_kconfig.c (DIE 0x43ACCA) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_12_227;
-
-/* anon_2_227 -- @anon2, 0x12E0 bytes, opt_kconfig.c (DIE 0x43601C) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_12_227 history[400];             // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_2_227;
-
-/* anon_9_227 -- @anon9, 0xD40 bytes, opt_kconfig.c (DIE 0x43A3FE) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_9_227;
+/* anonymous types (4) */
 
 /* anon_6_227 -- @anon6, 0x48 bytes, opt_kconfig.c (DIE 0x438AE5) */
 typedef struct {   // size 0x48

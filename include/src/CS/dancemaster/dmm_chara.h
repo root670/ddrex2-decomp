@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_dancemaster_dmm_chara_c_H
 #define DDR_UNIT_src_CS_dancemaster_dmm_chara_c_H
@@ -16,7 +17,7 @@
 #include "types/g_game_w.h"
 #include "types/play_mode.h"
 
-/* anonymous types (22) */
+/* anonymous types (20) */
 
 /* anon_0_109 -- @anon0, 0xC bytes, dmm_chara.c (DIE 0x1E86CE) */
 typedef struct {   // size 0xC
@@ -354,23 +355,6 @@ typedef struct {   // size 0x3D7C
     /* 0x3D74 */ int result_mask_cnt;                 // 0x4
     /* 0x3D78 */ int dummy;                           // 0x4
 } anon_7_109;
-
-/* anon_15_109 -- @anon15, 0x4 bytes, dmm_chara.c (DIE 0x1ECFD0) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_15_109;
-
-/* anon_18_109 -- @anon18, 0x10 bytes, dmm_chara.c (DIE 0x1ED482) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_15_109 x0;                       // 0x4
-    /* 0x004 */ anon_15_109 y0;                       // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_18_109;
 
 
 /* variables (1) */

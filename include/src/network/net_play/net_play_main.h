@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_play_net_play_main_c_H
 #define DDR_UNIT_src_network_net_play_net_play_main_c_H
@@ -18,26 +19,6 @@
 #include "types/_tag_cNetPlay.h"
 #include "types/_tag_cNetPlayArg.h"
 #include "types/g_game_w.h"
-
-/* anonymous types (2) */
-
-/* anon_1_102 -- @anon1, 0x4 bytes, net_play_main.c (DIE 0x1C141E) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_1_102;
-
-/* anon_2_102 -- @anon2, 0x10 bytes, net_play_main.c (DIE 0x1C1C19) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_1_102 x0;                        // 0x4
-    /* 0x004 */ anon_1_102 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_2_102;
-
 
 /* variables (6) */
 struct _tag_cNetPlay *pNetPlay;                                  /* @0x002DDBE8 size 0x4 */

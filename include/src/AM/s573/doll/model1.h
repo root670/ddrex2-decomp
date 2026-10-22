@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_doll_model1_c_H
 #define DDR_UNIT_src_AM_s573_doll_model1_c_H
@@ -18,7 +19,7 @@
 #include "types/dancer_model_w.h"
 #include "types/dancer_motion_w.h"
 
-/* anonymous types (17) */
+/* anonymous types (8) */
 
 /* anon_0_17 -- @anon0, 0x30 bytes, model1.c (DIE 0x2464D) */
 typedef struct {   // size 0x30
@@ -55,34 +56,6 @@ typedef struct {   // size 0x20
     /* 0x01C */ unsigned int *sharedn_top;            // 0x4
 } anon_2_17;
 
-/* anon_14_17 -- @anon14, 0x2 bytes, model1.c (DIE 0x25B19) */
-typedef struct {   // size 0x2
-    /* 0x000 */ unsigned short offset;                // 0x2
-} anon_14_17;
-
-/* anon_15_17 -- @anon15, 0x4 bytes, model1.c (DIE 0x25B82) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short shift_bit;             // 0x2
-    /* 0x002 */ anon_14_17 tbl[1];                    // 0x2
-} anon_15_17;
-
-/* anon_3_17 -- @anon3, 0x8 bytes, model1.c (DIE 0x24D96) */
-typedef struct {   // size 0x8
-    /* 0x000 */ unsigned char kind;                   // 0x1
-    /* 0x001 */ unsigned char pad[3];                 // 0x3
-    /* 0x004 */ anon_15_17 data;                      // 0x4
-} anon_3_17;
-
-/* anon_4_17 -- @anon4, 0xC bytes, model1.c (DIE 0x24E3F) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned char id;                     // 0x1
-    /* 0x001 */ unsigned char format;                 // 0x1
-    /* 0x002 */ unsigned char hastrans;               // 0x1
-    /* 0x003 */ unsigned char parent_id;              // 0x1
-    /* 0x004 */ unsigned int nbwave;                  // 0x4
-    /* 0x008 */ anon_3_17 **offset;                   // 0x4
-} anon_4_17;
-
 /* anon_6_17 -- @anon6, 0xC bytes, model1.c (DIE 0x251D7) */
 typedef struct {   // size 0xC
     /* 0x000 */ unsigned char u0;                     // 0x1
@@ -95,37 +68,6 @@ typedef struct {   // size 0xC
     /* 0x009 */ unsigned char v2;                     // 0x1
     /* 0x00A */ unsigned short p0;                    // 0x2
 } anon_6_17;
-
-/* anon_7_17 -- @anon7, 0xC bytes, model1.c (DIE 0x25312) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned int size;                    // 0x4
-    /* 0x004 */ unsigned short nbparts;               // 0x2
-    /* 0x006 */ unsigned short nbframe;               // 0x2
-    /* 0x008 */ anon_4_17 **offset;                   // 0x4
-} anon_7_17;
-
-/* anon_8_17 -- @anon8, 0x8 bytes, model1.c (DIE 0x253C3) */
-typedef struct {   // size 0x8
-    /* 0x000 */ char *name;                           // 0x4
-    /* 0x004 */ anon_7_17 *offset;                    // 0x4
-} anon_8_17;
-
-/* anon_11_17 -- @anon11, 0x14 bytes, model1.c (DIE 0x255CE) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned int attribute;               // 0x4
-    /* 0x004 */ struct _GsCOORDINATE2 *coord2;        // 0x4
-    /* 0x008 */ unsigned int *tmd;                    // 0x4
-    /* 0x00C */ unsigned int *packet;                 // 0x4
-    /* 0x010 */ unsigned int id;                      // 0x4
-} anon_11_17;
-
-/* anon_12_17 -- @anon12, 0x10 bytes, model1.c (DIE 0x256EE) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int vx;                               // 0x4
-    /* 0x004 */ int vy;                               // 0x4
-    /* 0x008 */ int vz;                               // 0x4
-    /* 0x00C */ int pad;                              // 0x4
-} anon_12_17;
 
 /* anon_13_17 -- @anon13, 0x28 bytes, model1.c (DIE 0x2578B) */
 typedef struct {   // size 0x28
@@ -158,14 +100,6 @@ typedef struct {   // size 0x28
     /* 0x025 */ unsigned char v2;                     // 0x1
     /* 0x026 */ unsigned short pad2;                  // 0x2
 } anon_13_17;
-
-/* anon_16_17 -- @anon16, 0x8 bytes, model1.c (DIE 0x25BEA) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short vx;                             // 0x2
-    /* 0x002 */ short vy;                             // 0x2
-    /* 0x004 */ short vz;                             // 0x2
-    /* 0x006 */ short pad;                            // 0x2
-} anon_16_17;
 
 /* anon_17_17 -- @anon17, 0x1C bytes, model1.c (DIE 0x25D81) */
 typedef struct {   // size 0x1C
@@ -243,7 +177,7 @@ anon_20_17 *dancer_data_w;                                       /* @0x002DE4A8 
 /* functions defined (5) */
 static unsigned int *NMDPrsetPacketGT3(unsigned int *dop, unsigned int prim_no, anon_6_17 *prsp); /* 0x001C7730-0x001C77A8 lines 264-281 */
 static unsigned int *NMDPrsetPacketG3(unsigned int *dop, unsigned int prim_no); /* 0x001C77B0-0x001C7810 lines 239-253 */
-unsigned int *NMDPresetObject(anon_11_17 *objp, unsigned int *addr); /* 0x001C7810-0x001C78BC lines 179-228 */
+unsigned int *NMDPresetObject(anon_934863761eeb *objp, unsigned int *addr); /* 0x001C7810-0x001C78BC lines 179-228 */
 static void NMDMapModelingData(unsigned int *p);                 /* 0x001C78C0-0x001C7990 lines 144-170 */
 void dancer_model_setup(int pid, int chara);                     /* 0x001C7990-0x001C7BA4 lines 48-119 */
 

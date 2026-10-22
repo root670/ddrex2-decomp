@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct sceHTTPClient *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: ddrex2_usa_id.c (DIE 0x3960F8)
  */
@@ -22,6 +23,7 @@ struct sceHTTPResponse;
 #include "types/sceHTTPHeaderList.h"
 #include "types/sceHTTPParsedURI.h"
 #include "types/sceHTTPResponse.h"
+#include "types/anon_315a882ef873.h"
 
 struct sceHTTPClient {   // size 0x210
     /* 0x000 */ char *name;                           // 0x4
@@ -69,23 +71,7 @@ struct sceHTTPClient {   // size 0x210
     /* 0x0A8 */ void *c_notify_opt;                   // 0x4
     /* 0x0AC */ void *c_notify_gp;                    // 0x4
     /* 0x0B0 */ int nb_open;                          // 0x4
-    /* 0x0B4 */ enum @enum {   // size 0x1
-        sceHTTPM_OPTIONS = 0,
-        sceHTTPM_GET = 1,
-        sceHTTPM_HEAD = 2,
-        sceHTTPM_POST = 3,
-        sceHTTPM_PUT = 4,
-        sceHTTPM_DELETE = 5,
-        sceHTTPM_TRACE = 6,
-        sceHTTPM_CONNECT = 7,
-        sceHTTPM_PROPFIND = 8,
-        sceHTTPM_PROPPATCH = 9,
-        sceHTTPM_MKCOL = 10,
-        sceHTTPM_COPY = 11,
-        sceHTTPM_MOVE = 12,
-        sceHTTPM_LOCK = 13,
-        sceHTTPM_UNLOCK = 14,
-    } method;
+    /* 0x0B4 */ anon_315a882ef873 method;             // 0x1
     /* 0x0B5 */ // 0x3 bytes padding
     /* 0x0B8 */ struct sceHTTPParsedURI *puri;        // 0x4
     /* 0x0BC */ struct sceHTTPHeaderList *iheaders;   // 0x4

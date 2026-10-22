@@ -5,15 +5,18 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct anime_db *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: b_anime.c (DIE 0x144BC)
  */
 #ifndef DDR_types_anime_db_H
 #define DDR_types_anime_db_H
+
+#include "types/anon_b14b78a0b5d3.h"
 
 struct anime_db {   // size 0x88
     /* 0x000 */ unsigned long size;                   // 0x8
@@ -22,12 +25,8 @@ struct anime_db {   // size 0x88
     /* 0x018 */ unsigned long *buff;                  // 0x4
     /* 0x01C */ int req_anime;                        // 0x4
     /* 0x020 */ int cur_id;                           // 0x4
-    /* 0x024, 0x02C */ struct {   // size 0x8
-        /* 0x000 */ short x;                              // 0x2
-        /* 0x002 */ short y;                              // 0x2
-        /* 0x004 */ short w;                              // 0x2
-        /* 0x006 */ short h;                              // 0x2
-    } prect, crect;                               // 0x8 each
+    /* 0x024 */ anon_b14b78a0b5d3 prect;              // 0x8
+    /* 0x02C */ anon_b14b78a0b5d3 crect;              // 0x8
     /* 0x034 */ int can_block;                        // 0x4
     /* 0x038 */ int tan_block[19];                    // 0x4C
     /* 0x084 */ // 0x4 bytes padding

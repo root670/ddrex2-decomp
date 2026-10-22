@@ -236,24 +236,29 @@ def _gap(indent, start, end, align):
     return f"{indent}/* 0x{start:03x} */ // 0x{end - start:x} bytes {why}"
 
 
-def _enum_lines(die, tag, indent):
+def _enum_lines(die, tag, indent, typedef=False):
     """`enum <tag> { A = 1, ... };` from CodeWarrior's own item blob.
 
     The vendored reader renders enums out of `0x00f3`/`0x00f4`, the vendor's attribute
     holding the items as an integer of `byte_size` bytes followed by a NUL-terminated name.
-    Nothing in this image is an enum, so this path is untriggered; it is here because the
-    renderer has to spell every aggregate DWARF can hand it.
+
+    `typedef` spells an enumeration one word can name: `typedef enum { ... } <tag>;`.  It is
+    not cosmetic.  A tag reaches the debug information -- `enum anon_x v;` records the
+    enumeration DIE's name as `anon_x`, while `typedef enum { ... } anon_x;` records `@enum`,
+    which is what retail has (measured with the pinned compiler: the tagged spelling's DIE
+    name is the tag, the typedef's is `@enum`).
     """
     blob = die.attrs.get(0x00f4) or die.attrs.get(0x00f3) or b""
     width = die.attrs.get(AT_byte_size, 4)
-    lines = [f"{indent}enum {tag} {{   // size 0x{width:x}"]
+    head = (f"{indent}typedef enum {{" if typedef else f"{indent}enum {tag} {{")
+    lines = [f"{head}   // size 0x{width:x}"]
     pos = 0
     while pos + width <= len(blob):
         value = int.from_bytes(blob[pos:pos + width], "little", signed=True)
         end = blob.index(b"\0", pos + width)
         lines.append(f"{indent}    {blob[pos + width:end].decode('latin-1')} = {value},")
         pos = end + 1
-    lines.append(f"{indent}}};")
+    lines.append(f"{indent}}}{f' {tag};' if typedef else '};'}")
     return lines
 
 
@@ -275,7 +280,7 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
     DWARF 1 has no typedef DIE, so the alias is invisible to the debug information.
     """
     if die.tag == TAG_enumeration_type:
-        return _enum_lines(die, tag or die.name or "", indent)
+        return _enum_lines(die, tag or die.name or "", indent, typedef=typedef)
     kind = _kind(dw, die)
     size = die.attrs.get(AT_byte_size, 0)
     head = f"{indent}{kind}{' ' + tag if tag else ''} {{   // size 0x{size:x}"
@@ -454,17 +459,6 @@ def shared_anonymous(dw):
     return index
 
 
-def alias_use(die, name):
-    """How a use of a shared alias is spelled: an enumeration keeps its `enum` keyword.
-
-    A struct or union alias is a typedef, so the bare name is the whole spelling.  An
-    enumeration is not: this tree has always spelled an anonymous enumeration `enum <tag>`
-    (`@enum` is what the compiler records for an unnamed one whatever the C says), and the
-    shared header declares it the same way.
-    """
-    return f"enum {name}" if die.tag == TAG_enumeration_type else name
-
-
 def _tagger(dw):
     """Every aggregate a member mentions, spelled the way a shared header spells it.
 
@@ -480,7 +474,7 @@ def _tagger(dw):
             raise NotSpellable(
                 f"{_where(die)} ({_declared_by(die)}): the anonymous type {die.name!r} is "
                 f"not reachable from a named type, so no shared header defines it")
-        return alias_use(die, shared_name(digest))
+        return shared_name(digest)
     return specifier
 
 
@@ -530,12 +524,10 @@ class Unit:
         has no typedef DIE, so the alias itself never reaches the debug information).  A
         named type still needs its keyword, because the shared header defines a tag.
 
-        An enumeration keeps its tag: the compiler names an unnamed one `@enum` in DWARF
-        whatever it is called in C, and `enum <tag>` is the spelling this tree already had
-        for them.
+        An anonymous enumeration is a typedef too, for the same reason a shared one is: a tag
+        reaches the debug information (`enum anon_x v;` records the enumeration DIE's name as
+        `anon_x`), while `typedef enum { ... } anon_x;` records `@enum` -- what retail has.
         """
-        if die.tag == TAG_enumeration_type:
-            return f"enum {self.tag(die) if anonymous(die) else die.name}"
         if anonymous(die):
             return self.tag(die)
         return f"{_kind(self.dw, die)} {die.name}"
@@ -863,7 +855,7 @@ def _unit_header(dw, tu):
     def specifier(die):
         """A use of an anonymous type: its shared alias, or this unit's own typedef."""
         alias = shared_alias(die)
-        return alias_use(die, alias) if alias else unit.specifier(die)
+        return alias if alias else unit.specifier(die)
 
     g = _guard("DDR", "UNIT", emit_cus.relpath(tu.name), "H")
     pcs = [(cu.attrs[AT_low_pc], cu.attrs[AT_high_pc]) for cu in tu.cus

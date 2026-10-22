@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_staffroll_cs_staffroll_c_H
 #define DDR_UNIT_src_CS_staffroll_cs_staffroll_c_H
@@ -16,11 +17,11 @@
 /* anonymous types (4) */
 
 /* anon_x34cde8_186 -- @enum, 0x1 bytes, cs_staffroll.c (DIE 0x34CDE8) */
-enum anon_x34cde8_186 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_BINREAD_STEP_INIT = 0,
     SRE_BINREAD_STEP_READ = 1,
     SRE_BINREAD_STEP_TERMINATE = 2,
-};
+} anon_x34cde8_186;
 
 /* anon_0_186 -- @anon0, 0x78 bytes, cs_staffroll.c (DIE 0x34CE52) */
 typedef struct {   // size 0x78
@@ -54,7 +55,7 @@ typedef struct {   // size 0x78
 } anon_0_186;
 
 /* anon_x34d26f_186 -- @enum, 0x1 bytes, cs_staffroll.c (DIE 0x34D26F) */
-enum anon_x34d26f_186 {   // size 0x1
+typedef enum {   // size 0x1
     SRE_SDREAD_STEP_VAG_INIT = 0,
     SRE_SDREAD_STEP_VAG_READ = 1,
     SRE_SDREAD_STEP_VAG_WAIT = 2,
@@ -64,7 +65,7 @@ enum anon_x34d26f_186 {   // size 0x1
     SRE_SDREAD_STEP_READ = 6,
     SRE_SDREAD_STEP_WAIT = 7,
     SRE_SDREAD_STEP_TERMINATE = 8,
-};
+} anon_x34d26f_186;
 
 /* anon_1_186 -- @anon1, 0x8 bytes, cs_staffroll.c (DIE 0x34D375) */
 typedef struct {   // size 0x8
@@ -80,8 +81,8 @@ static int isreReadStep;                                         /* @0x002DE5A0 
 static int isreSdReadStep;                                       /* @0x002DE5A4 size 0x4 */
 anon_0_186 g_staffroll;                                          /* @0x00807D60 size 0x78 */
 anon_1_186 sound_bin[];                                          /* @0x002DD418 */
-enum anon_x34d26f_186 SRE_SDREAD_STEP;                           /* not allocated size 0x1 */
-enum anon_x34cde8_186 SRE_BINREAD_STEP;                          /* not allocated size 0x1 */
+anon_x34d26f_186 SRE_SDREAD_STEP;                                /* not allocated size 0x1 */
+anon_x34cde8_186 SRE_BINREAD_STEP;                               /* not allocated size 0x1 */
 
 /* functions defined (4) */
 int csStaffRollSdMain(void);                                     /* 0x007F9D20-0x007F9FD4 lines 434-553 */

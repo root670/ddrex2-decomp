@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct _NS_NET_INFO_W *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: net.c (DIE 0x6DADA), net_main.c (DIE 0x78E83), net_type.c (DIE 0x81B4D), net_prg.c (DIE 0x855B5), net_game_main.c (DIE 0x9980F), net_game_window.c (DIE 0xA6931), net_game_opt.c (DIE 0xB41E2), net_game_match.c (DIE 0xC46B6), net_game_list.c (DIE 0xD7D08), net_sys_top.c (DIE 0x15EE4A), net_sys_user.c (DIE 0x1665FA), net_win_search.c (DIE 0x1A5203), net_game_vs.c (DIE 0x1C8AD5), net_sys_lobby.c (DIE 0x1EE5DA), net_game_prg.c (DIE 0x2E8EF7), ddrex2_usa_util.c (DIE 0x39F65E), net_auth_main.c (DIE 0x3A59C9)
  */
@@ -28,6 +29,7 @@ struct _ddrnet;
 #include "types/_NetUDPRecvWork.h"
 #include "types/_NetUDPSendWork.h"
 #include "types/_ddrnet.h"
+#include "types/anon_11313902d7fa.h"
 
 struct _NS_NET_INFO_W {   // size 0x2C8
     /* 0x000 */ unsigned int mode;                    // 0x4
@@ -36,12 +38,7 @@ struct _NS_NET_INFO_W {   // size 0x2C8
     /* 0x108 */ int dns_addr_pri;                     // 0x4
     /* 0x10C */ int dns_addr_sec;                     // 0x4
     /* 0x110 */ int dhcp_up;                          // 0x4
-    /* 0x114 */ struct {   // size 0x10
-        /* 0x000 */ int rtv;                              // 0x4
-        /* 0x004 */ int ip_addr;                          // 0x4
-        /* 0x008 */ int netmask;                          // 0x4
-        /* 0x00C */ int broadcast;                        // 0x4
-    } dhcp_property;
+    /* 0x114 */ anon_11313902d7fa dhcp_property;      // 0x10
     /* 0x124 */ struct _NS_NET_SOCK_W sock[1];        // 0x28
     /* 0x14C */ unsigned int connect_flag;            // 0x4
     /* 0x150 */ int connect_step;                     // 0x4

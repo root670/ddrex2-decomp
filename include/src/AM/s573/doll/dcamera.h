@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_doll_dcamera_c_H
 #define DDR_UNIT_src_AM_s573_doll_dcamera_c_H
@@ -18,7 +19,7 @@
 #include "types/dancer_model_w.h"
 #include "types/dancer_motion_w.h"
 
-/* anonymous types (12) */
+/* anonymous types (4) */
 
 /* anon_0_24 -- @anon0, 0x70 bytes, dcamera.c (DIE 0x33C58) */
 typedef struct {   // size 0x70
@@ -49,34 +50,6 @@ typedef struct {   // size 0x70
     /* 0x06E */ char dir;                             // 0x1
     /* 0x06F */ // 0x1 bytes padding
 } anon_0_24;
-
-/* anon_11_24 -- @anon11, 0x2 bytes, dcamera.c (DIE 0x34EFA) */
-typedef struct {   // size 0x2
-    /* 0x000 */ unsigned short offset;                // 0x2
-} anon_11_24;
-
-/* anon_12_24 -- @anon12, 0x4 bytes, dcamera.c (DIE 0x34F63) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short shift_bit;             // 0x2
-    /* 0x002 */ anon_11_24 tbl[1];                    // 0x2
-} anon_12_24;
-
-/* anon_1_24 -- @anon1, 0x8 bytes, dcamera.c (DIE 0x34005) */
-typedef struct {   // size 0x8
-    /* 0x000 */ unsigned char kind;                   // 0x1
-    /* 0x001 */ unsigned char pad[3];                 // 0x3
-    /* 0x004 */ anon_12_24 data;                      // 0x4
-} anon_1_24;
-
-/* anon_2_24 -- @anon2, 0xC bytes, dcamera.c (DIE 0x340AE) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned char id;                     // 0x1
-    /* 0x001 */ unsigned char format;                 // 0x1
-    /* 0x002 */ unsigned char hastrans;               // 0x1
-    /* 0x003 */ unsigned char parent_id;              // 0x1
-    /* 0x004 */ unsigned int nbwave;                  // 0x4
-    /* 0x008 */ anon_1_24 **offset;                   // 0x4
-} anon_2_24;
 
 /* anon_3_24 -- @anon3, 0x320 bytes, dcamera.c (DIE 0x341A6) */
 typedef struct {   // size 0x320
@@ -111,20 +84,6 @@ typedef struct {   // size 0x320
     /* 0x314 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
 } anon_3_24;
 
-/* anon_5_24 -- @anon5, 0xC bytes, dcamera.c (DIE 0x346D3) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned int size;                    // 0x4
-    /* 0x004 */ unsigned short nbparts;               // 0x2
-    /* 0x006 */ unsigned short nbframe;               // 0x2
-    /* 0x008 */ anon_2_24 **offset;                   // 0x4
-} anon_5_24;
-
-/* anon_6_24 -- @anon6, 0x8 bytes, dcamera.c (DIE 0x347D0) */
-typedef struct {   // size 0x8
-    /* 0x000 */ char *name;                           // 0x4
-    /* 0x004 */ anon_5_24 *offset;                    // 0x4
-} anon_6_24;
-
 /* anon_8_24 -- @anon8, 0x80 bytes, dcamera.c (DIE 0x348BE) */
 typedef struct {   // size 0x80
     /* 0x000 */ struct _tag_cFilepackData tblFilepack[2];  // 0x10
@@ -158,22 +117,6 @@ typedef struct {   // size 0x80
     /* 0x078 */ unsigned int vcnt;                    // 0x4
     /* 0x07C */ int common_rand;                      // 0x4
 } anon_8_24;
-
-/* anon_10_24 -- @anon10, 0x10 bytes, dcamera.c (DIE 0x34E39) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int vx;                               // 0x4
-    /* 0x004 */ int vy;                               // 0x4
-    /* 0x008 */ int vz;                               // 0x4
-    /* 0x00C */ int pad;                              // 0x4
-} anon_10_24;
-
-/* anon_13_24 -- @anon13, 0x8 bytes, dcamera.c (DIE 0x34FCB) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short vx;                             // 0x2
-    /* 0x002 */ short vy;                             // 0x2
-    /* 0x004 */ short vz;                             // 0x2
-    /* 0x006 */ short pad;                            // 0x2
-} anon_13_24;
 
 /* anon_16_24 -- @anon16, 0x246380 bytes, dcamera.c (DIE 0x3585E) */
 typedef struct {   // size 0x246380

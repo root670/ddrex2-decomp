@@ -5,10 +5,11 @@
  * DWARF 1 resolves typedefs away, so the only spelling the evidence offers
  * for a use is `struct dancer_motion_w *`.
  *
- * A member this type holds anonymously is spelled out below, because it
- * has no name that could travel: `@anonN` is per-unit numbering.  The
- * layout digest above is compared across every declaration, which is what
- * makes spelling it out here faithful.
+ * An anonymous member is named, not spelled out here: its layout is
+ * defined once in the `types/anon_<digest>.h` header included below, as a
+ * typedef of an *unnamed* aggregate, so every use of that layout in a
+ * unit's block is one DIE -- retail's own block has one, and two
+ * declarations of it are 5 DIEs and 0x97 bytes of overrun.
  *
  * declared by: dancer.c (DIE 0x20699), model1.c (DIE 0x24F37), model2.c (DIE 0x27C0E), motion1.c (DIE 0x2D0B6), motion2.c (DIE 0x2EC93), dcamera.c (DIE 0x351AC), dinit.c (DIE 0x3FC7B)
  */
@@ -20,6 +21,7 @@ struct one_motion_w;
 
 #include "types/_GsCOORDINATE2.h"
 #include "types/one_motion_w.h"
+#include "types/anon_caea742522ec.h"
 
 struct dancer_motion_w {   // size 0x5F8
     /* 0x000 */ struct _GsCOORDINATE2 coord2[18];     // 0x5A0
@@ -27,36 +29,7 @@ struct dancer_motion_w {   // size 0x5F8
     /* 0x5B0 */ int cur_dance_id;                     // 0x4
     /* 0x5B4 */ int last_dance_id;                    // 0x4
     /* 0x5B8 */ struct one_motion_w motion[2];        // 0x28
-    /* 0x5E0 */ struct {   // size 0x10
-        /* 0x000 */ char magic[2];                        // 0x2
-        /* 0x002 */ short nbmdt;                          // 0x2
-        /* 0x004 */ int reserve;                          // 0x4
-        /* 0x008 */ struct {   // size 0x8
-            /* 0x000 */ char *name;                           // 0x4
-            /* 0x004 */ struct {   // size 0xC
-                /* 0x000 */ unsigned int size;                    // 0x4
-                /* 0x004 */ unsigned short nbparts;               // 0x2
-                /* 0x006 */ unsigned short nbframe;               // 0x2
-                /* 0x008 */ struct {   // size 0xC
-                    /* 0x000 */ unsigned char id;                     // 0x1
-                    /* 0x001 */ unsigned char format;                 // 0x1
-                    /* 0x002 */ unsigned char hastrans;               // 0x1
-                    /* 0x003 */ unsigned char parent_id;              // 0x1
-                    /* 0x004 */ unsigned int nbwave;                  // 0x4
-                    /* 0x008 */ struct {   // size 0x8
-                        /* 0x000 */ unsigned char kind;                   // 0x1
-                        /* 0x001 */ unsigned char pad[3];                 // 0x3
-                        /* 0x004 */ struct {   // size 0x4
-                            /* 0x000 */ unsigned short shift_bit;             // 0x2
-                            /* 0x002 */ struct {   // size 0x2
-                                /* 0x000 */ unsigned short offset;                // 0x2
-                            } tbl[1];
-                        } data;
-                    } **offset;
-                } **offset;
-            } *offset;
-        } motion[1];
-    } *mpack;
+    /* 0x5E0 */ anon_caea742522ec *mpack;             // 0x4
     /* 0x5E4 */ int cur_p_counter;                    // 0x4
     /* 0x5E8 */ int last_p_counter;                   // 0x4
     /* 0x5EC */ int dance_class;                      // 0x4

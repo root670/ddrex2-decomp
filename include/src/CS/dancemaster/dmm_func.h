@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_dancemaster_dmm_func_c_H
 #define DDR_UNIT_src_CS_dancemaster_dmm_func_c_H
@@ -19,7 +20,7 @@
 #include "types/oni_course.h"
 #include "types/play_mode.h"
 
-/* anonymous types (31) */
+/* anonymous types (22) */
 
 /* anon_0_157 -- @anon0, 0x10 bytes, dmm_func.c (DIE 0x2C3C25) */
 typedef struct {   // size 0x10
@@ -36,33 +37,6 @@ typedef struct {   // size 0xC
     /* 0x004 */ int tex_id;                           // 0x4
     /* 0x008 */ int a;                                // 0x4
 } anon_1_157;
-
-/* anon_25_157 -- @anon25, 0x14 bytes, dmm_func.c (DIE 0x2CBD6F) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_25_157;
-
-/* anon_30_157 -- @anon30, 0x1300 bytes, dmm_func.c (DIE 0x2CC5C5) */
-typedef struct {   // size 0x1300
-    /* 0x000 */ unsigned char evboot[24];             // 0x18
-    /* 0x018 */ unsigned char is_savedata;            // 0x1
-    /* 0x019 */ signed char max_area;                 // 0x1
-    /* 0x01A */ signed char disp_type;                // 0x1
-    /* 0x01B */ char pading;                          // 0x1
-    /* 0x01C */ unsigned char dancer_use_cnt[24];     // 0x18
-    /* 0x034 */ int cur_cursor;                       // 0x4
-    /* 0x038 */ unsigned int all_clear_count;         // 0x4
-    /* 0x03C */ unsigned int all_play_time;           // 0x4
-    /* 0x040 */ int route[200];                       // 0x320
-    /* 0x360 */ anon_25_157 subject[200];             // 0xFA0
-} anon_30_157;
 
 /* anon_16_157 -- @anon16, 0x38 bytes, dmm_func.c (DIE 0x2C887B) */
 typedef struct {   // size 0x38
@@ -280,7 +254,7 @@ typedef struct {   // size 0x3D7C
     /* 0x168 */ int max_bar[76];                      // 0x130
     /* 0x298 */ float zoom;                           // 0x4
     /* 0x29C */ float timer;                          // 0x4
-    /* 0x2A0 */ anon_30_157 swap_save_data;           // 0x1300
+    /* 0x2A0 */ anon_3de85bd4740a swap_save_data;     // 0x1300
     /* 0x15A0 */ anon_16_157 mc_w;                    // 0x38
     /* 0x15D8 */ anon_4_157 button_disp_w;            // 0x10
     /* 0x15E8 */ anon_8_157 record_w;                 // 0x28
@@ -390,27 +364,10 @@ typedef struct {   // size 0x48
     /* 0x044 */ // 0x4 bytes padding
 } anon_14_157;
 
-/* anon_20_157 -- @anon20, 0x4 bytes, dmm_func.c (DIE 0x2CB345) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_20_157;
-
-/* anon_24_157 -- @anon24, 0x10 bytes, dmm_func.c (DIE 0x2CBC2A) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_20_157 x0;                       // 0x4
-    /* 0x004 */ anon_20_157 y0;                       // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_24_157;
-
 /* anon_19_157 -- @anon19, 0x24 bytes, dmm_func.c (DIE 0x2CA252) */
 typedef struct {   // size 0x24
-    /* 0x000 */ anon_20_157 x0;                       // 0x4
-    /* 0x004 */ anon_20_157 y0;                       // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -423,53 +380,12 @@ typedef struct {   // size 0x24
     /* 0x020 */ int flg;                              // 0x4
 } anon_19_157;
 
-/* anon_22_157 -- @anon22, 0xD40 bytes, dmm_func.c (DIE 0x2CB4E1) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_22_157;
-
 /* anon_26_157 -- @anon26, 0xC bytes, dmm_func.c (DIE 0x2CBECE) */
 typedef struct {   // size 0xC
     /* 0x000 */ int mode_quit_flg;                    // 0x4
     /* 0x004 */ int state;                            // 0x4
     /* 0x008 */ int renewal_record_flag;              // 0x4
 } anon_26_157;
-
-/* anon_27_157 -- @anon27, 0xC bytes, dmm_func.c (DIE 0x2CC122) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_27_157;
-
-/* anon_33_157 -- @anon33, 0x4 bytes, dmm_func.c (DIE 0x2CCBEE) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_33_157;
-
-/* anon_32_157 -- @anon32, 0x4 bytes, dmm_func.c (DIE 0x2CCB47) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_33_157 s;                        // 0x4
-} anon_32_157;
-
-/* anon_34_157 -- @anon34, 0x12E0 bytes, dmm_func.c (DIE 0x2CCE8C) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_27_157 history[400];             // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_34_157;
 
 
 /* variables (4) */

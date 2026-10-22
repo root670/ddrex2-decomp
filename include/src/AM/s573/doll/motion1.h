@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_AM_s573_doll_motion1_c_H
 #define DDR_UNIT_src_AM_s573_doll_motion1_c_H
@@ -19,57 +20,7 @@
 #include "types/dancer_model_w.h"
 #include "types/dancer_motion_w.h"
 
-/* anonymous types (12) */
-
-/* anon_10_19 -- @anon10, 0x2 bytes, motion1.c (DIE 0x2D670) */
-typedef struct {   // size 0x2
-    /* 0x000 */ unsigned short offset;                // 0x2
-} anon_10_19;
-
-/* anon_11_19 -- @anon11, 0x4 bytes, motion1.c (DIE 0x2D6D9) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short shift_bit;             // 0x2
-    /* 0x002 */ anon_10_19 tbl[1];                    // 0x2
-} anon_11_19;
-
-/* anon_2_19 -- @anon2, 0x8 bytes, motion1.c (DIE 0x2CB64) */
-typedef struct {   // size 0x8
-    /* 0x000 */ unsigned char kind;                   // 0x1
-    /* 0x001 */ unsigned char pad[3];                 // 0x3
-    /* 0x004 */ anon_11_19 data;                      // 0x4
-} anon_2_19;
-
-/* anon_0_19 -- @anon0, 0xC bytes, motion1.c (DIE 0x2C8BA) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned char id;                     // 0x1
-    /* 0x001 */ unsigned char format;                 // 0x1
-    /* 0x002 */ unsigned char hastrans;               // 0x1
-    /* 0x003 */ unsigned char parent_id;              // 0x1
-    /* 0x004 */ unsigned int nbwave;                  // 0x4
-    /* 0x008 */ anon_2_19 **offset;                   // 0x4
-} anon_0_19;
-
-/* anon_5_19 -- @anon5, 0xC bytes, motion1.c (DIE 0x2D332) */
-typedef struct {   // size 0xC
-    /* 0x000 */ unsigned int size;                    // 0x4
-    /* 0x004 */ unsigned short nbparts;               // 0x2
-    /* 0x006 */ unsigned short nbframe;               // 0x2
-    /* 0x008 */ anon_0_19 **offset;                   // 0x4
-} anon_5_19;
-
-/* anon_7_19 -- @anon7, 0x8 bytes, motion1.c (DIE 0x2D454) */
-typedef struct {   // size 0x8
-    /* 0x000 */ char *name;                           // 0x4
-    /* 0x004 */ anon_5_19 *offset;                    // 0x4
-} anon_7_19;
-
-/* anon_1_19 -- @anon1, 0x10 bytes, motion1.c (DIE 0x2C9FC) */
-typedef struct {   // size 0x10
-    /* 0x000 */ char magic[2];                        // 0x2
-    /* 0x002 */ short nbmdt;                          // 0x2
-    /* 0x004 */ int reserve;                          // 0x4
-    /* 0x008 */ anon_7_19 motion[1];                  // 0x8
-} anon_1_19;
+/* anonymous types (3) */
 
 /* anon_3_19 -- @anon3, 0x80 bytes, motion1.c (DIE 0x2CC31) */
 typedef struct {   // size 0x80
@@ -111,22 +62,6 @@ typedef struct {   // size 0x14
     /* 0x004 */ char *tail_name[4];                   // 0x10
 } anon_6_19;
 
-/* anon_9_19 -- @anon9, 0x10 bytes, motion1.c (DIE 0x2D5D4) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int vx;                               // 0x4
-    /* 0x004 */ int vy;                               // 0x4
-    /* 0x008 */ int vz;                               // 0x4
-    /* 0x00C */ int pad;                              // 0x4
-} anon_9_19;
-
-/* anon_12_19 -- @anon12, 0x8 bytes, motion1.c (DIE 0x2D741) */
-typedef struct {   // size 0x8
-    /* 0x000 */ short vx;                             // 0x2
-    /* 0x002 */ short vy;                             // 0x2
-    /* 0x004 */ short vz;                             // 0x2
-    /* 0x006 */ short pad;                            // 0x2
-} anon_12_19;
-
 /* anon_15_19 -- @anon15, 0x246380 bytes, motion1.c (DIE 0x2DF55) */
 typedef struct {   // size 0x246380
     /* 0x000 */ struct dancer_motion_w motion_w[3];   // 0x11E8
@@ -154,7 +89,7 @@ int motiontype[3];                                               /* @0x007122D0 
 
 /* functions defined (5) */
 void set_dance_motion_pack_tab(int pid);                         /* 0x001CA060-0x001CA240 lines 499-525 */
-static anon_1_19 *get_dance_mpack(int pid, char *dname);         /* 0x001CA240-0x001CA2F8 lines 455-472 */
+static anon_caea742522ec *get_dance_mpack(int pid, char *dname); /* 0x001CA240-0x001CA2F8 lines 455-472 */
 void set_dance_motion(int pid);                                  /* 0x001CA300-0x001CA88C lines 274-392 */
 void init_dance_motion(int pid);                                 /* 0x001CA890-0x001CABFC lines 217-265 */
 int dancer_motion_setup(int pid, int motion_id);                 /* 0x001CAC00-0x001CAE30 lines 161-209 */

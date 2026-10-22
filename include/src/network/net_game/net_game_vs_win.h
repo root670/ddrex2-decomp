@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_game_net_game_vs_win_c_H
 #define DDR_UNIT_src_network_net_game_net_game_vs_win_c_H
@@ -20,20 +21,14 @@
 #include "types/_net_win_vs_w.h"
 #include "types/g_game_w.h"
 
-/* anonymous types (6) */
-
-/* anon_7_156 -- @anon7, 0x4 bytes, net_game_vs_win.c (DIE 0x2C2013) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_7_156;
+/* anonymous types (4) */
 
 /* anon_1_156 -- @anon1, 0x20 bytes, net_game_vs_win.c (DIE 0x2BEB0F) */
 typedef struct {   // size 0x20
-    /* 0x000 */ anon_7_156 x0;                        // 0x4
-    /* 0x004 */ anon_7_156 y0;                        // 0x4
-    /* 0x008 */ anon_7_156 x1;                        // 0x4
-    /* 0x00C */ anon_7_156 y1;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ unsigned char r0;                     // 0x1
@@ -69,8 +64,8 @@ typedef struct {   // size 0x48
 
 /* anon_5_156 -- @anon5, 0x1C bytes, net_game_vs_win.c (DIE 0x2C0AFE) */
 typedef struct {   // size 0x1C
-    /* 0x000 */ anon_7_156 x0;                        // 0x4
-    /* 0x004 */ anon_7_156 y0;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -81,23 +76,12 @@ typedef struct {   // size 0x1C
     /* 0x018 */ int flg;                              // 0x4
 } anon_5_156;
 
-/* anon_9_156 -- @anon9, 0x10 bytes, net_game_vs_win.c (DIE 0x2C2E61) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_7_156 x0;                        // 0x4
-    /* 0x004 */ anon_7_156 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_9_156;
-
 /* anon_8_156 -- @anon8, 0x30 bytes, net_game_vs_win.c (DIE 0x2C2C6C) */
 typedef struct {   // size 0x30
-    /* 0x000 */ anon_7_156 x0;                        // 0x4
-    /* 0x004 */ anon_7_156 y0;                        // 0x4
-    /* 0x008 */ anon_7_156 x1;                        // 0x4
-    /* 0x00C */ anon_7_156 y1;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4

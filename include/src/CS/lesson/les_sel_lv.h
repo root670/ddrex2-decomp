@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_lesson_les_sel_lv_c_H
 #define DDR_UNIT_src_CS_lesson_les_sel_lv_c_H
@@ -19,7 +20,7 @@
 #include "types/_tag_cLesSelLevelCursor.h"
 #include "types/g_game_w.h"
 
-/* anonymous types (8) */
+/* anonymous types (6) */
 
 /* anon_0_198 -- @anon0, 0x48 bytes, les_sel_lv.c (DIE 0x37CEEC) */
 typedef struct {   // size 0x48
@@ -66,18 +67,12 @@ typedef struct {   // size 0x30
     /* 0x02E */ // 0x2 bytes padding
 } anon_2_198;
 
-/* anon_4_198 -- @anon4, 0x4 bytes, les_sel_lv.c (DIE 0x37E4AA) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_4_198;
-
 /* anon_5_198 -- @anon5, 0x30 bytes, les_sel_lv.c (DIE 0x37E52B) */
 typedef struct {   // size 0x30
-    /* 0x000 */ anon_4_198 x0;                        // 0x4
-    /* 0x004 */ anon_4_198 y0;                        // 0x4
-    /* 0x008 */ anon_4_198 x1;                        // 0x4
-    /* 0x00C */ anon_4_198 y1;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -90,17 +85,6 @@ typedef struct {   // size 0x30
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
 } anon_5_198;
-
-/* anon_6_198 -- @anon6, 0x10 bytes, les_sel_lv.c (DIE 0x37EA9A) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_4_198 x0;                        // 0x4
-    /* 0x004 */ anon_4_198 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_6_198;
 
 /* anon_9_198 -- @anon9, 0x18 bytes, les_sel_lv.c (DIE 0x380E0A) */
 typedef struct {   // size 0x18

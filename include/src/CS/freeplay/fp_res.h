@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_freeplay_fp_res_c_H
 #define DDR_UNIT_src_CS_freeplay_fp_res_c_H
@@ -20,7 +21,7 @@
 #include "types/oni_course.h"
 #include "types/tex_bind.h"
 
-/* anonymous types (35) */
+/* anonymous types (27) */
 
 /* anon_0_74 -- @anon0, 0x494 bytes, fp_res.c (DIE 0x12E99C) */
 typedef struct {   // size 0x494
@@ -101,16 +102,10 @@ typedef struct {   // size 0x48
     /* 0x044 */ // 0x4 bytes padding
 } anon_2_74;
 
-/* anon_10_74 -- @anon10, 0x4 bytes, fp_res.c (DIE 0x1328C2) */
-typedef union {   // size 0x4
-    /* 0x000 */ int id;                               // 0x4
-    /* 0x000 */ float fd;                             // 0x4
-} anon_10_74;
-
 /* anon_3_74 -- @anon3, 0x1C bytes, fp_res.c (DIE 0x12FAD7) */
 typedef struct {   // size 0x1C
-    /* 0x000 */ anon_10_74 x0;                        // 0x4
-    /* 0x004 */ anon_10_74 y0;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -120,17 +115,6 @@ typedef struct {   // size 0x1C
     /* 0x017 */ unsigned char a0;                     // 0x1
     /* 0x018 */ int flg;                              // 0x4
 } anon_3_74;
-
-/* anon_18_74 -- @anon18, 0x10 bytes, fp_res.c (DIE 0x1337D7) */
-typedef struct {   // size 0x10
-    /* 0x000 */ anon_10_74 x0;                        // 0x4
-    /* 0x004 */ anon_10_74 y0;                        // 0x4
-    /* 0x008 */ unsigned int z0;                      // 0x4
-    /* 0x00C */ unsigned char r0;                     // 0x1
-    /* 0x00D */ unsigned char g0;                     // 0x1
-    /* 0x00E */ unsigned char b0;                     // 0x1
-    /* 0x00F */ unsigned char a0;                     // 0x1
-} anon_18_74;
 
 /* anon_5_74 -- @anon5, 0x10 bytes, fp_res.c (DIE 0x130426) */
 typedef struct {   // size 0x10
@@ -142,8 +126,8 @@ typedef struct {   // size 0x10
 
 /* anon_6_74 -- @anon6, 0x24 bytes, fp_res.c (DIE 0x13050B) */
 typedef struct {   // size 0x24
-    /* 0x000 */ anon_10_74 x0;                        // 0x4
-    /* 0x004 */ anon_10_74 y0;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
     /* 0x008 */ unsigned int z0;                      // 0x4
     /* 0x00C */ float w;                              // 0x4
     /* 0x010 */ float h;                              // 0x4
@@ -352,10 +336,10 @@ typedef struct {   // size 0x14
 
 /* anon_15_74 -- @anon15, 0x30 bytes, fp_res.c (DIE 0x1331BE) */
 typedef struct {   // size 0x30
-    /* 0x000 */ anon_10_74 x0;                        // 0x4
-    /* 0x004 */ anon_10_74 y0;                        // 0x4
-    /* 0x008 */ anon_10_74 x1;                        // 0x4
-    /* 0x00C */ anon_10_74 y1;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ float w;                              // 0x4
@@ -368,14 +352,6 @@ typedef struct {   // size 0x30
     /* 0x02B */ unsigned char a0;                     // 0x1
     /* 0x02C */ int flg;                              // 0x4
 } anon_15_74;
-
-/* anon_16_74 -- @anon16, 0xD40 bytes, fp_res.c (DIE 0x133420) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_16_74;
 
 /* anon_20_74 -- @anon20, 0xC bytes, fp_res.c (DIE 0x133BC8) */
 typedef struct {   // size 0xC
@@ -391,18 +367,6 @@ typedef struct {   // size 0x30
     /* 0x008 */ anon_14_74 each[2];                   // 0x28
 } anon_21_74;
 
-/* anon_22_74 -- @anon22, 0x14 bytes, fp_res.c (DIE 0x133F56) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_22_74;
-
 /* anon_23_74 -- @anon23, 0x8 bytes, fp_res.c (DIE 0x134123) */
 typedef struct {   // size 0x8
     /* 0x000 */ short x;                              // 0x2
@@ -413,14 +377,14 @@ typedef struct {   // size 0x8
 
 /* anon_24_74 -- @anon24, 0x68 bytes, fp_res.c (DIE 0x134299) */
 typedef struct {   // size 0x68
-    /* 0x000 */ anon_10_74 x0;                        // 0x4
-    /* 0x004 */ anon_10_74 y0;                        // 0x4
-    /* 0x008 */ anon_10_74 x1;                        // 0x4
-    /* 0x00C */ anon_10_74 y1;                        // 0x4
-    /* 0x010 */ anon_10_74 x2;                        // 0x4
-    /* 0x014 */ anon_10_74 y2;                        // 0x4
-    /* 0x018 */ anon_10_74 x3;                        // 0x4
-    /* 0x01C */ anon_10_74 y3;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
+    /* 0x010 */ anon_d075beaabcd0 x2;                 // 0x4
+    /* 0x014 */ anon_d075beaabcd0 y2;                 // 0x4
+    /* 0x018 */ anon_d075beaabcd0 x3;                 // 0x4
+    /* 0x01C */ anon_d075beaabcd0 y3;                 // 0x4
     /* 0x020 */ unsigned int z0;                      // 0x4
     /* 0x024 */ unsigned int z1;                      // 0x4
     /* 0x028 */ unsigned int z2;                      // 0x4
@@ -444,45 +408,12 @@ typedef struct {   // size 0x68
     /* 0x064 */ int flg;                              // 0x4
 } anon_24_74;
 
-/* anon_25_74 -- @anon25, 0xC bytes, fp_res.c (DIE 0x1346DF) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_25_74;
-
-/* anon_30_74 -- @anon30, 0x4 bytes, fp_res.c (DIE 0x134FEB) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_30_74;
-
-/* anon_29_74 -- @anon29, 0x4 bytes, fp_res.c (DIE 0x134F44) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_30_74 s;                         // 0x4
-} anon_29_74;
-
-/* anon_31_74 -- @anon31, 0x12E0 bytes, fp_res.c (DIE 0x135265) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_25_74 history[400];              // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_31_74;
-
 /* anon_32_74 -- @anon32, 0x20 bytes, fp_res.c (DIE 0x1353E4) */
 typedef struct {   // size 0x20
-    /* 0x000 */ anon_10_74 x0;                        // 0x4
-    /* 0x004 */ anon_10_74 y0;                        // 0x4
-    /* 0x008 */ anon_10_74 x1;                        // 0x4
-    /* 0x00C */ anon_10_74 y1;                        // 0x4
+    /* 0x000 */ anon_d075beaabcd0 x0;                 // 0x4
+    /* 0x004 */ anon_d075beaabcd0 y0;                 // 0x4
+    /* 0x008 */ anon_d075beaabcd0 x1;                 // 0x4
+    /* 0x00C */ anon_d075beaabcd0 y1;                 // 0x4
     /* 0x010 */ unsigned int z0;                      // 0x4
     /* 0x014 */ unsigned int z1;                      // 0x4
     /* 0x018 */ unsigned char r0;                     // 0x1

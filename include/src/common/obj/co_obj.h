@@ -7,23 +7,16 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_common_obj_co_obj_c_H
 #define DDR_UNIT_src_common_obj_co_obj_c_H
 
 #include "types/CO_OBJ_W.h"
 
-/* anonymous types (2) */
-
-/* anon_0_99 -- @anon0, 0x10 bytes, co_obj.c (DIE 0x1B933F) */
-typedef struct {   // size 0x10
-    /* 0x000 */ int (*appr)(void *);                  // 0x4
-    /* 0x004 */ int (*exec)(void *);                  // 0x4
-    /* 0x008 */ int (*disap)(void *);                 // 0x4
-    /* 0x00C */ int (*disp)(void *);                  // 0x4
-} anon_0_99;
+/* anonymous types (1) */
 
 /* anon_1_99 -- @anon1, 0x10 bytes, co_obj.c (DIE 0x1B95EF) */
 typedef struct {   // size 0x10
@@ -49,7 +42,7 @@ void *co_obj_work_p(void *ow);                                   /* 0x00230610-0
 int co_obj_own_ini_flag(void *work_p);                           /* 0x00230620-0x00230628 lines 279-279 */
 int co_obj_ini_flag(void *chk_ow);                               /* 0x00230630-0x00230638 lines 271-271 */
 void *co_obj_del(void *del_ow);                                  /* 0x00230640-0x002306C0 lines 243-263 */
-void *co_obj_set(anon_0_99 *func, void (*init)(void *), unsigned char pri); /* 0x002306C0-0x00230844 lines 174-237 */
+void *co_obj_set(anon_1fa6d74458f3 *func, void (*init)(void *), unsigned char pri); /* 0x002306C0-0x00230844 lines 174-237 */
 void co_obj_disp(void);                                          /* 0x00230850-0x002308D0 lines 134-149 */
 void co_obj_exec(void);                                          /* 0x002308D0-0x002309F0 lines 81-131 */
 unsigned int co_obj_init(unsigned char *addr, unsigned int num); /* 0x002309F0-0x00230A50 lines 64-78 */

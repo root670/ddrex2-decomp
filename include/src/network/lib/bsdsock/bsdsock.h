@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_lib_bsdsock_bsdsock_c_H
 #define DDR_UNIT_src_network_lib_bsdsock_bsdsock_c_H
@@ -18,7 +19,7 @@
 #include "types/in_addr.h"
 #include "types/sockaddr.h"
 
-/* anonymous types (21) */
+/* anonymous types (19) */
 
 /* anon_0_200 -- @anon0, 0x1C bytes, bsdsock.c (DIE 0x386A66) */
 typedef struct {   // size 0x1C
@@ -149,20 +150,6 @@ typedef struct {   // size 0x10C
     /* 0x008 */ int sec;                              // 0x4
     /* 0x00C */ char domain[256];                     // 0x100
 } anon_13_200;
-
-/* anon_15_200 -- @anon15, 0x4 bytes, bsdsock.c (DIE 0x387B27) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char s_b1;                   // 0x1
-    /* 0x001 */ unsigned char s_b2;                   // 0x1
-    /* 0x002 */ unsigned char s_b3;                   // 0x1
-    /* 0x003 */ unsigned char s_b4;                   // 0x1
-} anon_15_200;
-
-/* anon_17_200 -- @anon17, 0x4 bytes, bsdsock.c (DIE 0x387CA0) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short s_w1;                  // 0x2
-    /* 0x002 */ unsigned short s_w2;                  // 0x2
-} anon_17_200;
 
 /* anon_16_200 -- @anon16, 0x8 bytes, bsdsock.c (DIE 0x387BCB) */
 typedef struct {   // size 0x8

@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_network_net_window_net_win_search_c_H
 #define DDR_UNIT_src_network_net_window_net_win_search_c_H
@@ -21,7 +22,7 @@
 #include "types/_NS_NET_INFO_W.h"
 #include "types/_net_win_search_w.h"
 
-/* anonymous types (5) */
+/* anonymous types (3) */
 
 /* anon_6_94 -- @anon6, 0x4 bytes, net_win_search.c (DIE 0x1A942F) */
 typedef union {   // size 0x4
@@ -73,20 +74,6 @@ typedef struct {   // size 0x74
     /* 0x06F */ unsigned char a3;                     // 0x1
     /* 0x070 */ int flg;                              // 0x4
 } anon_1_94;
-
-/* anon_3_94 -- @anon3, 0x4 bytes, net_win_search.c (DIE 0x1A7815) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char s_b1;                   // 0x1
-    /* 0x001 */ unsigned char s_b2;                   // 0x1
-    /* 0x002 */ unsigned char s_b3;                   // 0x1
-    /* 0x003 */ unsigned char s_b4;                   // 0x1
-} anon_3_94;
-
-/* anon_5_94 -- @anon5, 0x4 bytes, net_win_search.c (DIE 0x1A7F9A) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned short s_w1;                  // 0x2
-    /* 0x002 */ unsigned short s_w2;                  // 0x2
-} anon_5_94;
 
 /* anon_4_94 -- @anon4, 0x48 bytes, net_win_search.c (DIE 0x1A78B8) */
 typedef struct {   // size 0x48

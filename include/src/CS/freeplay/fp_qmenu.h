@@ -7,8 +7,9 @@
  * included from include/types/.  `@anonN` is this unit's own numbering, so an
  * anonymous type is declared here (`anon_<N>_<unit>`) and nowhere else -- as a
  * typedef of an *unnamed* aggregate, which is the spelling the compiler
- * records back as `@anonN`.  A named type's anonymous member is spelled
- * inline in the shared header that defines it, and is not declared again.
+ * records back as `@anonN`.  A layout the shared headers already define is
+ * named by its own `anon_<digest>` alias instead, so the block holds one DIE
+ * for it, as retail's does.
  */
 #ifndef DDR_UNIT_src_CS_freeplay_fp_qmenu_c_H
 #define DDR_UNIT_src_CS_freeplay_fp_qmenu_c_H
@@ -18,7 +19,7 @@
 #include "types/_tag_cDDR8SaveData.h"
 #include "types/oni_course.h"
 
-/* anonymous types (18) */
+/* anonymous types (12) */
 
 /* anon_0_170 -- @anon0, 0xC bytes, fp_qmenu.c (DIE 0x2FC124) */
 typedef struct {   // size 0xC
@@ -76,14 +77,6 @@ typedef struct {   // size 0x10
     /* 0x00C */ int (*disp)(void *);                  // 0x4
 } anon_4_170;
 
-/* anon_5_170 -- @anon5, 0xD40 bytes, fp_qmenu.c (DIE 0x2FCE3B) */
-typedef struct {   // size 0xD40
-    /* 0x000 */ unsigned int program_calorie[24];     // 0x60
-    /* 0x060 */ unsigned int program_play_count[24];  // 0x60
-    /* 0x0C0 */ unsigned int song_calorie[80][5];     // 0x640
-    /* 0x700 */ unsigned int song_play_count[80][5];  // 0x640
-} anon_5_170;
-
 /* anon_6_170 -- @anon6, 0x1C bytes, fp_qmenu.c (DIE 0x2FD101) */
 typedef struct {   // size 0x1C
     /* 0x000 */ unsigned char end_num;                // 0x1
@@ -97,18 +90,6 @@ typedef struct {   // size 0x1C
     /* 0x014 */ void *item;                           // 0x4
     /* 0x018 */ void *entry;                          // 0x4
 } anon_6_170;
-
-/* anon_7_170 -- @anon7, 0x14 bytes, fp_qmenu.c (DIE 0x2FD41C) */
-typedef struct {   // size 0x14
-    /* 0x000 */ unsigned char cone_state[8];          // 0x8
-    /* 0x008 */ unsigned char state;                  // 0x1
-    /* 0x009 */ unsigned char perfect;                // 0x1
-    /* 0x00A */ unsigned short play_count;            // 0x2
-    /* 0x00C */ unsigned short play_time;             // 0x2
-    /* 0x00E */ unsigned short clear_count;           // 0x2
-    /* 0x010 */ unsigned short first_clear_count;     // 0x2
-    /* 0x012 */ unsigned short first_clear_time;      // 0x2
-} anon_7_170;
 
 /* anon_20_170 -- @anon20, 0x90 bytes, fp_qmenu.c (DIE 0x301073) */
 typedef struct {   // size 0x90
@@ -249,39 +230,6 @@ typedef struct {   // size 0x7E0
     /* 0x738 */ anon_3_170 result;                    // 0xA0
     /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
 } anon_8_170;
-
-/* anon_9_170 -- @anon9, 0xC bytes, fp_qmenu.c (DIE 0x2FDBA0) */
-typedef struct {   // size 0xC
-    /* 0x000 */ int date;                             // 0x4
-    /* 0x004 */ unsigned int weight : 12;             // bits 0..11
-    /* 0x004 */ unsigned int calorie : 20;            // bits 12..31
-    /* 0x008 */ unsigned int play_count : 12;         // bits 0..11
-    /* 0x008 */ unsigned int play_time : 20;          // bits 12..31
-} anon_9_170;
-
-/* anon_13_170 -- @anon13, 0x4 bytes, fp_qmenu.c (DIE 0x2FE28F) */
-typedef struct {   // size 0x4
-    /* 0x000 */ unsigned char d[4];                   // 0x4
-} anon_13_170;
-
-/* anon_12_170 -- @anon12, 0x4 bytes, fp_qmenu.c (DIE 0x2FE20A) */
-typedef union {   // size 0x4
-    /* 0x000 */ unsigned int ui;                      // 0x4
-    /* 0x000 */ anon_13_170 s;                        // 0x4
-} anon_12_170;
-
-/* anon_14_170 -- @anon14, 0x12E0 bytes, fp_qmenu.c (DIE 0x2FE4E5) */
-typedef struct {   // size 0x12E0
-    /* 0x000 */ int weight;                           // 0x4
-    /* 0x004 */ int lbs;                              // 0x4
-    /* 0x008 */ int norm_type;                        // 0x4
-    /* 0x00C */ int norm_time;                        // 0x4
-    /* 0x010 */ int norm_calorie;                     // 0x4
-    /* 0x014 */ int workout_step;                     // 0x4
-    /* 0x018 */ int simultaneous_step;                // 0x4
-    /* 0x01C */ anon_9_170 history[400];              // 0x12C0
-    /* 0x12DC */ int check_sum_val;                   // 0x4
-} anon_14_170;
 
 
 /* variables (19) */
