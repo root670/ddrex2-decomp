@@ -545,6 +545,12 @@ DDREX2P = Target(
         # statement lines moved and `.line` is adopted.  Under this pair `.text` is
         # retail's 0x40 bytes and `.debug` its 0x28C bytes outright; adoption has
         # only `.line` to substitute.
+        # .text 0x540 word-exact; .debug retail's 0x955 / 63 DIEs after adoption (anon names and
+        # references rewritten); .line adopted whole (81 records).  Operand order is
+        # (h - 4) * c_now, y + 2 + bar_y [+ bar_h]; `z > 0xFEFF`; and the dw_h clamp is
+        # `sa = (sa > 0) ? sa : 0; dw_h = bar_h - sa;`, which keeps the register split.
+        ("src/common/com_scrollbar.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         # Layout tidied, so `.line` is adopted.  Adoption applies the DIE-order normaliser
