@@ -138,7 +138,7 @@ def newest_mtime(directory, now=None):
     return newest
 
 
-def ref_for(wt, cwd):
+def ref_for(wt):
     """The ref that holds *wt*'s HEAD: its branch, or the detached HEAD itself."""
     return wt.branch or wt.head
 
@@ -164,7 +164,7 @@ def inspect(wt, main_root, main_branch, age_minutes, now=None):
         if differs:
             return KEEP, f"{SRC}/ differs from {main_branch}"
     else:
-        ref = ref_for(wt, main_root)
+        ref = ref_for(wt)
         if ref is None:
             return REMOVE, "checkout missing; nothing to compare"
         differs = git_status(["diff", "--quiet", main_branch, ref, "--", SRC],
@@ -172,7 +172,7 @@ def inspect(wt, main_root, main_branch, age_minutes, now=None):
         if differs:
             return KEEP, f"{SRC}/ differs from {main_branch}"
 
-    ref = ref_for(wt, main_root)
+    ref = ref_for(wt)
     if ref is not None:
         unmerged = git(["rev-list", f"{main_branch}..{ref}", "--", SRC], main_root).strip()
         if unmerged:
@@ -186,7 +186,7 @@ def archive(wt, main_root, main_branch, rows_root):
     if os.path.isdir(wt.path):
         diff = git(["diff", main_branch], wt.path)
     else:
-        ref = ref_for(wt, main_root)
+        ref = ref_for(wt)
         if ref is None:
             diff = ""
         else:
