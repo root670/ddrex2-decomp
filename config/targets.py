@@ -655,6 +655,11 @@ DDREX2P = Target(
         # twelve placements.  Retail carries a whole unreferenced _nsv_player_list_file.
         ("src/network/net_window/net_win_dpoint.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x460 in a 0x460 extent, eight bodies word-exact; .line 0x31A and .debug
+        # 0x1A12 / 162 DIEs adopted (.debug byte-equal).  Needs -sdatathreshold 0 and twelve
+        # placements.  Local names are forced by the DIE comparison: winw, and rtn in Slby.
+        ("src/network/net_window/net_win_slby.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x198 in a 0x1A0 extent, nine bodies word-exact; .debug retail's 0x1988 /
         # 168 DIEs byte-equal after adoption.  The layout emits all 42 .line records on
         # retail's lines; 1 row differs in position, so retail's .line 0x1EC is adopted.
