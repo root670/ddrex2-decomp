@@ -706,6 +706,11 @@ DDREX2P = Target(
         # are retail's statement positions; never --collapse, and brace-adjacent blanks stay.
         ("src/common/cws/cws_wins.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x6E8, eight bodies word-exact; .line 0x59A and .debug 0xDAA / 77 DIEs
+        # adopted (six colouring intermediates, GsInitCoordinate2's `i` and a duplicate
+        # array_type dropped, with the reference retargeted to the surviving twin).
+        ("src/AM/s573/doll/ps1lib.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x300, five bodies word-exact; .text, .line 0x1F4 and .debug 0x6D4 / 33 DIEs
         # are retail's outright.  The Create bodies need their matrix
         # prototypes spelled through a typedef: five `float (*)[4]` declarators emit five
