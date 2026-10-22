@@ -633,6 +633,12 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x238, nine bodies word-exact; .debug retail's 0x419B / 413 DIEs after
+        # adoption, which drops get_table_no_by_infotxt_num's two locals (retail's CU has
+        # none) and recomputes 392 AT_sibling words.  The dancer table needs
+        # (int)(num - 202); the bounds compares are sizeof(tbl)/sizeof(tbl[0]) for sltiu.
+        ("src/CS/info_data.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0xEB4, five bodies word-exact; .debug retail's 0x1FE8 / 211 DIEs byte-equal
         # after adoption (9 anon names, 37 refs, rtv_sel's location); .line 0xBE0 adopted
         # (309 records vs retail's 300).  Needs -sdatathreshold 0 and five placements.
