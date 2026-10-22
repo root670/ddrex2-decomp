@@ -691,12 +691,6 @@ DDREX2P = Target(
         # vararg in the "%06d"/"%08d" cases, which puts it in $a3 at entry.
         ("src/network/net_window/net_win_infosel.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
-        # .text 0x1A8, both bodies word-exact (0x38 + 0x170).  `0 <= id && id < 7` is what
-        # materialises retail's slt/bnez where `id < 0 || id >= 7` fuses to bltz; the scan
-        # bounds are sizeof(tbl)/sizeof(tbl[0]) for retail's sltiu.  Needs -sdatathreshold 0
-        # and @116; .line is adopted (our layout emits 10 extra rows).
-        ("src/network/net_dnas/net_dnas_mes_e.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x778, six bodies word-exact; .text AND .line byte-equal outright, so
         # --normalise-debug alone makes .debug retail's 0x1969 / 161 DIEs.  No
         # placements; the setters hold retail's emission-free lines with a trailing `return;`.
