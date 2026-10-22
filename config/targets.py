@@ -633,6 +633,11 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x560, four bodies word-exact.  case 0 binds shop_get_work() through an int
+        # cast rather than a declared temp (a temp adds a third local DIE); disp regained
+        # retail's sixth local ofsx.  Needs the @31 jump table.
+        ("src/CS/shop/shop_info.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x350, both bodies word-exact; .line byte-equal pre-tidy (56+20 rows) and
         # adopted after; .debug retail's 0x78DD / 785 DIEs (24 of 25 anon indices permuted).
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.

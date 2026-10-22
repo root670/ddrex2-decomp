@@ -73,3 +73,4 @@ netwinslby_plate_board = 0x002C1BE0; // size:0x50 extent:0x50 source:src/network
 netwinslby_plate_chara_back = 0x002C1C30; // size:0x14 extent:0x20 source:src/network/net_window/net_win_dhead.c
 netwinslby_plate_chara_face = 0x002C1C50; // size:0x14 extent:0x20 source:src/network/net_window/net_win_dhead.c
 netwininfosel = 0x002C1C70; // size:0x3c extent:0x40 source:src/network/net_window/net_win_dhead.c
+@31 = 0x002D6B00; // size:0x18 extent:0x18 source:src/CS/shop/shop_info.c
