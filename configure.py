@@ -476,6 +476,8 @@ def code_splits(sources, geometry=None):
 
 #: A split line that defines a label (the macro splat emits: `dlabel`/`alabel`/...).
 SPLIT_LABEL_LINE = re.compile(r"^\s*(?:glabel|alabel|ehlabel|jlabel|dlabel)\s+(\S+)")
+#: The line that closes a label's extent; it computes ``. - NAME`` and so needs NAME local.
+SPLIT_END_LABEL_LINE = re.compile(r"^\s*end(?:d|g|a|eh|j)label\s+(\S+)")
 
 
 def data_placements(target=None):
@@ -562,7 +564,22 @@ def cut_split(name, text, start, cuts):
                 match = SPLIT_LABEL_LINE.match(line)
                 if match:
                     removed.append((match.group(1), address))
+    # A label whose definition is cut must lose its ``enddlabel`` too: the end line stays in
+    # the following piece and computes ``. - NAME``, and against an absolute NAME the
+    # assembler rejects it (".size expression … does not evaluate to a constant").  Dropping
+    # it keeps the piece assemblable; the label itself is still defined absolutely.
+    dropped = {label for label, _ in removed}
+    if dropped:
+        pieces = [(address, "".join(
+            line for line in text_of.splitlines(keepends=True)
+            if not _ends_dropped(line, dropped))) for address, text_of in pieces]
     return pieces, removed
+
+
+def _ends_dropped(line, dropped):
+    """True for an ``enddlabel NAME`` line naming a label this cut removed."""
+    match = SPLIT_END_LABEL_LINE.match(line)
+    return match is not None and match.group(1) in dropped
 
 
 def plan_data(sources, code, geometry, placements, replacements):
