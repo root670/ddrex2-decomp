@@ -32,6 +32,7 @@ exists; the note explains the shape mismatch.
 | `src/CS/lang.c` | 043 | 0x4E | 1 | 7 | `a9ae61fac8368712` | 7 | 6 | emitted table no longer corresponds to retail's layout: 6 of 7 row(s) differ; retail's chunk is adopted |
 | `src/AM/s573/play/p_anime.c` | 061-065 | 0x9B0 | 5 | 244 | `6ac87d487e8c54f2` | 244 | 239 | emitted table no longer corresponds to retail's layout: 239 of 244 row(s) differ; retail's chunk is adopted |
 | `src/CS/ani_load.c` | 066-069 | 0x124 | 4 | 26 | `c446560b111d67af` | 26 | 22 | emitted table no longer corresponds to retail's layout: 22 of 26 row(s) differ; retail's chunk is adopted |
+| `src/AM/s573/doll/ddata.c` | 083-093 | 0x1D4 | 11 | 38 | `9147b3321e7550b7` | 38 | 27 | emitted table no longer corresponds to retail's layout: 27 of 38 row(s) differ; retail's chunk is adopted |
 | `src/AM/s573/doll/matrix.c` | 094-098 | 0x1F4 | 5 | 46 | `35b1ff57e4ad1174` | 46 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
 | `src/AM/s573/doll/model1.c` | 099-103 | 0x546 | 5 | 131 | `48e579bd16869928` | 141 | - | emitted table no longer corresponds to retail's layout: emitted 141 record(s), retail 131 (.line table 1 holds 20 rows against retail's 13); retail's chunk is adopted |
 | `src/AM/s573/doll/ps1lib.c` | 130-137 | 0x59A | 8 | 137 | `11a8eff1c150dedf` | 144 | - | emitted table no longer corresponds to retail's layout: emitted 144 record(s), retail 137 (.line table 6 holds 76 rows against retail's 77); retail's chunk is adopted |
