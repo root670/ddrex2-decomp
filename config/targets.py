@@ -742,6 +742,12 @@ DDREX2P = Target(
         # (83 of 90 rows moved by statement line); .debug retail's 0x1BC4 / 175 DIEs byte
         # for byte after adoption.  Main's dispatch source case order is 2,3,1 -- that is
         # what makes MWCC emit retail's compare chain 1,3,2 with blocks 2,3,1,default.
+        # .text 0x490 in a 0x490 extent, six bodies word-exact; .line and .debug (0x19DA / 173
+        # DIEs) adopted, layout tidied.  Needs -sdatathreshold 0 and six placements.  BoardDisp's
+        # else arm needs a scratch `mx = m.x + w.x; dx = mx + o.x` (the extra locals are dropped
+        # by adoption); without it the final add operands come out swapped.
+        ("src/network/net_window/net_win_base.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/network/net_window/net_win_listsel.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x460 in a 0x460 extent, eight bodies word-exact; .line 0x31A and .debug
