@@ -633,6 +633,13 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xDE0 (0x24C + 0x2D4 + 0x300 + 0x5AC), four bodies word-exact; .line adopted
+        # (2782 bytes); .debug retail's 0x6052 / 635 DIEs after adoption.  pad_type is one
+        # 62-instruction line whose `= 1` test and `? -1 : 0` arm are load-bearing; init's
+        # `if (code == -1) return;` must be a return, not a block (also fixes code's
+        # AT_location); the `switch (step_s)` lists case 3 before case 2.
+        ("src/CS/train/tra_msel.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x1D8 in a 0x1E0 extent, eleven bodies word-exact; .line adopted whole;
         # .debug retail's 0x13ED / 112 DIEs after adoption (63 sibling words, 45 refs).
         # Twenty statics are placed (65 rows incl. 45 @N strings); six are unallocated in
