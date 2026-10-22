@@ -683,7 +683,9 @@ moved `.text`, and the real before/after compile with per-function counts.
   own `.git`, never in the home directory.  `git worktree list` then finds every one of them, and
   the branch name and the directory travel together; a home-directory worktree is outside the
   repository's cleanup and disappears from the roster.  Merge back by cherry-picking into the main
-  checkout, never by rewriting the worktree's history.
+  checkout, never by rewriting the worktree's history.  An agent leaves its worktree in place;
+  after integrating a unit, run `python3 tools/units/worktree_prune.py` — it keeps the worktree
+  until its source is merged, then archives its diff and removes it.
 - No test may reach a build machine — `tests/conftest.py` fails any test whose argv names `ninja`,
   `splat` or `configure.py`, and a session backstop fails a run that changes the repository.
 - Verify suite claims **at the commit** (`git archive <sha> | tar -x -C /tmp/…` and run there); this
