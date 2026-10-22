@@ -633,6 +633,13 @@ DDREX2P = Target(
         # refs.  Two .bss statics keep {0} (above 0x2DE180) and are why both are local_variable.
         ("src/CS/opening/openinglogo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x1D8 in a 0x1E0 extent, eleven bodies word-exact; .line adopted whole;
+        # .debug retail's 0x13ED / 112 DIEs after adoption (63 sibling words, 45 refs).
+        # Twenty statics are placed (65 rows incl. 45 @N strings); six are unallocated in
+        # retail (DW_AT_location 0) and stay bare declarations.  chara_data_name/mot_data_name
+        # point into bk_tm2_records at 0x98+8i and 0x58+8i.
+        ("src/AM/s573/doll/ddata.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x758 in a 0x760 extent, six bodies word-exact; .debug retail's 0x5E9D / 623
         # DIEs after adoption (one array_type dropped, 199 sibling/reference rewrites);
         # .line 0x5C6 adopted whole.  Never -sdatathreshold 0 here: it turns every gp access
