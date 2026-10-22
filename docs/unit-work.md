@@ -166,6 +166,7 @@ byte:
 | `AT_location` values in `.debug` | the local's record is otherwise retail's (the DIE set is matched one-to-one; the location is excluded from the pairing signature) | every local by name and owning function, with the values: `n (in play_anime_step_inst): scratch -> $a2` |
 | anonymous `@anonN` names, and reference words between structurally identical DIEs | the referenced DIE is structurally identical to retail's -- duplicates are interchangeable, so retail's choice among them is adopted | every name (`@anon1 -> @anon0`) and every rewritten reference (old -> new, attribute, owning DIE) |
 | one of **our** `.debug` records that retail does not have | `.text` is byte-identical, and the record's whole subtree has no retail counterpart; the record is dropped, its references are remapped, and the remaining bytes must equal retail's | every dropped DIE: tag, name, chunk offset and span (`dropped extra DIE +0x64C6 local_variable 'dmm_t' (0x21 bytes; no counterpart in retail)`) |
+| every surviving record's `AT_sibling` word | the drops are final, so the record's subtree end is the laid-out position; a child chain whose records were all dropped contributes no terminator either | every recomputed word: `recomputed AT_sibling 0x00059F48 -> 0x00059EFF (in +0x3C5B compile_unit …)` |
 | an attribute retail carries on a paired DIE while ours lacks it (measured: the `0x2303` access-reference list) | the attribute is a list of 4-byte references, and every target has a paired DIE | the attribute and its owning DIE (`adopted attribute 0x2303 on …`) |
 
 **The distinction is explicit:** extra records on our side may be **dropped**; a record
@@ -173,6 +174,16 @@ retail has and we do not must **refuse** -- fabricating a DIE would be invention
 adoption.  `_pair` only returns leftovers for our side, and the refusal names the missing
 retail DIE (`no counterpart in the emitted chunk`, or `a missing record is not fabricated`
 when the chunk is shorter).
+
+**A drop moves positional words.**  `AT_sibling` is not a reference: it names the laid-out
+end of the record's subtree, so a drop invalidates it even though every reference word stays
+put.  After the layout is final every surviving record that carries the word is recomputed
+to its laid-out end, and a child chain whose records were all dropped takes its four-byte
+terminator with it (the end-of-subtree arithmetic counts a terminator only for a chain that
+still has records).  `info_data.c` is the measured shape: the two locals in
+`get_table_no_by_infotxt_num` (`0x49` bytes) empty their lexical block's chain, and the
+block's, the function's and the CU's words each moved four bytes past retail's before the
+recompute.
 
 Then the **whole `.debug` chunk must equal retail's**.  Anything else refuses, naming the
 DIE and attribute; there is no partial adoption.  The `.line` substitution is the reason the

@@ -20,9 +20,12 @@ What it does, in order:
    paired in emission order and a different set refuses (:mod:`toolchain.debug_set`'s
    signature, made recursive);
 3. lay out our DIE records in retail's sibling order, recursively (a lexical block reorders
-   its own children, not the top level only), keeping each chain's trailing bytes verbatim;
-4. recompute every ``AT_sibling`` from the new layout, and rewrite every intra-chunk offset
-   reference through the source-to-new offset map;
+   its own children, not the top level only), keeping the trailing terminator of every
+   child chain that still has records -- a chain whose records were all dropped as extras
+   is gone with them;
+4. recompute every ``AT_sibling`` from the new layout (its target is the laid-out end of
+   that record's subtree, so a dropped child chain contributes no terminator), and rewrite
+   every intra-chunk offset reference through the source-to-new offset map;
 5. re-emit, and let the caller compare the result with retail's bytes.  A difference is a
    refusal, not a warning: no tolerance, no partial.
 
@@ -88,10 +91,11 @@ class Reordered:
     """The normalised chunk and what happened while rewriting it."""
 
     __slots__ = ("chunk", "dies", "moved", "references", "reference_changes", "dropped",
-                 "name_changes", "adopted_attributes")
+                 "name_changes", "adopted_attributes", "sibling_changes", "sibling_targets")
 
     def __init__(self, chunk, dies, moved, references, reference_changes=(),
-                 dropped=(), name_changes=(), adopted_attributes=()):
+                 dropped=(), name_changes=(), adopted_attributes=(), sibling_changes=(),
+                 sibling_targets=()):
         self.chunk = chunk          # the rewritten bytes, at the same ``base``
         self.dies = dies            # DIEs emitted
         self.moved = moved          # DIEs whose new offset is not their old one
@@ -104,6 +108,10 @@ class Reordered:
         self.name_changes = tuple(name_changes)
         #: ``(die_description, attribute)`` for every attribute retail has and ours lacks.
         self.adopted_attributes = tuple(adopted_attributes)
+        #: ``(old, new, die_description)`` for every surviving ``AT_sibling`` recomputed.
+        self.sibling_changes = tuple(sibling_changes)
+        #: ``{new offset: sibling target}`` for every emitted record that carries one.
+        self.sibling_targets = dict(sibling_targets)
 
 
 def _describe(die, base):
@@ -463,7 +471,10 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
 
     ``drop_extra`` allows a DIE on *our* side to have no retail counterpart: it is dropped
     with its whole subtree and reported in :attr:`Reordered.dropped`.  A DIE retail has and
-    we do not still refuses -- fabricating a record would be invention, not adoption.
+    we do not still refuses -- fabricating a record would be invention, not adoption.  Every
+    surviving record's ``AT_sibling`` is then recomputed from the final layout and reported
+    in :attr:`Reordered.sibling_changes`; :attr:`Reordered.sibling_targets` carries the
+    target per laid-out offset, which is what the adoption step applies.
 
     ``adopt_missing`` names attributes retail carries on a paired DIE while ours does not
     (the adoption step passes ``AT_2303``, the access-reference list).  Each such attribute
@@ -629,8 +640,13 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
             new_at[our_die.offset] = cursor[0]
             cursor[0] += (our_die.length + extra_length(our_die.offset)
                           + name_delta.get(our_die.offset, 0))
-            plan(children_of[our_die.offset])
-            if our_die.children:
+            children = children_of[our_die.offset]
+            plan(children)
+            # The four-byte terminator belongs to the *surviving* child chain.  A chain
+            # whose records were all dropped as extras has no chain left to terminate, and
+            # its bytes are not laid out -- so the end of its subtree is the record's own
+            # end, exactly as ``emit`` writes it.
+            if children:
                 start, stop = residues[our_die.offset]
                 cursor[0] += stop - start
             new_end[our_die.offset] = cursor[0]
@@ -643,6 +659,25 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     tail = subtree_end(roots[-1]) if roots else base
     if not (base <= tail <= end):
         raise Refusal(f"the emitted chunk's last DIE ends at 0x{tail:X}, past the chunk")
+
+    # AT_sibling is a positional word: once an extra record is dropped and the offsets are
+    # final, the value the emitted record carries no longer names its subtree's end.  The
+    # target is the layout's own end-of-subtree offset -- the arithmetic this encoder writes
+    # the chunk with, which counts a child chain's terminator only when the chain still has
+    # records.  A surviving record that carries the attribute but has no laid-out position
+    # would be a guess, so it refuses.
+    sibling_targets, sibling_changes = {}, []
+    for our_die in by_offset.values():
+        if AT_SIBLING not in our_die.attrs or our_die.offset in dropped_offsets:
+            continue
+        target = new_end.get(our_die.offset)
+        if target is None:
+            raise Refusal(f"{_describe(our_die, base)} carries AT_sibling but has no "
+                          f"position in the laid-out chunk")
+        sibling_targets[new_at[our_die.offset]] = target
+        if our_die.attrs[AT_SIBLING] != target:
+            sibling_changes.append((our_die.attrs[AT_SIBLING], target,
+                                    _describe(our_die, base)))
 
     rewritten = []
 
@@ -706,7 +741,11 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
         out = bytearray(span)
         for code, form, at, size in _fields(out):
             if code == AT_SIBLING:
-                _P32(out, at, new_end[die.offset])
+                target = sibling_targets.get(new_at[die.offset])
+                if target is None:
+                    raise Refusal(f"{_describe(die, base)} carries AT_sibling but its "
+                                  f"target is not determined by the laid-out chunk")
+                _P32(out, at, target)
                 continue
             if form == 2:
                 value = _U32(out, at)[0]
@@ -741,4 +780,4 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
                       f"0x{len(emitted):X}; the DIE records were not reordered freely")
     moved = sum(1 for offset in new_at if new_at[offset] != offset)
     return Reordered(chunk, len(new_at), moved, len(rewritten), rewritten, dropped,
-                     name_changes, adopted_attributes)
+                     name_changes, adopted_attributes, sibling_changes, sibling_targets)

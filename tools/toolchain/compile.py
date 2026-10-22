@@ -1225,6 +1225,9 @@ def debug_promotion(unit: str, *, text: bytes, line: bytes, debug: bytes,
         for old, new, where, code in adopted.reference_changes:
             print(f"compile: {unit}: rewrote reference 0x{old:08X} -> 0x{new:08X} "
                   f"(attribute 0x{code:04X} in {where})", file=sys.stderr)
+        for old, new, where in adopted.sibling_changes:
+            print(f"compile: {unit}: recomputed AT_sibling 0x{old:08X} -> 0x{new:08X} "
+                  f"(in {where})", file=sys.stderr)
         print(f"compile: {unit}: .debug is retail's 0x{len(retail_debug):X} bytes byte for "
               f"byte after adoption ({adopted.dies} DIEs)", file=sys.stderr)
         print(f"compile: {unit}: record in its tu_builds comment: .line and AT_location "

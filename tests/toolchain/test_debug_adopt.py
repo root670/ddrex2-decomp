@@ -25,9 +25,12 @@ sys.path.insert(0, str(ROOT))
 
 from toolchain import compile as cc  # noqa: E402
 from toolchain import debug_adopt as da  # noqa: E402
+from toolchain import debug_set as ds  # noqa: E402
 from tests.toolchain.test_debug_normalize import Die, Lazy, build  # noqa: E402
+from tests.toolchain.test_debug_set import _attribute, _encoded_length  # noqa: E402
 
 AT_ARRAY_TYPE = 0x0001
+AT_SIBLING = 0x0012
 AT_BYTE_SIZE = 0x00B6
 AT_FUND_TYPE = 0x0055
 AT_LOCATION = 0x0023
@@ -142,6 +145,164 @@ def test_an_extra_die_is_dropped_and_reported(capsys):
     assert "dropped extra DIE +0x" in error
     assert "local_variable 't'" in error
     assert "no counterpart in retail" in error
+    assert "byte for byte after adoption" in error
+
+
+def block_tree(extra_local):
+    """A CU whose function holds a block that is empty in retail and has a local in ours.
+
+    Dropping that local empties the block's child chain, so the chain's four-byte
+    terminator is not part of the layout either -- the shape that leaves the block's,
+    the function's and the CU's ``AT_sibling`` stale if the drop only removes records.
+    """
+    block = Die(0x000B, [(AT_NAME, "b")])
+    if extra_local:
+        block.children.append(
+            Die(0x000C, [(AT_NAME, "t"), (AT_FUND_TYPE, 8), (AT_LOCATION, register(2))]))
+    body = Die(0x0006, [(AT_NAME, "f")], [block])
+    return Die(0x0011, [(AT_NAME, "p_anime.c")], [body])
+
+
+def encode_tree(root, without_sibling=None):
+    """Encode ``root``, omitting ``without_sibling``'s own ``AT_sibling`` word.
+
+    The fixture encoder always writes the word; this variant exists to build the corrupt
+    record the normaliser must refuse -- a DIE with children and no positional target.
+    """
+    cursor = [0]
+
+    def record_size(die):
+        own = 6 + sum(_encoded_length(code, value) for code, value in die.attrs)
+        return own + (0 if die is without_sibling else 6)
+
+    def subtree_length(die):
+        total = record_size(die)
+        if die.children:
+            total += sum(subtree_length(child) for child in die.children) + 4
+        return total
+
+    def assign(die):
+        die.offset = cursor[0]
+        cursor[0] += record_size(die)
+        for child in die.children:
+            assign(child)
+        if die.children:
+            cursor[0] += 4
+
+    assign(root)
+
+    def value(one):
+        if isinstance(one, Die):
+            return one.offset
+        if isinstance(one, Lazy):
+            return one.render()
+        return one
+
+    def encode(die):
+        body = struct.pack("<H", die.tag)
+        for code, one in die.attrs:
+            body += _attribute(code, value(one))
+        if die is not without_sibling:
+            body += _attribute(AT_SIBLING, die.offset + subtree_length(die))
+        record = struct.pack("<I", len(body) + 4) + body
+        children = b"".join(encode(child) for child in die.children)
+        return record + (children + b"\x00\x00\x00\x00" if die.children else b"")
+
+    return encode(root)
+
+
+def test_dropping_a_chain_recomputes_every_surviving_sibling(capsys):
+    """The block loses its only record: its terminator and every enclosing word move."""
+    retail = build(block_tree(extra_local=False))
+    emitted = build(block_tree(extra_local=True))
+    assert len(emitted) > len(retail), "the local and its chain terminator are extra"
+
+    adopted = da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    assert adopted.chunk == retail
+    assert [die.tag for die, _span in adopted.dropped] == [0x000C]
+
+    block = next(die for die in ds.parse(retail, 0) if die.tag == 0x000B)
+    rewrites = [change for change in adopted.sibling_changes
+                if "lexical_block" in change[2]]
+    assert rewrites, "the emptied block's AT_sibling is recomputed"
+    assert rewrites[0][1] == block.attrs[AT_SIBLING], "it names the laid-out chain end"
+    assert rewrites[0][0] != rewrites[0][1], "the emitted word pointed past the layout"
+    assert any("global_subroutine" in change[2] for change in adopted.sibling_changes)
+    assert any("compile_unit" in change[2] for change in adopted.sibling_changes)
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=emitted,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=retail, adopt=True)
+
+    assert placed == retail
+    error = capsys.readouterr().err
+    assert "dropped extra DIE +0x" in error
+    assert "recomputed AT_sibling 0x" in error
+    assert "lexical_block" in error
+    assert "byte for byte after adoption" in error
+
+
+def test_a_missing_sibling_target_refuses():
+    """Retail's record carries a positional word ours has not: it cannot be recomputed."""
+    retail = build(block_tree(extra_local=False))
+    our_tree = block_tree(extra_local=True)
+    block = our_tree.children[0].children[0]
+    emitted = encode_tree(our_tree, without_sibling=block)
+
+    with pytest.raises(da.Refused) as excinfo:
+        da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    message = str(excinfo.value)
+    assert "lexical_block 'b'" in message
+    assert "attribute 0x0012" in message
+    assert "no counterpart in the emitted record" in message
+
+
+def struct_array_twin(duplicate):
+    """A struct whose two ``float[4]`` members share one array type in retail.
+
+    The fp_qmenu shape: the twin type records are CU children and the two references come
+    from *member* DIEs, not from locals.  Dropping the extra type still has to retarget the
+    member that named it at the survivor.
+    """
+    first = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 16)])
+    second = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 16)]) if duplicate else first
+    types = [first] + ([second] if duplicate else [])
+    members = [Die(0x000D, [(AT_NAME, "cam_p"), (AT_USER_DEF_TYPE, first),
+                            (AT_LOCATION, register(2))]),
+               Die(0x000D, [(AT_NAME, "eye_p"), (AT_USER_DEF_TYPE, second),
+                            (AT_LOCATION, register(3))])]
+    aggregate = Die(0x0013, [(AT_NAME, "@anon1"), (AT_BYTE_SIZE, 32)], members)
+    return Die(0x0011, [(AT_NAME, "p_anime.c")], types + [aggregate]), second
+
+
+def test_a_duplicate_type_record_is_absorbed_by_a_struct_member(capsys):
+    """A type record referenced from a member is droppable like any identical twin."""
+    retail_tree, retail_array = struct_array_twin(duplicate=False)
+    retail = build(retail_tree)
+    our_tree, extra_array = struct_array_twin(duplicate=True)
+    emitted = build(our_tree)
+
+    adopted = da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    assert adopted.chunk == retail
+    assert [die.tag for die, _span in adopted.dropped] == [AT_ARRAY_TYPE]
+    redirects = [change for change in adopted.reference_changes
+                 if change[0] == extra_array.offset]
+    assert redirects, "eye_p's AT_type is retargeted at the surviving array"
+    assert redirects[0][1] == retail_array.offset
+    assert all("member 'eye_p'" in change[2] for change in redirects)
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=emitted,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=retail, adopt=True)
+
+    assert placed == retail
+    error = capsys.readouterr().err
+    assert "dropped extra DIE +0x" in error
+    assert "array_type" in error
+    assert "rewrote reference" in error
     assert "byte for byte after adoption" in error
 
 

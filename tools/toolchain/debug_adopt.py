@@ -89,12 +89,12 @@ class Adopted:
     __slots__ = ("chunk", "line", "line_rows", "line_tables", "line_total",
                  "line_emitted", "line_changed", "first_line_row", "line_note", "locations",
                  "anon_names", "references", "reference_changes", "dropped",
-                 "adopted_attributes", "dies")
+                 "adopted_attributes", "dies", "sibling_changes")
 
     def __init__(self, chunk, line, line_rows, line_tables, line_total, line_changed,
                  first_line_row, locations, anon_names, references, dies,
                  line_note=None, reference_changes=(), dropped=(),
-                 adopted_attributes=(), line_emitted=0):
+                 adopted_attributes=(), line_emitted=0, sibling_changes=()):
         self.chunk = chunk              # retail's .debug chunk, byte-equal to the proof
         self.line = line                # retail's .line chunk, adopted whole
         self.line_rows = line_rows      # [(table, row, before, after)] byte-different rows
@@ -114,6 +114,8 @@ class Adopted:
         #: ``(die_description, attribute)`` for every attribute retail has and ours lacks.
         self.adopted_attributes = tuple(adopted_attributes)
         self.dies = dies                # DIEs in the adopted chunk
+        #: ``(old, new, die_description)`` for every surviving ``AT_sibling`` recomputed.
+        self.sibling_changes = tuple(sibling_changes)
 
 
 # ---------------------------------------------------------------------------
@@ -400,6 +402,35 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
                           f"+0x{one.offset - base:X}: {debug_set.TAG.get(one.tag, '?')} "
                           f"against {debug_set.TAG.get(other.tag, '?')}")
 
+    # AT_sibling is positional, not a reference: dropping an extra record changes it while
+    # every reference word stays put, and the value the emitted record carried names a
+    # subtree that no longer exists.  Now that the drops are final, every surviving record
+    # that carries one is recomputed to the layout's end-of-subtree offset -- the same
+    # arithmetic the encoder writes the chunk with, terminator included only for a child
+    # chain that still has records.  A record whose target the layout does not determine is
+    # refused, never left stale; the byte proof below is what accepts the result.
+    for die in ours:
+        if debug_set.AT_SIBLING not in die.attrs:
+            continue
+        target = ordering.sibling_targets.get(die.offset)
+        if target is None:
+            raise Refused(f"+0x{die.offset - base:X} {debug_set.TAG.get(die.tag, '?')} "
+                          f"{die.name or ''}: AT_sibling has no target in the laid-out "
+                          f"chunk")
+        start = die.offset - base
+        record = bytes(out[start:start + die.length])
+        for code, _form, at, _size in _fields(record):
+            if code != debug_set.AT_SIBLING:
+                continue
+            if _U32(out, start + at)[0] != target:
+                _P32(out, start + at, target)
+            break
+        else:
+            raise Refused(f"+0x{die.offset - base:X} {debug_set.TAG.get(die.tag, '?')} "
+                          f"{die.name or ''}: AT_sibling is in the DIE set but not in the "
+                          f"laid-out record")
+    sibling_changes = list(ordering.sibling_changes)
+
     ours_keys, retail_keys = _key_tree(ours), _key_tree(theirs)
     locations = []
     anon_names = [Changed("", old, old, new)
@@ -478,4 +509,4 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
                    line_changed, first_line_row, locations, anon_names,
                    len(reference_changes), len(ours), line_note,
                    reference_changes, ordering.dropped, ordering.adopted_attributes,
-                   line_emitted)
+                   line_emitted, sibling_changes)
