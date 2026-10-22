@@ -89,3 +89,6 @@ netwinslby_plate_waku_on = 0x002BF490; // size:0xb4 extent:0xc0 source:src/netwo
 netwinslby_plate_graph = 0x002BF550; // size:0x3c extent:0x40 source:src/network/net_window/net_win_slby.c
 netwinslby_plate_gauge = 0x002BF590; // size:0x14 extent:0x20 source:src/network/net_window/net_win_slby.c
 netwinslby = 0x002BF5B0; // size:0x3c extent:0x40 source:src/network/net_window/net_win_slby.c
+@40 = 0x002D6D50; // size:0x5 extent:0x8 source:src/network/net_window/net_win_listsel.c
+@63 = 0x002D6D58; // size:0x3 extent:0x8 source:src/network/net_window/net_win_listsel.c
+@41 = 0x002D6D60; // size:0x1 extent:0x8 source:src/network/net_window/net_win_listsel.c
