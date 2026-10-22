@@ -66,6 +66,7 @@ exists; the note explains the shape mismatch.
 | `src/network/net_window/net_win_infoboard.c` | 1351-1354 | 0xDE | 4 | 19 | `5b4afcd35eedfac4` | 19 | 15 | emitted table no longer corresponds to retail's layout: 15 of 19 row(s) differ; retail's chunk is adopted |
 | `src/network/net_window/net_win_infosel.c` | 1508-1515 | 0x2B6 | 8 | 63 | `308dae06bd260979` | 63 | 0 | layout reproduces retail's table; adoption supplied .debug metadata only |
 | `src/CS/train/tra_str.c` | 1614-1616 | 0x194 | 3 | 38 | `ff45bb9e698ddb4a` | 38 | 35 | emitted table no longer corresponds to retail's layout: 35 of 38 row(s) differ; retail's chunk is adopted |
+| `src/CS/freeplay/fp_qmenu.c` | 1687-1692 | 0x5C6 | 6 | 143 | `7a710564f71abac0` | 145 | - | emitted table no longer corresponds to retail's layout: emitted 145 record(s), retail 143 (.line table 3 holds 42 rows against retail's 40); retail's chunk is adopted |
 | `src/network/net_window/net_win_dhead.c` | 1693-1700 | 0x252 | 8 | 53 | `d22f529e8dcfc8da` | 53 | 38 | emitted table no longer corresponds to retail's layout: 38 of 53 row(s) differ; retail's chunk is adopted |
 | `src/network/net_window/net_win_dpoint.c` | 1701-1708 | 0x270 | 8 | 56 | `568388b1ff873991` | 56 | 48 | emitted table no longer corresponds to retail's layout: 48 of 56 row(s) differ; retail's chunk is adopted |
 | `src/CS/edit_lib/el_mes.c` | 1759 | 0x62 | 1 | 9 | `1e305cc6a711433b` | 9 | 8 | emitted table no longer corresponds to retail's layout: 8 of 9 row(s) differ; retail's chunk is adopted |
