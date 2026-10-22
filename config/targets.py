@@ -803,7 +803,12 @@ DDREX2P = Target(
         # "%08d" literals in .data sections of their own instead of a shared 8-byte pool, so
         # each is placed at its retail slot (`@40`/`@41` in data_placements.txt).
         ("src/network/net_window/net_win_listdtl2.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g -sdatathreshold 0")),
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x1D0 (two bodies word-exact), .line byte-equal; .debug set-equal (anonymous-
+        # type DIE order), adopted.  The sort's outer counter is `i`, not `t` (`t` is the
+        # swap temp), which also fixes the callee-saved colouring.
+        ("src/AM/s573/doll/dexport.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g")),
 )
 
 #: Every target this tree can build for.  Adding one is a `Target(...)` above and a mention
