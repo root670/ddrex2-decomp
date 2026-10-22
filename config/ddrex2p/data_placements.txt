@@ -74,3 +74,6 @@ netwinslby_plate_chara_back = 0x002C1C30; // size:0x14 extent:0x20 source:src/ne
 netwinslby_plate_chara_face = 0x002C1C50; // size:0x14 extent:0x20 source:src/network/net_window/net_win_dhead.c
 netwininfosel = 0x002C1C70; // size:0x3c extent:0x40 source:src/network/net_window/net_win_dhead.c
 @31 = 0x002D6B00; // size:0x18 extent:0x18 source:src/CS/shop/shop_info.c
+NetWin_BarFunc = 0x002BF238; // size:0xc extent:0x18 source:src/network/net_window/net_win_bar.c
+NetWin_BarCode = 0x002BF250; // size:0x10 extent:0x10 source:src/network/net_window/net_win_bar.c
+netwinbar = 0x002BF260; // size:0x14 extent:0x20 source:src/network/net_window/net_win_bar.c

@@ -564,22 +564,25 @@ def cut_split(name, text, start, cuts):
                 match = SPLIT_LABEL_LINE.match(line)
                 if match:
                     removed.append((match.group(1), address))
-    # A label whose definition is cut must lose its ``enddlabel`` too: the end line stays in
-    # the following piece and computes ``. - NAME``, and against an absolute NAME the
-    # assembler rejects it (".size expression … does not evaluate to a constant").  Dropping
-    # it keeps the piece assemblable; the label itself is still defined absolutely.
-    dropped = {label for label, _ in removed}
-    if dropped:
-        pieces = [(address, "".join(
-            line for line in text_of.splitlines(keepends=True)
-            if not _ends_dropped(line, dropped))) for address, text_of in pieces]
-    return pieces, removed
+    # A label whose extent straddles a cut has its ``dlabel`` in one piece and its
+    # ``enddlabel`` in another, where ``. - NAME`` no longer evaluates (NAME is absolute
+    # there), so the piece does not assemble.  Drop any end line whose label this piece does
+    # not define; the label itself is still defined absolutely by the linker script.
+    trimmed = []
+    for address, body in pieces:
+        lines_of = body.splitlines(keepends=True)
+        defined = {match.group(1) for match in map(SPLIT_LABEL_LINE.match, lines_of)
+                   if match is not None}
+        trimmed.append((address, "".join(
+            line for line in lines_of
+            if not _ends_label_outside(line, defined))))
+    return trimmed, removed
 
 
-def _ends_dropped(line, dropped):
-    """True for an ``enddlabel NAME`` line naming a label this cut removed."""
+def _ends_label_outside(line, defined):
+    """True for an ``enddlabel NAME`` line whose NAME this piece does not define."""
     match = SPLIT_END_LABEL_LINE.match(line)
-    return match is not None and match.group(1) in dropped
+    return match is not None and match.group(1) not in defined
 
 
 def plan_data(sources, code, geometry, placements, replacements):
