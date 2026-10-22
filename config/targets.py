@@ -655,6 +655,12 @@ DDREX2P = Target(
         # twelve placements.  Retail carries a whole unreferenced _nsv_player_list_file.
         ("src/network/net_window/net_win_dpoint.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x928 in a 0x930 extent, eight bodies word-exact; .line 0x5FE adopted whole
+        # (148 records against retail's 147); .debug retail's 0x2804 / 253 DIEs byte-equal
+        # after adoption.  Needs -sdatathreshold 0 and fifteen placements.  Main's second
+        # dispatch level tests entry_flag, and the dancer cell stride is (num % 8) * 42.
+        ("src/network/net_window/net_win_suser.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x458 in a 0x460 extent, ten bodies word-exact; .line 0x406 adopted whole
         # (91 records against retail's 95); .debug retail's 0x1C7A / 177 DIEs byte-equal
         # after adoption.  Needs -sdatathreshold 0 and twelve placements.  CwsObjMove
