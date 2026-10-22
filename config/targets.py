@@ -738,6 +738,12 @@ DDREX2P = Target(
         # dispatch level tests entry_flag, and the dancer cell stride is (num % 8) * 42.
         ("src/network/net_window/net_win_suser.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x920 in a 0x928 extent, six bodies word-exact; .line 0x5D0 adopted; .debug retail's
+        # 0x28E0 / 269 DIEs byte-equal after adoption.  Needs -sdatathreshold 0 and thirteen
+        # placements.  BoardDisp's else arm needs scratch `mx = m.x + w.x; dx = mx + o.x` (x, y, z;
+        # the extra locals are dropped by adoption, and they shift the pool numbers to @148..@150, @194).
+        ("src/network/net_window/net_win_user.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x458 in a 0x460 extent, ten bodies word-exact; .line 0x406 adopted whole
         # (91 records against retail's 95); .debug retail's 0x1C7A / 177 DIEs byte-equal
         # after adoption.  Needs -sdatathreshold 0 and twelve placements.  CwsObjMove
