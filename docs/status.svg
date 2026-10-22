@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 46 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 18.5% of units, 5.15% of functions and 3.02% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 47 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 18.9% of units, 5.29% of functions and 3.15% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 46 / 249 units promoted (18.5%)</text>
-<text x="24" y="52" font-size="12" fill="#57606a">230 / 4,463 functions (5.15%) &#183; 49,344 / 1,631,596 code bytes (3.02%) &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 47 / 249 units promoted (18.9%)</text>
+<text x="24" y="52" font-size="12" fill="#57606a">236 / 4,463 functions (5.29%) &#183; 51,408 / 1,631,596 code bytes (3.15%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 5/18 units · 34/182 funcs · 6,560/67,808 bytes (9.7%)</text>
@@ -45,7 +45,7 @@
 <rect class="cell" data-state="untouched" x="234" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/com_scrollbar.c - 1,344 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="CS">
-<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 15/118 units · 56/814 funcs · 18,544/433,844 bytes (4.3%)</text>
+<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 16/118 units · 62/814 funcs · 20,608/433,844 bytes (4.8%)</text>
 <rect class="cell" data-state="untouched" x="24" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_e.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/bk_load.c - 128 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_j.c - 0 code bytes - untouched</title></rect>
@@ -59,7 +59,7 @@
 <rect class="cell" data-state="untouched" x="174" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout.c - 4,928 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="189" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_disp/bk_mv_list.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="204" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_disp/bk_disp_sub.c - 5,744 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="219" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/bk_disp/bk_disp.c - 2,064 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="219" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/bk_disp/bk_disp.c - 2,064 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="234" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_msel.c - 19,504 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="249" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_eyetoy.c - 2,080 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="264" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_chara.c - 15,824 code bytes - untouched</title></rect>
