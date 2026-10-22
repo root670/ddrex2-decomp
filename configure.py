@@ -604,7 +604,10 @@ def plan_data(sources, code, geometry, placements, replacements):
                               f"split; no split carries it")
         index = owners[-1]
         split_address, split = rows[index]
-        split_end = rows[index + 1][0] if index + 1 < len(rows) else geometry.loadable_end
+        # The last split ends at ``bss_vram``, not ``loadable_end``: split addresses are VAs,
+        # and the loadable end is a *file* offset (the tail databins sit between them), so the
+        # old bound made the final code split unable to accept any placement.
+        split_end = rows[index + 1][0] if index + 1 < len(rows) else geometry.bss_vram
         begin, end = record["address"], record["address"] + record["extent"]
         if not (split_address <= begin < end <= split_end):
             raise ConfigError(
