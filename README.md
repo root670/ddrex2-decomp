@@ -39,7 +39,7 @@ why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before edit
 
 <!-- status:start -->
 
-**Overall: 40 / 249 translation units promoted (16.1%); 187 / 4,463 functions reconstructed (4.19%); 37,296 / 1,631,596 code bytes reconstructed (2.29%).**
+**Overall: 41 / 249 translation units promoted (16.5%); 195 / 4,463 functions reconstructed (4.37%); 39,072 / 1,631,596 code bytes reconstructed (2.39%).**
 
 Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
 
@@ -49,7 +49,7 @@ Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python
 
 | module | units | promoted units | functions | reconstructed functions | code bytes | reconstructed bytes | units % | functions % | bytes % |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `AM` | 18 | 3 | 182 | 15 | 67,808 | 4,304 | 16.7% | 8.24% | 6.35% |
+| `AM` | 18 | 4 | 182 | 23 | 67,808 | 6,080 | 22.2% | 12.64% | 8.97% |
 | `common` | 15 | 3 | 147 | 11 | 44,708 | 4,208 | 20.0% | 7.48% | 9.41% |
 | `CS` | 118 | 11 | 814 | 32 | 433,844 | 8,752 | 9.3% | 3.93% | 2.02% |
 | `eyetoy` | 3 | 0 | 30 | 0 | 13,300 | 0 | 0.0% | 0.00% | 0.00% |
@@ -62,7 +62,7 @@ Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python
 | `(external)` | 1 | 0 | 7 | 0 | 1,420 | 0 | 0.0% | 0.00% | 0.00% |
 | `(library)` | 0 | 0 | 439 | 0 | 117,800 | 0 | 0.0% | 0.00% | 0.00% |
 | `(unattributed)` | 0 | 0 | 2,208 | 0 | 713,896 | 0 | 0.0% | 0.00% | 0.00% |
-| **total** | **249** | **40** | **4,463** | **187** | **1,631,596** | **37,296** | **16.1%** | **4.19%** | **2.29%** |
+| **total** | **249** | **41** | **4,463** | **195** | **1,631,596** | **39,072** | **16.5%** | **4.37%** | **2.39%** |
 
 Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
 
