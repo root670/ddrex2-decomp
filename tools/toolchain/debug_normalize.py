@@ -447,7 +447,8 @@ def _encode_attribute(code, payload):
 
 
 def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
-              drop_extra: bool = False, adopt_missing=(), adopt_names: bool = False) -> Reordered:
+              drop_extra: bool = False, adopt_missing=(), adopt_names: bool = False,
+              redirect_dropped: bool = False) -> Reordered:
     """Rewrite ``emitted`` into ``retail``'s DIE order, at the same ``base`` in ``.debug``.
 
     The result carries retail's DIE *sequence*; whether it is retail's *bytes* is the
@@ -472,6 +473,14 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     ``adopt_names`` takes retail's ``@anonN`` name for a paired anonymous DIE.  The name is
     part of the record, so it is adopted *before* the layout -- a longer index moves every
     later record -- and reported in :attr:`Reordered.name_changes`.
+
+    ``redirect_dropped`` lets a reference into a dropped record be retargeted at a *surviving
+    record with the same full subtree key* -- the same structural interchangeability the
+    pairing already relies on.  The compiler sometimes emits two identical type records where
+    retail emitted one, and both are referenced; dropping either twin changes the reference
+    word of whichever record named it, so the value is rewritten to the surviving twin and
+    reported in :attr:`Reordered.reference_changes`.  A reference to a dropped record with no
+    identical survivor still refuses, because there the reference's meaning would change.
     """
     try:
         ours = debug_set.parse(emitted, base)
@@ -524,6 +533,7 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     # -- pairing: every level, one-to-one, extras on our side kept for dropping ---------
     children_of, retail_of, dropped = {}, {}, []
     retail_to_ours = {}
+    redirect_of = {}                    # dropped DIE offset -> identical surviving twin
 
     def pair_level(our_level, retail_level, where):
         pairs, leftovers = _pair(our_level, retail_level, our_key, retail_key, base, where,
@@ -535,6 +545,11 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
         for die in leftovers:
             span = subtree_end(die) - die.offset
             dropped.append((die, span))
+            if redirect_dropped:
+                twin = next((candidate for candidate, _retail_die in pairs
+                             if our_key(candidate) == our_key(die)), None)
+                if twin is not None:
+                    redirect_of[die.offset] = twin.offset
         return pairs
 
     def walk(pairs):
@@ -636,6 +651,11 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
         if not (base <= value < end):
             return None                     # another section's offset, not this chunk's
         if value in dropped_offsets:
+            twin = redirect_of.get(value)
+            if twin is not None:
+                moved = new_at[twin]
+                rewritten.append((value, moved, _describe(die, base), code))
+                return moved
             raise Refusal(f"{_describe(die, base)}: reference 0x{value:08X} (attribute "
                           f"0x{code:04X}) points at a DIE dropped as an extra record; "
                           f"retail carries no such target")

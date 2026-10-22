@@ -25,12 +25,15 @@ sys.path.insert(0, str(ROOT))
 
 from toolchain import compile as cc  # noqa: E402
 from toolchain import debug_adopt as da  # noqa: E402
-from tests.toolchain.test_debug_normalize import Die, build  # noqa: E402
+from tests.toolchain.test_debug_normalize import Die, Lazy, build  # noqa: E402
 
+AT_ARRAY_TYPE = 0x0001
 AT_BYTE_SIZE = 0x00B6
 AT_FUND_TYPE = 0x0055
 AT_LOCATION = 0x0023
 AT_NAME = 0x0038
+AT_USER_DEF_TYPE = 0x0072
+AT_2303 = 0x2303
 
 UNIT = "src/AM/s573/play/p_anime.c"
 
@@ -140,6 +143,97 @@ def test_an_extra_die_is_dropped_and_reported(capsys):
     assert "local_variable 't'" in error
     assert "no counterpart in retail" in error
     assert "byte for byte after adoption" in error
+
+
+def twin_tree(duplicate):
+    """Retail shares one array type between two locals; our compiler emitted two.
+
+    The two array DIEs are structurally identical (same tag, same size), so either may
+    stand for retail's one -- but each local names a different one on our side.  Dropping
+    the extra therefore has to retarget one surviving local's reference at the survivor:
+    the interchangeable-duplicate rule the pairing already uses.
+    """
+    first = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 16)])
+    second = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 16)]) if duplicate else first
+    types = [first] + ([second] if duplicate else [])
+    locals_ = [Die(0x000C, [(AT_NAME, "n"), (AT_USER_DEF_TYPE, first),
+                            (AT_LOCATION, register(6))]),
+               Die(0x000C, [(AT_NAME, "m"), (AT_USER_DEF_TYPE, second),
+                            (AT_LOCATION, register(7))])]
+    body = Die(0x0006, [(AT_NAME, "f")], locals_)
+    aggregate = Die(0x0013, [(AT_NAME, "@anon1"), (AT_BYTE_SIZE, 4)])
+    return Die(0x0011, [(AT_NAME, "p_anime.c")], types + [body, aggregate]), second
+
+
+def test_a_duplicate_record_is_dropped_and_its_reference_redirected(capsys):
+    """Two identical type records where retail has one: one is dropped, refs follow it."""
+    retail_tree, retail_array = twin_tree(duplicate=False)
+    retail = build(retail_tree)
+    our_tree, extra_array = twin_tree(duplicate=True)
+    emitted = build(our_tree)
+
+    adopted = da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    assert adopted.chunk == retail
+    assert [die.tag for die, _span in adopted.dropped] == [AT_ARRAY_TYPE]
+    assert adopted.dropped[0][0].name is None, "the array type is unnamed"
+    redirects = [change for change in adopted.reference_changes
+                 if change[0] == extra_array.offset]
+    assert redirects, "m's reference to the dropped twin is rewritten"
+    assert redirects[0][1] == retail_array.offset, "it lands on the surviving twin"
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=OURS_LINE, debug=emitted,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=retail, adopt=True)
+
+    assert placed == retail
+    error = capsys.readouterr().err
+    assert "dropped extra DIE +0x" in error
+    assert "array_type" in error
+    assert "rewrote reference" in error
+    assert "byte for byte after adoption" in error
+
+
+def test_a_reference_to_a_dropped_record_without_a_twin_refuses():
+    """No identical survivor means the reference's meaning would change: adoption refuses."""
+    shared_retail = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 16)])
+    local_retail = Die(0x000C, [
+        (AT_NAME, "n"), (AT_FUND_TYPE, 8),
+        (AT_2303, Lazy(4, lambda: struct.pack("<I", shared_retail.offset)))])
+    body_retail = Die(0x0006, [(AT_NAME, "f")], [local_retail])
+    retail = build(Die(0x0011, [(AT_NAME, "p_anime.c")],
+                       [shared_retail, body_retail]))
+
+    shared = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 16)])
+    extra = Die(AT_ARRAY_TYPE, [(AT_BYTE_SIZE, 32)])
+    local = Die(0x000C, [
+        (AT_NAME, "n"), (AT_FUND_TYPE, 8),
+        (AT_2303, Lazy(4, lambda: struct.pack("<I", extra.offset)))])
+    body = Die(0x0006, [(AT_NAME, "f")], [local])
+    emitted = build(Die(0x0011, [(AT_NAME, "p_anime.c")],
+                        [shared, extra, body]))
+
+    with pytest.raises(da.Refused) as excinfo:
+        da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    message = str(excinfo.value)
+    assert "points at a DIE dropped as an extra record" in message
+    assert "retail carries no such target" in message
+
+
+def test_a_drop_that_still_leaves_a_difference_refuses():
+    """Dropping is not a licence to accept: the remaining chunk must be retail's bytes."""
+    retail = build(tree(location=6, anon="@anon1")) + b"\x00\x00\x00\x00"
+    extra = tree(location=2, anon="@anon0")
+    extra.children[0].children.append(
+        Die(0x000C, [(AT_NAME, "t"), (AT_FUND_TYPE, 8), (AT_LOCATION, register(2))]))
+    emitted = build(extra) + b"\x01\x00\x00\x00"
+    assert len(emitted) > len(retail)
+
+    with pytest.raises(da.Refused) as excinfo:
+        da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    assert "the adopted chunk is not retail's" in str(excinfo.value)
 
 
 def test_a_missing_die_refuses(capsys):

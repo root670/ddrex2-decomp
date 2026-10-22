@@ -25,6 +25,12 @@ only when the result is retail's ``.debug`` chunk byte for byte:
        interchangeable; the adopted value is retail's choice among them.
    Every other byte must already be retail's.  A difference in anything else refuses and
    names the DIE and attribute -- there is no tolerance and no partial adoption.
+   A whole DIE record *we* emitted that retail's block does not contain (a local the
+   compiler kept where retail's dropped it, or a duplicate type record) is dropped with its
+   subtree: it is ours to remove, and the block that remains must still be retail's.  A
+   reference into a dropped record is retargeted only at a surviving record with the same
+   full subtree key -- the interchangeable-duplicate rule the pairing already uses -- and a
+   reference with no such twin refuses.  Every dropped record is named in the report.
 4. The adopted chunk is compared with retail's.  A difference is a :class:`Refused`, never
    a warning and never a plausible-looking result.
 
@@ -370,7 +376,8 @@ def adopt(emitted: bytes, retail: bytes, base: int = 0, emitted_line: bytes = b"
             ignore=lambda die, code: (
                 (code == AT_LOCATION and die.tag == TAG_LOCAL_VARIABLE)
                 or code == debug_set.AT_2303),
-            drop_extra=True, adopt_missing=(debug_set.AT_2303,), adopt_names=True)
+            drop_extra=True, adopt_missing=(debug_set.AT_2303,), adopt_names=True,
+            redirect_dropped=True)
     except debug_normalize.Refusal as exc:
         raise Refused(str(exc))
 

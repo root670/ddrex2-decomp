@@ -1302,7 +1302,12 @@ def _fill_debug(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int,
     Length is a condition :func:`debug_promotion` reports (with the offending DIE), not a
     reason to stop assembling here: a short block leaves a gap and a long one extends the
     candidate, and both are visible to the whole-chunk comparison.  Blocks are placed at
-    the offsets retail pinned, which is what makes a DIE's position comparable.
+    the offsets retail pinned, which is what makes a DIE's position comparable -- except
+    that a block *longer* than its pinned slot pushes the following blocks back instead of
+    overwriting them, and every intra-chunk reference is resolved against the offset its
+    section actually landed at.  Without that, a unit carrying extra DIEs (the case
+    ``--adopt-retail-meta`` drops) would hand adoption a chunk whose records overlap and
+    cannot be parsed, so the extra record could never be named.
 
     A block whose length is not retail's is returned as a mismatch too.  Without that, a
     short block whose missing bytes happened to be trailing nulls could leave the *chunk*
@@ -1311,21 +1316,44 @@ def _fill_debug(mw: MWObject, tu: Tu, base: int, size: int, blocks, gp: int,
     """
     bodies = []
     for offset, pinned, index, label in blocks:
-        body = relocate(mw.data(index), mw.relocs.get(index, ()),
-                        lambda symbol: mw.resolve(tu, symbol), f"{label}.debug", gp)
+        bodies.append((offset - base, pinned, index, label, mw.data(index)))
+    # A block longer than retail's is the extra-record case adoption drops.  It has to reach
+    # adoption as a *parseable* run of DIEs, so blocks are laid out without overlap: a long
+    # block pushes the following ones back, and every intra-chunk reference is resolved
+    # against where its section actually landed.  When every block fits (retail's own
+    # layout), the actual offsets are the pinned ones and nothing moves.
+    layout, cursor = {}, base
+    for at, _pinned, _index, label, raw in bodies:
+        start = max(base + at, cursor)
+        layout[label] = start
+        cursor = start + len(raw)
+    actual = {base + at: layout[label] for at, _p, _i, label, _raw in bodies}
+
+    def resolve(symbol):
+        pinned = mw._section_offset(tu, symbol)
+        if pinned is None:
+            return mw.resolve(tu, symbol)
+        return actual.get(pinned, pinned)
+
+    placed = []
+    for at, pinned, index, label, _raw in bodies:
+        body = relocate(mw.data(index), mw.relocs.get(index, ()), resolve,
+                        f"{label}.debug", gp)
         if rename is not None:
             body = retail_name_in(body, *rename)
-        bodies.append((offset - base, pinned, body, label))
-    end = max([size] + [at + len(body) for at, _pinned, body, _label in bodies])
+        placed.append((layout[label], pinned, body, label))
+    end = max([size] + [start - base + len(body)
+                        for start, _pinned, body, _label in placed])
     out = bytearray(end)
     sizes, mismatches = [], []
-    for at, pinned, body, label in bodies:
+    for start, pinned, body, label in placed:
+        at = start - base
         out[at:at + len(body)] = body
         sizes.append((label, ".debug", len(body), pinned))
         if len(body) != pinned:
             retail_block = retail_chunk[at:at + pinned]
             mismatches.append((label, len(body), pinned,
-                               debug_set.classify(body, retail_block, at + base)))
+                               debug_set.classify(body, retail_block, start)))
     return bytes(out), sizes, mismatches
 
 
