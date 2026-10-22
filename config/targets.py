@@ -655,6 +655,13 @@ DDREX2P = Target(
         # twelve placements.  Retail carries a whole unreferenced _nsv_player_list_file.
         ("src/network/net_window/net_win_dpoint.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x198 in a 0x1A0 extent, nine bodies word-exact; .debug retail's 0x1988 /
+        # 168 DIEs byte-equal after adoption.  The layout emits all 42 .line records on
+        # retail's lines; 1 row differs in position, so retail's .line 0x1EC is adopted.
+        # Needs -sdatathreshold 0.  Its three statics verify but cannot be placed until
+        # plan_data keeps a dlabel/enddlabel pair together (D_002BF02A spans the cut).
+        ("src/network/net_window/net_win_bar.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x3B8 in a 0x3C0 extent, eight bodies word-exact; .text AND .line
         # byte-equal outright, so --normalise-debug alone makes .debug retail's 0x1817 /
         # 152 DIEs.  Needs -sdatathreshold 0 and six static placements.  `_point` is a
