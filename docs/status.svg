@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 39 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 15.7% of units, 4.01% of functions and 2.14% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 40 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 16.1% of units, 4.19% of functions and 2.29% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 39 / 249 units promoted (15.7%)</text>
-<text x="24" y="52" font-size="12" fill="#57606a">179 / 4,463 functions (4.01%) &#183; 34,944 / 1,631,596 code bytes (2.14%) &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 40 / 249 units promoted (16.1%)</text>
+<text x="24" y="52" font-size="12" fill="#57606a">187 / 4,463 functions (4.19%) &#183; 37,296 / 1,631,596 code bytes (2.29%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 3/18 units · 15/182 funcs · 4,304/67,808 bytes (6.3%)</text>
@@ -181,7 +181,7 @@
 <rect class="cell" data-state="untouched" x="39" y="326" width="12" height="12" rx="2" fill="#d0d7de"><title>src/gs/gs_vu0.c - 864 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="network">
-<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 19/82 units · 113/542 funcs · 16,048/208,732 bytes (7.7%)</text>
+<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 20/82 units · 121/542 funcs · 18,400/208,732 bytes (8.8%)</text>
 <rect class="cell" data-state="untouched" x="24" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net.c - 7,616 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_main.c - 2,480 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_type.c - 896 code bytes - untouched</title></rect>
@@ -209,7 +209,7 @@
 <rect class="cell" data-state="untouched" x="384" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_connect.c - 208 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="399" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_info.c - 3,616 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="414" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_logout.c - 2,112 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="429" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_suser.c - 2,352 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="429" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_suser.c - 2,352 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="444" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_tab.c - 1,024 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="459" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_watch.c - 960 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="474" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_search.c - 2,400 code bytes - untouched</title></rect>
