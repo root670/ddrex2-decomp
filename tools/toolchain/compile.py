@@ -168,6 +168,8 @@ LINK_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 #: never named is numbered by the compiler, and that number is what the object's relocations
 #: carry.  A pool slot is a datum like any other -- the address is the pool entry's, proved by
 #: the same byte comparison -- so the ledger has to be able to spell one.
+UNIT_SYMBOL = re.compile(
+    r"^(?P<name>[A-Za-z_][\w]*)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*source:(?P<source>\S+)$")
 DATA_PLACEMENT = re.compile(
     r"^(?P<name>[A-Za-z_]\w*|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*"
     r"size:0x(?P<size>[0-9A-Fa-f]+)\s+extent:0x(?P<extent>[0-9A-Fa-f]+)\s+"
@@ -451,6 +453,30 @@ class Manifests:
             raise Unusable(f"{path.relative_to(REPO_ROOT)} is missing; run ./ddr oracle")
         return json.loads(path.read_text())
 
+    def unit_symbols(self, source: str):
+        """``[(name, address)]`` the unit's own static resolves to, from ``unit_symbols.txt``.
+
+        Two units may each declare a file-scope static of one name (`step0` in `dmm_main.c`
+        and in `shop_main.c`); the oracle numbers the second `step0_1`, so the bare name
+        only resolves to the first.  A line `name = 0xADDR; // source:FILE` says which retail
+        address the named unit's reference means.  Unlike a data placement it links nothing:
+        the static lives in a split the link already holds.
+        """
+        path = self.dir / "unit_symbols.txt"
+        if not path.is_file():
+            return []
+        out = []
+        for line in path.read_text().splitlines():
+            text = line.strip()
+            if not text or text.startswith("//"):
+                continue
+            match = UNIT_SYMBOL.match(text)
+            if match is None:
+                raise Unusable(f"{_display(path)}: not `name = 0xADDR; // source:FILE`: {text}")
+            if match["source"] == source:
+                out.append((match["name"], int(match["address"], 16)))
+        return out
+
     def prefer_source(self, source: str) -> None:
         """Let ``source``'s own placement records win over another unit's of the same name.
 
@@ -470,6 +496,8 @@ class Manifests:
         first, so without this pop the object's ``AT_location`` and initialiser would bake
         the other unit's address.  The source's own measured record displaces the bare name.
         """
+        for name, address in self.unit_symbols(source):
+            self.symbols[name] = (address, {"provenance": "unit"})
         for record in self.placements:
             if record["source"] == source:
                 self.placed[record["name"]] = record["address"]

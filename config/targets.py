@@ -709,6 +709,12 @@ DDREX2P = Target(
         # retail's sixth local ofsx.  Needs the @31 jump table.
         ("src/CS/shop/shop_info.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x260, six bodies word-exact; .debug retail's 0x46BF byte-equal after adoption,
+        # .line 0x27E adopted.  step0 is dmm_main.c's name too: the oracle numbers this one
+        # step0_1, so config/ddrex2p/unit_symbols.txt gives it 0x002DE560 for this source.
+        # The 0x2303 ref order forces `step0 = 0` before the sb pair, inside a block local.
+        ("src/CS/shop/shop_main.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x350, both bodies word-exact; .line byte-equal pre-tidy (56+20 rows) and
         # adopted after; .debug retail's 0x78DD / 785 DIEs (24 of 25 anon indices permuted).
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.

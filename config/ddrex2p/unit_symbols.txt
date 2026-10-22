@@ -1,0 +1,2 @@
+// A file-scope static whose bare name the symbol ledger gives to another unit; see Manifests.unit_symbols.
+step0 = 0x002DE560; // source:src/CS/shop/shop_main.c
