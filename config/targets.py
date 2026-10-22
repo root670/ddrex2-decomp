@@ -640,6 +640,13 @@ DDREX2P = Target(
         # a global_variable DIE plus an array_type.  `(x & 0x20) ? 1 : 0` for sltu.
         ("src/CS/bk_disp/bk_disp.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x11E8, ten bodies word-exact; .line 0x100E and .debug 0x2A91 / 265 DIEs
+        # adopted byte-equal.  Needs @420 and seven statics.  BoardDisp assigns dx/dy/dz
+        # inside BOTH arms of the master_link branch -- that duplicated tail is retail's;
+        # its plate guard is `ptex_obj > 1` (slti $1).  LineDisp shares one block for
+        # cases 0 and 1; `nm_page == 0 ? i : i + 5` puts the index in the delay slot.
+        ("src/network/net_window/net_win_rccssel.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0xDE0 (0x24C + 0x2D4 + 0x300 + 0x5AC), four bodies word-exact; .line adopted
         # (2782 bytes); .debug retail's 0x6052 / 635 DIEs after adoption.  pad_type is one
         # 62-instruction line whose `= 1` test and `? -1 : 0` arm are load-bearing; init's
