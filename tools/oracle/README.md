@@ -57,6 +57,7 @@ the vendored `Dwarf` above and writes all of `include/**` (`./ddr oracle`):
 | path | what it is |
 |---|---|
 | `include/types/<tag>.h` | one named type, defined exactly once: the members with their offsets, the DIE it came from, the units that declare it, and a digest of its layout |
+| `include/types/anon_<digest>.h` | one anonymous layout, defined exactly once as a typedef of an unnamed aggregate, for every header that holds it |
 | `include/types.h` | every named type |
 | `include/src/<unit>.h` | a unit: the shared types it includes, its own anonymous types, its globals, and its prototypes with retail's address and line range |
 
@@ -70,6 +71,20 @@ per-unit numbering — the same name is a different type in a different unit —
 stays in the unit that declares it as `anon_<N>_<unit>`, and two units that
 declare one *named* type differently fail the oracle (`LayoutDisagreement`) naming
 the type and the member that differs.
+
+An anonymous layout a *named* type holds is the one exception to that per-unit
+rule, and it is a measured one.  Retail's CU for `shop_info.c` carries a single
+`@anon0` (8 bytes, `short x, y, w, h`) referenced by both `_CWS_WIN_W.def` and
+`anon_1_129.shop_rect`; spelling the member out inline while the unit typedefed its
+own copy emitted two, 5 DIEs and 0x97 bytes over retail's declaration block (181
+DIEs / 0x18C7 against 176 / 0x1805).  So the **layout is the key**: every anonymous
+aggregate reachable from a named type's canonical definition gets a header of its
+own, `types/anon_<digest>.h` — a typedef of an *unnamed* aggregate, so the alias
+never reaches the DWARF and the compiler still records `@anonN` — and a member, or
+a unit's own anonymous type, names that alias.  The digest of the structural
+signature (size, kind, member names, offsets, bit fields, member types) is the
+proof the uses are one type.  A unit that declares the same layout twice keeps the
+second declaration for itself, because retail's block has two DIEs there.
 
 Every header is checked by the original compiler, not a host `cc`:
 

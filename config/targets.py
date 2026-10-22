@@ -638,6 +638,12 @@ DDREX2P = Target(
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x358 in a 0x360 extent, eight bodies word-exact; .line 0x252 adopted
+        # (53 records, 38 of 53 rows differ); .debug retail's 0x1B6D / 173 DIEs after 39
+        # reference words.  Needs -sdatathreshold 0 and ten placements.  SetPoint is two
+        # separate identical "%04d" blocks, not a shared fall-through.
+        ("src/network/net_window/net_win_dhead.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x398 in a 0x3A0 extent, eight bodies word-exact; .line 0x270 adopted
         # (the type include and an unreferenced-aggregate helper add two lines retail lacks);
         # .debug retail's 0x1B80 / 173 DIEs after adoption.  Needs -sdatathreshold 0 and
