@@ -655,6 +655,12 @@ DDREX2P = Target(
         # twelve placements.  Retail carries a whole unreferenced _nsv_player_list_file.
         ("src/network/net_window/net_win_dpoint.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x458 in a 0x460 extent, ten bodies word-exact; .line 0x406 adopted whole
+        # (91 records against retail's 95); .debug retail's 0x1C7A / 177 DIEs byte-equal
+        # after adoption.  Needs -sdatathreshold 0 and twelve placements.  CwsObjMove
+        # returns int: a char prototype adds dsll32/dsra32 to Main's != 0 test.
+        ("src/network/net_window/net_win_rcname.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x470 in a 0x470 extent, seven bodies word-exact; .line 0x3BC adopted
         # (83 of 90 rows moved by statement line); .debug retail's 0x1BC4 / 175 DIEs byte
         # for byte after adoption.  Main's dispatch source case order is 2,3,1 -- that is
