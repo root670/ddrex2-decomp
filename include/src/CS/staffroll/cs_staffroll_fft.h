@@ -523,8 +523,8 @@ typedef struct {   // size 0x8
 /* anon_26_187 -- @anon26, 0x530 bytes, cs_staffroll_fft.c (DIE 0x34FF31) */
 typedef struct {   // size 0x530
     /* 0x000 */ anon_3_187 disp_env;                  // 0x28
-    /* 0x028 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x030 */ anon_39_187 draw_gtag;                // 0x10
+    /* 0x028 */ // 0x8 bytes padding
+    /* 0x030 */ anon_39_187 draw_gtag __attribute__((aligned(16)));  // 0x10
     /* 0x040 */ anon_8_187 draw_env;                  // 0x80
     /* 0x0C0 */ anon_37_187 db;                       // 0x330
     /* 0x3F0 */ anon_28_187 *dmaVif0;                 // 0x4

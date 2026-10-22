@@ -117,11 +117,11 @@ typedef struct {   // size 0x90
     /* 0x038 */ float cz[3];                          // 0xC
     /* 0x044 */ float adj_y[3];                       // 0xC
     /* 0x050 */ float timer;                          // 0x4
-    /* 0x054 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x060 */ float cam_p[4];                       // 0x10
+    /* 0x054 */ // 0xC bytes padding
+    /* 0x060 */ float cam_p[4] __attribute__((aligned(16)));  // 0x10
     /* 0x070 */ float eye_p[4];                       // 0x10
     /* 0x080 */ void *fpanel;                         // 0x4
-    /* 0x084 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
+    /* 0x084 */ // 0xC bytes padding
 } anon_18_70;
 
 /* anon_12_70 -- @anon12, 0xC bytes, fp_eyetoy.c (DIE 0x10C029) */

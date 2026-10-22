@@ -17,11 +17,11 @@ struct _tag_cLesSelLevelCursor;
 struct _tag_cLesSelLevel {   // size 0xC0
     /* 0x000 */ int counter;                          // 0x4
     /* 0x004 */ int disp_level;                       // 0x4
-    /* 0x008 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x010 */ struct _tag_cLesSelLevelCursor Cursor;  // 0xA0
+    /* 0x008 */ // 0x8 bytes padding
+    /* 0x010 */ struct _tag_cLesSelLevelCursor Cursor __attribute__((aligned(16)));  // 0xA0
     /* 0x0B0 */ int step;                             // 0x4
     /* 0x0B4 */ int timer;                            // 0x4
-    /* 0x0B8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
+    /* 0x0B8 */ // 0x8 bytes padding
 };
 
 #endif /* DDR_types__tag_cLesSelLevel_H */

@@ -121,8 +121,8 @@ typedef struct {   // size 0x80
 /* anon_16_24 -- @anon16, 0x246380 bytes, dcamera.c (DIE 0x3585E) */
 typedef struct {   // size 0x246380
     /* 0x000 */ struct dancer_motion_w motion_w[3];   // 0x11E8
-    /* 0x11E8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x11F0 */ struct dancer_model_w model_w[3];    // 0x1590
+    /* 0x11E8 */ // 0x8 bytes padding
+    /* 0x11F0 */ struct dancer_model_w model_w[3] __attribute__((aligned(16)));  // 0x1590
     /* 0x2780 */ unsigned int mdl_data[3][45568];     // 0x85800
     /* 0x87F80 */ unsigned int mot_data[3][86784];    // 0xFE400
     /* 0x186380 */ unsigned int packet_w[3][65536];   // 0xC0000

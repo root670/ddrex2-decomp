@@ -25,8 +25,8 @@ struct _net_win_rccssel_w {   // size 0x80
     /* 0x000 */ struct _nsv_rc_table_param_work *RcData;  // 0x4
     /* 0x004 */ int counter;                          // 0x4
     /* 0x008 */ int move_time[5];                     // 0x14
-    /* 0x01C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x020 */ anon_a57f91ef029f line_pos[5];        // 0x50
+    /* 0x01C */ // 0x4 bytes padding
+    /* 0x020 */ anon_a57f91ef029f line_pos[5] __attribute__((aligned(16)));  // 0x50
     /* 0x070 */ char line_disp_flag[5];               // 0x5
     /* 0x075 */ char line_step;                       // 0x1
     /* 0x076 */ char nm_page;                         // 0x1

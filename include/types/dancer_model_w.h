@@ -25,8 +25,8 @@ struct dancer_model_w {   // size 0x730
     /* 0x29C */ unsigned int model;                   // 0x4
     /* 0x2A0 */ unsigned int *packet;                 // 0x4
     /* 0x2A4 */ unsigned int *header;                 // 0x4
-    /* 0x2A8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x2B0 */ float m[17][4][4];                    // 0x440
+    /* 0x2A8 */ // 0x8 bytes padding
+    /* 0x2B0 */ float m[17][4][4] __attribute__((aligned(16)));  // 0x440
     /* 0x6F0 */ unsigned int *prim_tbl;               // 0x4
     /* 0x6F4 */ float dist;                           // 0x4
     /* 0x6F8 */ float scale;                          // 0x4
@@ -45,7 +45,7 @@ struct dancer_model_w {   // size 0x730
     /* 0x721 */ unsigned char pad[2];                 // 0x2
     /* 0x723 */ // 0x1 bytes padding
     /* 0x724 */ anon_67489868bb1e *einf;              // 0x4
-    /* 0x728 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
+    /* 0x728 */ // 0x8 bytes padding
 };
 
 #endif /* DDR_types_dancer_model_w_H */

@@ -421,8 +421,8 @@ typedef struct {   // size 0x2280
     /* 0x07C */ unsigned int out_page_mc;             // 0x4
     /* 0x080 */ unsigned char out_file_name[12];      // 0xC
     /* 0x08C */ unsigned short out_file_size;         // 0x2
-    /* 0x08E */ // 0x2 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x090 */ unsigned char tmp_edit_data[8192];    // 0x2000
+    /* 0x08E */ // 0x2 bytes padding
+    /* 0x090 */ unsigned char tmp_edit_data[8192] __attribute__((aligned(16)));  // 0x2000
     /* 0x2090 */ unsigned char read_flg;              // 0x1
     /* 0x2091 */ unsigned char disp_check_flg;        // 0x1
     /* 0x2092 */ unsigned char out_file_player;       // 0x1

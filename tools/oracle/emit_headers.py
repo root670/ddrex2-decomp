@@ -223,8 +223,10 @@ def _gap(indent, start, end, align):
     """Bytes no member covers, in the vendored renderer's own words.
 
     DWARF has no alignment attributes (`sceVu0FVECTOR` and friends are 16-byte aligned
-    typedefs), so a gap that rounding up to 16 explains is only probably padding.  There is
-    no vtable-pointer case: these are C translation units, and none of them has one.
+    typedefs), so a gap that rounding up to 16 explains is only probably padding -- unless
+    `align` is 16, which is what `_stated_alignment` passes once the member after the gap
+    carries the alignment its offset implies, or the aggregate's own size confirms it.
+    There is no vtable-pointer case: these are C translation units, and none of them has one.
     """
     up = lambda n: (start + n - 1) // n * n
     if up(align) == end:
@@ -234,6 +236,29 @@ def _gap(indent, start, end, align):
     else:
         why = "not in DWARF (a member CodeWarrior did not describe)"
     return f"{indent}/* 0x{start:03x} */ // 0x{end - start:x} bytes {why}"
+
+
+def _stated_alignment(start, offset, natural, size):
+    """The alignment a member has to state to sit where retail put it, or `None`.
+
+    DWARF records a member's offset, not its alignment, so a gap that only rounding up to
+    16 explains is ambiguous: it is either padding for a 16-byte-aligned member or a member
+    DWARF omits.  Measured on `fp_qmenu.c`: `float cam_p[4]` declares alignment 4, but
+    retail puts it at 0x60 after `float timer` ends at 0x54, and the type is 0x90 bytes --
+    a multiple of 16 whose tail rounds 0x88 up to 0x90 exactly the same way.  The offset
+    and the size together therefore state an alignment the declaration does not, and the
+    spelling that carries it is `__attribute__((aligned(16)))`.  Only emitted when the
+    aggregate's own size is a multiple of it, so the attribute cannot move any later member
+    or change the recorded size.
+    """
+    if offset <= start or natural >= 16:
+        return None
+    up = lambda n: (start + n - 1) // n * n
+    if up(natural) == offset:
+        return None
+    if up(16) == offset and size % 16 == 0:
+        return 16
+    return None
 
 
 def _enum_lines(die, tag, indent, typedef=False):
@@ -290,6 +315,7 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
     ind = indent + "    "
     cursor = 0
     members = 0
+    tail_align = dw.align_of(("base", "", die))
     for child in die.children:
         if child.tag not in (TAG_member, TAG_inheritance):
             continue
@@ -301,9 +327,15 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
         offset = member_offset(child)
         tree = dw.type_of(child) or VOID
         size_of = dw.sizeof(tree)
+        align = dw.align_of(tree)
+        stated = None if offset is None or kind == "union" else _stated_alignment(
+            cursor, offset, align, size)
         if offset is not None and offset > cursor and kind != "union":
-            lines.append(_gap(ind, cursor, offset, dw.align_of(tree)))
+            lines.append(_gap(ind, cursor, offset, stated or align))
         text = decl(dw, tree, child.name or "", tagger)
+        if stated:
+            text += f" __attribute__((aligned({stated})))"
+            tail_align = max(tail_align, stated)
         if AT_bit_size in child.attrs:
             bit = child.attrs.get(AT_bit_offset, 0)
             width = child.attrs[AT_bit_size]
@@ -318,7 +350,7 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
     if not members:
         lines.append(f"{ind}// no data members")
     elif kind != "union" and size > cursor:
-        lines.append(_gap(ind, cursor, size, dw.align_of(("base", "", die))))
+        lines.append(_gap(ind, cursor, size, tail_align))
     lines.append(f"{indent}}}{' ' + tag if typedef and tag else ''};")
     if typedef and not tag:
         raise NotSpellable(f"DIE 0x{die.off:x}: a typedef needs the name the C will use")

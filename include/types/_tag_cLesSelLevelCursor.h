@@ -22,15 +22,15 @@ struct _tag_cLesSelLevelCursor {   // size 0xA0
     /* 0x000 */ int pmode;                            // 0x4
     /* 0x004 */ int pcount;                           // 0x4
     /* 0x008 */ int pcounter;                         // 0x4
-    /* 0x00C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x010 */ anon_fa86f3882d77 pos;                // 0x10
+    /* 0x00C */ // 0x4 bytes padding
+    /* 0x010 */ anon_fa86f3882d77 pos __attribute__((aligned(16)));  // 0x10
     /* 0x020 */ anon_fa86f3882d77 npos;               // 0x10
     /* 0x030 */ anon_fa86f3882d77 ipos;               // 0x10
     /* 0x040 */ int amode;                            // 0x4
     /* 0x044 */ int acount;                           // 0x4
     /* 0x048 */ int acounter;                         // 0x4
-    /* 0x04C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-    /* 0x050 */ anon_fa86f3882d77 angle;              // 0x10
+    /* 0x04C */ // 0x4 bytes padding
+    /* 0x050 */ anon_fa86f3882d77 angle __attribute__((aligned(16)));  // 0x10
     /* 0x060 */ anon_fa86f3882d77 nangle;             // 0x10
     /* 0x070 */ anon_fa86f3882d77 iangle;             // 0x10
     /* 0x080 */ int step;                             // 0x4
@@ -38,7 +38,7 @@ struct _tag_cLesSelLevelCursor {   // size 0xA0
     /* 0x088 */ int bright;                           // 0x4
     /* 0x08C */ int alpha;                            // 0x4
     /* 0x090 */ int pri;                              // 0x4
-    /* 0x094 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
+    /* 0x094 */ // 0xC bytes padding
 };
 
 #endif /* DDR_types__tag_cLesSelLevelCursor_H */
