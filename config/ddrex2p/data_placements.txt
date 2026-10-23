@@ -177,3 +177,4 @@ netwinuser = 0x002BE3B0; // size:0x78 extent:0x78 source:src/network/net_window/
 @149 = 0x002D4958; // size:0x5 extent:0x8 source:src/network/net_window/net_win_user.c
 @150 = 0x002D4960; // size:0x5 extent:0x8 source:src/network/net_window/net_win_user.c
 @194 = 0x002D4968; // size:0x2 extent:0x8 source:src/network/net_window/net_win_user.c
+@134 = 0x002D4E80; // size:0x7 extent:0x8 source:src/network/net_dnas/net_dnas_mes_e.c
