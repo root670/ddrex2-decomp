@@ -169,7 +169,7 @@ LINK_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
 #: carry.  A pool slot is a datum like any other -- the address is the pool entry's, proved by
 #: the same byte comparison -- so the ledger has to be able to spell one.
 UNIT_SYMBOL = re.compile(
-    r"^(?P<name>[A-Za-z_][\w]*)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*source:(?P<source>\S+)$")
+    r"^(?P<name>[A-Za-z_]\w*|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*source:(?P<source>\S+)$")
 DATA_PLACEMENT = re.compile(
     r"^(?P<name>[A-Za-z_]\w*|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*"
     r"size:0x(?P<size>[0-9A-Fa-f]+)\s+extent:0x(?P<extent>[0-9A-Fa-f]+)\s+"

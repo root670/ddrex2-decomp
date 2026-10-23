@@ -61,7 +61,7 @@ void namesMakeChangeMessage(int code, unsigned char *msg) {
         *msg++ = 10;
         table++;
     }
-    func_001BE6F0(err_string, 256, "(%+d)", code);
+    func_001BE6F0(err_string, 256, "(%+d)\0\0\0", code);
     for (i = 0; i < 256; i++) {
         *msg++ = err_string[i];
         if (err_string[i] == 0) {
@@ -90,7 +90,7 @@ void namesMakeRegisterMessage(int code, unsigned char *msg) {
         *msg++ = 10;
         table++;
     }
-    func_001BE6F0(err_string, 256, "(%+d)", code);
+    func_001BE6F0(err_string, 256, "(%+d)\0\0\0", code);
     for (i = 0; i < 256; i++) {
         *msg++ = err_string[i];
         if (err_string[i] == 0) {
@@ -121,7 +121,7 @@ void namesMakeAuthMessage(int code, unsigned char *msg) {
         *msg++ = 10;
         table++;
     }
-    func_001BE6F0(err_string, 256, "(%+d)", code);
+    func_001BE6F0(err_string, 256, "(%+d)\0\0\0", code);
     for (i = 0; i < 256; i++) {
         *msg++ = err_string[i];
         if (err_string[i] == 0) {

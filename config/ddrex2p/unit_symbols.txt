@@ -1,2 +1,15 @@
 // A file-scope static whose bare name the symbol ledger gives to another unit; see Manifests.unit_symbols.
 step0 = 0x002DE560; // source:src/CS/shop/shop_main.c
+@1 = 0x002D6B20; // source:src/network/net_auth/net_auth_errmes_e.c
+@2 = 0x002D6B40; // source:src/network/net_auth/net_auth_errmes_e.c
+@3 = 0x002D6B60; // source:src/network/net_auth/net_auth_errmes_e.c
+@4 = 0x002D6B80; // source:src/network/net_auth/net_auth_errmes_e.c
+@5 = 0x002D6BB0; // source:src/network/net_auth/net_auth_errmes_e.c
+@6 = 0x002D6BD8; // source:src/network/net_auth/net_auth_errmes_e.c
+@7 = 0x002D6BE0; // source:src/network/net_auth/net_auth_errmes_e.c
+@8 = 0x002D6C00; // source:src/network/net_auth/net_auth_errmes_e.c
+@9 = 0x002D6C20; // source:src/network/net_auth/net_auth_errmes_e.c
+@10 = 0x002D6C50; // source:src/network/net_auth/net_auth_errmes_e.c
+@11 = 0x002D6C70; // source:src/network/net_auth/net_auth_errmes_e.c
+@12 = 0x002D6C90; // source:src/network/net_auth/net_auth_errmes_e.c
+@50 = 0x002D6CB8; // source:src/network/net_auth/net_auth_errmes_e.c
