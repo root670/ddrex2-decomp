@@ -1,5 +1,5 @@
 #include "src/CS/shop/shop_info.h"
-
+extern struct _CWS_WIN_W *D_0082446C[];
 anon_1_129 *shop_get_work(void);
 void MultiWindowSetMode(int win_num, int mode);
 void MultiWindowOpen(int win_num);
@@ -78,7 +78,7 @@ static void shop_select_info_disp(void) {
     int count;
 
     work = shop_get_work();
-    winp = *(struct _CWS_WIN_W **)0x82446C;
+    winp = D_0082446C[0];
     count = shop_get_obj_count(work, 7);
     switch (work->move_w[7].type) {
     case 1:

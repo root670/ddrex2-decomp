@@ -1,5 +1,5 @@
 #include "src/CS/shop/shop_select.h"
-
+extern struct _CWS_WIN_W *D_00824468[];
 anon_0_126 *shop_get_work(void);
 int shop_init_obj_move_work(anon_0_126 *work);
 void shop_multi_win_init(anon_0_126 *work);
@@ -100,7 +100,7 @@ static int shop_select_confirm(void) {
     int rtv;
 
     work = shop_get_work();
-    winp = *(struct _CWS_WIN_W **)0x824468;
+    winp = D_00824468[0];
     rtv = 0;
     switch (work->step_s) {
     case 0:
