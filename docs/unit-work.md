@@ -433,6 +433,11 @@ Only a *name that exists* can be used.  A data address with no `D_<addr>` entry 
 value such as `pOpening = (struct _tag_cOpening *)0x006D33A0` in a file-scope definition, whose
 bytes are not linked -- rule 9) has nothing to name; leave it and list it in the unit's report.
 
+An address used as an *integer constant* cannot be named at all: `ps2dancerPdataLoadInit((void *)0x01874000)`
+in `fp_doll_init` compiles to `lui; ori` in retail, while any symbol reference gives `lui; addiu`
+(measured with `extern char D_01874000[];`), so that one raw constant stays.  It is a value, not
+a data access; do not loosen adoption's `.text` equality for it.
+
 The overlay window (`D_00824450` and its neighbours, outside every declared segment) is named
 the same way: `compile.py` resolves a `D_<8 hex>` outside the segments as its own address, and
 `shop_select.c`, `shop_info.c`, `dmm_mess.c` and `fp_qmenu.c` use `extern struct _CWS_WIN_W
