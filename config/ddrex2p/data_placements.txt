@@ -181,3 +181,6 @@ netwinuser = 0x002BE3B0; // size:0x78 extent:0x78 source:src/network/net_window/
 @209 = 0x002C1D90; // size:0x18 extent:0x18 source:src/CS/edit/ed_ssq_func.c
 @411 = 0x002DA048; // size:0x5 extent:0x8 source:src/CS/edit/ed_edit_disp.c
 @412 = 0x002DA050; // size:0x5 extent:0x8 source:src/CS/edit/ed_edit_disp.c
+@27 = 0x002C1DF0; // size:0x18 extent:0x18 source:src/CS/edit/ed_menu.c
+@134 = 0x002D7A20; // size:0x10 extent:0x10 source:src/CS/edit/ed_menu.c
+@102 = 0x002D7A30; // size:0x18 extent:0x18 source:src/CS/edit/ed_menu.c

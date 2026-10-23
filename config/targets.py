@@ -581,6 +581,10 @@ DDREX2P = Target(
         # two literals are placed; disp reuses dx as the 38.0f operand (rx + dx - 3.0f).
         ("src/CS/edit/ed_edit_disp.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 4"),
+        # .text 0xB00 of eleven bodies word-exact; .debug/.line adopted; three data placements
+        # (next_tab, the title literal, the switch table).  menu_icon_set is a static inline.
+        ("src/CS/edit/ed_menu.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x350 with all three bodies word-exact; adoption supplies temp's AT_location
         # ($t1 -> $t7 / $t6) and 8 reference words.  ORIG_P/ORIG_S must be initialised
         # file-scope statics: only then does this build tag them local_variable.
