@@ -374,14 +374,22 @@ def test_a_link_assignment_inside_the_segments_resolves(tmp_path):
     assert m.address_of("option_icon_tex") == 0x2C0460
 
 
-def test_a_link_assignment_outside_the_segments_is_refused_not_resolved(tmp_path):
-    """`D_008062B0` is assigned where nothing is placed: an overlay window, not an address."""
+def test_a_splat_data_name_outside_the_segments_is_its_own_address(tmp_path):
+    """`D_008062B0` is splat's name for 0x008062B0: it is its address, in any window."""
     m = link_manifests(tmp_path, syms=["D_008062B0 = 0x008062B0;\n"])
-    assert "D_008062B0" not in m.placed
-    with pytest.raises(cc.Unusable) as refusal:
-        m.address_of("D_008062B0")
-    assert "outside every declared segment" in str(refusal.value)
-    assert "undefined_syms_auto.txt" in str(refusal.value)
+    assert m.address_of("D_008062B0") == 0x8062B0
+
+
+def test_a_link_assignment_outside_the_segments_that_is_not_its_own_name_is_refused(tmp_path):
+    """Only the name that spells the address resolves; any other name outside is refused."""
+    m = link_manifests(tmp_path, syms=["overlay_thing = 0x008062B0;\n",
+                                       "D_008062B4 = 0x008062B0;\n"])
+    for name in ("overlay_thing", "D_008062B4"):
+        assert name not in m.placed
+        with pytest.raises(cc.Unusable) as refusal:
+            m.address_of(name)
+        assert "outside every declared segment" in str(refusal.value)
+        assert "undefined_syms_auto.txt" in str(refusal.value)
 
 
 # -- the lui/addiu address pair ----------------------------------------------------------

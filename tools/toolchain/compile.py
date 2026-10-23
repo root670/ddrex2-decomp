@@ -160,6 +160,11 @@ DATA_ADDRESS = re.compile(r"/\*\s+([0-9A-Fa-f]+)\s+\*/")
 #: the aliases ``configure.py`` writes into the ld script itself.  These are the link's other
 #: symbol source, and the ones ``symbol_addrs.txt`` does not carry.
 LINK_ASSIGN = re.compile(r"^(\S+)\s*=\s*(0x[0-9A-Fa-f]+);")
+
+#: Splat's own name for data nothing labels: ``D_`` and the eight hex digits of the address it
+#: stands for.  Such a name *is* its address, so the link's assignment of it needs no segment
+#: to hold it (see ``Manifests.__init__``).
+SPLAT_DATA_NAME = re.compile(r"^D_(?P<address>[0-9A-Fa-f]{8})$")
 #: One address-driven data placement (``config/<target>/data_placements.txt``): the compiled
 #: symbol, the retail address its bytes were matched to, the compiled length, the retail span
 #: (including the zero fill retail shows), and which source defines it.
@@ -352,7 +357,15 @@ class Manifests:
         # is a refusal with that reason -- the same boundary `NetRouterMain` hits from the
         # oracle's ledger.  A target nobody has measured gets neither (see `_within_segments`).
         for name, address, source in self._link_assignments():
-            if self._within_segments(address):
+            splat = SPLAT_DATA_NAME.match(name)
+            if self._within_segments(address) or (
+                    splat is not None and int(splat["address"], 16) == address):
+                # A splat ``D_<addr>`` outside the segments (an overlay window) is still
+                # exactly its address: a reference to it is an absolute ``lui``/``lw`` pair
+                # whose halves need no section to land in, and the unit's ``.text`` byte
+                # equality is what proves the address right.  A name that is not its own
+                # address (`NetRouterMain`) says nothing about where it lives, so it stays
+                # refused below.
                 self.placed.setdefault(name, address)
                 self.by_address.setdefault(address, name)
             else:
