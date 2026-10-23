@@ -707,6 +707,13 @@ DDREX2P = Target(
          "-c -lang c -O3 -opt full -g"),
         ("src/CS/freeplay/fp_eyetoy.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xBB0, eleven bodies word-exact; .debug retail's 0x998A byte-equal after
+        # adoption, .line adopted.  The unit declares its own anonymous types: every float[4]
+        # member is the one shared FVEC4 node (and [3][4] / [2][4] are arrays of it), cam_p
+        # needs 16-byte alignment in both gs3d and the doll work, and the local data tables
+        # (@N) are the init templates for set_pos / fpanel_update / disp.
+        ("src/CS/freeplay/fp_doll.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x238, nine bodies word-exact; .debug retail's 0x419B / 413 DIEs after
         # adoption, which drops get_table_no_by_infotxt_num's two locals (retail's CU has
         # none) and recomputes 392 AT_sibling words.  The dancer table needs
