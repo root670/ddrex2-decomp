@@ -667,6 +667,11 @@ DDREX2P = Target(
         # pooled literal @33 at 0x2D3CE0, not an extern (a global_variable DIE costs too).
         ("src/common/cws/cws_obj.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x1300, 17 bodies word-exact; .debug retail's 0x21FC / 211 DIEs and .line adopted.
+        # Needs the two jump tables (@179, @317) and the error string (@500) placed.  Chained
+        # stores run v then s (`v.x = s.x = x`); CwsWinCreate returns from inside its loop.
+        ("src/common/cws/cws_win.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x2A8, three bodies word-exact; .line and .debug adopted.  Nine statics (seven
         # tables in the 0x2BF2C8 band, three one-string tables in sdata) need placements.
         ("src/network/net_auth/net_auth_errmes_e.c", "3.0b38-030307",
