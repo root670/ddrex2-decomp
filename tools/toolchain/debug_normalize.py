@@ -499,7 +499,9 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     twin.  The compiler records every extern a function touches, and retail has no DIE for a
     data object it never named; the entry has no meaning once its target is gone, so it is
     deleted and the list's length word, the record's length word and every later offset
-    follow.  Any other dropped target, and a list that would be left empty, still refuse.
+    follow.  A list that would be left empty is removed whole when retail's paired record
+    carries no such attribute at all; when retail's does carry one, or the target is any other
+    dropped record, it still refuses.
     """
     try:
         ours = debug_set.parse(emitted, base)
@@ -655,6 +657,12 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
                         and by_offset[value].tag in (0x0006, 0x0007)):
                     gone.append(position)
             if gone and len(gone) == len(positions):
+                retail_span = retail[retail_of[our_offset].offset - base:
+                                     retail_of[our_offset].offset - base
+                                     + retail_of[our_offset].length]
+                if code not in dict(_raw_attributes(retail_span)):
+                    trimmed[(our_offset, code)] = "all"
+                    continue
                 raise Refusal(f"{_describe(our_die, base)}: attribute 0x{code:04X} names "
                               f"only dropped global declarations; an empty list is not "
                               f"retail's record")
@@ -662,7 +670,13 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
                 trimmed[(our_offset, code)] = gone
     trim_delta = {}
     for (our_offset, _code), gone in trimmed.items():
-        trim_delta[our_offset] = trim_delta.get(our_offset, 0) + 4 * len(gone)
+        if gone == "all":
+            span = emitted[our_offset - base:our_offset - base
+                           + by_offset[our_offset].length]
+            whole = sum(len(raw) for field, raw in _raw_attributes(span) if field == _code)
+            trim_delta[our_offset] = trim_delta.get(our_offset, 0) + whole
+        else:
+            trim_delta[our_offset] = trim_delta.get(our_offset, 0) + 4 * len(gone)
 
     def extra_length(offset):
         return sum(len(raw) for (owner, _code), raw in extras.items()
@@ -745,6 +759,10 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
             for field, form, at, size in _fields(bytes(out)):
                 if field != code:
                     continue
+                if gone == "all":
+                    width = 2 if form == 3 else 4
+                    del out[at - width - 2:at + size]
+                    break
                 payload = out[at:at + size]
                 for position in sorted(gone, reverse=True):
                     del payload[position:position + 4]

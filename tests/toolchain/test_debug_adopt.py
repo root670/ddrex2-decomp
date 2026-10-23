@@ -489,13 +489,13 @@ def test_a_short_line_chunk_is_accepted_under_adopt_and_reported(capsys):
     assert "byte for byte after adoption" in error
 
 
-def _access_tree(entries, gvars):
+def _access_tree(entries, gvars, bare=False):
     """A CU: the declarations ``gvars`` name, then one function whose 0x2303 lists ``entries``."""
     dies = [Die(0x0007, [(AT_NAME, name), (AT_FUND_TYPE, 8)]) for name in gvars]
     shared = Die(0x0007, [(AT_NAME, "g"), (AT_FUND_TYPE, 8)])
     targets = {"g": shared, **{name: die for name, die in zip(gvars, dies)}}
     chosen = [targets[name] for name in entries]
-    body = Die(0x0006, [
+    body = Die(0x0006, [(AT_NAME, "f")] if bare else [
         (AT_NAME, "f"),
         (AT_2303, Lazy(4 * len(chosen), lambda: b"".join(
             struct.pack("<I", die.offset) for die in chosen)))])
@@ -525,3 +525,15 @@ def test_a_list_left_empty_by_a_dropped_global_declaration_refuses():
     with pytest.raises(da.Refused) as excinfo:
         da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
     assert "names only dropped global declarations" in str(excinfo.value)
+
+
+def test_a_list_of_only_dropped_declarations_is_removed_whole_when_retail_has_none():
+    retail_root, _ = _access_tree([], [], bare=True)
+    retail = build(retail_root)
+    our_root, _ = _access_tree(["D_006B2F58"], ["D_006B2F58"])
+    emitted = build(our_root)
+
+    adopted = da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    assert adopted.chunk == retail
+    assert [die.name for die, _span in adopted.dropped] == ["D_006B2F58"]

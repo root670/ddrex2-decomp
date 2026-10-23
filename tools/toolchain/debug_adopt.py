@@ -33,7 +33,7 @@ only when the result is retail's ``.debug`` chunk byte for byte:
    reference with no such twin refuses.  The one exception is an entry of a ``0x2303``
    access-reference list that names a dropped *global declaration* (a ``extern D_<addr>``
    the compiler recorded and retail never named): that entry is deleted, the list's and the
-   record's length words follow, and the list may not be left empty.  Every dropped record is named in the report.
+   record's length words follow, and a list left empty is dropped whole only when retail's paired record has no such attribute.  Every dropped record is named in the report.
 4. The adopted chunk is compared with retail's.  A difference is a :class:`Refused`, never
    a warning and never a plausible-looking result.
 
