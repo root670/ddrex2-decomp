@@ -433,13 +433,27 @@ Only a *name that exists* can be used.  A data address with no `D_<addr>` entry 
 value such as `pOpening = (struct _tag_cOpening *)0x006D33A0` in a file-scope definition, whose
 bytes are not linked -- rule 9) has nothing to name; leave it and list it in the unit's report.
 
-One boundary remains open: a `D_<addr>` whose address is **outside every declared segment**
-(the overlay window, `D_00824450` and its neighbours) cannot be named from promoted C, because
-`compile.py` refuses to place an object that references it (`outside every declared segment`,
-pinned by `tests/toolchain/test_compile_relocations.py`) until the overlay milestone models those
-segments.  A unit that needs one stays unpromoted, or keeps its raw cast as a listed exception
-(`dmm_mess.c`, `shop_info.c`, `shop_select.c`, `fp_qmenu.c` today) -- it is not hidden, and it is
-not converted by loosening that refusal.
+The overlay window (`D_00824450` and its neighbours, outside every declared segment) is named
+the same way: `compile.py` resolves a `D_<8 hex>` outside the segments as its own address, and
+`shop_select.c`, `shop_info.c`, `dmm_mess.c` and `fp_qmenu.c` use `extern struct _CWS_WIN_W
+*D_0082445x[];`.  Two measured rules for those:
+
+* A function whose only reference to the object is the `extern` makes the compiler record a
+  global-declaration DIE and a `0x2303` entry; adoption drops both, and drops the whole `0x2303`
+  attribute when every entry is such a declaration and retail's record has none.
+* A local initialised straight from the extern (`winp = D_00824450[0];`) loses its
+  `local_variable` DIE under this compiler, which adoption refuses ("children of ... lexical_block
+  holds 0 DIEs against retail's 1").  Spelling the initialiser with a cast to the local's own
+  type (`winp = (struct _CWS_WIN_W *)D_00824450[0];`) keeps the DIE (`dmm_mess.c`).
+
+One listed exception remains: `src/common/cws/multi_window.c` keeps `#define D_00824450
+(*(struct _MULTI_WIN_W *)0x824450)` and `#define D_00824470 ((char *)0x824470)`.  Retail indexes
+the window array with a variable (`pwin[win_num]`) and folds the address's low half into the load
+(`lui; addu; lw %lo`).  MWCC folds a *constant* address that way, but a symbol indexed by a
+register is always `lui; addiu; addu; lw 0` -- measured for an incomplete array, a sized array, a
+struct, a defined (non-extern) object, and a cast-and-add spelling, each one word too large per
+access (`MultiWindowSetCautionMark` is 0x8 bytes over).  No spelling of the symbol reproduces
+retail, so the raw constant stays and is the only way that unit matches.
 
 ## An initialiser is the recoverable truth, never a `{ 0 }` placeholder
 
