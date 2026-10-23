@@ -1,4 +1,5 @@
 #include "src/CS/freeplay/fp_qmenu.h"
+extern void *D_00824450[];
 
 void fp_msel_sd_call(unsigned int call, float time);
 int co_obj_is_exist(void *chk_ow, int id);
@@ -173,7 +174,7 @@ static int fp_qm_save_func(void) {
             MultiWindowCreate(0, 0, 0x5A, pCmes->genwnd_w, pCmes->genwnd_h, 0xF000, -0xC);
             MultiWindowSetMode(0, 1);
             MultiWindowOpen(0);
-            CwsWinSetBri(*(void **)0x824450, 0x80);
+            CwsWinSetBri(D_00824450[0], 0x80);
             qmsw->step++;
         }
         if (val != -1) {
