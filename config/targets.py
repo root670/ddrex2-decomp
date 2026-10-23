@@ -701,6 +701,8 @@ DDREX2P = Target(
         # into lui/lw.  cam_p needs 16-byte alignment, which the header emitter now states.
         ("src/CS/freeplay/fp_qmenu.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        ("src/CS/freeplay/fp_eyetoy.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x238, nine bodies word-exact; .debug retail's 0x419B / 413 DIEs after
         # adoption, which drops get_table_no_by_infotxt_num's two locals (retail's CU has
         # none) and recomputes 392 AT_sibling words.  The dancer table needs
