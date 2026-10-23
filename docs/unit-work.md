@@ -772,3 +772,73 @@ pin fixes every statement in the then-block, so the liveness cannot be moved eit
 
 **What the loop lacks:** a way to ask *which C construct* emits a given missing DIE. That is manual
 probing today and it is where most of a hard unit's cycles go. Everything else the loop needs exists.
+
+## Worker lessons: parallel unit runs (read before starting a unit)
+
+Measured over the parallel batches that promoted `dexport`, `md5`, `com_scrollbar`,
+`net_auth_errmes_e`, `net_win_base`, `shop_main`, `net_win_user`, `net_dnas_mes_e`, `ed_ssq_func`
+and `ed_edit_disp`.  Each item cost somebody an hour once.
+
+**Acceptance**
+
+1. **The only proof is `./ddr build` exiting 0 and writing a fresh `out/SLUS_211.74`, then
+   `./ddr verify`.**  `./ddr verify` prints `G1 ok` against a stale `out/` after a failed build,
+   and `./ddr verify --tu <unit>` can say all three parts ok while the full build fails (it
+   compiles the unit alone).  Quote the build's exit code in your report.
+2. **Rebase onto current `master` before the final check and re-run it.**  Other units land
+   placements and `tu_builds` rows while you work; a green result on an old base is not green.
+3. **`config/ddrex2p/data_placements.txt` and `tu_builds` in `config/targets.py` are append
+   hotspots.**  On a conflict keep both sides, then `grep -n '^<<<<<<<\|^=======$\|^>>>>>>>'`
+   both files and confirm there are no markers.  On macOS write `sed -i ''`, not `sed -i`.
+4. **Report byte differences per function, never sizes.**  A function can be the right size and
+   mostly wrong; relocation words (`jal`, `lui`/`addiu` of symbols) differ in an unlinked object
+   and are not real differences.
+5. **Park honestly.**  If a unit does not match after about 45 minutes, commit the draft under
+   `drafts/` (not `src/`, no `tu_builds` row, so the tree still builds) and report which
+   function, which words, and what you tried.
+
+**Compiler and layout**
+
+6. **Functions go in retail address order.**  The compiler emits in source order; writing them
+   top-down by name usually reverses the unit.
+7. **Declaration order is register assignment.**  When two callee-saved registers are swapped,
+   permute declarations before changing logic; a block-local scratch variable (`mx = a + b;
+   dx = mx + c;`) fixes swapped `addu` operands, and adoption drops the extra local DIE.
+   A *new global* DIE is not dropped (see 13).
+8. **Constant and compare shapes matter:** `x > 0xFEFF` against `x >= 0xFF00` changes which
+   register holds the constant; `(a != 0)` forces a materialised flag; a sign-extend from a
+   byte is `(int)((unsigned int)x << 24) >> 24`; a ternary clamp (`sa = sa > 0 ? sa : 0`) can
+   fix a whole callee-saved numbering.
+9. **`-sdatathreshold`:** try the default, `0` and `4` before settling on a row.  A literal
+   or global under the threshold goes to `.sdata` and is addressed `$gp`-relative, which
+   changes both the instructions and the register choice.  The recorded pair is half of the
+   measurement.
+10. **Static inline helpers** (`Decode`/`Encode`, a table `find`) leave no DIE of their own, so
+    they are free tools for reproducing an inline retail had.
+11. **A DIE retail has and the code does not need** (an unused `@anon0` type) can be emitted by
+    a trailing `static void probe(T *p) { p->m = 1; }`; adoption drops the probe's own DIE.
+
+**Data and names**
+
+12. **Compiler-numbered literal names (`@134`) are per object, not global.**  Two units can
+    both own an `@1`.  Put a unit's own addresses in `config/ddrex2p/unit_symbols.txt`
+    (`@N = 0xADDR; // source:FILE`, also for a file-scope static whose bare name another unit
+    owns, e.g. `step0`).  An 8-byte-or-shorter literal shared with other code may need padding
+    (`"(%+d)\0\0\0"`) so it leaves `.sdata`; strings are not linked, so the padding changes no
+    image byte.
+13. **Never reference data by a hard-coded address.**  A name comes from the debug info; with
+    no debug symbol, use splat's address-derived `D_<8 hex digits>` (they are in
+    `config/ddrex2p/undefined_syms_auto.txt`), the same way unnamed functions keep
+    `func_XXXXXXXX` (AGENTS.md rule 3).  Do not write `*(unsigned int *)0x006B2F58`.  A
+    function pointer by address becomes the function's name.  (The mechanism that makes this
+    build for a symbol with no DWARF is being added; until it lands, list any raw address you
+    could not convert in your report instead of inventing a name.)
+14. **A `.debug` reference to a global DIE retail does not have** fails adoption
+    ("points at a DIE dropped as an extra record").  Prefer inline string literals over
+    declaring an extern for them.
+
+**Workspace**
+
+15. **Work only in your own worktree** (`.git/agents/<name>` on branch `wt-<name>`, with
+    `orig` and `toolchain` symlinked to the main checkout).  The controller cherry-picks
+    commits onto `master` one at a time and rebuilds after each; do not touch the main checkout.
