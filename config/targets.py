@@ -572,6 +572,10 @@ DDREX2P = Target(
         # Layout tidied; `.line` adopted (9 rows, 0x62 table); `.debug` byte-equal outright.
         ("src/CS/edit_lib/el_mes.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x860 of eleven bodies word-exact; .debug retail's 0x148B / 112 DIEs; .line adopted.
+        # The header walks keep `size = header->size` and the found pointer assigned inside the loop.
+        ("src/CS/edit/ed_ssq_func.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         # .text 0x350 with all three bodies word-exact; adoption supplies temp's AT_location
         # ($t1 -> $t7 / $t6) and 8 reference words.  ORIG_P/ORIG_S must be initialised
         # file-scope statics: only then does this build tag them local_variable.
