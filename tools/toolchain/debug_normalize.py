@@ -456,7 +456,7 @@ def _encode_attribute(code, payload):
 
 def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
               drop_extra: bool = False, adopt_missing=(), adopt_names: bool = False,
-              redirect_dropped: bool = False) -> Reordered:
+              redirect_dropped: bool = False, trim_dropped_refs=()) -> Reordered:
     """Rewrite ``emitted`` into ``retail``'s DIE order, at the same ``base`` in ``.debug``.
 
     The result carries retail's DIE *sequence*; whether it is retail's *bytes* is the
@@ -492,6 +492,14 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     word of whichever record named it, so the value is rewritten to the surviving twin and
     reported in :attr:`Reordered.reference_changes`.  A reference to a dropped record with no
     identical survivor still refuses, because there the reference's meaning would change.
+
+    ``trim_dropped_refs`` names *list* attributes (the adoption step passes ``AT_2303``, the
+    access-reference list) from which an entry is removed when it names a dropped extra
+    *global declaration* (``global_variable`` / ``global_subroutine``) that has no identical
+    twin.  The compiler records every extern a function touches, and retail has no DIE for a
+    data object it never named; the entry has no meaning once its target is gone, so it is
+    deleted and the list's length word, the record's length word and every later offset
+    follow.  Any other dropped target, and a list that would be left empty, still refuse.
     """
     try:
         ours = debug_set.parse(emitted, base)
@@ -631,6 +639,31 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
     new_at, new_end = {}, {}
     dropped_offsets = {die.offset for die, _span in dropped}
 
+    # -- entries of a ``trim_dropped_refs`` list that name a dropped global declaration ---
+    trimmed = {}                        # (our offset, code) -> payload positions removed
+    for our_offset in retail_of:
+        our_die = by_offset[our_offset]
+        span = emitted[our_die.offset - base:our_die.offset - base + our_die.length]
+        for code, form, at, size in _fields(span):
+            if code not in trim_dropped_refs or form not in (3, 4) or not size:
+                continue
+            positions = _block_references(code, span[at:at + size]) or []
+            gone = []
+            for position in positions:
+                value = _U32(span, at + position)[0]
+                if (value in dropped_offsets and value not in redirect_of
+                        and by_offset[value].tag in (0x0006, 0x0007)):
+                    gone.append(position)
+            if gone and len(gone) == len(positions):
+                raise Refusal(f"{_describe(our_die, base)}: attribute 0x{code:04X} names "
+                              f"only dropped global declarations; an empty list is not "
+                              f"retail's record")
+            if gone:
+                trimmed[(our_offset, code)] = gone
+    trim_delta = {}
+    for (our_offset, _code), gone in trimmed.items():
+        trim_delta[our_offset] = trim_delta.get(our_offset, 0) + 4 * len(gone)
+
     def extra_length(offset):
         return sum(len(raw) for (owner, _code), raw in extras.items()
                    if owner == offset)
@@ -639,7 +672,8 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
         for our_die, _retail_die in pairs:
             new_at[our_die.offset] = cursor[0]
             cursor[0] += (our_die.length + extra_length(our_die.offset)
-                          + name_delta.get(our_die.offset, 0))
+                          + name_delta.get(our_die.offset, 0)
+                          - trim_delta.get(our_die.offset, 0))
             children = children_of[our_die.offset]
             plan(children)
             # The four-byte terminator belongs to the *surviving* child chain.  A chain
@@ -702,8 +736,29 @@ def normalise(emitted: bytes, retail: bytes, base: int = 0, ignore=None,
             rewritten.append((value, moved, _describe(die, base), code))
         return moved
 
+    def _trim_lists(span, offset):
+        """``span`` without the trimmed entries, its length words following."""
+        out = bytearray(span)
+        for (owner, code), gone in sorted(trimmed.items(), reverse=True):
+            if owner != offset:
+                continue
+            for field, form, at, size in _fields(bytes(out)):
+                if field != code:
+                    continue
+                payload = out[at:at + size]
+                for position in sorted(gone, reverse=True):
+                    del payload[position:position + 4]
+                width = 2 if form == 3 else 4
+                struct.pack_into("<H" if form == 3 else "<I", out, at - width, len(payload))
+                out[at:at + size] = payload
+                break
+        _P32(out, 0, len(out))
+        return bytes(out)
+
     def record(die):
         span = emitted[die.offset - base:die.offset - base + die.length]
+        if trim_delta.get(die.offset):
+            span = _trim_lists(span, die.offset)
         extra = [(code, raw) for (owner, code), raw in extras.items()
                  if owner == die.offset]
         name = name_raw.get(die.offset)

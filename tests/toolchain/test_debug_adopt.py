@@ -487,3 +487,41 @@ def test_a_short_line_chunk_is_accepted_under_adopt_and_reported(capsys):
     assert "not row-for-row comparable" in error
     assert "retail's chunk is adopted whole" in error
     assert "byte for byte after adoption" in error
+
+
+def _access_tree(entries, gvars):
+    """A CU: the declarations ``gvars`` name, then one function whose 0x2303 lists ``entries``."""
+    dies = [Die(0x0007, [(AT_NAME, name), (AT_FUND_TYPE, 8)]) for name in gvars]
+    shared = Die(0x0007, [(AT_NAME, "g"), (AT_FUND_TYPE, 8)])
+    targets = {"g": shared, **{name: die for name, die in zip(gvars, dies)}}
+    chosen = [targets[name] for name in entries]
+    body = Die(0x0006, [
+        (AT_NAME, "f"),
+        (AT_2303, Lazy(4 * len(chosen), lambda: b"".join(
+            struct.pack("<I", die.offset) for die in chosen)))])
+    return Die(0x0011, [(AT_NAME, "bk.c")], [shared, *dies, body]), chosen
+
+
+def test_an_access_entry_naming_a_dropped_global_declaration_is_deleted():
+    """An extern retail never named is dropped, and so is the 0x2303 entry that named it."""
+    retail_root, _ = _access_tree(["g"], [])
+    retail = build(retail_root)
+    our_root, _ = _access_tree(["g", "D_006B2F58"], ["D_006B2F58"])
+    emitted = build(our_root)
+    assert len(emitted) > len(retail)
+
+    adopted = da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+
+    assert adopted.chunk == retail
+    assert [die.name for die, _span in adopted.dropped] == ["D_006B2F58"]
+
+
+def test_a_list_left_empty_by_a_dropped_global_declaration_refuses():
+    retail_root, _ = _access_tree(["g"], [])
+    retail = build(retail_root)
+    our_root, _ = _access_tree(["D_006B2F58"], ["D_006B2F58"])
+    emitted = build(our_root)
+
+    with pytest.raises(da.Refused) as excinfo:
+        da.adopt(emitted, retail, 0, OURS_LINE, RETAIL_LINE)
+    assert "names only dropped global declarations" in str(excinfo.value)
