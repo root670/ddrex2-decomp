@@ -1,6 +1,10 @@
 #include "src/network/net_window/net_win_listdtl2.h"
 
 struct _CWS_OBJ *CwsObjCreate(struct _CWS_OBJ_SET *data);
+void CwsWinOpen(struct _CWS_WIN_W *win);
+void CwsWinClose(struct _CWS_WIN_W *win);
+void CwsWinDestroy(struct _CWS_WIN_W *win);
+void CwsObjDisp(struct _CWS_WIN_W *win, struct _CWS_OBJ *objw);
 char CwsStrSetAll(struct _CWS_WIN_W *win, int str_num, int x, int y, int pri, unsigned char bri, unsigned char alpha, unsigned int flag, int type, unsigned char col, unsigned char *string, ...);
 char CwsStrSetTex(struct _CWS_WIN_W *win, int str_num, int tex_id);
 char CwsStrSetString(struct _CWS_WIN_W *win, int str_num, unsigned char *string, ...);
@@ -12,9 +16,9 @@ static int (*NetWin_Listdtl2Func[3])(struct _CWS_WIN_W *) = {
 };
 static void (*NetWin_Listdtl2Code[4])(struct _CWS_WIN_W *) = {
     0,
-    (void (*)(struct _CWS_WIN_W *))0x00207360,
-    (void (*)(struct _CWS_WIN_W *))0x00206E60,
-    (void (*)(struct _CWS_WIN_W *))0x00206E50,
+    CwsWinOpen,
+    CwsWinClose,
+    CwsWinDestroy,
 };
 static struct _CWS_OBJ_TEX netwinlistdtl2_plate_point_board[2] = {
     {
@@ -156,7 +160,7 @@ static struct _CWS_OBJ_TEX netwinlistdtl2_plate_point_font[5] = {
 };
 static struct _CWS_OBJ_SET netwinlistdtl2[3] = {
     {
-        .func = (int (*)(void *, void *))0x002046C0,
+        .func = (int (*)(void *, void *))CwsObjDisp,
         .tex_num = 31,
         .ptex_obj = 2,
         .ptex = netwinlistdtl2_plate_point_board,
@@ -166,7 +170,7 @@ static struct _CWS_OBJ_SET netwinlistdtl2[3] = {
         .a = 0x80,
     },
     {
-        .func = (int (*)(void *, void *))0x002046C0,
+        .func = (int (*)(void *, void *))CwsObjDisp,
         .tex_num = -1,
         .ptex_obj = 4,
         .ptex = netwinlistdtl2_plate_point_waku,
@@ -176,7 +180,7 @@ static struct _CWS_OBJ_SET netwinlistdtl2[3] = {
         .a = 0x80,
     },
     {
-        .func = (int (*)(void *, void *))0x002046C0,
+        .func = (int (*)(void *, void *))CwsObjDisp,
         .tex_num = 30,
         .ptex_obj = 5,
         .ptex = netwinlistdtl2_plate_point_font,

@@ -433,6 +433,14 @@ Only a *name that exists* can be used.  A data address with no `D_<addr>` entry 
 value such as `pOpening = (struct _tag_cOpening *)0x006D33A0` in a file-scope definition, whose
 bytes are not linked -- rule 9) has nothing to name; leave it and list it in the unit's report.
 
+One boundary remains open: a `D_<addr>` whose address is **outside every declared segment**
+(the overlay window, `D_00824450` and its neighbours) cannot be named from promoted C, because
+`compile.py` refuses to place an object that references it (`outside every declared segment`,
+pinned by `tests/toolchain/test_compile_relocations.py`) until the overlay milestone models those
+segments.  A unit that needs one stays unpromoted, or keeps its raw cast as a listed exception
+(`dmm_mess.c`, `shop_info.c`, `shop_select.c`, `fp_qmenu.c` today) -- it is not hidden, and it is
+not converted by loosening that refusal.
+
 ## An initialiser is the recoverable truth, never a `{ 0 }` placeholder
 
 A file-scope object's initialiser is written out from retail's bytes whenever they give it, because
