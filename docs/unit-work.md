@@ -168,6 +168,7 @@ byte:
 | one of **our** `.debug` records that retail does not have | `.text` is byte-identical, and the record's whole subtree has no retail counterpart; the record is dropped, its references are remapped, and the remaining bytes must equal retail's | every dropped DIE: tag, name, chunk offset and span (`dropped extra DIE +0x64C6 local_variable 'dmm_t' (0x21 bytes; no counterpart in retail)`) |
 | every surviving record's `AT_sibling` word | the drops are final, so the record's subtree end is the laid-out position; a child chain whose records were all dropped contributes no terminator either | every recomputed word: `recomputed AT_sibling 0x00059F48 -> 0x00059EFF (in +0x3C5B compile_unit …)` |
 | an attribute retail carries on a paired DIE while ours lacks it (measured: the `0x2303` access-reference list) | the attribute is a list of 4-byte references, and every target has a paired DIE | the attribute and its owning DIE (`adopted attribute 0x2303 on …`) |
+| an entry of one of **our** `0x2303` access-reference lists that names a dropped *global declaration* (the `extern D_<addr>` of a DWARF-less data object, which retail has no DIE for) | the dropped target is a `global_variable`/`global_subroutine` with no identical surviving twin, and at least one other entry remains; the entry, the list's length word and the record's length word go, every later offset follows, and the chunk must still equal retail's | the dropped declaration (`dropped extra DIE … global_variable 'D_006B2F58'`) |
 
 **The distinction is explicit:** extra records on our side may be **dropped**; a record
 retail has and we do not must **refuse** -- fabricating a DIE would be invention, not
@@ -393,6 +394,44 @@ Invented, with provenance recorded — because DWARF does not carry it:
 - **descriptive names** for the DWARF-less engine code, which has no names at all.
 
 The rule to follow is tww's, and it is a good one: **no names are better than incorrect names.**
+
+## Data with no DWARF name: `D_<addr>`, never a raw address
+
+A promoted source **never** reaches a data object by a hard-coded address
+(`*(unsigned int *)0x006B2F58`, `(struct x *)0x00824450`).  The name of an object comes from
+DWARF; where retail's debug information has none, the name is splat's address-derived
+`D_<8 hex digits>` (`D_006B2F58 = 0x6B2F58;` in `config/ddrex2p/undefined_syms_auto.txt`) --
+exactly as an unnamed function keeps `func_<8 hex digits>` (AGENTS.md rule 3: names are never
+invented).  A function reached through a pointer takes the function's name (the DWARF name if
+`symbol_addrs.txt` has one, `CwsWinOpen` for `0x00207360`; `func_XXXXXXXX` otherwise), never a
+cast address.
+
+**The spelling is an incomplete-array extern, subscripted:**
+
+```c
+extern unsigned int D_006B2F58[];
+extern int D_006B47F0[];
+...
+size = SdFFTInit(D_006B2F58[0]);
+D_006B2F58[0] += size;
+```
+
+Measured against `bk_disp.c`: a plain `extern unsigned int D_006B2F58;` is small data to this
+compiler and is addressed `$gp`-relative, which `compile.py` refuses when the address is out of
+`$gp`'s reach (and `-sdatathreshold 0` on the row moves other functions of the unit); the
+incomplete-array form is never small data, so it gives the `lui`/`lw` absolute addressing retail
+has.  The element type is the type the access reads; a pointer object is
+`extern struct _CWS_WIN_W *D_00824450[];` read as `D_00824450[0]`.
+
+The extern puts a global-declaration DIE in our `.debug` that retail does not have, and the
+function's `0x2303` access list names it.  `--adopt-retail-meta` drops the DIE and the list entry
+(see the table above); the whole chunk must still equal retail's.  **Trust `./ddr build`, not
+`./ddr verify --tu`, for this**: the per-unit verdict can report ok while the full build refuses
+in adoption.
+
+Only a *name that exists* can be used.  A data address with no `D_<addr>` entry (an initialiser
+value such as `pOpening = (struct _tag_cOpening *)0x006D33A0` in a file-scope definition, whose
+bytes are not linked -- rule 9) has nothing to name; leave it and list it in the unit's report.
 
 ## An initialiser is the recoverable truth, never a `{ 0 }` placeholder
 

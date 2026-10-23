@@ -74,7 +74,10 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 3. **Names are never invented.**  A symbol's name comes from the retail debug information or from
    `config/<target>/ghidra_functions.json`; a function with no evidence keeps the name its address gives
    it (`func_00214080`).  Inventing a plausible name (`Player_Update`, `RenderScene`) puts a lie in
-   the symbol table, in the headers, and in every objdiff verdict that follows.
+   the symbol table, in the headers, and in every objdiff verdict that follows.  The same holds for data: promoted C never
+   reaches an object by a hard-coded address (`*(int *)0x006B47F0`); with no DWARF name it
+   uses splat's `D_006B47F0`, spelt as an incomplete-array extern (`extern int D_006B47F0[];`,
+   used as `D_006B47F0[0]`) -- see "Data with no DWARF name" in `docs/unit-work.md`.
 
 4. **Statements keep their retail line numbers.**  The `.line` section is part of the artifact
    (`docs/milestones/ddrex2p-m2.md`), so a statement belongs on the line the evidence says it is on.
