@@ -1,7 +1,7 @@
 #include "src/CS/dancemaster/dmm_mess.h"
 
-#define DMM_WIN0 (*(struct _CWS_WIN_W **)0x824450)
-#define DMM_WIN1 (*(struct _CWS_WIN_W **)0x824454)
+extern struct _CWS_WIN_W *D_00824450[];
+extern struct _CWS_WIN_W *D_00824454[];
 
 unsigned char *dmm_str_newgame = (unsigned char *)"NEW GAME";
 unsigned char *dmm_str_continue = (unsigned char *)"CONTINUE";
@@ -103,13 +103,13 @@ void dmm_disp_text(unsigned char *str, int x, int y, int z, int br, int alpha, i
 
 void set_data_warning_mess(void) {
     dmm_get_work();
-    dmm_disp_text(dmm_str_warning, 0, -0x56, 0x7100, 0x80, 0x80, 0x178, 0x400, 1, DMM_WIN1);
+    dmm_disp_text(dmm_str_warning, 0, -0x56, 0x7100, 0x80, 0x80, 0x178, 0x400, 1, D_00824454[0]);
 }
 
 void set_data_select_mess(void) {
     struct _CWS_WIN_W *winp;
 
-    winp = DMM_WIN0;
+    winp = (struct _CWS_WIN_W *)D_00824450[0];
     CwsStrSetAll(winp, 0, 0, -0x1e, 0x6100, 0x80, 0x80, 0x400, 2, 0, dmm_str_newgame);
     CwsStrSetAll(winp, 1, 0, 4, 0x6100, 0x80, 0x80, 0x400, 2, 0, dmm_str_continue);
     if (dmm_is_savedata()) {
