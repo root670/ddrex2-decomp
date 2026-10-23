@@ -853,6 +853,8 @@ DDREX2P = Target(
         # type DIE order), adopted.  The sort's outer counter is `i`, not `t` (`t` is the
         # swap temp), which also fixes the callee-saved colouring.
         ("src/AM/s573/doll/dexport.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
+        ("src/common/cws/multi_window.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g")),
 )
 

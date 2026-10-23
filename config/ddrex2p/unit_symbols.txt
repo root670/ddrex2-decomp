@@ -13,3 +13,4 @@ step0 = 0x002DE560; // source:src/CS/shop/shop_main.c
 @11 = 0x002D6C70; // source:src/network/net_auth/net_auth_errmes_e.c
 @12 = 0x002D6C90; // source:src/network/net_auth/net_auth_errmes_e.c
 @50 = 0x002D6CB8; // source:src/network/net_auth/net_auth_errmes_e.c
+@51 = 0x002D3E10; // source:src/common/cws/multi_window.c
