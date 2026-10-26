@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 67 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 26.9% of units, 8.72% of functions and 5.92% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 69 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 27.7% of units, 8.72% of functions and 5.92% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 67 / 249 units promoted (26.9%)</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 69 / 249 units promoted (27.7%)</text>
 <text x="24" y="52" font-size="12" fill="#57606a">389 / 4,463 functions (8.72%) &#183; 96,560 / 1,631,596 code bytes (5.92%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
@@ -24,7 +24,7 @@
 <rect class="cell" data-state="promoted" x="234" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/dexport.c - 464 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="249" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dinit.c - 4,160 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="264" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/demo/title_demo.c - 2,400 code bytes - partial</title></rect>
-<rect class="cell" data-state="untouched" x="279" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/disp/mmenu_obj.c - 7,184 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="279" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/disp/mmenu_obj.c - 7,184 code bytes - partial</title></rect>
 </g>
 <g class="module" data-module="common">
 <text x="24" y="139" font-size="12" font-weight="600" fill="#24292f">common - 8/15 units · 62/147 funcs · 18,624/44,708 bytes (41.7%)</text>
@@ -266,10 +266,10 @@
 <rect class="cell" data-state="untouched" x="489" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_router/net_router_mes_e.c - 96 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="sound">
-<text x="24" y="412" font-size="12" font-weight="600" fill="#24292f">sound - 1/4 units · 3/20 funcs · 1,264/7,520 bytes (16.8%)</text>
+<text x="24" y="412" font-size="12" font-weight="600" fill="#24292f">sound - 3/4 units · 3/20 funcs · 1,264/7,520 bytes (16.8%)</text>
 <rect class="cell" data-state="promoted" x="24" y="417" width="12" height="12" rx="2" fill="#2da44e"><title>src/sound/vxdecode/decode.c - 1,264 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="39" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/vxdecode/dectbl.c - 0 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="54" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/vxdecode/get4bit.c - 0 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="39" y="417" width="12" height="12" rx="2" fill="#2da44e"><title>src/sound/vxdecode/dectbl.c - 0 code bytes - promoted</title></rect>
+<rect class="cell" data-state="promoted" x="54" y="417" width="12" height="12" rx="2" fill="#2da44e"><title>src/sound/vxdecode/get4bit.c - 0 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="69" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/fft/sd_fft.c - 6,352 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="sys">
