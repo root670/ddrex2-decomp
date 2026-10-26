@@ -780,6 +780,40 @@ moved `.text`, and the real before/after compile with per-function counts.
 - Verify suite claims **at the commit** (`git archive <sha> | tar -x -C /tmp/…` and run there); this
   checkout is shared and has already produced one green build against uncommitted code.
 
+## Register colouring rules (measured)
+
+Controlled experiments under `3.0b38-030307 -c -lang c -O3 -opt full -g`, one factor at a time;
+the probe sources and drivers are `drafts/regalloc/rules/` (`cc.py` compiles + disassembles one
+file, `cmpfn.py <file> <fn>` prints the register substitution ours -> retail's split asm,
+`climb.py` hill-climbs declaration order against it, `gen1..gen8.py` are the experiments below).
+All callee-saved results read the register a value lives in from the instruction that uses it.
+
+| # | finding | evidence |
+|---|---|---|
+| 1 | **Inert factors**: number of uses (0..4 inside the loop, 1..4 after a call, loop depth of the uses), where the last use is (after call 1/2/3), initialise-at-declaration vs later, type, statement order. For webs that are *the same kind* (declared variables live across the same calls) none of these moves a register. | `gen1`, `gen5`, `gen6`, `gen2` (init True/False identical) |
+| 2 | **Declared webs are coloured in declaration order, first declared -> highest `sN`** (3 values: `s2,s1,s0` for any permutation of declaration order). | `gen2`, `gen6` (21 cells), `gen3` |
+| 3 | **A compiler-made strength-reduced pointer whose base is a global, a constant or an address expression is coloured after every declared web**, so it takes the lowest register left (`s0` in 60/60 declaration permutations of `shop_bind_nm`), and a later loop's SR temp is coloured before that loop's re-split `i` (`ofs2=s2, i2=s0`). No declaration order can move it. | `gen1` (ptr=s0 in all 10 cells), `sb_perm2`, `sb_search` |
+| 4 | **An SR pointer whose base is a declared, non-constant pointer `p` that dies at the loop is coloured as `p`** (it inherits `p`'s declaration slot). `p,w,i` declared in that order gives `ptr=s2, w=s1, i=s0` -- the exact retail shape of `shop_bind_nm`; `w,p,i` gives `ptr=s1`. So when retail's SR pointer outranks a declared value, look for a declared pointer (or struct base) the pointer is derived from, and put that declaration where the pointer's colour belongs. | `gen7` (6 permutations, all as stated) |
+| 5 | **This does not survive constant propagation**: with `tbl = (unsigned int *)0xA7D350;` the SR pointer is initialised from the folded constant, not from `tbl`, and stays `s0` in all 720 declaration permutations (`sb_search2`). The explicit-pointer spelling (`ofs = *tbl++`) does colour `tbl` first (`ptr=s2,work=s1,i=s0`, retail's colours) but loses retail's loop shape: the preheader is emitted inline (`ori s2` in the delay slot of the entry `b`) and the unit is 4 words short, because the compiler-made pointer is what places `lui/ori` in the out-of-line preheader after the function body. So both halves of `shop_bind_nm` are reachable, never together by declarations alone. | `sb_explicit_ptr.c`, `sb_search2.py` |
+| 6 | **A web used heavily in a *later* loop outranks earlier-loop webs regardless of declaration order** (w read in loop 2 -> `w=s2` for all six declaration orders; its competitors then follow rule 2 among themselves). A variable used in two loops is split into two webs and the second is coloured after the SR temps (rule 3). | `gen3` (`loop2`, `loop2b`), `gen4` |
+| 7 | **Short scalar copies of struct fields do not follow rule 2.** In `CwsWin_ListbkDisp` the `wx/wy/ww/wh` and `loop_cut` declarations can be permuted freely (120 orders) without moving the `loop_cut`/`wy` pair (`s0`/`s1`), nor does moving `loop_cut = 0;` before or after the field loads. The set is retail's; only that pair is swapped. | `cmpfn.py` + permutation loop on `net_win_listbk.c` |
+| 8 | At nine or more live values the n<=5 rule above generalises as the existing "register assignment is declaration order" row (first six reversed into `s5..s0`, 7th..9th `s6..s8`); retail's `ListbkDisp` set (`dr=s3 dg=s5 db=s7 da=fp dz=s6 objw=s4`) is not a monotone function of its DWARF declaration order, so at that size treat the DWARF order as evidence, not as the declaration order to write. | `CwsWin_ListbkDisp` DWARF vs ours |
+
+**How to use them.** (a) Read retail's colouring off the DWARF (`dwarf1.py fn`) *and* the asm; a
+value with no DIE is a compiler temp. (b) If retail has an SR pointer or CSE temp in a *high*
+register, the C needs a declared value for the compiler to derive it from (rule 4) -- a constant
+base will not do (rule 5). (c) If two declared values are swapped, permute their declarations
+first (rule 2); if permuting the pair changes nothing (rule 7), the pair is not decided by
+declaration order and the cause is the web structure (rule 6), not the spelling.
+`cmpfn.py <file> <fn>` is the quickest way to tell: it reports the substitution table
+(`{('s0','s1'): 7, ('s1','s0'): 10}` is a clean pairwise swap).
+
+**Not fixed by these rules (parked, with what was learned):** `shop_bind_nm` (rule 5),
+`CwsWin_ListbkDisp` (rule 7), `ps2dancerLoadInit` (temp class: retail `i=$3, ptr=$9`, ours the
+reverse; temp-class ordering was not isolated -- the 3-iteration probe unrolls, use a
+trip count that does not), `MainNetPlay`, `down_load_anime`, `back_anime_step`, `freeze_eff_disp`
+(not examined: no probe applies yet).
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:

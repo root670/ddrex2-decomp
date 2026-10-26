@@ -1,0 +1,4 @@
+typedef struct { char pad[12]; char *course_data_addr; } W;
+extern W *shop_get_work(void);
+extern void func_0012CF10(void *, int);
+void shop_bind_nm(void) {
