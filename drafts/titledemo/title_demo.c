@@ -214,12 +214,15 @@ static int ti_movie_work_set(unsigned int *addr) {
     return (int)((unsigned char *)addr + 0x848AC0) - (int)tmp_addr;
 }
 
+#pragma opt_propagation off
 static void ti_movie_SetDecTag(void) {
     anon_1_41 *list;
     unsigned char *buff;
     anon_1_41 *tag;
     int i;
     int j;
+    int j4;
+    int flag;
 
     tag = tmw->decTags;
     buff = (unsigned char *)tmw->cscBuff;
@@ -237,8 +240,12 @@ static void ti_movie_SetDecTag(void) {
     tag[1].ul64[0] = 0x1000000010UL;
     tag[1].ul64[1] = 0x52;
     tag += 2;
-    for (i = 0; i < 0x1C; i++) {
-        for (j = 0; j < 0x15; j++) {
+    i = 0;
+    do {
+        j = 0;
+        j4 = 0;
+        do {
+            flag = (j == 0x14) && (i == 0x1B);
             tag[0].ul128 = 0;
             tag[0].ui32[0] = 0x10000004;
             tag[1].ul128 = 0;
@@ -246,19 +253,23 @@ static void ti_movie_SetDecTag(void) {
             tag[1].ul64[1] = 0xE;
             tag += 2;
             tag[0].ul128 = 0;
-            tag[0].ul64[0] = ((unsigned long)(unsigned int)list << 32) | ((unsigned long)(unsigned int)(j * 0x10) << 48);
+            tag[0].ul64[0] = ((unsigned long)(unsigned int)list << 32) | ((unsigned long)(unsigned int)j4 << 48);
             tag[0].ul64[1] = 0x51;
             tag[1].ul128 = 0;
             tag[1].ul64[0] = 0;
             tag[1].ul64[1] = 0x53;
             tag += 2;
             tag[0].ul128 = 0;
-            tag[0].ul64[0] = (unsigned long)((j == 0x14) && (i == 0x1B)) << 15 | 0x0800000000000040UL;
+            tag[0].ul64[0] = ((long)flag << 15) | 0x0800000000000040UL;
             tag[1].ul128 = 0;
-            tag[1].ui32[0] = (((j == 0x14) && (i == 0x1B)) ? 0x30000000 : 0) | 0x40;
+            tag[1].ui32[0] = (flag ? 0 : 0x30000000) | 0x40;
             tag[1].ui32[1] = (unsigned int)buff;
             tag += 2;
-        }
+            j++;
+            j4 += 0x10;
+            buff += 0x400;
+        } while (j < 0x15);
+        i++;
         list = (anon_1_41 *)((int)list + 0x10);
-    }
+    } while (i < 0x1C);
 }
