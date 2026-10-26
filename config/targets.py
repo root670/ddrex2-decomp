@@ -672,6 +672,11 @@ DDREX2P = Target(
         # stores run v then s (`v.x = s.x = x`); CwsWinCreate returns from inside its loop.
         ("src/common/cws/cws_win.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x970, 15 bodies word-exact; .debug and .line adopted.  `-inline deferred` gives
+        # retail's reversed emission order, `level=8` folds gs3dSetRenderMatrix into the unit
+        # matrix setter.  dist3d is `asm {}` in a C function under `.set noreorder` (10 words).
+        ("src/gs/gs_3d.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -inline auto,level=8,deferred"),
         # .text 0x2A8, three bodies word-exact; .line and .debug adopted.  Nine statics (seven
         # tables in the 0x2BF2C8 band, three one-string tables in sdata) need placements.
         ("src/network/net_auth/net_auth_errmes_e.c", "3.0b38-030307",
