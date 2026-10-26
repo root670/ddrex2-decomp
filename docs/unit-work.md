@@ -846,6 +846,15 @@ body from nine differing words to a single swapped register pair; the `.line` ro
 agree the increments are separate statements (lines 363/371). So when a residue is
 `slti $1` against `slti $v1`, change the bound's spelling before touching the allocator.
 
+### 12. A compare against a 32-bit immediate keeps its constant in a register — unless the bound is written `>`
+
+`if (z >= 0xFF00)` compiles to `slt v0,v1,v0`, keeping the constant in an allocated
+register; `if (z > 0xFEFF)` canonicalises to `slt at,v0,at`, with the constant in `at` —
+retail's shape in `ComKeyBoardDisp` (probe: `drafts/com_keyboard/probe/p1.c`..`p4.c`, only
+the `>` spelling matches). Same unit, same idea one type down:
+`(int)g_sys_w.s_counter % 32 - 16` needs the `int` cast to get the signed-modulo fixup
+(`bgez` / `addi -0x20`), because `s_counter` is `unsigned int`.
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:
