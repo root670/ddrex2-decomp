@@ -212,10 +212,10 @@ class Tu:
     """One translation unit of the retail build, with its pinned placement."""
 
     __slots__ = ("file", "name", "records", "debug_offset", "debug_size",
-                 "line_offset", "line_size", "functions")
+                 "line_offset", "line_size", "functions", "anchor")
 
     def __init__(self, file, name, records, debug_offset, debug_size, line_offset,
-                 line_size, functions):
+                 line_size, functions, anchor=None):
         self.file = file                  # repo-relative, e.g. "src/sys/sys_scf.c"
         self.name = name                  # the retail spelling, with its drive
         self.records = records            # cus.json indices, in .debug order
@@ -224,6 +224,12 @@ class Tu:
         self.line_offset = line_offset    # the unit's run of .line chunks
         self.line_size = line_size
         self.functions = functions        # in address order
+        # A unit with no code is a data-only unit: its DWARF declares no function, and the
+        # address it starts at is the first datum the placement ledger pins for its source.
+        # With no functions and no anchor there is nothing to place, which is a refusal.
+        if not functions and anchor is None:
+            raise Unusable(f"{file} declares no functions and no data placement")
+        self.anchor = anchor
 
     @property
     def source(self) -> pathlib.Path:
@@ -231,11 +237,15 @@ class Tu:
 
     @property
     def address(self) -> int:
-        return min(function.address for function in self.functions)
+        """Where the unit starts: its first function, or its first placed datum."""
+        return min((function.address for function in self.functions), default=self.anchor)
 
     @property
     def end(self) -> int:
-        return max(function.address + function.size for function in self.functions)
+        """Where the unit's code ends; a data-only unit has no code, so it ends where it
+        starts (its span is empty)."""
+        return max((function.address + function.size for function in self.functions),
+                   default=self.anchor)
 
     def function_named(self, name):
         return next((f for f in self.functions if f.name == name), None)
@@ -595,7 +605,16 @@ class Manifests:
                 name, entry["low_pc"], entry["high_pc"] - entry["low_pc"],
                 entry["offset"], entry["size"], line["offset"], line["size"], number))
         if not functions:
-            raise Unusable(f"{record['file']} declares no functions")
+            # A declaration-only unit owns initialised data and no code.  Its address is the
+            # first datum the ledger pins for its source; without such a row there is
+            # nothing to place and the unit is not promotable.
+            placed = [row for row in self.placements if row["source"] == record["file"]]
+            if not placed:
+                raise Unusable(
+                    f"{record['file']} declares no functions and no data placement names "
+                    f"it")
+            return Tu(record["file"], record["name"], records, chunk["offset"],
+                      chunk["size"], 0, 0, [], min(row["address"] for row in placed))
         functions.sort(key=lambda f: f.address)
         if not _contiguous(line_chunks):
             raise Unusable(
@@ -641,7 +660,14 @@ def _split_extent(tu: Tu, manifests: Manifests, root=None) -> tuple[int, int]:
     so a promoted object has to fill it too.
     """
     root = manifests.root if root is None else root
-    segment = manifests.target.geometry_required().code_segment
+    geometry = manifests.target.geometry_required()
+    if not tu.functions:
+        # A data-only unit displaces no split: its span is empty.  The anchor is the start of
+        # the loadable image, not 0: retail's VA 0 is the ELF header, outside every loaded
+        # segment, and `Elf.read` refuses it -- an empty read still needs a mapped address.
+        base = geometry.loadable_vram
+        return base, base
+    segment = geometry.code_segment
     directory = pathlib.Path(root) / "asm" / "nonmatchings" / segment
     if not directory.is_dir():
         raise Unusable(f"{tu.file}: {directory} is missing; run the oracle and "

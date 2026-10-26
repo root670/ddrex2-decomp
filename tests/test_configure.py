@@ -141,6 +141,27 @@ def test_the_linker_script_pins_the_targets_geometry():
     assert f"SIZEOF(.bss) == 0x{geo.bss_size:X}" in script
 
 
+def test_a_data_only_promotion_contributes_no_text_and_no_line_edge():
+    """A declaration-only unit has no code for the ld script (its datum arrives through the
+    ledger) and no ``.line`` section to dump: an ``objcopy --dump-section`` edge for one would
+    fail on a section the object does not carry."""
+    import types
+    target = probe()
+    data_only = types.SimpleNamespace(
+        address=0x00100010, object="build/src/data.c.o", code=False, splits=set(),
+        file="src/data.c", flags="--compiler 3.0 -g --adopt-retail-meta",
+        debug_payload="build/src/data.c.o.debug",
+        line_payload="build/src/data.c.o.line",
+        debug_databin=".debug_000", line_databins=[])
+    script = configure.pinned_ld_script([], [], [data_only], target, target.geometry)
+    assert "build/src/data.c.o" not in script
+
+    databins = configure.databin_segments(chunks(), target.geometry)
+    ninja = configure.ninja_text([], databins, False, [data_only], target, target.geometry)
+    assert "build build/src/data.c.o.debug: objsec build/src/data.c.o" in ninja
+    assert "build/src/data.c.o.line" not in ninja
+
+
 def test_the_ninja_graph_names_the_target_on_every_edge_that_reads_it():
     """The compiler, the linker and the gate each read a target's files: the graph says which."""
     target = probe()
@@ -445,7 +466,8 @@ def test_a_measured_row_configures_an_adopting_unit():
     `.text` byte equality is the proof and retail's inventory supplies `.line`/`.debug`; the
     row carries only the compiler build and flags it was measured with.
     """
-    tu = type("Tu", (), {"address": 0x100000, "functions": ()})
+    tu = type("Tu", (), {"address": 0x100000,
+                         "functions": (type("F", (), {"name": "f"})(),)})
     manifests = type("M", (), {
         "tu_files": lambda self: {"src/sys/sys_scf.c"},
         "tu_named": lambda self, name: tu,
@@ -455,6 +477,30 @@ def test_a_measured_row_configures_an_adopting_unit():
     (promotion,) = configure.promotions(
         manifests, probe(tu_builds=(("src/sys/sys_scf.c", "3.0", "-g"),)))
 
+    assert promotion.flags == "--compiler 3.0 -g --adopt-retail-meta"
+    assert promotion.code is True
+    assert promotion.splits == {"asm/nonmatchings/main/f.s"}
+
+
+def test_a_data_only_row_carries_no_code_and_no_line_databins():
+    """A unit whose DWARF declares no function is promotion too: its address is its first
+    placed datum's, its object contributes no `.text`, and it owns a `.debug` chunk with no
+    `.line` chunk beside it."""
+    tu = type("Tu", (), {"address": 0x002AFD40, "functions": ()})
+    manifests = type("M", (), {
+        "tu_files": lambda self: {"src/AM/s573/play/oni_list.c"},
+        "tu_named": lambda self, name: tu,
+        "debug_chunk_index": lambda self, unit: 7,
+        "line_chunk_indices": lambda self, unit: [],
+    })()
+    (promotion,) = configure.promotions(
+        manifests, probe(tu_builds=(("src/AM/s573/play/oni_list.c", "3.0", "-g"),)))
+
+    assert promotion.address == 0x002AFD40
+    assert promotion.code is False
+    assert promotion.splits == set()
+    assert promotion.debug_databin == ".debug_007"
+    assert promotion.line_databins == []
     assert promotion.flags == "--compiler 3.0 -g --adopt-retail-meta"
 
 

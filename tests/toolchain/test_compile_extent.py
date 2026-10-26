@@ -10,6 +10,7 @@ fabricate agreement.
 
 import pathlib
 import sys
+import types
 
 import pytest
 
@@ -74,6 +75,7 @@ def test_a_whole_extent_payload_is_returned_untouched(capsys):
 
 class _Geometry:
     code_segment = "main"
+    loadable_vram = 0x100000
 
 
 class _Target:
@@ -95,7 +97,7 @@ class _Tu:
 
     def __init__(self, functions, end):
         self.functions = [_Function(address) for address in functions]
-        self.address = min(functions)
+        self.address = min(functions) if functions else end
         self.end = end
 
 
@@ -193,3 +195,47 @@ def test_adoption_measures_a_short_line_block_instead_of_refusing_it():
     assert chunk == b"\xAA\xBB\xCC\xDD\xEE\xFF"
     assert sizes == [("a", ".line", 2, 4), ("b", ".line", 4, 4)]
 
+
+
+# -- a unit with no code at all ----------------------------------------------------------
+
+
+def test_a_data_only_unit_displaces_no_split(tmp_path):
+    """A declaration-only unit owns data and no code: its ``.text`` span is empty, anchored at
+    the loadable image's base -- retail's VA 0 is the ELF header, outside every segment, and
+    ``Elf.read`` refuses it even for a zero-byte read."""
+    assert cc._split_extent(_Tu([], 0x100000), _Manifests(), root=tmp_path) == \
+        (0x100000, 0x100000)
+
+
+def test_a_data_only_tu_anchors_at_its_first_placed_datum():
+    tu = cc.Tu("src/example.c", "C:\\example.c", [0], 0x10, 0x20, 0, 0, [],
+               anchor=0x200000)
+    assert (tu.address, tu.end) == (0x200000, 0x200000)
+    assert tu.function_named("nothing") is None
+
+
+def test_a_tu_with_neither_code_nor_data_is_refused():
+    with pytest.raises(cc.Unusable,
+                       match=r"src/example\.c declares no functions and no data placement"):
+        cc.Tu("src/example.c", "C:\\example.c", [0], 0x10, 0x20, 0, 0, [])
+
+
+def test_manifests_reads_a_declaration_only_unit_from_its_data_placement():
+    """``_tu`` refuses a unit it cannot place at all, and anchors one whose datum the ledger
+    pins: the ``.line`` fields are zero because the unit owns no statement table."""
+    manifests = types.SimpleNamespace(
+        cus=[{"index": 0, "kind": "tu", "file": "src/example.c",
+              "name": "C:\\example.c"}],
+        chunks=[{"section": ".debug", "offset": 0x100, "size": 0x50, "tunits": [0]}],
+        by_address={}, placements=[])
+    with pytest.raises(cc.Unusable, match="declares no functions and no data placement"):
+        cc.Manifests._tu(manifests, 0)
+
+    manifests.placements = [{"name": "course_list", "address": 0x200000, "size": 0x10,
+                             "extent": 0x20, "source": "src/example.c"}]
+    tu = cc.Manifests._tu(manifests, 0)
+    assert (tu.file, tu.functions, tu.line_offset, tu.line_size) == \
+        ("src/example.c", [], 0, 0)
+    assert (tu.address, tu.end, tu.debug_offset, tu.debug_size) == \
+        (0x200000, 0x200000, 0x100, 0x50)
