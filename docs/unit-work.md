@@ -920,3 +920,10 @@ and `ed_edit_disp`.  Each item cost somebody an hour once.
 15. **Work only in your own worktree** (`.git/agents/<name>` on branch `wt-<name>`, with
     `orig` and `toolchain` symlinked to the main checkout).  The controller cherry-picks
     commits onto `master` one at a time and rebuilds after each; do not touch the main checkout.
+
+16. **Disk: every worktree carries a full `build/` + `out/` (about 90 MB to 180 MB each, 50+ worktrees
+    is ~10 GB) and a full disk makes every shell command fail with ENOSPC.**  When you finish or
+    park a unit, commit first, then `rm -rf build out .ninja_log .ninja_deps` in your worktree
+    (they regenerate with `./ddr build`).  Never delete a worktree or its branch: parked drafts
+    live on the branch.  Keep scratch scripts in your scratchpad or `drafts/`, not in a shared
+    `/tmp` name another worker may overwrite.
