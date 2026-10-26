@@ -397,6 +397,18 @@ The rule to follow is tww's, and it is a good one: **no names are better than in
 
 ## Data with no DWARF name: `D_<addr>`, never a raw address
 
+**Precedence: a DWARF name first, `D_<addr>` only when no debug object covers the address.**
+"Covers" includes a *member* of a DWARF-named global: `D_006B2F58` is `g_game_w.last_data_addr`
+(`g_game_w` is at `0x607A70`, size `0xACDC4`; `0x6B2F58 - 0x607A70 = 0xAB4E8`), so it is spelled
+that way, never as an `extern ... D_006B2F58[]`.  `python3 tools/units/dwarf_audit.py [--all]`
+lists, for every `D_<8hex>` name and raw hex constant in a promoted source, the member expression
+the debug information gives its address (or `none`); run it before reaching for a `D_` name.
+Measured on `bk_disp.c`: `D_006B47F0` -> `g_game_w.bk_ef_kind` is byte-identical in `.text`,
+`.debug` and `.line`.  `D_006B2F58` -> `g_game_w.last_data_addr` (cast to `unsigned int` where
+passed to an integer parameter) also gives identical `.text`, but the compiler's `@N` label for
+the unit's string literal moves (`@87` -> `@91`, any spelling of a store through that member), so
+the unit's key in `data_placements.txt` moves with it; the retail address is unchanged.
+
 A promoted source **never** reaches a data object by a hard-coded address
 (`*(unsigned int *)0x006B2F58`, `(struct x *)0x00824450`).  The name of an object comes from
 DWARF; where retail's debug information has none, the name is splat's address-derived

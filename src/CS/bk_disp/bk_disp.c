@@ -32,8 +32,8 @@ int EyeRegGetSystemStatus(void);
 void EyeRefSetOneWindow(short x, short y, short w, short h);
 void EyeRefSetPositionZ(int z);
 
-extern unsigned int D_006B2F58[];
-extern int D_006B47F0[];
+
+
 
 void bk_disp_read_set(int flg) {
     bk_mpeg_init(g_game_w.mip, flg);
@@ -54,12 +54,12 @@ void bk_play_disp_init(void) {
         return;
     }
     if (SaveData.Option.BgEffect == 0 && g_game_w.mip->verm_num == 0x7012) {
-        size = SdFFTInit(D_006B2F58[0]);
-        D_006B2F58[0] += size;
+        size = SdFFTInit((unsigned int)g_game_w.last_data_addr);
+        g_game_w.last_data_addr += size;
         SdSetFFTStart();
-        size = SetFFTDispWork(D_006B2F58[0]);
-        D_006B47F0[0] = 0;
-        D_006B2F58[0] += size;
+        size = SetFFTDispWork((unsigned int)g_game_w.last_data_addr);
+        g_game_w.bk_ef_kind = 0;
+        g_game_w.last_data_addr += size;
     }
     SetBeginnerFlg1p(0);
     SetBeginnerFlg2p(0);
