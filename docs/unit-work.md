@@ -836,6 +836,16 @@ loop 3, four instructions later, gives the counter `t1`/pointer `t2`. The pair's
 free-list state; adding or removing *any* value rotates the allocation by one register, so a
 residue of this kind is reached by rotating, never by permuting declarations.
 
+### 11. A loop bound's spelling decides the branch temp
+
+`for (i = 0; i <= 0x1C; i++)` with the increment as its own statement emits
+`slti $1,i,0x1D` + `bnez $1`; writing the same bound as `i < 0x1D` emits `slti $v1`
+instead. Measured on `shop_bind_nm`: its loop 1 must stay `i < 0x4C` (because
+`<= 0x4B` gives `slti $at`), while loop 2 needs `<= 0x1C`, and the `<=` form took the
+body from nine differing words to a single swapped register pair; the `.line` rows
+agree the increments are separate statements (lines 363/371). So when a residue is
+`slti $1` against `slti $v1`, change the bound's spelling before touching the allocator.
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:
