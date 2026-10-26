@@ -809,10 +809,32 @@ declaration order and the cause is the web structure (rule 6), not the spelling.
 (`{('s0','s1'): 7, ('s1','s0'): 10}` is a clean pairwise swap).
 
 **Not fixed by these rules (parked, with what was learned):** `shop_bind_nm` (rule 5),
-`CwsWin_ListbkDisp` (rule 7), `ps2dancerLoadInit` (temp class: retail `i=$3, ptr=$9`, ours the
-reverse; temp-class ordering was not isolated -- the 3-iteration probe unrolls, use a
-trip count that does not), `MainNetPlay`, `down_load_anime`, `back_anime_step`, `freeze_eff_disp`
+`CwsWin_ListbkDisp` (rule 7), `down_load_anime`, `back_anime_step`, `freeze_eff_disp`
 (not examined: no probe applies yet).
+
+### 9. A member access may belong to a POINTER, not to the struct
+
+When one of our bodies puts an address in `$1`/`at` where retail reuses `$2`, suspect the base,
+not the allocator. Retail's `lw $2,-0x4508($28); lw $2,0x4C($2)` is a **pointer deref**; a
+static struct's member compiles to `lui at; lw $2,0x4C(at)`. Measured on
+`network/net_play/net_play_main.c`: the DWARF declares `static struct _tag_cNetPlay _pNetPlay`
+(0x5C at 0x71F020) *and* `_tag_cNetPlay *pNetPlay` (0x002DDBE8); gp is 0x2E20F0, so
+`gp-0x4508` is exactly `pNetPlay`, and `_pNetPlay` is never referenced in the TU. Rewriting every
+access through `pNetPlay` made eleven bodies register-exact at once and took the twelfth from
+`+0x18` to `+0x4`. Probe: `static struct S *p` gives `lw v0,0(gp); jr ra; lw v0,76(v0)`, while
+`static struct S obj` gives `lui at,0; jr ra; lw v0,76(at)`. So read `tools/oracle/dwarf1.py
+globals ELF --grep <name>` before believing a header's struct-versus-pointer spelling, and check
+which of the two addresses the gp-relative load actually reaches.
+
+### 10. Free-list state, not kind: SR pointer versus declared counter
+
+`drafts/regalloc/rules/tempord.py` (non-unrolling trip count; a constant 3 unrolls eight ways)
+shows the SR pointer always takes the earlier temp register and the declared counter a later one —
+in every expression shape and every lever — so **rule 3 is a callee-saved statement only**. It is
+not a kind rule either: `ps2dancerLoadInit`'s loop 2 gives the pointer `v1`/counter `t1` while its
+loop 3, four instructions later, gives the counter `t1`/pointer `t2`. The pair's order is per-loop
+free-list state; adding or removing *any* value rotates the allocation by one register, so a
+residue of this kind is reached by rotating, never by permuting declarations.
 
 ## Known blocker classes and three failure modes worth knowing
 
