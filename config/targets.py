@@ -887,6 +887,10 @@ DDREX2P = Target(
         # satisfied trivially; `.line` has no chunk at all.  The datum is placed by the
         # ledger row in config/ddrex2p/data_placements.txt, not by the ld script.
         ("src/AM/s573/play/oni_list.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
+        ("src/sound/vxdecode/get4bit.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
+        ("src/sound/vxdecode/dectbl.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g")),
 )
 

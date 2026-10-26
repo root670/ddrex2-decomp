@@ -194,3 +194,18 @@ netwinuser = 0x002BE3B0; // size:0x78 extent:0x78 source:src/network/net_window/
 // (file 0x1AFF40): 39 * 0x10C = 0x28D4, followed by 12 zero bytes to the next datum
 // (the SJIS string at 0x002B2620), so the extent is 0x28E0.  No word is a relocation.
 course_list = 0x002AFD40; // size:0x28D4 extent:0x28E0 source:src/AM/s573/play/oni_list.c
+
+// sound/vxdecode/get4bit.c is a data-only unit: three initialised 256-byte nibble tables
+// (nLow, nHigh and nL, contiguous at 0x002B6620..0x002B6920) and no function at all.  The
+// bytes are the `alabel nLow`/`nHigh`/`nL` blocks of asm/nonmatchings/main/func_002AC0A8.s
+// (file 0x1B6820), each 0x100 bytes with the next datum immediately after it, so every
+// extent equals its size.  No word is a relocation.
+nLow = 0x002B6620; // size:0x100 extent:0x100 source:src/sound/vxdecode/get4bit.c
+nHigh = 0x002B6720; // size:0x100 extent:0x100 source:src/sound/vxdecode/get4bit.c
+nL = 0x002B6820; // size:0x100 extent:0x100 source:src/sound/vxdecode/get4bit.c
+
+// sound/vxdecode/dectbl.c is a data-only unit: one initialised 240-entry table of 8-byte
+// longs (multbl, 0x780 bytes) and no function at all.  The bytes are the `alabel multbl`
+// block of asm/nonmatchings/main/func_002AC0A8.s (file 0x1B60A0); nLow follows it
+// immediately at 0x002B6620, so the extent equals the size.  No word is a relocation.
+multbl = 0x002B5EA0; // size:0x780 extent:0x780 source:src/sound/vxdecode/dectbl.c
