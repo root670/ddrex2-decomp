@@ -33,6 +33,29 @@ A translation unit counts as promoted only when `./ddr --target ddrex2p verify -
 `.line` chunk. What the source must then preserve is *which statements share a line*, not the
 physical number (see "Tidying a promoted source").
 
+### A unit with no code: data-only promotion
+
+A translation unit can own initialised data and no function at all. The first one is
+`AM/s573/play/oni_list.c`: two types and `oni_course course_list[39]` (0x28D4 bytes at VA
+0x002AFD40), one declaration CU, no function CU. It is promoted like any other unit, with an
+empty `.text`; the proof moves to the datum and the chunk.
+
+- **The datum is the proof.** `data_placements.txt` names it, and `cc` relocates and compares
+  the object's bytes with retail at that address before the link places it. The row's `extent`
+  is the retail span to the next datum; the zero fill inside it is a pad piece, so G1 still
+  compares every byte.
+- **No `.line` chunk exists** (there are no statements), so `configure.py` writes no `.line`
+  payload edge -- the object carries no `.line` section to dump. `.debug` is still one chunk
+  (the declaration CU's types) and must come out retail's, as always.
+- **The object is not listed in the ld script.** A unit with no code has no `.text` to place;
+  its datum reaches the link through the placement ledger alone. Its `Promotion.address` (the
+  sort key) is its first datum's address.
+- **`verify --tu` reports** `text ok (the translation unit declares no code)`,
+  `debug chunk ok` and `line chunk ok (nothing to compare in line)`.
+
+A unit whose DWARF declares no function *and* which no `data_placements.txt` row names is
+refused by `compile.Manifests._tu`: there is nothing to place.
+
 ### `.line`: corroboration and a localiser, never a gate
 
 Line numbers are **recovery evidence**, never part of the promotion proof. Before writing code,
@@ -845,6 +868,29 @@ instead. Measured on `shop_bind_nm`: its loop 1 must stay `i < 0x4C` (because
 body from nine differing words to a single swapped register pair; the `.line` rows
 agree the increments are separate statements (lines 363/371). So when a residue is
 `slti $1` against `slti $v1`, change the bound's spelling before touching the allocator.
+
+### 12. A compare against a 32-bit immediate keeps its constant in a register — unless the bound is written `>`
+
+`if (z >= 0xFF00)` compiles to `slt v0,v1,v0`, keeping the constant in an allocated
+register; `if (z > 0xFEFF)` canonicalises to `slt at,v0,at`, with the constant in `at` —
+retail's shape in `ComKeyBoardDisp` (probe: `drafts/com_keyboard/probe/p1.c`..`p4.c`, only
+the `>` spelling matches). Same unit, same idea one type down:
+`(int)g_sys_w.s_counter % 32 - 16` needs the `int` cast to get the signed-modulo fixup
+(`bgez` / `addi -0x20`), because `s_counter` is `unsigned int`.
+
+### 13. A debug-only shortfall that adoption cannot repair
+
+Adoption can drop records our object emits and retail's does not; it can never add one.
+`AM/s573/doll/vu0.c` is the case: its three bodies are handwritten VU0 macro-mode and are
+byte-equal as `asm { }` blocks (108/108 words, `.set noreorder` inside the block so the
+compiler's epilogue lands after it — `$Lab:` labels are rejected, plain `Lab:` works), but
+retail's CU carries `formal_parameter` DIEs for parameters its code never reads (`m0` of
+`a_make` and `rgb_make`), and MWCC 3.0b38 records such a DIE **only when the parameter
+reaches emitted code** — 27 dead C spellings, five builds and eight flag sets all agree.
+Naming the parameter inside the asm does emit the DIE, but it substitutes the parameter's
+home register into an instruction retail encodes with a different one, so `.text` breaks.
+The chunk is short by exactly the unused parameters' DIEs (18 records, 0x262 bytes). This is
+a *compiler DWARF-emission* difference, not a C shape: record it and do not fabricate.
 
 ## Known blocker classes and three failure modes worth knowing
 

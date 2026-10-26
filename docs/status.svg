@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 66 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 26.5% of units, 8.72% of functions and 5.92% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 67 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 26.9% of units, 8.72% of functions and 5.92% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 66 / 249 units promoted (26.5%)</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 67 / 249 units promoted (26.9%)</text>
 <text x="24" y="52" font-size="12" fill="#57606a">389 / 4,463 functions (8.72%) &#183; 96,560 / 1,631,596 code bytes (5.92%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
-<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 6/18 units · 36/182 funcs · 7,024/67,808 bytes (10.4%)</text>
+<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 7/18 units · 36/182 funcs · 7,024/67,808 bytes (10.4%)</text>
 <rect class="cell" data-state="untouched" x="24" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/play/onimode.c - 15,216 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="39" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/play/oni_list.c - 0 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="39" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/play/oni_list.c - 0 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="54" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/disp/b_anime.c - 5,072 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="69" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/play/p_anime.c - 2,384 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="84" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/vu0.c - 448 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="84" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/vu0.c - 448 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="99" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dancer.c - 2,832 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="114" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/ddata.c - 480 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="129" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/matrix.c - 768 code bytes - promoted</title></rect>
@@ -20,10 +20,10 @@
 <rect class="cell" data-state="partial" x="174" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/motion1.c - 3,536 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="189" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/motion2.c - 4,576 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="204" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/ps1lib.c - 1,776 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="219" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/doll/dcamera.c - 6,960 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="219" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dcamera.c - 6,960 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="234" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/dexport.c - 464 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="249" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dinit.c - 4,160 code bytes - partial</title></rect>
-<rect class="cell" data-state="untouched" x="264" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/demo/title_demo.c - 2,400 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="264" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/demo/title_demo.c - 2,400 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="279" y="106" width="12" height="12" rx="2" fill="#d0d7de"><title>src/AM/s573/disp/mmenu_obj.c - 7,184 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="common">

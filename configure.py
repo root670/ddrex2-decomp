@@ -738,20 +738,23 @@ def link_aliases(sources, symbols_path, auto_paths):
 class Promotion:
     """A unit built from C: its object, its payloads, and what it replaces in the image.
 
-    ``.text`` comes from the object (the pinned ``ld`` script places it where the unit's
-    splits used to be), while ``.debug``/``.line`` are dumped out of the same object by the
-    ``objsec`` edges and substituted for the retail databins of the chunks the unit owns.
-    The split objects stay in the graph: they are objdiff's target side (M1's own bytes),
-    and ``ddr diff`` still needs them.
+    A unit with code contributes ``.text`` from its object (the pinned ``ld`` script places
+    it where the unit's splits used to be); a data-only unit has no code at all, so its
+    object is placed by the data ledger instead and its empty ``.text`` is never listed.
+    ``.debug``/``.line`` are dumped out of the object by the ``objsec`` edges and
+    substituted for the retail databins of the chunks the unit owns; a data-only unit owns
+    one ``.debug`` chunk and no ``.line`` chunk.  The split objects stay in the graph: they
+    are objdiff's target side (M1's own bytes), and ``ddr diff`` still needs them.
     """
 
     __slots__ = ("file", "address", "flags", "object", "debug_payload", "line_payload",
-                 "debug_databin", "line_databins", "splits")
+                 "debug_databin", "line_databins", "splits", "code")
 
     def __init__(self, file, address, flags, object_path, debug_payload, line_payload,
-                 debug_databin, line_databins, splits):
+                 debug_databin, line_databins, splits, code=True):
         self.file = file                  # "src/sys/sys_scf.c"
-        self.address = address            # the unit's first function's retail address
+        self.address = address            # the unit's first function's address, or -- a
+                                          # data-only unit -- its first placed datum's
         self.flags = flags                # the cc rule's `flags` variable
         self.object = object_path         # repo-relative path of the cc edge's output
         self.debug_payload = debug_payload
@@ -759,6 +762,7 @@ class Promotion:
         self.debug_databin = debug_databin        # the databin it replaces
         self.line_databins = line_databins        # the run of databins it replaces
         self.splits = splits              # the split paths the ld script must not list
+        self.code = code                  # whether the object carries the unit's .text
 
 
 def promotions(manifests=None, target=None) -> list:
@@ -835,7 +839,8 @@ def _promotions(manifests=None, target=None) -> list:
             f".debug_{manifests.debug_chunk_index(tu):03d}",
             [f".line_{index:03d}" for index in manifests.line_chunk_indices(tu)],
             {f"asm/nonmatchings/{segment}/{function.name}.s"
-             for function in tu.functions}))
+             for function in tu.functions},
+            code=bool(tu.functions)))
     return sorted(out, key=lambda promotion: promotion.address)
 
 
@@ -891,7 +896,8 @@ def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None,
 
     A promoted unit contributes one object where its splits used to be, at the address its
     first function sits at; every other split is listed exactly as before, so the object
-    order still *is* the layout.
+    order still *is* the layout.  A data-only unit has no code to contribute, so its object
+    is not listed here: its datum reaches the link through ``data``.
 
     ``replacements`` carries a split whose bytes a data placement owns: ``{split: [(address,
     piece path)]}``, the split's remaining text as per-region pieces in address order.
@@ -933,7 +939,8 @@ def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None,
             listed.append((address,
                            object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix(),
                            ".text"))
-    listed += [(promotion.address, promotion.object, ".text") for promotion in promotions]
+    listed += [(promotion.address, promotion.object, ".text") for promotion in promotions
+               if promotion.code]
     listed += [(address, name, section) for address, name, section in data]
     listed += [(address, piece_object(piece), ".text") for address, piece in pads]
     listed.sort()
@@ -1089,8 +1096,13 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         lines.append(f"build {promotion.object}: cc {promotion.file}"
                      f"{generated_by(*COMPILE_EDGE_INPUTS)}\n")
         lines.append(f"  flags = {promotion.flags}\n")
-        for section, payload in ((".debug", promotion.debug_payload),
-                                 (".line", promotion.line_payload)):
+        # A unit with no `.line` chunk (a data-only unit has no code, so no statement
+        # table) has nothing to substitute and the object carries no `.line` section; an
+        # `objcopy --dump-section` edge would then fail on a section that is not there.
+        sections = [(".debug", promotion.debug_payload)]
+        if promotion.line_databins:
+            sections.append((".line", promotion.line_payload))
+        for section, payload in sections:
             lines.append(f"build {payload}: objsec {promotion.object}"
                          f"{generated_by(*COMPILE_EDGE_INPUTS)}\n")
             lines.append(f"  section = {section}\n")

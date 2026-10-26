@@ -187,3 +187,10 @@ netwinuser = 0x002BE3B0; // size:0x78 extent:0x78 source:src/network/net_window/
 @179 = 0x002D3D60; // size:0x18 extent:0x20 source:src/common/cws/cws_win.c
 @317 = 0x002D3D80; // size:0x18 extent:0x20 source:src/common/cws/cws_win.c
 @500 = 0x002D3DA0; // size:0x2c extent:0x30 source:src/common/cws/cws_win.c
+
+// AM/s573/play/oni_list.c is a data-only unit: its DWARF declares two types and this one
+// object and no function at all.  The 39 initialisers are retail's bytes in the
+// `alabel course_list` block of asm/nonmatchings/main/func_002AC0A8.s at VA 0x002AFD40
+// (file 0x1AFF40): 39 * 0x10C = 0x28D4, followed by 12 zero bytes to the next datum
+// (the SJIS string at 0x002B2620), so the extent is 0x28E0.  No word is a relocation.
+course_list = 0x002AFD40; // size:0x28D4 extent:0x28E0 source:src/AM/s573/play/oni_list.c

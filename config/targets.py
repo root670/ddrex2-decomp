@@ -880,6 +880,13 @@ DDREX2P = Target(
         ("src/AM/s573/doll/dexport.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/common/cws/multi_window.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
+        # A data-only unit: no code, one 0x28D4-byte datum (`course_list`) and its `.debug`
+        # chunk (0x5BE / 35 DIEs, retail's byte for byte once adoption proves it).  `.text`
+        # is empty by construction, so `--adopt-retail-meta`'s byte-equality precondition is
+        # satisfied trivially; `.line` has no chunk at all.  The datum is placed by the
+        # ledger row in config/ddrex2p/data_placements.txt, not by the ld script.
+        ("src/AM/s573/play/oni_list.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g")),
 )
 
