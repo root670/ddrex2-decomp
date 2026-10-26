@@ -8,6 +8,11 @@ void *co_obj_set(anon_7_107 *func, void (*init)(void *), unsigned char pri);
 void co_obj_step_set(void *ow, int step, void (*init)(void *));
 void func_0017A8A0(int se);
 void func_001B7C30(void *p, int n);
+int func_00127F60(anon_1_107 *info, int tex);
+void func_00123CF0(anon_2_107 *sp);
+void func_00123950(anon_4_107 *sp);
+struct tex_bind *func_0012D070(int);
+void CSXX20Puts(int, int, unsigned char *, int, int, int, int, int, int);
 void co_cursor01_init(struct _tag_cCoCursor01 *p);
 void co_cursor01_disp(struct _tag_cCoCursor01 *p, float x, float y, int a, int bri, int pri, int tex_id, int flag);
 
@@ -44,7 +49,7 @@ void co_quick_menu_set(anon_0_107 **qdp, unsigned short pri, unsigned char obj_p
             num++;
             qd++;
         }
-        if (num) {
+        if (num & 0xFF) {
             if (ex(qmw)) co_obj_del(qmw->obj_p);
             qmw->obj_p = 0;
             qmw->obj_id = 0;
@@ -86,7 +91,7 @@ void co_quick_menu_data_set(anon_0_107 **qdp) {
     num = 0;
     qd = qdp;
     if (qdp) {
-        if (ex(qmw))
+        if (ex(qmw)) {
         for (;;) {
             if (*qd == 0) break;
             num++;
@@ -99,6 +104,7 @@ void co_quick_menu_data_set(anon_0_107 **qdp) {
             qmw->tmp_func = 0;
             qmw->h = 24.0f + 24.0f * qmw->num;
             if (qmw->h < 104.0f) qmw->h = 104.0f;
+        }
         }
     }
 }
@@ -225,5 +231,130 @@ static int co_qmenu_exec(void *w) {
 }
 
 static int co_qmenu_disp(void *wp) {
+    anon_5_107 *w1;
+    anon_0_107 *qd;
+    anon_4_107 sp2;
+    anon_2_107 sp;
+    anon_1_107 info;
+    int i, j;
+    float x0, y0, disp_w, disp_h, u, v, w, h, t, tx;
+    int col;
+    int cur_tex_id;
+    unsigned char bri;
+
+    w1 = (anon_5_107 *)wp;
+    if (qmw->qw00_tex_id >= 0) func_00127F60(&info, qmw->qw00_tex_id);
+    else func_0012D070(0x45);
+    if (qmw->w <= 0.0f) {
+        sp.flg = 0;
+        sp.flg |= 0x100;
+        sp.r0 = 0x80;
+        sp.g0 = 0x80;
+        sp.b0 = 0x80;
+        sp.a0 = (unsigned char)w1->alpha;
+        sp.x0.id = 0xC3A00000;
+        sp.y0.fd = qmw->y0;
+        sp.z0 = qmw->z;
+        sp.u = 21.0f;
+        sp.w = 11.0f;
+        sp.h = 88.0f;
+        sp.v = 0;
+        func_00123CF0(&sp);
+    } else {
+        sp2.flg = 0;
+        sp2.flg |= 0x100;
+        sp2.r0 = 0x80;
+        sp2.g0 = 0x80;
+        sp2.b0 = 0x80;
+        sp2.a0 = (unsigned char)w1->alpha;
+        y0 = qmw->y0;
+        for (i = 0; i < 3; i++) {
+            x0 = -320.0f;
+            switch (i) {
+            case 0:
+                h = 88.0f;
+                v = 0;
+                disp_h = h;
+                break;
+            case 1:
+                t = qmw->h - 16.0f - 88.0f;
+                if (t <= 0.0f) continue;
+                disp_h = t;
+                v = 88.0f;
+                h = 16.0f;
+                break;
+            case 2:
+                v = 104.0f;
+                h = 16.0f;
+                disp_h = h;
+                break;
+            }
+            for (j = 0; j < 3; j++) {
+                switch (j) {
+                case 0:
+                    if (qmw->w <= 11.0f) continue;
+                    w = 10.0f;
+                    u = 0;
+                    disp_w = qmw->w - 11.0f;
+                    break;
+                case 1:
+                    w = qmw->w;
+                    disp_w = 11.0f;
+                    if (w < disp_w) {
+                        disp_w = w;
+                        u = 21.0f - w;
+                    } else {
+                        u = 10.0f;
+                        w = disp_w;
+                    }
+                    break;
+                case 2:
+                    if (i != 0) continue;
+                    u = 21.0f;
+                    w = 11.0f;
+                    disp_w = w;
+                    break;
+                }
+                sp2.u = u;
+                sp2.v = v;
+                sp2.w = w;
+                sp2.h = h;
+                sp2.x0.fd = x0;
+                sp2.y0.fd = y0;
+                sp2.z0 = qmw->z;
+                sp2.x1.fd = x0 + disp_w;
+                sp2.y1.fd = y0 + disp_h;
+                sp2.z1 = qmw->z;
+                func_00123950(&sp2);
+                x0 += disp_w;
+            }
+            y0 += disp_h;
+        }
+        tx = -290.0f - (qmw->max_w - qmw->w);
+        h = 2.0f + (12.0f + qmw->y0);
+        if (qmw->num == 3) h += 3.0f;
+        else if (qmw->num == 2) h += 17.0f;
+        else if (qmw->num == 1) h += 26.0f;
+        for (i = 0; i < qmw->num; i++) {
+            tx = tx;
+            qd = qmw->qd[i];
+            if (qmw->cur == i) {
+                col = 1;
+                bri = 0x80;
+                if (!(tx - 2.0f < -320.0f)) {
+                    cur_tex_id = qmw->cur01_tex_id;
+                    co_cursor01_disp(&qmw->cur_w, tx - 3.0f, 10.0f + h, (int)w1->alpha, 0x80, qmw->z, cur_tex_id >= 0 ? cur_tex_id : tex_bind[68].id, 1);
+                }
+            } else {
+                col = 0;
+                if (qmw->stat == 5) bri = 0x40;
+                else bri = 0x80;
+            }
+            if (qd->func == 0) bri = 0x40;
+            if (qmw->csxx20_tex_id >= 0) CSXX20Puts((int)tx, (int)h, qd->str, bri, qmw->z, col, (int)w1->alpha, qmw->csxx20_tex_id, 0x1350);
+            else CSXX20Puts((int)tx, (int)h, qd->str, bri, qmw->z, col, (int)w1->alpha, 0xFB, 0x1350);
+            h += 24.0f;
+        }
+    }
     return 0;
 }
