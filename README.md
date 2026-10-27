@@ -1,39 +1,22 @@
-# ddrex-decomp — DDR Extreme 2 (US) preview matching decompilation
+# DDR Extreme 2 (US) preview — matching decompilation
 
-A **matching decompilation** of the *DDR Extreme 2 (US)* preview for the PlayStation 2, retail ELF
-`SLUS_211.74`, sha256 `ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`
-(copied to the gitignored `orig/SLUS_211.74`).
+A **matching decompilation** of the *Dance Dance Revolution Extreme 2 (US)* preview for the
+PlayStation 2: `SLUS_211.74`, 7,725,036 bytes, sha256
+`ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`.
 
-**One target is registered, in one place**: [`config/targets.py`](config/targets.py) holds its retail
-ELF and G1 pin, its disc image and G3 pin, its config directory, its *measured* geometry and the
-compiler/flag pair each promoted unit was measured against.  Every tool reads that descriptor and
-`--target <name>` selects it (default: the registered target, so a bare `./ddr build` means the binary
-above); no other file spells a target name or a retail path.  Adding a target is a `Target(...)` plus
-one line in the registry there.
+"Matching" is literal. The C compiles with the retail compiler and links into an ELF **byte-identical
+to retail's** — code, debug sections, line tables, headers — and splicing that ELF back into the disc
+image reproduces the image byte for byte. A unit counts only when its `.text`, `.debug` chunk and
+`.line` chunks all match.
 
-The binary and its disc image are **not in the tree** — retail files are never committed, so you
-supply both (below) — but the *measurement* of that binary is: `config/ddrex2p/` holds its generated
-config, its pins and its compile-unit and debug-chunk maps, and the descriptor holds the segment
-list, the chunked sections' lengths and the boot ELF's offset in the image.  Every verb that needs a
-file you have not supplied stops with the name of the file it is missing instead of guessing.
+**No copyrighted assets are included.** This repository ships no game data, no retail code and no
+disassembly of retail code. You supply the retail ELF and the disc image; they belong in the
+gitignored `orig/` and `disc/`, are never committed and never redistributed. What is committed is
+*measurement* — addresses, sizes, digests, generated headers — plus the C we wrote. The compiler is
+proprietary: `tools/toolchain/fetch.py` downloads and hash-verifies it into the gitignored
+`toolchain/`. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
-"Matching" means the reconstruction is *proved*, not judged: the built ELF must be byte-identical to
-the retail one, debug sections and all, and writing it back into the retail disc image must reproduce
-that image byte for byte.  The build is byte-identical **before a single line of C is written** —
-everything not yet reconstructed is assembled from the retail bytes themselves, and a generated
-layout pins every function and datum at its retail address, so a mistake is attributable to the one
-unit being edited.
-
-| milestone | what it closed on | document |
-|---|---|---|
-| M1–M2 (removed target) | the skeleton and the first promoted unit of the previous target: oracle, splat config, pinned link, ISO layer, and one unit matching on `.text` + `.debug` + `.line` | records were removed with that target |
-| M2 (this target) | the first promoted unit on `ddrex2p`: `sys_scf.c` matching on `.text` + `.debug` + `.line`, and the compiler pair it was measured with | [`docs/milestones/ddrex2p-m2.md`](docs/milestones/ddrex2p-m2.md) |
-| library sourcing (this target) | which SDK archive revision reproduces each library, byte-wise, names only | [`docs/milestones/m3-library-sourcing.md`](docs/milestones/m3-library-sourcing.md) |
-
-The retarget is specified in [`docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md`](docs/superpowers/specs/2026-10-16-ddrex2-preview-retarget-design.md)
-and planned in [`docs/superpowers/plans/2026-10-16-ddrex2-preview-retarget.md`](docs/superpowers/plans/2026-10-16-ddrex2-preview-retarget.md)
-(the earlier skeleton plan kept it historical record); the working contract — the rules, the loop, and
-why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before editing anything.
+![Translation-unit heatmap — one square per unit, green means promoted](docs/status.svg)
 
 ## Progress
 
@@ -68,123 +51,102 @@ Legend: green = promoted (G2 green); amber = partial (draft or source, unproven)
 
 <!-- status:end -->
 
-## The gates
+## Quick start
 
-Every claim about this repository is one of three machine-checkable digests.  Each gate checks its
-*reference* against the digest pinned in the target's `config/<target>/checksums.txt` **before**
-comparing, so a corrupted or wrong-version input fails loudly instead of being compared with a
-build — and a reference *no* record names is refused outright (exit 2) rather than compared with
-itself, unless `--allow-unpinned-reference` says so in so many words on the success line.  A
-target's inputs are its own: `./ddr --target ddrex2p verify` reads that target's binary and pin, and a
-target whose binary has not been placed yet is a loud stop rather than a fallback to another one.
+```sh
+python3 tools/toolchain/check_deps.py                   # what is missing, and how to get it
+python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126  # compilers, hash-verified
+cp /path/to/your/SLUS_211.74 orig/                      # you supply this
+./ddr build && ./ddr verify                             # G1: byte-identical to retail
+```
 
-| gate | command | what it proves |
+## Hosts
+
+|host|support|compiler runs|
 |---|---|---|
-| **G1** binary | `./ddr verify` | the built image `out/<elf>` sha256 == the retail ELF's — the whole file, `.debug`/`.line`/`.comment`/headers included |
-| **G2** per-TU | `./ddr verify --tu sys_scf` | for a promoted unit: its `.text` span, its `.debug` chunk and its `.line` chunks against retail, naming the first divergence — this is the **promotion rule**: code *and* debug bytes |
-| **G3** disc | `./ddr verify --iso` | splicing the built ELF into a copy of the target's retail image, at the offset its descriptor measured, reproduces that image's sha256 |
+|macOS (arm64, x86_64)|tested|`wibo-macos`, fetched and digest-pinned|
+|Linux (x86_64)|supported|`wibo-x86_64`, fetched and digest-pinned|
+|Windows (x86_64)|supported, native|`mwccps2.exe` directly — no wibo, no WSL|
 
-A red gate is never worked around; on a red G1 the tool names the translation unit, the function,
-the compile unit and the chunk that own the first divergent byte, and that is where the fix goes.
+All three need Python 3.11+, `ninja`, a MIPS binutils (`ld`, `objcopy`, `as`), `splat` and optionally
+`objdiff-cli` for `./ddr diff`. `python3 tools/toolchain/check_deps.py` names every missing tool with
+the command that provides it.
 
-## Building it
+**macOS**
 
-**Prerequisites** (macOS; the compiler runs under [wibo](https://github.com/decompals/wibo), which
-is fetched for you):
-
-```bash
+```sh
 brew install mips-linux-gnu-binutils ninja
 python3 -m pip install --user 'splat64[mips]' pytest
 curl -sL -o ~/.local/bin/objdiff-cli \
-  https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64 \
-  && chmod +x ~/.local/bin/objdiff-cli
+  https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64
+chmod +x ~/.local/bin/objdiff-cli
 ```
 
-`python3 tools/toolchain/check_deps.py` verifies all of them and records the versions it observed in
-`toolchain/PROVENANCE.txt`; a missing tool is reported with the exact command that provides it.
+**Linux (x86_64)**, Debian/Ubuntu names:
 
-**The retail files are yours to supply** — they are never committed (see `THIRD_PARTY_NOTICES.md`
-and `AGENTS.md` rule 5):
-
-* `orig/SLUS_211.74` — the retail ELF (7,725,036 bytes), copied out of your own copy of the preview
-  image.  Its measured geometry and its generated config are committed (`config/targets.py`,
-  `config/ddrex2p/`), and `./ddr oracle` regenerates the config from the copy you place here.
-* the *DDR Extreme 2 (May 10, 2005 prototype)* image — the G3 reference.  Both paths, and the two
-  sha256 digests they are pinned by, are recorded in `config/targets.py` (the image is the one the
-  plan pinned: `70a90566…6cd652b`).  Mount it at the recorded path and bare `./ddr --target ddrex2p
-  verify --iso` finds it; an absent image skips (exit 0) with an explicit "nothing was compared".
-
-**The compiler** is proprietary and is fetched, hash-verified and extracted into the gitignored
-`toolchain/`:
-
-```bash
-python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
+```sh
+sudo apt install build-essential ninja-build python3 python3-pip binutils-mips-linux-gnu
+python3 -m pip install --user 'splat64[mips]' pytest
+curl -sL -o ~/.local/bin/objdiff-cli \
+  https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-linux-x86_64
+chmod +x ~/.local/bin/objdiff-cli
 ```
 
-`2.4-001213` is the required build (the retail `.comment` names the 2.4.1.01 *linker* family);
-`3.0-011126` is the build the first promoted unit was measured against, so a full build needs both.
+**Windows (x86_64)** — native tooling; WSL and msys2 are not needed:
 
-**Then:**
-
-```bash
-./ddr build                       # configure.py + ninja: split, assemble, link, tail, G1
-./ddr verify                      # G1
-./ddr verify --tu sys_scf         # the promotion rule for one unit
-./ddr verify --iso                # G3 (skips cleanly when the image is not mounted)
-python3 -m pytest -q              # the suite: real splat, real assembler, real compiler (~16 s today)
+```bat
+winget install Python.Python.3.12 Ninja-build.Ninja
+python -m pip install --user splat64[mips] pytest
+:: objdiff-cli-windows-x86_64.exe from the same release page, on %PATH%
+python ddr build
+python ddr verify
 ```
 
-Any of those takes `--target <name>` (default: the registered target), before or after the
-verb: `./ddr --target ddrex2p verify` is the same gate on the same files as `./ddr verify`.
+`ddr` is a Python script, so on Windows call it as `python ddr <verb>`. The CodeWarrior tools are
+Windows binaries, so nothing is emulated there.
 
-`./ddr build` takes about a minute from scratch (4,102 ninja edges, 4,092 of them splits) and less
-when only the unit you edited changed.  `./ddr diff <symbol> <tu>` shows objdiff's instruction-level
-view of one function: the target side is the *retail bytes* of that symbol (emitted into
-`build/diff/`, which no link edge reads), the base side is the object under edit -- the unit's C
-object, or for a unit with no C the split's own bytes without splat's `.NON_MATCHING` alias, which
-objdiff would otherwise refuse to score.  Both sides are printed with what they are, and a
-percentage is printed only when objdiff really compared the symbol; G1 and the per-TU verdicts are
-the arbiters (see the caveat at the end of `docs/milestones/ddrex2p-m2.md`).
+## Supplying the retail files
 
-## How it works
+* `orig/SLUS_211.74` — the retail ELF from your own copy of the preview. Its geometry and generated
+  config are committed (`config/targets.py`, `config/ddrex2p/`); `./ddr oracle` regenerates the config
+  from the copy you place.
+* the disc image — the G3 reference. Its path and pinned sha256 live in `config/targets.py`; without
+  it `./ddr verify --iso` skips with an explicit "nothing was compared".
 
+## Gates
+
+|gate|command|proves|
+|---|---|---|
+|G1|`./ddr verify`|the built ELF's sha256 equals the retail ELF's|
+|G2|`./ddr verify --tu <unit>`|that unit's `.text`, `.debug` chunk and `.line` chunks equal retail's|
+|G3|`./ddr verify --iso`|splicing the built ELF into the image reproduces the image|
+
+A red gate is never worked around: the tool names the unit, function, compile unit and chunk that own
+the first divergent byte, and that is where the fix goes.
+
+## Everyday commands
+
+```sh
+./ddr build                     # configure.py + ninja: split, assemble, compile, link, G1
+./ddr verify --tu sys_scf       # G1 + that unit's promotion verdict
+./ddr diff sysInitScf sys_scf   # objdiff-cli: retail's bytes for one symbol against our object
+python3 -m pytest -q tests      # the suite — it runs the real tools, not stubs
 ```
-orig/<target ELF> ──► ./ddr oracle ──► config/<target>/{cus,debug_chunks,symbol_addrs}.json/txt
-                                      include/src/**        (one header per translation unit)
-config/<target>/** ──► configure.py ─► asm/** (splat splits), build/<elf>.ld,
-                                      build.ninja, objdiff.json
-asm/**, src/**     ──► ninja ────────► build/** objects ──► ld ──► objcopy ──► cat ──► out/<elf> ──► G1
-                                                                        out/rebuilt.iso ──► G3
-```
 
-Every path above is the one `config/targets.py` gives the target `--target` names; with another
-target the same pipeline splits `orig/<its ELF>` into `config/<name>/**` and gates
-`out/<its ELF>`.  `asm/**`, `build/**`, `out/**` and `include/**` are single generated trees, so one
-target is configured at a time (another target's config and pins stay on disk untouched).
+While reconstructing a unit: `tools/units/line_map.py` (retail's statement structure), `twins.py`
+(bodies already written elsewhere), `measure.py` (per-body word diff), `m2c_draft.py` (first draft,
+jump tables fed), `slots.py` (callee-saved and stack-slot map), `permute.py` (bounded search). The
+rules behind them are [`docs/unit-work.md`](docs/unit-work.md).
 
-* `config/targets.py` — the target descriptor: the ELF and its G1 pin, the disc image and its G3 pin,
-  the config directory, the measured geometry (loadable segment, trailing sections, chunk sizes,
-  disc-image offset) and the per-unit compiler/flag pairs.  Adding a target is adding a descriptor.
-* `tools/oracle/**` — the vendored DWARF 1 reader plus the emitters that turn the retail ELF's own
-  debug information into the manifests and headers.  Names and line numbers come from the target, not
-  from a guess.
-* `configure.py` — splits the target's ELF with splat and writes the ninja graph, the linker script
-  that pins every address, and the objdiff project the CI reports from.
-* `tools/toolchain/compile.py` — the `cc` rule's program: it runs `mwccps2` under wibo, reads the
-  Metrowerks object with the oracle's own reader, and places the `.text`, `.debug` and `.line` bytes
-  the compiler wrote (mainline binutils cannot read those objects, and `mwldps2` does not keep the
-  debug sections — R23).
-* `.github/workflows/` — `build` (toolchain, configure, ninja, G1), `objects` (the objdiff object
-  graph) and `progress` (the objdiff report); all three run on macOS runners and fetch the retail ELF
-  from a URL kept in a repository secret, because the repository never contains it.  The progress
-  report is objdiff's own object-level arithmetic, **not** the gates' verdict: its
-  `matched_data_percent: 100.0` is a percentage over splat's target object (this build reconstructs
-  no data at all), and its `matched_code` reads 0.0007% for a tree whose linked `sys_scf` bytes *are*
-  retail's — `./ddr verify --tu` is what proves a unit (`AGENTS.md` rules 6 and 9).
+## Where things live
 
-## Licence and provenance
+`ddr` is the command surface (`oracle`, `build`, `verify`, `diff`, `iso`). `config/targets.py` is the
+only place a target's facts are written down — retail ELF and pin, image and pin, config directory,
+measured geometry, and the compiler/flag pair each promoted unit was measured against. `tools/oracle/`
+is the DWARF 1 reader and the header/manifest emitters, `tools/toolchain/` the compiler plumbing.
+`src/**` is the C we write; `include/**`, `asm/**`, `build.ninja` are generated and never hand-edited.
 
-The vendored oracle code (`tools/oracle/**`) is third-party MIT/Apache-2.0 and is listed, with its
-upstream hashes, in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).  The retail binary, the disc
-image and the CodeWarrior toolchain belong to their owners and are never redistributed here; the
-repository holds only the artifacts of *this* build and the code that produces them.
+[`AGENTS.md`](AGENTS.md) is the operating contract — the rules, the loop, and why each exists;
+[`docs/unit-work.md`](docs/unit-work.md) is the unit rulebook;
+[`docs/superpowers/specs/`](docs/superpowers/specs) holds the design and
+[`docs/milestones/`](docs/milestones) the evidence each milestone closed on.
