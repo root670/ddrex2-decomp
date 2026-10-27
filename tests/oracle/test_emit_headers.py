@@ -184,3 +184,73 @@ def test_no_generated_header_states_alignment_after_the_typedef_name():
     import re
     for path in sorted((ROOT / "include").rglob("*.h")):
         assert not re.search(r"}\s+\w+\s+__attribute__", path.read_text()), path
+
+
+def _enum_items(blob, width):
+    """``[(value, name)]`` -- the vendor blob's own items, read at the DIE's ``byte_size``.
+
+    CodeWarrior's enumeration attribute is a run of ``value`` (as many bytes as the type is
+    wide) followed by a NUL-terminated name, so the *width* is what tells 0x10 from 0x10,0x00.
+    """
+    items, pos = [], 0
+    while pos + width <= len(blob):
+        value = int.from_bytes(blob[pos:pos + width], "little", signed=True)
+        end = blob.index(b"\0", pos + width)
+        items.append((value, blob[pos + width:end].decode("latin-1")))
+        pos = end + 1
+    return items
+
+
+def _an_enumeration(blob, byte_size):
+    """A DIE-shaped record carrying nothing but what :func:`emit_headers._enum_lines` reads."""
+    import types
+    return types.SimpleNamespace(tag=emit_headers.TAG_enumeration_type, name="@enum",
+                                 attrs={0x00F4: blob, emit_headers.AT_byte_size: byte_size},
+                                 children=[], cu=None)
+
+
+def test_an_enumeration_is_read_at_the_width_its_die_states():
+    """One item per entry at 1 byte, one per *four* bytes where the type is 4 wide.
+
+    The blob is the vendor's, not the emitter's: a 1-byte enumeration spells each value as one
+    byte, so a blob read at four bytes wide swallows three names per item.  Measured on
+    `cs_staffroll.c`, whose two enumeration DIEs are `AT_byte_size 1` against the pinned
+    compiler's `-enum int` default of 4 -- 3 bytes per enumerator, 0x24 over retail's pinned
+    0x845 declaration span, and a type reference no signature pairs.
+    """
+    narrow = b"\x00ONE\x00\x01TWO\x00\x02THREE\x00"
+    wide = b"\x00\x00\x00\x00ONE\x00\x01\x00\x00\x00TWO\x00"
+    lines = emit_headers._enum_lines(_an_enumeration(narrow, 1), "E", "")
+    assert [line.strip() for line in lines[1:-1]] == ["ONE = 0,", "TWO = 1,", "THREE = 2,"]
+    assert "size 0x1" in lines[0]
+    lines = emit_headers._enum_lines(_an_enumeration(wide, 4), "E", "")
+    assert [line.strip() for line in lines[1:-1]] == ["ONE = 0,", "TWO = 1,"]
+    assert "size 0x4" in lines[0]
+
+
+def test_every_enumeration_in_this_image_is_spelled_at_its_own_width():
+    """The whole image: each enumeration DIE renders exactly the items its blob holds.
+
+    Structural on purpose -- no unit is named.  A width taken from anywhere but the DIE (a
+    hard-coded 4, say) makes the rendered item list disagree with the blob for every 1-byte
+    enumeration in the binary, which is the shape that stopped `cs_staffroll.c` from adopting
+    retail's `.debug` chunk.
+    """
+    dw = emit_headers.dwarf(TARGET.elf)
+    enums = 0
+    for die in dw.dies.values():
+        if die.tag != emit_headers.TAG_enumeration_type:
+            continue
+        blob = die.attrs.get(0x00F4) or die.attrs.get(0x00F3)
+        if not blob:
+            continue
+        width = die.attrs.get(emit_headers.AT_byte_size, 4)
+        expected = _enum_items(blob, width)
+        for typedef in (True, False):
+            lines = emit_headers._enum_lines(die, "probe", "", typedef=typedef)
+            assert f"size 0x{width:x}" in lines[0], lines[0]
+            got = [(int(line.rsplit(" = ", 1)[1].rstrip(",")), line.split("=")[0].strip())
+                   for line in lines[1:-1]]
+            assert got == expected, f"DIE 0x{die.off:x} at {width} bytes"
+        enums += 1
+    assert enums, "this binary's DWARF declares enumerations, and they are all checked"
