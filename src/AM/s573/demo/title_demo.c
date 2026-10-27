@@ -1,4 +1,5 @@
 #include "src/AM/s573/demo/title_demo.h"
+#include "hw/ee_dma.h"
 
 static unsigned char *ti_mv_list[6] = {
     (unsigned char *)&ex2_movie_vag[1],
@@ -136,9 +137,9 @@ void title_movie_disp(unsigned int pri) {
     tex.colors = 0;
     func_00122440(pri, 2);
     func_00125180(0x20, 0x14, 0);
-    *(volatile unsigned int *)0x1000A030 = (unsigned int)tmw->decTags;
-    *(volatile unsigned int *)0x1000A020 = 0;
-    *(volatile unsigned int *)0x1000A000 = 0x105;
+    D2_TADR = (unsigned int)tmw->decTags;
+    D2_QWC = 0;
+    D2_CHCR = 0x105;
     sceGsSyncPath(0, 0);
     tex.tbp = 0x2600;
     func_00127110(&tex, 0xFD);

@@ -456,6 +456,7 @@ def _display(path) -> str:
 DDREX2P = Target(
     name="ddrex2p",
     config_dir=REPO_ROOT / "config" / "ddrex2p",
+    include_dirs=("include", "hwinclude"),
     elf=REPO_ROOT / "orig" / "SLUS_211.74",
     elf_sha256="ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd",
     image=pathlib.Path(
