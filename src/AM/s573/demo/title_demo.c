@@ -1,5 +1,6 @@
 #include "src/AM/s573/demo/title_demo.h"
 #include "hw/ee_dma.h"
+#include "hw/vu1_mem.h"
 
 static unsigned char *ti_mv_list[6] = {
     (unsigned char *)&ex2_movie_vag[1],
@@ -195,9 +196,9 @@ static void ti_movie_play(void) {
     i_ct = val;
     i_ct = i_ct % 2;
     if (i_ct == 0) {
-        func_001BBBF8((unsigned int)buf, (unsigned char *)0x70000000, 0x3900);
+        func_001BBBF8((unsigned int)buf, VU1_MEM_PTR(unsigned char, 0x00), 0x3900);
         if (sceMpegGetPicture(&mpeg, tmw->cscBuff, 0x24C) < 0) tmw->disp_flg = 0;
-        func_001BBBF8(0x70000000, buf, 0x3900);
+        func_001BBBF8(VU1_MEM_BASE, buf, 0x3900);
         if (tmw->vag_flg == 0) {
             tmw->vag_flg = 1;
             func_00179C30(0, 0, 0, 1.0f);

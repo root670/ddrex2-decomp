@@ -11,6 +11,12 @@ token stream is unchanged the object *should* be unchanged, and the tool does no
 a source that names a configured promotion unit is compiled before and after through the
 promotion path and is written only when ``.text``, ``.debug`` and ``.line`` are byte-identical.
 
+``--check`` also enforces the hardware-name half of the same source-form gate, through
+:func:`units.hw_names.require_named`: a cast to an absolute address in the EE register block
+(0x10000000-0x101FFFFF) or the VU1 memory window (0x70000000-0x70003FFF) is refused with the
+``hwinclude`` header that names that block, because a hardware access is a named lvalue --
+``D2_TADR = x;``, ``VU1_MEM_F32(0x10) = y;`` -- and never an address at the use site.
+
 There is no exception: every comment is blanked, including the leading header block and a
 note marked with ``/*!`` or ``//!``.  A promoted source carries no comments at all.  The tool
 enforces that rather than trusting the strip: :func:`require_no_comments` fails when a source
@@ -70,6 +76,7 @@ for _extra in (str(REPO_ROOT / "tools"), str(REPO_ROOT / "tools" / "oracle"), st
     if _extra not in sys.path:
         sys.path.insert(0, _extra)
 
+from units import hw_names  # noqa: E402  the hardware-name half of --check
 
 
 class Comment(NamedTuple):
@@ -594,7 +601,9 @@ def _parser() -> argparse.ArgumentParser:
                         help="write nothing and fail if the file still carries a comment or, "
                              "unless it is a promoted source (whose blank lines inside a "
                              "brace are the line numbers themselves), a blank line directly "
-                             "inside a brace (the gate that keeps a promoted source clean)")
+                             "inside a brace, or a cast to an absolute EE register / VU1 "
+                             "window address instead of a hwinclude macro (the gate that "
+                             "keeps a promoted source clean)")
     parser.add_argument("--collapse", action="store_true",
                         help="strip every comment, then tidy the layout: drop the blank "
                              "lines the header and notes leave, one blank line at most, no "
@@ -648,6 +657,18 @@ def main(argv=None) -> int:
             require_no_comments(rewritten, "rewritten source")
     except Refused as exc:
         print(f"strip_comments.py: {_display(source)}: {exc}", file=sys.stderr)
+        return 1
+
+    # The second half of the source-form gate: a hardware access is named, not cast.  A cast
+    # to an absolute EE register or VU1 window address is refused with the header that names
+    # the block (hwinclude/hw/**), which is the only place the cast may be spelt.
+    try:
+        if args.check:
+            hw_names.require_named(text, _display(source))
+        else:
+            hw_names.require_named(rewritten, "rewritten source")
+    except hw_names.RawAddressCast as exc:
+        print(f"strip_comments.py: {exc}", file=sys.stderr)
         return 1
 
     if args.check:

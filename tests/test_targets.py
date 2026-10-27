@@ -242,8 +242,8 @@ def test_a_targets_include_path_is_spelled_from_the_repository_root():
     assert probe_target(include_dirs=("headers", "types")).include_paths \
         == (ROOT / "headers", ROOT / "types")
     registered = targets.get()
-    assert registered.include_dirs == ("include",)
-    assert registered.include_paths == (ROOT / "include",)
+    assert registered.include_dirs == ("include", "hwinclude")
+    assert registered.include_paths == (ROOT / "include", ROOT / "hwinclude")
 
 
 def test_a_duplicate_target_name_is_refused():

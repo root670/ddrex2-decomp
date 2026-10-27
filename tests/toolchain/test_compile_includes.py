@@ -28,7 +28,8 @@ def test_the_flags_follow_the_descriptors_search_path_in_order():
     """The directories are the descriptor's, spelled in its order -- two are two flags."""
     target = dataclasses.replace(targets.get(), include_dirs=("include", "src"))
     assert cc.include_flags(target) == [f"-I{ROOT / 'include'}", f"-I{ROOT / 'src'}"]
-    assert cc.include_flags(targets.get()) == [f"-I{ROOT / 'include'}"]
+    assert cc.include_flags(targets.get()) == [f"-I{ROOT / 'include'}",
+                                               f"-I{ROOT / 'hwinclude'}"]
 
 
 def test_an_include_directory_that_is_not_there_is_a_configuration_error():

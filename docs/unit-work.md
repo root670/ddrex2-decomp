@@ -537,10 +537,11 @@ placeholder's presence is load-bearing even though its contents are not.
 
 ## Comment style
 
-**Three source-form rules cover a promoted file, and each has a mechanism that enforces it:**
+**Four source-form rules cover a promoted file, and each has a mechanism that enforces it:**
 no comments and no blank line directly inside a brace (`tools/units/strip_comments.py
---check`), and no `#line` directive (`configure.py` before it writes `build.ninja`, and
-`compile.py` at the `cc` edge, both naming the count and the remedy).  They exist because the
+--check`), no cast to an absolute EE register or VU1 memory address (the same `--check`, via
+`tools/units/hw_names.py`), and no `#line` directive (`configure.py` before it writes
+`build.ninja`, and `compile.py` at the `cc` edge, both naming the count and the remedy).  They exist because the
 source is evidence: a comment is an essay in the wrong place, a brace-padding blank is a style
 choice pretending to be layout, and a directive means the file a reader sees is not the file
 the compiler numbered.  The brace rule bends for a promoted source: its `.line` chunk pins
@@ -803,6 +804,35 @@ with the row comment saying the layout was tidied and `.line` adopted.  G1 is
 `ef31c90f…c02cd`.  Tests: blank-run collapse, trailing whitespace, header removal, the
 brace-edge blank, idempotence, the grouping refusal, a
 moved `.text`, and the real before/after compile with per-function counts.
+
+### Hardware is named, not cast
+
+**A unit reaches a register or the VU1 memory window through `hwinclude/hw/**`, never through a
+cast to its address.**  `hwinclude` is hand-written for exactly that reason: the oracle derives
+the game's own types and globals from DWARF, but a hardware register is not a game symbol -- its
+name is a documented fact of the board -- so it belongs in a header a person writes, never in
+`include/**` (generated, never hand-edited) and never at the use site.  `tools/units/hw_names.py`
+is the check and `strip_comments.py --check` runs it beside the comment gate: a pointer cast to an
+absolute address in the EE register block (`0x10000000-0x101FFFFF`) or the VU1 memory window
+(`0x70000000-0x70003FFF`) fails with the header that names the block -- `hwinclude/hw/ee_dma.h`
+(the D0-D3 channel map and the controller's own registers) or `hwinclude/hw/vu1_mem.h` (the
+16 KiB window as `VU1_MEM_BASE`, a typed pointer and int/float/short/128-bit lvalues) -- and an
+EE register no header names yet fails with the instruction to add one.  An address outside those
+ranges is not hardware and the gate leaves it alone: `g_sys_w` is 0x98 bytes at `0x006B4840`, so
+the freeplay singletons at `0x006D2E30`/`0x006D33A0` and the overlay scratch base `0x01874000`
+stay raw casts until a named member or const covers them, because no DWARF member or splat
+`D_XXXXXXXX` does and rule 3 forbids inventing one.  **The exact expansion is part of the
+evidence**: every macro is an lvalue expanding to `*(volatile unsigned int *)ADDR` (or, for the
+VU window, `*(volatile TYPE *)(0x70000000u + offset)`), so `D2_TADR = x;` compiles to the same
+`lui`/`addiu` pair the cast did; spelling a DMA channel as a struct and reaching `->tadr` would
+emit the channel base plus a field offset instead, which is a different instruction, and a matched
+unit's bytes are the whole proof.  Add a register to these headers in that shape rather than
+casting, then re-gate the converted unit with `./ddr build` and `./ddr verify --tu <tu>`: the
+`#include` line itself shifts statement numbers, which adoption covers (retail's `.line` is what
+the image carries), but `.text` is not allowed to move and a conversion that moves a byte is
+reverted (`gs_3d.c`'s nine casts and three VU-base arguments, and `title_demo.c`'s one of each,
+went through with `.text`/`.debug`/`.line` byte-identical -- 0x968 and 0x958 bytes,
+`tests/units/test_hw_names.py` pins the gate and the tree).
 
 ## House rules that keep the gates honest
 

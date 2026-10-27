@@ -1,3 +1,4 @@
+#include "hw/vu1_mem.h"
 typedef float FVEC4[4];
 typedef float FMAT4[4][4];
 typedef float sceVu0FVECTOR[4];
@@ -118,17 +119,17 @@ void gs3dBegin(int packet, int vnct, unsigned int prim)
     gs3d->pkind = packet;
     gs3d->prim = prim;
     if (vnct == 0) {
-        gs3d->vp = (FVEC4 *)0x70000000;
-        gs3d->cp = (FVEC4 *)0x70000010;
+        gs3d->vp = VU1_MEM_PTR(FVEC4, 0x00);
+        gs3d->cp = VU1_MEM_PTR(FVEC4, 0x10);
     } else if (vnct == 1) {
-        gs3d->vp = (FVEC4 *)0x70000000;
-        gs3d->cp = (FVEC4 *)0x70000010;
-        gs3d->tp = (FVEC4 *)0x70000020;
+        gs3d->vp = VU1_MEM_PTR(FVEC4, 0x00);
+        gs3d->cp = VU1_MEM_PTR(FVEC4, 0x10);
+        gs3d->tp = VU1_MEM_PTR(FVEC4, 0x20);
     } else if (vnct == 2) {
-        gs3d->vp = (FVEC4 *)0x70000000;
-        gs3d->np = (FVEC4 *)0x70000010;
-        gs3d->cp = (FVEC4 *)0x70000020;
-        gs3d->tp = (FVEC4 *)0x70000030;
+        gs3d->vp = VU1_MEM_PTR(FVEC4, 0x00);
+        gs3d->np = VU1_MEM_PTR(FVEC4, 0x10);
+        gs3d->cp = VU1_MEM_PTR(FVEC4, 0x20);
+        gs3d->tp = VU1_MEM_PTR(FVEC4, 0x30);
     } else {
     }
 }
@@ -170,21 +171,21 @@ void gs3dEnd(void)
         p = func_00121E70(h);
         p->ul64[0] = (unsigned long)gs3d->pnum | 0x8000 | ((unsigned long)0x4000 << 32) | ((unsigned long)gs3d->prim << 47) | ((unsigned long)0x20000000 << 32);
         p->ul64[1] = 0x51;
-        gxRenderVC(p + 1, gs3d->local_screen, 0x70000000, gs3d->pnum);
+        gxRenderVC(p + 1, gs3d->local_screen, VU1_MEM_BASE, gs3d->pnum);
         func_00121E40(h, gs3d->pnum * 2 + 1);
     } else if (gs3d->vnct == 1) {
         h = gs3d->pkind;
         p = func_00121E70(h);
         p->ul64[0] = (unsigned long)gs3d->pnum | 0x8000 | ((unsigned long)0x4000 << 32) | ((unsigned long)gs3d->prim << 47) | ((unsigned long)0x30000000 << 32);
         p->ul64[1] = 0x512;
-        gxRenderVCT(p + 1, gs3d->local_screen, 0x70000000, gs3d->pnum);
+        gxRenderVCT(p + 1, gs3d->local_screen, VU1_MEM_BASE, gs3d->pnum);
         func_00121E40(h, gs3d->pnum * 3 + 1);
     } else if (gs3d->vnct == 2) {
         h = gs3d->pkind;
         p = func_00121E70(h);
         p->ul64[0] = (unsigned long)gs3d->pnum | 0x8000 | ((unsigned long)0x4000 << 32) | ((unsigned long)gs3d->prim << 47) | ((unsigned long)0x30000000 << 32);
         p->ul64[1] = 0x512;
-        gxRenderVNCT(p + 1, gs3d->local_screen, 0x70000000, gs3d->local_light, gs3d->light_color, gs3d->pnum);
+        gxRenderVNCT(p + 1, gs3d->local_screen, VU1_MEM_BASE, gs3d->local_light, gs3d->light_color, gs3d->pnum);
         func_00121E40(h, gs3d->pnum * 3 + 1);
     } else {
     }
