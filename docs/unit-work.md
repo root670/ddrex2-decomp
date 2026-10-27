@@ -1068,6 +1068,14 @@ zero-fill PT_LOAD reservations whose bytes live in the disc blobs (`DATA00-09.BI
 geometry comment). So those 65 units cannot be promoted until overlay loading is modelled: it is a
 geometry feature, not a source problem, and it is the largest single item between here and 249.
 
+The ELF's own program headers say what has to be modelled: 12 `PT_LOAD`s, one file-backed main image
+(0x00100000, filesz 0x1DE180, memsz 0x623700, ending 0x723700) and **eleven zero-fill windows** —
+seven overlays that all load at **0x7F0000** (memsz 0x17E80, 0xEB80, 0x1D880, 0x1D600, 0x13800,
+0x12600, 0xC980), two at 0x1884000 (0x5A700, 0x111E00), one at 0xE4D380 (0x36F00), and an empty one
+at 0x770000. So an overlay function's address names its *window* but not which of seven overlays is
+resident there: the disc blobs decide, which is why a per-overlay splat segment has to be keyed by
+the blob, not by the address.
+
 ## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
