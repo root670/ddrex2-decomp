@@ -891,6 +891,8 @@ DDREX2P = Target(
         ("src/sound/vxdecode/get4bit.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sound/vxdecode/dectbl.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
+        ("src/AM/s573/demo/title_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g")),
 )
 

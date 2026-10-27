@@ -209,3 +209,4 @@ nL = 0x002B6820; // size:0x100 extent:0x100 source:src/sound/vxdecode/get4bit.c
 // block of asm/nonmatchings/main/func_002AC0A8.s (file 0x1B60A0); nLow follows it
 // immediately at 0x002B6620, so the extent equals the size.  No word is a relocation.
 multbl = 0x002B5EA0; // size:0x780 extent:0x780 source:src/sound/vxdecode/dectbl.c
+ti_mv_list = 0x002B8B90; // size:0x18 extent:0x18 source:src/AM/s573/demo/title_demo.c
