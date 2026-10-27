@@ -927,6 +927,19 @@ strength reduction disappears too, so an accumulating index may then need to be 
 routing an address through a local (`tmp_addr`) is what makes MWCC record the variable's DIE,
 and a dead first assignment (`i_ct = val; i_ct = i_ct % 2;`) is what keeps a local's DIE alive.
 
+Two cautions measured the same day, both about trusting a measurement:
+
+- **A pragma that changes nothing may simply be ignored.** This build accepts unknown pragma
+  names silently — `#pragma opt_bogus_thing` compiles identically — so `opt_propagation off`,
+  `opt_pulloutconstants off`, `opt_strength_reduction off`, `opt_schedule(d) off` and
+  `opt_global_register off` all being byte-identical on `mmenu_obj`'s residues proves only that
+  those bodies are not pragma-shaped, not that the pragma works. Treat an effect as evidence and
+  its absence as "not this lever".
+- **A per-unit green against a stale `build.ninja` is worthless.** Before `configure.py` puts a
+  unit on a `cc` edge, `./ddr verify --tu <new unit>` compares the *retail-filled* image and
+  prints `text ok / debug chunk ok / line chunk ok`. Run `configure.py` (or `./ddr build`) first;
+  `mmenu_obj` reported a full green and then refused by name once configured.
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:
