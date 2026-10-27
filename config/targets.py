@@ -552,6 +552,16 @@ DDREX2P = Target(
         # `sa = (sa > 0) ? sa : 0; dw_h = bar_h - sa;`, which keeps the register split.
         ("src/common/com_scrollbar.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x18 in a 0x20 extent, both bodies word-exact (the split's 4-byte
+        # inter-function nop and 8-byte trailing nop are the fill); .line adopted
+        # (5 records in 2 tables, 3 rows moved, first .line+0x8 10 -> 80); .debug
+        # retail's 0x65B / 38 DIEs after adoption (5 reference words, 28 AT_sibling
+        # recomputes).  Retail carries two unreferenced array types -- unsigned char *[6]
+        # and unsigned char[256] -- which `unused_types`, an uncalled static function
+        # whose parameters point at them, emits; only file-scope arrays need storage the
+        # ledger cannot place.  pdemo is .bss: no initialiser, no placement.
+        ("src/sys/sys_demo.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         # Layout tidied, so `.line` is adopted.  Adoption applies the DIE-order normaliser
