@@ -355,24 +355,31 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    only there is `EXACT`.
 
    ```
-   measure: src/sys/sys_demo.c (ddrex2p)
+   measure: src/AM/s573/demo/title_demo.c (ddrex2p)
    pair: 3.0b38-030307 -c -lang c -O3 -opt full -g
    masking: a body is EXACT when it differs from retail only in the bits a relocation writes
             (R_MIPS_26 jump target; R_MIPS_32 whole word; R_MIPS_HI16, R_MIPS_LO16 and
             R_MIPS_GPREL16 low half); every other differing word is counted.
-     body          ours/retail words           differing  first diff
+     body                    ours/retail words  differing  first diff
      ----------------------------------------------------------------
-     Exact                       2/2                   0  -
-     RegisterSwap                2/2                   1  +0x4
-     Short                       1/2  short by 0x4 bytes  -
+     ti_movie_SetDecTag                102/102          0  -
+     ti_movie_work_set                   55/55          0  -
+     ti_movie_play                       97/97          0  -
+     title_movie_disp                  165/165          0  -
+     title_movie_manage                125/125          0  -
+     title_movie_play_ok                   3/3          0  -
+     title_movie_play_start                4/4          0  -
+     title_movie_init                    34/34          0  -
+
+   8 of 8 bodies EXACT (retail's length, no differing word outside a relocated field)
    ```
 
-   A body whose length is not retail's prints `short by N bytes` or `N bytes too large` instead of a
-   word count: the gate refuses such a body, so a word count would suggest the size is already
-   right. `--fn <name> --side` is the reading you want for a residue — retail and ours one
+   A body whose length is not retail's prints `short by N bytes` or `N bytes too large` in place of
+   the word count: the gate refuses such a body, so a word count there would suggest the size is
+   already right. `--fn <name> --side` is the reading you want for a residue — retail and ours one
    instruction per line, with the field that moved named (`rt $v0 -> $v1`,
    `offset -0x30 -> -0x34`), and a word that differs only inside a relocated field marked
-   `(relocation field)`.
+   `(relocation field)`. `--json` is the same table for tooling.
 
    The command measures a **measured** unit: a source with no `tu_builds` row is refused (exit 2)
    and the refusal names the remedy, `tools/toolchain/select_build.py --tu <tu>` — that is step 8's
@@ -1217,7 +1224,13 @@ Two compiler facts measured on `fp_style.c`/`fp_opt.c`:
   (`} __attribute__((aligned(16))) tag;`). The other spelling
   (`typedef struct {…} tag __attribute__((aligned(16)));`) is silently ignored by 3.0b38 - probe:
   `p[1].step` stayed at 0x34 instead of 0x38 - which is why a padded aggregate's `sizeof` stayed
-  short and the bodies indexing it could not match.
+  short and the bodies indexing it could not match.  The header generator applies that rule
+  itself, for the aggregate's *tail* as well as for a member's offset (`_tail_alignment` in
+  `tools/oracle/emit_headers.py`): a DWARF `byte_size` that rounds the member cursor up to 16,
+  where the members' own alignment does not already land on it, is emitted with the attribute,
+  and a named type gets the identical placement (`struct tag {…} __attribute__((aligned(16)));`,
+  measured: stride 0x38, `sizeof` 0x20).  So `anon_5_73` and `anon_8_73` in
+  `include/src/CS/freeplay/fp_style.h` now have `sizeof` 0x20 and 0x7e0.
 
 ### 21. m2c's range guard, varargs and string walkers are all wrong by default
 
@@ -1241,6 +1254,36 @@ Measured on `cws_str.c`, where each of these differing spellings cost whole-body
 
 Known prior art comes from `grep`ping `__builtin_next_arg` and `__builtin_args_info` under `src/`.
 
+### 22. A switch case's guard is a `break`, and a block-scope array initialiser is a blob copy
+
+Measured on `tra_menu.c` (`TRObj_menu_item_apper`/`_disap`): a guarded case whose retail branch
+target is the **loop increment** is `if (!ok) break;` - writing the guard as a plain
+`if (cond) { ... }` leaves its branch pointing into the case body instead (20 and 11 differing
+words, all in that one target). Reading the retail branch's destination settles it.
+
+Two related shapes from the same unit:
+- `unsigned char arr[9] = {const list}` at **block scope** copies a blob (`ld`+`lbu`+`sd`+`sb`),
+  while `arr[9] = {0}` emits the 0x24-byte zeroing loop retail has. Byte stores come only from
+  individual assignments.
+- A helper called with byte arguments must be prototyped `(unsigned char, unsigned char)`; a
+  `short` prototype adds the `dsll32`/`dsra32` pair retail does not have. Likewise
+  `(unsigned int)(x - 2) < 3` is the `sltiu` form, while `(unsigned char)` gives `andi`+`slti`.
+
+## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`### 22. A switch case's guard is a `break`, and a block-scope array initialiser is a blob copy
+
+Measured on `tra_menu.c` (`TRObj_menu_item_apper`/`_disap`): a guarded case whose retail branch
+target is the **loop increment** is `if (!ok) break;` - writing the guard as a plain
+`if (cond) { ... }` leaves its branch pointing into the case body instead (20 and 11 differing
+words, all in that one target). Reading the retail branch's destination settles it.
+
+Two related shapes from the same unit:
+- `unsigned char arr[9] = {const list}` at **block scope** copies a blob (`ld`+`lbu`+`sd`+`sb`),
+  while `arr[9] = {0}` emits the 0x24-byte zeroing loop retail has. Byte stores come only from
+  individual assignments.
+- A helper called with byte arguments must be prototyped `(unsigned char, unsigned char)`; a
+  `short` prototype adds the `dsll32`/`dsra32` pair retail does not have. Likewise
+  `(unsigned int)(x - 2) < 3` is the `sltiu` form, while `(unsigned char)` gives `andi`+`slti`.
+
 ## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`### 21. m2c's range guard, varargs and string walkers are all wrong by default
 
 Measured on `cws_str.c`, where each of these differing spellings cost whole-body mismatches:
@@ -1262,6 +1305,36 @@ Measured on `cws_str.c`, where each of these differing spellings cost whole-body
   register allocation.
 
 Known prior art comes from `grep`ping `__builtin_next_arg` and `__builtin_args_info` under `src/`.
+
+### 22. A switch case's guard is a `break`, and a block-scope array initialiser is a blob copy
+
+Measured on `tra_menu.c` (`TRObj_menu_item_apper`/`_disap`): a guarded case whose retail branch
+target is the **loop increment** is `if (!ok) break;` - writing the guard as a plain
+`if (cond) { ... }` leaves its branch pointing into the case body instead (20 and 11 differing
+words, all in that one target). Reading the retail branch's destination settles it.
+
+Two related shapes from the same unit:
+- `unsigned char arr[9] = {const list}` at **block scope** copies a blob (`ld`+`lbu`+`sd`+`sb`),
+  while `arr[9] = {0}` emits the 0x24-byte zeroing loop retail has. Byte stores come only from
+  individual assignments.
+- A helper called with byte arguments must be prototyped `(unsigned char, unsigned char)`; a
+  `short` prototype adds the `dsll32`/`dsra32` pair retail does not have. Likewise
+  `(unsigned int)(x - 2) < 3` is the `sltiu` form, while `(unsigned char)` gives `andi`+`slti`.
+
+## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`### 22. A switch case's guard is a `break`, and a block-scope array initialiser is a blob copy
+
+Measured on `tra_menu.c` (`TRObj_menu_item_apper`/`_disap`): a guarded case whose retail branch
+target is the **loop increment** is `if (!ok) break;` - writing the guard as a plain
+`if (cond) { ... }` leaves its branch pointing into the case body instead (20 and 11 differing
+words, all in that one target). Reading the retail branch's destination settles it.
+
+Two related shapes from the same unit:
+- `unsigned char arr[9] = {const list}` at **block scope** copies a blob (`ld`+`lbu`+`sd`+`sb`),
+  while `arr[9] = {0}` emits the 0x24-byte zeroing loop retail has. Byte stores come only from
+  individual assignments.
+- A helper called with byte arguments must be prototyped `(unsigned char, unsigned char)`; a
+  `short` prototype adds the `dsll32`/`dsra32` pair retail does not have. Likewise
+  `(unsigned int)(x - 2) < 3` is the `sltiu` form, while `(unsigned char)` gives `andi`+`slti`.
 
 ## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`
 
