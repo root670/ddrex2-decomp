@@ -861,6 +861,12 @@ DDREX2P = Target(
         # 787 DIEs byte-equal after adoption.  Ships the switch's @67 jump table.
         ("src/network/net_game/net_game_challenge.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x440, three bodies word-exact (90/53/124); .debug retail's 0x9A8C / 1012 DIEs
+        # byte-equal after adoption; .line and AT_location adopted; ships the switch's @30 jump
+        # table.  Retail's `bar` is kept by splitting the subtraction off the multiply, and its
+        # `val` is a call result compared in case 2 - both emit the DIE without moving a word.
+        ("src/CS/dancemaster/dmm_init.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
