@@ -136,10 +136,36 @@ NINJA_HEADER = """\
 # zero bytes that the retail bytes already carry explicitly -- the splits' `.word` /
 # `.short` / `.byte` stream is a byte-exact 1,713,792-byte partition on its own, and
 # 19 splits (one per VA that is 4 mod 8) assemble 4 bytes too long while they survive.
-ALIGN_FILTER = r"""sed -E '/^[[:space:]]*\.align[[:space:]]/d'"""
-AS_RULE = ("cpp -Iinclude $in -o - | " + ALIGN_FILTER
-           + " | mips-linux-gnu-as -Iasm/include --no-pad-sections "
-             "-EL -march=5900 -mabi=eabi -o $out")
+# The interpreter every emitted edge runs its driver with.  ``sys.executable``, never the POSIX
+# name ``python3``: ninja starts an edge with ``CreateProcess`` on Windows -- no shell -- where
+# the interpreter is ``python.exe`` and need not be on PATH at all, so the graph spells the
+# interpreter that configured *this* checkout.  Emitted once, as ninja's own ``python``
+# variable, and referenced quoted because ``sys.executable`` may live under ``C:\Program Files``.
+PYTHON = sys.executable
+
+# The `as` rule's program.  It used to be a shell pipeline -- ``cpp -Iinclude $in -o - | sed -E
+# '.../d' | mips-linux-gnu-as ...`` -- and ninja's Windows port has neither of those filters nor
+# even a ``|`` to join them with.  ``as_split.py`` drops the same ``.align`` lines and runs the
+# same ``as`` invocation itself, and the object bytes are unchanged: ``tests/test_configure.py``
+# compares the two rules split by split.  The program is text of this graph's own, so it is an
+# implicit input of every `as` edge (`AS_PROGRAM` below, beside ``GENERATOR``).
+AS_PROGRAM = "tools/toolchain/as_split.py"
+AS_RULE = f'"$python" {AS_PROGRAM} $in -o $out'
+
+# ``objcopy --dump-section <section>=<out> <in> <copy>`` needs a *named* output file: a lone
+# input is an in-place edit, and the two objsec edges run concurrently against the same object
+# (the comment on the rule has the observation).  The copy itself is not wanted, so it goes to
+# the null device -- and that is ``os.devnull``, ``/dev/null`` on POSIX and ``nul`` on Windows,
+# because ``cmd`` cannot spell the POSIX one.  One Python process, no shell features, and the
+# exit status objcopy returned.
+OBJSEC_PY = ("import os, subprocess, sys; sys.exit(subprocess.call(["
+             "'mips-linux-gnu-objcopy', '--dump-section', "
+             "sys.argv[1] + '=' + sys.argv[2], sys.argv[3], os.devnull]))")
+
+# ``cat $in > $out`` in one process: ``>`` means the same thing in ``sh`` and ``cmd``, but
+# ``cat`` is not a program on Windows.  Unbuffered read/write, inputs in the order ninja gives.
+CAT_PY = ("import sys; open(sys.argv[1], 'wb').write("
+          "b''.join(open(path, 'rb').read() for path in sys.argv[2:]))")
 
 # The graph has to depend on the code that generates it (R35a).  Every command line below
 # is text from this file, and the `cc` rule's *program* is `tools/toolchain/compile.py` --
@@ -1285,6 +1311,7 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         # ninja rule blocks accept only its own keywords, so the variables the specified
         # command lines interpolate are declared at the top level (and may be overridden
         # per edge, which is how Task 12 will pick a compiler flag set per TU).
+        f"python = {PYTHON}\n",
         f"mapfile = build/{elf}.map\n",
         "\n",
         "rule as\n",
@@ -1295,21 +1322,20 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         # The target is a *flag* of the driver, not part of its input list: which config's
         # manifests place the unit -- and which retail binary its DWARF is compared with --
         # is exactly what `--target` decides, and ninja has to say it on every edge.
-        f"  command = python3 tools/toolchain/compile.py --target {target.name} "
-        "$in $out $flags\n",
+        f'  command = "$python" tools/toolchain/compile.py --target {target.name} '
+        '$in $out $flags\n',
         "  description = cc $in\n",
         "\n",
         # One section out of the object the compiler produced: the promoted unit's own
         # `.debug`/`.line` bytes, which the tail edge substitutes for retail's databins.
-        # The explicit `/dev/null` output matters: objcopy treats a lone input file as an
-        # *in-place* edit, and the `.debug` and `.line` edges run concurrently against the
-        # same object, so an in-place rewrite (truncate, then write the same bytes back)
-        # has one edge reading the object while the other is mid-write -- observed as
-        # `objcopy: [.debug]: file truncated` and a short payload.  Naming an output keeps
-        # objcopy read-only on $in: the object keeps its dates and bytes, each dump lands
-        # at `now`, and both edges stay incremental.
+        # The named sink is what keeps objcopy read-only on $in -- it treats a lone input as
+        # an *in-place* edit, and the `.debug` and `.line` edges run concurrently against the
+        # same object, so an in-place rewrite (truncate, then write the same bytes back) has
+        # one edge reading the object while the other is mid-write -- observed as
+        # `objcopy: [.debug]: file truncated` and a short payload.  The sink is the null
+        # device, spelled by `os.devnull` because `cmd /c` has no `/dev/null` (see OBJSEC_PY).
         "rule objsec\n",
-        "  command = mips-linux-gnu-objcopy --dump-section $section=$out $in /dev/null\n",
+        f'  command = "$python" -c "{OBJSEC_PY}" $section $out $in\n',
         "  description = objsec $section $out\n",
         "\n",
         "rule ld\n",
@@ -1323,15 +1349,17 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         "\n",
         # The file's non-loadable tail has no symbols to link, so it is concatenated in
         # manifest order instead -- the one shape `ld`/`objcopy` cannot produce, because
-        # objcopy writes only the sections a program header loads.
+        # objcopy writes only the sections a program header loads.  The rule keeps its name
+        # (`cat`, and three tests identify the tail edge by it); only its command is Python,
+        # because `cat` is not a program on Windows (see CAT_PY).
         "rule cat\n",
-        "  command = cat $in > $out\n",
+        f'  command = "$python" -c "{CAT_PY}" $out $in\n',
         "  description = cat $out\n",
         "\n",
         "rule g1\n",
         # The gate reads the target too: its retail binary, its checksums manifest and its
         # manifests are all the target's, and `$in` is the target's built image.
-        f"  command = python3 tools/verify/g1.py --target {target.name} $in\n",
+        f'  command = "$python" tools/verify/g1.py --target {target.name} $in\n',
         "  description = g1 $in\n",
         "\n",
     ]
@@ -1339,13 +1367,15 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
     for split in splits:
         rel = split.relative_to(REPO_ROOT).as_posix()
         obj = object_path(split).relative_to(REPO_ROOT).as_posix()
-        lines.append(f"build {obj}: as {rel}{generated_by(*GENERATED_BY)}\n")
+        lines.append(f"build {obj}: as {rel}"
+                     f"{generated_by(GENERATOR, AS_PROGRAM)}\n")
         objects.append(obj)
     # A data placement's split pieces are generated by configure itself, not splat; the as
     # rule assembles them exactly like a split, because a piece *is* a split's remaining text.
     for path in list(pieces) + [path for _, path in pads]:
         obj = piece_object(path)
-        lines.append(f"build {obj}: as {path}{generated_by(*GENERATED_BY)}\n")
+        lines.append(f"build {obj}: as {path}"
+                     f"{generated_by(GENERATOR, AS_PROGRAM)}\n")
         objects.append(obj)
     for source in data_sources:
         # `--data`: compile a data-only source raw (no `-g`, so it contributes no DWARF) and

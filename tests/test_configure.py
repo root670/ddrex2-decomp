@@ -12,6 +12,7 @@ import dataclasses
 import json
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 import types
@@ -169,13 +170,105 @@ def test_the_ninja_graph_names_the_target_on_every_edge_that_reads_it():
     geo = target.geometry
     databins = configure.databin_segments(chunks(), geo)
     ninja = configure.ninja_text([], databins, False, [], target, geo)
-    assert f"python3 tools/toolchain/compile.py --target {target.name}" in ninja
-    assert f"python3 tools/verify/g1.py --target {target.name}" in ninja
+    assert f'"$python" tools/toolchain/compile.py --target {target.name}' in ninja
+    assert f'"$python" tools/verify/g1.py --target {target.name}' in ninja
     assert f"-T config/{target.name}/undefined_syms_auto.txt" in ninja
     assert f"-T config/{target.name}/undefined_funcs_auto.txt" in ninja
     assert f"build out/{target.elf.name}.elf: ld build/{target.elf.name}.ld" in ninja
     assert f"build out/{target.elf.name}: cat" in ninja
     assert f"build g1: g1 out/{target.elf.name} | orig/{target.elf.name}" in ninja
+
+
+# ---------------------------------------------------------------------------
+# The generated graph has to run where the build runs: `CreateProcess`, not `sh`
+#
+# Ninja starts an edge with `sh -c` on macOS/Linux and with `CreateProcessA` on Windows --
+# no shell at all, so no `|`, no `>`, and none of `python3`, `cpp`, `sed` or `cat`.  A rule
+# command may therefore only name the interpreter that configured this graph
+# (`sys.executable`, spelled once as ninja's `python` variable), programs installed by name
+# on every host, and `-c` one-liners.  Rule *names* stay (`cat` names the tail edge, and
+# three tests identify it by that name); only the commands had to move.
+# ---------------------------------------------------------------------------
+
+
+def test_no_edge_command_needs_a_posix_shell():
+    """Every command is the configured interpreter or a MIPS binutils program."""
+    target = probe()
+    ninja = configure.ninja_text([], [], False, [], target, target.geometry)
+    commands = [line.split("=", 1)[1].strip()
+                for line in ninja.splitlines() if line.startswith("  command = ")]
+    assert len(commands) >= 6               # as, cc, objsec, ld, bin, cat, g1
+    for command in commands:
+        for posix_only in ("python3", "/dev/null", "cpp ", "sed ", "cat ", " | "):
+            assert posix_only not in command, f"{posix_only!r} is POSIX-only: {command}"
+        first = command.split()[0]
+        assert first == '"$python"' or first.startswith("mips-linux-gnu-"), command
+    assert f"python = {sys.executable}" in ninja
+
+
+def test_the_as_rule_is_one_program_that_every_as_edge_depends_on():
+    """The split filter and the assembler are one process, and its bytes dirty every edge."""
+    target = probe()
+    split = ROOT / "asm" / "nonmatchings" / "main" / "probe.s"
+    ninja = configure.ninja_text([split], [], True, [], target, target.geometry)
+    assert f'  command = "$python" {configure.AS_PROGRAM} $in -o $out\n' in ninja
+    assert " | " not in configure.AS_RULE
+    assert (f" | {configure.GENERATOR} {configure.AS_PROGRAM}\n") in ninja
+    assert (ROOT / configure.AS_PROGRAM).is_file()
+
+
+def test_the_emitted_one_liners_replace_the_shell_utilities_byte_for_byte(tmp_path):
+    """`cat $in > $out` and the `/dev/null` sink, as the processes they now are."""
+    pieces = [b"one\n", b"two\n", b"three"]
+    paths = []
+    for index, blob in enumerate(pieces):
+        path = tmp_path / f"in{index}"
+        path.write_bytes(blob)
+        paths.append(str(path))
+    out = tmp_path / "out"
+    subprocess.run([sys.executable, "-c", configure.CAT_PY, str(out), *paths], check=True)
+    assert out.read_bytes() == b"".join(pieces)
+
+    # The objsec edge names the null device as its copy sink: the dump must be the section's
+    # bytes and the object untouched (two of these edges run concurrently against it).
+    source = tmp_path / "sec.s"
+    source.write_text('\t.section .debug,"",@progbits\n\t.4byte 0x11223344\n\t.byte 0xAA\n')
+    obj = tmp_path / "sec.o"
+    subprocess.run(["mips-linux-gnu-as", "-EL", "-march=5900", "-mabi=eabi",
+                    "-o", str(obj), str(source)], check=True)
+    before = obj.read_bytes()
+    dumped = tmp_path / "sec.bin"
+    subprocess.run([sys.executable, "-c", configure.OBJSEC_PY, ".debug", str(dumped),
+                    str(obj)], check=True)
+    assert dumped.read_bytes() == b"\x44\x33\x22\x11\xaa"
+    assert obj.read_bytes() == before
+
+
+def test_the_as_rule_program_assembles_splits_byte_for_byte_like_the_old_pipeline(tmp_path):
+    """The proof the `as` rule rests on, on a spread of splits (all 7,664 were compared).
+
+    The old rule was ``cpp -Iinclude $in -o - | sed -E '<.align drop>' | as ...``; the new one
+    is ``as_split.py``.  The two must produce identical objects: the filter is the only thing
+    that changes, and `cpp`'s own contribution is marker comments gas reads as comments.
+    """
+    if shutil.which("cpp") is None or shutil.which("sed") is None:
+        pytest.skip("the old pipeline's cpp/sed are not on this host")
+    splits = sorted((ROOT / "asm").rglob("*.s"))
+    if not splits:
+        pytest.skip("no generated split tree (run ./ddr build)")
+    sample = splits[::700] + [path for path in splits if path.parent.name == "data"][:1]
+    for split in sample:
+        rel = split.relative_to(ROOT).as_posix()
+        reference = tmp_path / "reference.o"
+        chain = (f"cpp -Iinclude {rel} -o - | "
+                 f"sed -E '/^[[:space:]]*[.]align[[:space:]]/d' | "
+                 f"mips-linux-gnu-as -Iasm/include --no-pad-sections -EL -march=5900 "
+                 f"-mabi=eabi -o {reference}")
+        subprocess.run(["sh", "-c", chain], cwd=ROOT, check=True)
+        ours = tmp_path / "ours.o"
+        subprocess.run([sys.executable, str(ROOT / configure.AS_PROGRAM), rel,
+                        "-o", str(ours)], cwd=ROOT, check=True)
+        assert reference.read_bytes() == ours.read_bytes(), rel
 
 
 # ---------------------------------------------------------------------------
