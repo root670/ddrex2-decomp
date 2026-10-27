@@ -1059,6 +1059,15 @@ that function's local DIEs (`model2`'s raw `.debug` came out 0x2412 short), so c
 even with `.text` exact. Use the asm body as a **word-exact reference for writing the C**, and
 promote only when the C produces the same words.
 
+**Scope: 65 of the remaining units are overlay-resident.** Measuring every unpromoted unit's
+lowest function address against the overlay window (0x7F0000 and above) splits what is left into
+**107 main-image units (1,419 functions)** and **65 overlay units (860 functions)**. The overlay
+code has no split at all — `dmm_play`'s body is at 0x7F8810 and `asm/nonmatchings/` has no
+`dmm_play*` — because `splat.yaml`'s only code segment is `[0x200, c, main]` and the overlays are
+zero-fill PT_LOAD reservations whose bytes live in the disc blobs (`DATA00-09.BIN`, deferred by the
+geometry comment). So those 65 units cannot be promoted until overlay loading is modelled: it is a
+geometry feature, not a source problem, and it is the largest single item between here and 249.
+
 ## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
