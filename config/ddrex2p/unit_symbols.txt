@@ -24,3 +24,5 @@ D_0102FBCC = 0x0102FBCC; // source:src/network/net_game/net_game_logout.c
 D_0102FADC = 0x0102FADC; // source:src/network/net_game/net_game_logout.c
 D_01029FE4 = 0x01029FE4; // source:src/network/net_window/net_win_peruser.c
 D_01029FE4 = 0x01029FE4; // source:src/network/net_window/net_win_perpoint.c
+D_01029FE4 = 0x01029FE4; // source:src/network/net_game/net_game_help.c
+D_0102FACC = 0x0102FACC; // source:src/network/net_game/net_game_help.c
