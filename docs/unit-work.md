@@ -915,6 +915,18 @@ unusable for such a unit (the short prototype is "redeclared" against the defini
 declares its own types inline like `model1.c`; and the missing formals can be declared
 freely, because unreached parameters emit no DIE and the `.debug` inventory still matches.
 
+### 16. A "fold" residue may be a pragma, not a shape
+
+Where retail keeps three separate `addiu $15,$15,0x20` (or three `tag += 2`) and this build
+forwards them into one chain sunk to the latch, the source is not the lever:
+`#pragma opt_propagation off` **and** `#pragma opt_pulloutconstants off`, scoped before the
+function, reproduce retail exactly — measured on `AM/s573/demo/title_demo.c`'s
+`ti_movie_SetDecTag`, which went from five words short to byte-equal. With propagation off the
+strength reduction disappears too, so an accumulating index may then need to be a source local
+(`j4`) rather than a `j*0x10` expression. Same unit, two more `.debug`-only tricks worth knowing:
+routing an address through a local (`tmp_addr`) is what makes MWCC record the variable's DIE,
+and a dead first assignment (`i_ct = val; i_ct = i_ct % 2;`) is what keeps a local's DIE alive.
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:
