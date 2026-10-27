@@ -947,6 +947,14 @@ home register into an instruction retail encodes with a different one, so `.text
 The chunk is short by exactly the unused parameters' DIEs (18 records, 0x262 bytes). This is
 a *compiler DWARF-emission* difference, not a C shape: record it and do not fabricate.
 
+**The marker to look for first.** `grep -l 'Handwritten function' asm/nonmatchings/**/*.s` finds
+**240 of the 4,491 splits**: those were assembly in the original source, not C (splat writes the
+marker when the function has no line information). They are the rule-13 class — `vu0.c`'s three
+bodies were transcribed as `asm { }` and came out byte-equal, so a unit containing them is still
+promotable, but its bodies are transcription and the count of "C bodies" is 240 smaller than the
+split total. `model2.c` is the case to copy: ten C bodies plus `NormCulcG3U`, `NormCulcG3US` and
+`VertCulcU` as asm.
+
 ### 14. Designated initialisers are accepted; mixing forms is not
 
 `.field = x` compiles under the pinned pair, **including on bitfields** (`unsigned a : 4`
