@@ -332,10 +332,17 @@ class Candidate:
         if len(body) != len(self.expected):
             return body
         try:
-            return self.words(self._placed_text(mw, gp))
+            words = self.words(self._placed_text(mw, gp))
         except errors as exc:
             self.refusal = str(exc)
             return None
+        if len(words) != len(self.expected):
+            # The gate placed every body, so this is a truncated read, not a size
+            # residue: never rank what the gate did not measure.
+            self.refusal = (f"the placed body is {len(words)} bytes, expected "
+                            f"{len(self.expected)}")
+            return None
+        return words
 
     def size_gap(self, source: bytes) -> int | None:
         """Bytes ``source``'s target body is short of retail's (negative: too large)."""
