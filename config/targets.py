@@ -851,6 +851,12 @@ DDREX2P = Target(
         # 0x7700) and include/types/_NETWORK_W.h cannot say so yet.
         ("src/network/net_game/net_game_logout.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x620, all four bodies word-exact; .debug retail's 0x1574 / 141 DIEs
+        # byte-for-byte after adoption; .line and AT_location adopted.  Needs
+        # -sdatathreshold 0: the seven literals are absolute-addressed in retail, whose $gp
+        # does not reach 0x002D78xx.
+        ("src/network/net_window/net_win_perpoint.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
