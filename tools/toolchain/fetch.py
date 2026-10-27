@@ -19,8 +19,11 @@ Usage::
     python3 tools/toolchain/fetch.py m2c
     python3 tools/toolchain/fetch.py --root /tmp/tc 2.4-001213
 
-``2.4-001213`` is the *required* build, as is wibo: if either fails the command
-exits non-zero.  ``m2c`` is pinned by commit and by a digest of its whole extracted
+``2.4-001213`` is the *required* build, as is wibo where a runner is needed: if either fails
+the command exits non-zero.  wibo is fetched per host — ``wibo-macos`` on Darwin,
+``wibo-x86_64`` on Linux — and *not at all* on Windows, whose compilers are native PE
+binaries; there :func:`wibo` returns ``None`` and the ``wibo`` target is recorded as
+``not needed``.  ``m2c`` is pinned by commit and by a digest of its whole extracted
 tree; it is a drafting aid (``tools/units/m2c_draft.py``) rather than a build input,
 so a failure to fetch it is recorded and does not fail the sweep.  The other candidate
 builds are optional alternates used later to select the compiler build by
@@ -72,7 +75,12 @@ CANDIDATES = tuple(ARTIFACTS)
 REQUIRED = "2.4-001213"
 
 WIBO_BASE = "https://github.com/decompals/wibo/releases/latest/download"
-WIBO_ASSETS = {"darwin": "wibo-macos"}
+#: The release asset each host runs.  A host listed in :data:`WIBO_NATIVE` needs no runner
+#: at all; any other host without an asset here cannot run the compilers and says so.
+WIBO_ASSETS = {"darwin": "wibo-macos", "linux": "wibo-x86_64"}
+#: Hosts whose compilers are native binaries: ``mwccps2.exe`` and ``mwldps2.exe`` are PE
+#: images, so Windows executes them directly and wibo would only be a second copy of Windows.
+WIBO_NATIVE = ("windows",)
 WIBO_NAME = "wibo"
 WIBO_LOCAL_FALLBACK = pathlib.Path.home() / "ac-decomp" / ".cache" / "wibo"
 ALREADY_INSTALLED = "already installed"
@@ -83,10 +91,12 @@ DESCRIPTION = ("Fetch and hash-verify the CodeWarrior PS2 compilers, wibo, m2c "
 
 # wibo is published under ``releases/latest``, so its URL cannot be pinned: the digest of the
 # binary we accept is pinned here instead and is checked *before* wibo is executed (R15).
-# Both the release asset and the patched fallback build are pinned; an installed wibo that
-# matches neither is refused rather than run.
+# Both the release assets and the patched fallback build are pinned; an installed wibo that
+# matches neither its host's pin nor the fallback is refused rather than run.  Each digest is
+# of the bytes of the 1.2.0 asset as downloaded from that release and hashed here.
 WIBO_PINNED = {
     "wibo-macos": "2b3000ef6a7a490c24ccd71967735ae0005e218922e51806cca1b8d77fd3cf7c",  # 1.2.0
+    "wibo-x86_64": "13f86a2d618f0dbe67179d349625345eabf9b46450295cb4c904e49f6aff85af",  # 1.2.0
 }
 WIBO_FALLBACK_PINNED = "d94d832136c74fec3960047e55a30382e74bb06848bba5386b15abd17380b314"  # 1.2.0-1-g09b973a
 
@@ -228,8 +238,11 @@ def _now() -> str:
 
 
 def wibo_url(asset: str | None = None) -> str:
-    """Release asset URL for wibo on this host (``wibo-macos`` on Darwin)."""
-    return f"{WIBO_BASE}/{asset or wibo_asset()}"
+    """Release asset URL for wibo on this host (``wibo-macos``/``wibo-x86_64``)."""
+    asset = asset or wibo_asset()
+    if asset is None:
+        raise UnpinnedArtifact(_no_runner())
+    return f"{WIBO_BASE}/{asset}"
 
 
 def _download(url: str, dest: pathlib.Path) -> None:
@@ -403,14 +416,33 @@ def wibo_local_fallback() -> pathlib.Path | None:
     return None
 
 
-def wibo_asset() -> str:
-    """wibo release asset name for this host (``wibo-macos`` on Darwin)."""
-    return WIBO_ASSETS.get(platform.system().lower(), "wibo-x86_64")
+def _no_runner() -> str:
+    """The one refusal for a host that has no pinned runner; names why there is none."""
+    host = platform.system()
+    if host.lower() in WIBO_NATIVE:
+        return (f"no wibo runner is needed on {host}: mwccps2.exe and mwldps2.exe are "
+                f"native there")
+    return (f"no wibo release asset is known for {host}: add it to WIBO_ASSETS and pin its "
+            f"digest in WIBO_PINNED before use")
+
+
+def wibo_asset() -> str | None:
+    """wibo release asset this host runs, or ``None`` where the compilers are native.
+
+    ``wibo-macos`` on Darwin, ``wibo-x86_64`` (a static x86-64 ELF) on Linux; Windows runs
+    the compilers directly, so :func:`wibo` installs nothing there.
+    """
+    host = platform.system().lower()
+    if host in WIBO_NATIVE:
+        return None
+    return WIBO_ASSETS.get(host)
 
 
 def wibo_pin(asset: str | None = None) -> str:
     """Pinned digest of the wibo asset this host accepts; refuses to run an unpinned one."""
     asset = asset or wibo_asset()
+    if asset is None:
+        raise UnpinnedArtifact(_no_runner())
     digest = WIBO_PINNED.get(asset)
     if digest is None:
         raise UnpinnedArtifact(
@@ -468,7 +500,7 @@ def _install_wibo(
     return dest, source
 
 
-def wibo(root: pathlib.Path | str | None = None, override_url: str | None = None) -> pathlib.Path:
+def wibo(root: pathlib.Path | str | None = None, override_url: str | None = None) -> pathlib.Path | None:
     """Fetch wibo, verify it against the pinned digest, prove it runs, and return its path.
 
     wibo is published under ``releases/latest``, so the URL cannot be pinned; instead
@@ -477,7 +509,15 @@ def wibo(root: pathlib.Path | str | None = None, override_url: str | None = None
     fallback (:data:`WIBO_FALLBACK_PINNED`) is refused with :class:`HashMismatch`.
     When the download is unreachable, or the downloaded binary does not run under
     Rosetta, the pinned patched binary in ``~/ac-decomp/.cache/wibo`` is installed.
+
+    ``None`` means *this host needs no runner*: the compilers are native Windows binaries,
+    so on Windows nothing is fetched and every caller passes ``None`` through to
+    :mod:`toolchain.probe`, which then runs the tool itself.
     """
+    if wibo_asset() is None:
+        print(f"wibo: no runner needed on {platform.system()}: the compilers are native there",
+              file=sys.stderr)
+        return None
     root = pathlib.Path(root) if root is not None else TOOLCHAIN_ROOT
     return _install_wibo(root, override_url)[0]
 
@@ -810,18 +850,22 @@ _PROVENANCE_KEYS = (
     "installed_sha256",
     "pinned_sha256",
     "files",
+    "runner",
+    "note",
     "reason",
 )
 
 
 def _render_provenance(state: dict, host_tools: str = "") -> str:
+    runner = (WIBO_NAME if wibo_asset() is not None
+              else f"no runner (the compilers are native on {platform.system()})")
     lines = [
         "# toolchain/PROVENANCE.txt - generated by tools/toolchain/fetch.py; do not edit.",
         "# The compiler archives are proprietary: fetched from the decomp.me compiler",
         "# releases, never vendored. Every artifact below passed the digests pinned in",
         "# tools/toolchain/fetch.py before it was extracted or run; failures are recorded",
         "# here, never silently skipped.",
-        f"# required: {REQUIRED} and {WIBO_NAME}; optional: {M2C_NAME} and the alternates "
+        f"# required: {REQUIRED} and {runner}; optional: {M2C_NAME} and the alternates "
         + ", ".join(v for v in CANDIDATES if v != REQUIRED),
         f"# host tools (assembler, linker, objcopy, ninja, splat, objdiff) are recorded by {HOST_TOOLS_OWNER}",
         "",
@@ -941,6 +985,18 @@ def _wibo_entry(source: str, installed: pathlib.Path, required: bool) -> dict:
     }
 
 
+def _native_entry(required: bool) -> dict:
+    """The runner record for a host whose compilers are native: nothing was fetched."""
+    return {
+        "kind": "runner",
+        "status": "not needed",
+        "required": required,
+        "observed": _now(),
+        "runner": "native",
+        "note": f"{platform.system()} runs mwccps2.exe and mwldps2.exe directly",
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
@@ -988,6 +1044,13 @@ def main(argv: list[str] | None = None) -> int:
                 entries[target] = _m2c_entry(source, dest, required)
                 print(f"{target}: verified {M2C_COMMIT[:12]} at {dest} (source: {source})")
             elif target == WIBO_NAME:
+                if wibo_asset() is None:
+                    # Nothing to download: this host runs the compilers itself, and a
+                    # failed "fetch" of a runner that is never used would be a lie.
+                    entries[target] = _native_entry(required)
+                    print(f"{target}: not needed on {platform.system()}: "
+                          f"the compilers are native there")
+                    continue
                 dest, source = _install_wibo(
                     root, in_place_source=previous.get(WIBO_NAME, {}).get("source")
                 )

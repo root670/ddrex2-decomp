@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the vendored ``mwccps2.exe`` under wibo and read back what it produced.
+"""Run the vendored ``mwccps2.exe`` (under wibo where the host needs it) and read what it wrote.
 
 This is the last unknown before the build system is wired up: it proves that the
 hash-verified CodeWarrior 2.4 compiler *runs* on this host through wibo, accepts the
@@ -19,7 +19,9 @@ Two facts measured on the archived tools, both visible in ``toolchain/PROVENANCE
 
 The compiler is invoked with ``cwd`` set to the compiler directory — its licence lookup
 is directory-relative (R17) — and receives absolute source and object paths, so the same
-call works from any working directory.
+call works from any working directory.  On a host whose compilers are native (Windows)
+there is no runner: :func:`_invoke` execs the tool itself, and every caller may pass
+``None`` in the runner's place.
 
 Usage::
 
@@ -111,9 +113,23 @@ def _rejected_flag(text: str, flags) -> str | None:
     return f"-{name}"
 
 
+def _runner_prefix(wibo_path) -> list[str]:
+    """The runner's argv prefix: ``[wibo]``, or nothing where the tool is a native binary.
+
+    ``wibo_path`` is the path :func:`fetch.wibo` returned; it is ``None`` on a host whose
+    compilers are native (Windows), and then the tool *is* the program to exec — no
+    ``wibo`` word ever appears in argv.
+    """
+    return [] if wibo_path is None else [str(_resolve(wibo_path))]
+
+
 def _invoke(wibo_path, compiler_dir: pathlib.Path, tool: str, argv) -> subprocess.CompletedProcess:
-    """Run ``wibo <compiler_dir>/<tool> <argv>`` with cwd in the compiler directory."""
-    command = [str(_resolve(wibo_path)), str(_tool(compiler_dir, tool)), *argv]
+    """Run ``wibo <compiler_dir>/<tool> <argv>`` with cwd in the compiler directory.
+
+    Without a runner (``wibo_path is None``) the command is ``<compiler_dir>/<tool> <argv>``:
+    the compiler and linker are native Windows binaries there, so the tool is exec'd itself.
+    """
+    command = [*_runner_prefix(wibo_path), str(_tool(compiler_dir, tool)), *argv]
     try:
         return subprocess.run(
             command, cwd=compiler_dir, capture_output=True, text=True, timeout=TIMEOUT
@@ -155,7 +171,8 @@ def compile(src, obj, compiler_dir, wibo, flags) -> None:
 
     ``flags`` is passed through verbatim — a flag the compiler rejects is reported by
     name in :class:`CompilerFailed`, never dropped.  ``compiler_dir`` is the directory
-    returned by :func:`fetch.compiler`; ``wibo`` is the path from :func:`fetch.wibo`.
+    returned by :func:`fetch.compiler`; ``wibo`` is the path from :func:`fetch.wibo`, or
+    ``None`` where the compiler is native and is exec'd directly.
     """
     src = _resolve(src)
     obj = _resolve(obj)
@@ -170,12 +187,13 @@ def compile(src, obj, compiler_dir, wibo, flags) -> None:
 
 
 def link(objects, out, compiler_dir, wibo, flags=(), entry=None) -> None:
-    """Link ``objects`` into ``out`` with ``mwldps2.exe`` under wibo.
+    """Link ``objects`` into ``out`` with ``mwldps2.exe`` under wibo (or directly, natively).
 
     MWLD is what contributes ``PlayStation2`` to ``.comment``; linking is used only to
     show that half of the retail string.  A whole application is not being built, so
     ``entry`` names the symbol MWLD should use instead of the default ``__start``;
-    without it MWLD fails on ``undefined: "__start"``.
+    without it MWLD fails on ``undefined: "__start"``.  ``wibo`` is ``None`` where the
+    linker is native, exactly as for :func:`compile`.
     """
     compiler_dir = _resolve(compiler_dir)
     out = _resolve(out)
@@ -278,12 +296,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         compiler_dir = fetch.compiler(args.version)
         wibo = fetch.wibo()
+        command = [*_runner_prefix(wibo), str(compiler_dir / COMPILER_NAME),
+                   *args.flags, "-o", args.object, args.source]
         print(f"compiler {compiler_dir}")
-        print(f"runner   {wibo}")
+        print(f"runner   {wibo if wibo is not None else 'native (no runner on this host)'}")
         compile(args.source, args.object, compiler_dir, wibo, args.flags)
         info = inspect(args.object)
-        print(f"command  {wibo} {compiler_dir / COMPILER_NAME} "
-              f"{' '.join(args.flags)} -o {args.object} {args.source}")
+        print(f"command  {' '.join(command)}")
         _print_report(info, pathlib.Path(args.object))
         if info["comment"] != MWCC_COMMENT:
             print(f"unexpected .comment {info['comment']!r}", file=sys.stderr)

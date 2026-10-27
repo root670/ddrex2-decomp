@@ -54,3 +54,74 @@ def test_inspect_keeps_every_repeated_section_visible(tmp_path):
     assert info["debug_kind"] == "MIPS_DEBUG"
     assert info["section_names"].count(".debug") >= 2
     assert set(info["text"]) == {"sysGetDateNotation", "sysInitScf"}
+
+
+# ---------------------------------------------------------------------------
+# The invocation itself: with a runner (macOS/Linux) and without one (native Windows)
+#
+# Both cases are exercised here on one host by handing `_invoke` a small script that echoes
+# its argv: what reaches the tool *is* the command line, and the two rules differ only in
+# whether the runner's path comes first.
+# ---------------------------------------------------------------------------
+
+ECHO_ARGV = '#!/bin/sh\nfor arg in "$@"; do echo "$arg"; done\n'
+#: The same, but it also creates the ``-o`` file: a tool that *succeeds* on the native path,
+#: so ``link``'s own `_checked` gate is what accepts the run.
+ECHO_ARGV_WRITING_OUTPUT = (
+    '#!/bin/sh\n'
+    'while [ $# -gt 0 ]; do\n'
+    '  echo "$1"\n'
+    '  if [ "$1" = "-o" ]; then : > "$2"; fi\n'
+    '  shift\n'
+    'done\n'
+)
+
+
+def _echo_tool(directory: pathlib.Path, name: str,
+               body: str = ECHO_ARGV) -> pathlib.Path:
+    path = directory / name
+    path.write_text(body)
+    path.chmod(0o755)
+    return path
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"),
+                    reason="a .exe cannot be a /bin/sh script; Windows runs the real tool")
+def test_a_native_run_execs_the_tool_with_no_runner_in_argv(tmp_path):
+    """``wibo is None`` means the tool is the program: argv[0] is the tool, not ``wibo``."""
+    compiler_dir = tmp_path / "compiler"
+    compiler_dir.mkdir()
+    tool = _echo_tool(compiler_dir, probe.COMPILER_NAME)
+    result = probe._invoke(None, compiler_dir, probe.COMPILER_NAME, ["-c", "-lang", "c"])
+    assert result.returncode == 0
+    assert result.stdout.split() == ["-c", "-lang", "c"]
+    assert str(tool.resolve()) not in result.stdout     # the tool itself is not an argument
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"),
+                    reason="a .exe cannot be a /bin/sh script; Windows runs the real tool")
+def test_a_runner_still_comes_first_in_argv(tmp_path):
+    """The macOS/Linux command is byte-identical: ``wibo <tool> <argv>``."""
+    compiler_dir = tmp_path / "compiler"
+    compiler_dir.mkdir()
+    tool = _echo_tool(compiler_dir, probe.COMPILER_NAME)
+    runner = _echo_tool(tmp_path, "wibo")
+    result = probe._invoke(runner, compiler_dir, probe.COMPILER_NAME, ["-c"])
+    assert result.stdout.split() == [str(tool), "-c"]
+    assert probe._runner_prefix(runner) == [str(runner.resolve())]
+    assert probe._runner_prefix(None) == []
+
+
+@pytest.mark.skipif(sys.platform.startswith("win"),
+                    reason="a .exe cannot be a /bin/sh script; Windows runs the real tool")
+def test_link_takes_the_same_no_runner_path(tmp_path):
+    """``link`` is ``_invoke`` plus MWLD's argv, so ``None`` reaches it the same way."""
+    compiler_dir = tmp_path / "compiler"
+    compiler_dir.mkdir()
+    _echo_tool(compiler_dir, probe.LINKER_NAME, ECHO_ARGV_WRITING_OUTPUT)
+    obj = tmp_path / "probe.o"
+    obj.write_bytes(b"")
+    out = tmp_path / "probe.elf"
+    probe.link([obj], out, compiler_dir, None, entry="sysInitScf")
+    assert out.is_file() and out.stat().st_size == 0   # the tool ran and `_checked` accepted it
+
