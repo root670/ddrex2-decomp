@@ -43,10 +43,11 @@ The states are rendered twice from the same data: a Markdown table in ``README.m
 ``<!-- status:start -->`` and ``<!-- status:end -->`` (the markers are inserted on the first
 run; later runs replace only their contents), and ``docs/status.svg``, one cell per unit,
 grouped and labelled by module with a per-cell ``<title>``.  Both are deterministic, and
-``--check`` compares them without writing.  The README block is kept short: one summary line
-carrying the legend and the pointer to this file, then one row per module with at least one
-promoted unit -- the SVG keeps every module's band, so a module with nothing promoted loses
-nothing but a repeated row.
+``--check`` compares them without writing.  The README block is one summary line carrying the
+legend, the denominator clause and the pointer to this file, then a table row for **every**
+module -- ordered by code bytes, descending, and including the split-only buckets that have no
+units -- so the rows reconcile with the summary to the byte and to the function.  The SVG
+groups the same modules in the same order, one band each, with one cell per unit.
 
 ``./ddr build`` and a plain ``./ddr verify`` call this generator themselves, at the point the
 build's ``g1`` edge has just passed, so a promotion cannot leave either file stale.
@@ -382,44 +383,55 @@ def cell(part: int, total: int) -> str:
     return f"{_fmt(part)}/{_fmt(total)} ({_pct(part, total)})"
 
 
-def _state_groups(units: Iterable[Unit], states: dict[str, str]) -> list[tuple]:
-    """``[(module, [units...])]`` in display order, each list in manifest order."""
+def _module_groups(units: Iterable[Unit], states: dict[str, str]) -> dict[str, list[Unit]]:
+    """``{module: [units...]}``, each list in manifest order."""
     groups: dict[str, list[Unit]] = {}
     for unit in units:
         groups.setdefault(module_of(unit.file), []).append(unit)
-    return [(module, groups[module]) for module in sorted(groups, key=module_key)]
+    return groups
+
+
+def report_modules(units: Iterable[Unit], states: dict[str, str],
+                   code: Code) -> list[tuple[str, list[Unit]]]:
+    """Every module in the report, ordered by its code bytes, descending.
+
+    A module is anything with a translation unit *or* split code, so the rows always
+    partition the summary's denominators: units by the unit's own module, functions and
+    bytes by the split ledger's attribution (``module_of`` of the owning unit's path, or the
+    ``(library)``/``(unattributed)`` bucket).  Overlay-resident splits are attributed the
+    same way -- through the owning unit's path -- so an overlay's code is in its unit's row,
+    not a second row that would double-count it.  Ordering is by code bytes, then by
+    :func:`module_key`, so the biggest code modules come first and ties are stable.
+    """
+    groups = _module_groups(units, states)
+    names = set(groups) | set(code.by_module)
+    ordered = sorted(names, key=lambda name: (-code.fact_of(name).code_bytes, module_key(name)))
+    return [(name, groups.get(name, [])) for name in ordered]
 
 
 def render_markdown(units: list[Unit], states: dict[str, str], target: str,
                     code: Code) -> str:
     """The block placed between the README markers: one summary line, then the table.
 
-    The budget is the reader's: the summary line (which also carries the state legend and the
-    pointer to this file's accounting) and the three-column table are all the block says.  A
-    row per module would spend most of it on modules with nothing promoted, so the table lists
-    the modules that have at least one: the summary still counts every unit, and
-    ``docs/status.svg`` keeps one labelled band per module, so a zero row is not information
-    the artifacts lost.
+    The table lists every module -- overlays included through the unit that owns their
+    splits, and the ``(library)``/``(unattributed)`` buckets, which have no units -- so its
+    rows partition the summary's three totals exactly.  Ordering is by code bytes, biggest
+    first: the reader sees where the code is before where it is not (see
+    :func:`report_modules`).
     """
     overall = stats_of(units, states, code)
-    groups = _state_groups(units, states)
-    unit_modules = {module for module, _ in groups}
-    all_modules = sorted(unit_modules | set(code.by_module), key=module_key)
     units_cell, functions_cell, bytes_cell = overall.cells()
     lines = [
         f"**{units_cell} units · {functions_cell} functions · {bytes_cell} code bytes "
         f"reconstructed** — green = promoted, amber = partial, grey = untouched; "
+        f"denominators are the split ledger's functions and declared code bytes, and "
         f"`tools/units/status.py` counts only what `./ddr verify --tu` confirms.",
         "",
         "| module | units | functions | reconstructed bytes |",
         "|---|---:|---:|---:|",
     ]
-    for module in all_modules:
-        group = next((rows for name, rows in groups if name == module), [])
-        stats = stats_of(group, states, code, module)
-        if not stats.promoted_units:
-            continue
-        row_units, row_functions, row_bytes = stats.cells()
+    for module, group in report_modules(units, states, code):
+        row_units, row_functions, row_bytes = stats_of(group, states, code, module).cells()
         lines.append(f"| `{module}` | {row_units} | {row_functions} | {row_bytes} |")
     return "\n".join(lines) + "\n"
 
@@ -475,8 +487,7 @@ def render_svg(units: list[Unit], states: dict[str, str], target: str,
     :class:`Stats`, so the two artifacts cannot disagree about what was counted.
     """
     overall = stats_of(units, states, code)
-    groups = _state_groups(units, states)
-    layout = _svg_layout(groups)
+    layout = _svg_layout(report_modules(units, states, code))
     height = (layout[-1]["label_y"] + layout[-1]["height"] + LEGEND
               if layout else HEADER + LEGEND)
     units_cell, functions_cell, bytes_cell = overall.cells()

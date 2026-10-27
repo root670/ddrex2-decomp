@@ -280,7 +280,7 @@ def test_module_is_the_directory_after_src():
     assert st.module_of("libstr3.c") == "(external)"
 
 
-def test_markdown_is_a_summary_line_and_the_three_column_table():
+def test_markdown_is_a_summary_line_and_a_row_for_every_module():
     units, code = fixture()
     states = st.classify(units, sources={"src/sys/sys_a.c"}, drafts={"dm_d.c"},
                          rows={"src/sys/sys_a.c"}, verified={"src/sys/sys_a.c"})
@@ -291,16 +291,17 @@ def test_markdown_is_a_summary_line_and_the_three_column_table():
     assert lines[0] == (
         "**1/8 (12.5%) units · 1/10 (10.0%) functions · 100/1,700 (5.9%) code bytes "
         "reconstructed** — green = promoted, amber = partial, grey = untouched; "
+        "denominators are the split ledger's functions and declared code bytes, and "
         "`tools/units/status.py` counts only what `./ddr verify --tu` confirms.")
     assert lines[1] == ""
     assert lines[2] == "| module | units | functions | reconstructed bytes |"
     assert lines[3] == "|---|---:|---:|---:|"
-    assert any(line.startswith("| `sys` |") for line in lines)
-    # A module with nothing promoted is not a repeated row: the overall line counts it and
-    # the heatmap keeps its band.
-    assert not any(line.startswith("| `(library)` |") for line in lines)
-    assert not any(line.startswith("| `(unattributed)` |") for line in lines)
-    assert len(lines) <= 12
+    assert [line.split("|")[1].strip().strip("`") for line in lines[4:]] == [
+        module for module, _ in st.report_modules(units, states, code)]
+    # The split-only buckets have no units but are still rows: the table must reconcile.
+    assert any(line.startswith("| `(library)` |") for line in lines)
+    assert any(line.startswith("| `(unattributed)` |") for line in lines)
+    assert len(lines) == 4 + len(st.report_modules(units, states, code))
 
 
 CELL = re.compile(r"^\d[\d,]*/\d[\d,]* \(\d+\.\d%\)$")
@@ -308,6 +309,40 @@ CELL = re.compile(r"^\d[\d,]*/\d[\d,]* \(\d+\.\d%\)$")
 
 def _table_rows(markdown):
     return [line for line in markdown.splitlines() if line.startswith("|")]
+
+
+def _pair(cell: str) -> tuple[int, int]:
+    part, total = cell.split(" (")[0].split("/")
+    return int(part.replace(",", "")), int(total.replace(",", ""))
+
+
+def test_the_rows_reconcile_with_the_summary_for_every_column():
+    units, code = fixture()
+    states = st.classify(units, sources={"src/sys/sys_a.c", "src/CS/dance/dm_b.c"},
+                         drafts={"dm_d.c"}, rows={"src/sys/sys_a.c", "src/CS/dance/dm_b.c"},
+                         verified={"src/sys/sys_a.c", "src/CS/dance/dm_b.c"})
+    markdown = st.render_markdown(units, states, "synthetic", code)
+
+    summary = re.findall(r"\d[\d,]*/\d[\d,]* \(\d+\.\d%\)", markdown.splitlines()[0])
+    rows = _table_rows(markdown)[2:]
+    assert len(rows) == len(st.report_modules(units, states, code))
+
+    for column in range(3):
+        part = sum(_pair(row.strip("|").split("|")[column + 1].strip())[0] for row in rows)
+        total = sum(_pair(row.strip("|").split("|")[column + 1].strip())[1] for row in rows)
+        assert (part, total) == _pair(summary[column]), column
+
+
+def test_modules_are_ordered_by_code_bytes_descending():
+    units, code = fixture()
+    states = {unit.file: st.UNTOUCHED for unit in units}
+
+    order = [module for module, _ in st.report_modules(units, states, code)]
+
+    bytes_by_module = [code.fact_of(module).code_bytes for module in order]
+    assert bytes_by_module == sorted(bytes_by_module, reverse=True)
+    assert order[:2] == ["CS", "gs"]          # 500 each, then module_key's tie-break
+    assert order[-1] == st.LIBRARY            # 20 bytes, the smallest bucket
 
 
 def test_every_table_row_has_the_module_and_three_promoted_over_total_cells():
@@ -423,7 +458,10 @@ def test_svg_is_grouped_by_module_and_is_github_sized():
     groups = [element for element in root.iter()
               if _local(element.tag) == "g" and element.get("class") == "module"]
     assert {group.get("data-module") for group in groups} == {
-        "sys", "CS", "AM", "(root)", "gs", "(external)"}
+        "sys", "CS", "AM", "(root)", "gs", "(external)"} | {st.LIBRARY,
+                                                              st.UNATTRIBUTED}
+    assert [group.get("data-module") for group in groups] == [
+        module for module, _ in st.report_modules(units, states, code)]
     assert int(root.get("width")) <= 900
     assert int(root.get("height")) > 0
     assert "<script" not in svg
@@ -442,8 +480,6 @@ def test_svg_prints_the_tables_own_cells_for_every_row_and_the_overall_line():
 
     for row in rows[2:]:
         name = row.split("|")[1].strip().strip("`")
-        if f'data-module="{name}"' not in svg:
-            continue                      # a split-only group has no module band
         cells = [cell.strip() for cell in row.strip("|").split("|")][1:]
         label = (f"{name} - {cells[0]} units \u00b7 {cells[1]} functions"
                  f" \u00b7 {cells[2]} bytes")

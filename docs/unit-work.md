@@ -43,7 +43,9 @@ split-declared sizes — never the object's 16-byte-aligned span, which is paddi
 numerator is a subset of its denominator and no percentage can pass 100.  Nobody runs the
 generator by hand: `./ddr build` and a plain `./ddr verify` refresh both files from the build
 they just made, and `python3 tools/units/status.py --check` is the test hook that fails when
-either is stale.
+either is stale.  The table lists every module — ordered by code bytes, and including the
+`(library)`/`(unattributed)` buckets that hold split code no unit claims — so the rows sum to
+the summary's units, functions and bytes exactly.
 
 ### A unit with no code: data-only promotion
 
