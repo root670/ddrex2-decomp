@@ -233,3 +233,4 @@ netwinperhed = 0x002C15D0; // size:0x3c extent:0x40 source:src/network/net_windo
 @113 = 0x002D78B0; // size:0x5 extent:0x8 source:src/network/net_window/net_win_perpoint.c
 @67 = 0x002D6DE0; // size:0x2C extent:0x30 source:src/network/net_game/net_game_challenge.c
 @30 = 0x002D4860; // size:0x2C extent:0x30 source:src/CS/dancemaster/dmm_init.c
+crect = 0x002DDEE8; // size:0x8 extent:0x8 source:src/CS/option/opt_doll.c

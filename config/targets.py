@@ -911,6 +911,12 @@ DDREX2P = Target(
         # MWCC hoist a load above a store and costs 3 words.
         ("src/network/net_game/net_game_help.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x1E4, one body word-exact (121 words); .debug retail's 446 DIEs byte-for-byte
+        # after adoption; .line 428.  Overlay opt_rel4cd.  Measured pair: 3.0-011126/3.0.1/3.0.3
+        # give 72 differing words and 2.4-001213 gives 107; -O2 is identical to -O3 here.
+        # `crect` needs its own placement or it resolves to the other unit's 0x002DDE60.
+        ("src/CS/option/opt_doll.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
