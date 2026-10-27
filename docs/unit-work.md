@@ -392,6 +392,27 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    about the unit's other bodies, so `measure.py` is the per-body count and the diff is the
    side-by-side report when one body needs a second opinion.
 
+   **When the residue is an allocation, read the prologue with `slots.py`.**
+   `python3 tools/units/slots.py <tu> <fn>` prints retail's and our **callee-saved and stack-slot
+   map** side by side — the saved-register order from the prologue's stores and the epilogue's loads
+   (GPR and FP separately), every `$sp` slot with the local (or struct member) whose home it is and
+   the size the DWARF gives it, the register that holds its *address* (`addiu $s4,$sp,0x1C0`) or the
+   registers that read its *value*, and the frame size — then a **diff** that names each exchange the
+   way a reader says it: `retail &sp.flg -> s4, ours -> s6`. Retail's instructions are the split at
+   `asm/nonmatchings/<segment>/<fn>.s`; ours are `measure.py`'s compile of the recorded pair, with the
+   same relocation masking. Names come from each side's **own** DWARF (retail's from the pinned ELF,
+   ours from the object just compiled); a slot neither side homes prints `0xOFF (unattributed)`, and a
+   slot *move* (`retail 0xA0 (unattributed) -> ours 0xB0 (def_y, 0x4 bytes)`) is read off the two
+   bodies' access multisets, never inferred from offsets. `--draft PATH --compiler V --flags "…"`
+   measures a draft that has no `tu_builds` row yet, and `--search N` tries the declaration orders of
+   the **address-taken locals only** (rotations then transpositions, fixed order, bounded) and prints
+   the best `N` by frame size, then saved-register set, then differing words — rejecting any candidate
+   whose **unmasked** count is not lower, because a permutation that changes the code is an artefact,
+   not a fix. The tool exists because `com_keyboard`'s `ComKeyBoardDisp` stalled at 327 differing words
+   on exactly this class: it reports `retail &sp.flg -> s4, ours -> s6`, `retail &sp.w -> s6, ours -> s4`
+   and `the two slots are exchanged: retail 0xA0 <-> ours 0xB0` (`def_y`), and no declaration order
+   lowers either count.
+
 7. **Gate the unit**, then commit it alone:
 
    ```bash
