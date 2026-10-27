@@ -898,6 +898,12 @@ DDREX2P = Target(
         # `val` is a call result compared in case 2 - both emit the DIE without moving a word.
         ("src/CS/dancemaster/dmm_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xD0, both bodies word-exact (48/4); .line adopted (20 records emitted against
+        # retail's 20, one row changed - the function-end marker); .debug retail's 0x3945 / 392
+        # DIEs byte for byte after adoption.  D_008062B0 resolves to NetRouterMain through the
+        # overlay window, so nothing here needs a literal or a ledger row.
+        ("src/network/net_sys/net_sys_connect.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
