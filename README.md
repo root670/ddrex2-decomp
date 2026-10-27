@@ -68,15 +68,15 @@ A red gate is never worked around: the tool names the unit, function and chunk t
 
 <!-- status:start -->
 
-**77/249 (30.9%) units · 424/4,463 (9.5%) functions · 104,696/1,631,596 (6.4%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
+**78/249 (31.3%) units · 427/4,701 (9.1%) functions · 104,776/1,721,464 (6.1%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
 
 | module | units | functions | reconstructed bytes |
 |---|---:|---:|---:|
 | `AM` | 8/18 (44.4%) | 44/182 (24.2%) | 9,172/67,808 (13.5%) |
 | `common` | 8/15 (53.3%) | 62/147 (42.2%) | 18,320/44,708 (41.0%) |
-| `CS` | 23/118 (19.5%) | 119/814 (14.6%) | 34,544/433,844 (8.0%) |
+| `CS` | 23/118 (19.5%) | 119/833 (14.3%) | 34,544/439,128 (7.9%) |
 | `gs` | 1/2 (50.0%) | 15/18 (83.3%) | 2,332/3,172 (73.5%) |
-| `network` | 31/82 (37.8%) | 174/542 (32.1%) | 38,708/208,732 (18.5%) |
+| `network` | 32/82 (39.0%) | 177/725 (24.4%) | 38,788/282,680 (13.7%) |
 | `sound` | 3/4 (75.0%) | 3/20 (15.0%) | 1,244/7,520 (16.5%) |
 | `sys` | 2/2 (100.0%) | 4/4 (100.0%) | 80/80 (100.0%) |
 | `(root)` | 1/3 (33.3%) | 3/43 (7.0%) | 296/7,232 (4.1%) |
