@@ -1,5 +1,16 @@
 #include "src/AM/s573/demo/title_demo.h"
 
+static unsigned char *ti_mv_list[6] = {
+    (unsigned char *)&ex2_movie_vag[1],
+    (unsigned char *)&ex2_movie_vag[2],
+    (unsigned char *)&ex2_movie_vag[3],
+    (unsigned char *)&ex2_movie_vag[4],
+    (unsigned char *)&ex2_movie_vag[5],
+    (unsigned char *)&ex2_movie_vag[6],
+};
+static anon_0_41 *tmw = &ti_movie_w;
+static anon_0_41 ti_movie_w = { 0 };
+
 void func_001B7C30(void *p, int size);
 void func_001267B0(int a, int b);
 void sceMpegInit(void);
@@ -202,16 +213,16 @@ static int ti_movie_work_set(unsigned int *addr) {
     unsigned char *tmp_addr;
 
     tmp_addr = (unsigned char *)addr;
-    tmw->vag_addr = tmp_addr;
-    tmw->buf[0] = tmp_addr + 0x100000;
-    tmw->buf[1] = tmp_addr + 0x200000;
-    tmw->buf[2] = tmp_addr + 0x300000;
-    tmw->buf[3] = tmp_addr + 0x400000;
-    tmw->buf[4] = tmp_addr + 0x500000;
-    tmw->buf[5] = tmp_addr + 0x600000;
-    sceMpegCreate(&mpeg, tmp_addr + 0x700000, 0xA7E00);
-    tmw->decTags = (anon_1_41 *)(tmp_addr + 0x7A7E00);
-    tmw->cscBuff = (anon_2_41 *)(tmp_addr + 0x7B5AC0);
+    tmw->vag_addr = (unsigned char *)addr;
+    tmw->buf[0] = (unsigned char *)addr + 0x100000;
+    tmw->buf[1] = (unsigned char *)addr + 0x200000;
+    tmw->buf[2] = (unsigned char *)addr + 0x300000;
+    tmw->buf[3] = (unsigned char *)addr + 0x400000;
+    tmw->buf[4] = (unsigned char *)addr + 0x500000;
+    tmw->buf[5] = (unsigned char *)addr + 0x600000;
+    sceMpegCreate(&mpeg, (unsigned char *)addr + 0x700000, 0xA7E00);
+    tmw->decTags = (anon_1_41 *)((unsigned char *)addr + 0x7A7E00);
+    tmw->cscBuff = (anon_2_41 *)((unsigned char *)addr + 0x7B5AC0);
     return (int)(tmp_addr + 0x848AC0) - (int)tmp_addr;
 }
 
