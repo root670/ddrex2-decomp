@@ -940,6 +940,14 @@ Two cautions measured the same day, both about trusting a measurement:
   prints `text ok / debug chunk ok / line chunk ok`. Run `configure.py` (or `./ddr build`) first;
   `mmenu_obj` reported a full green and then refused by name once configured.
 
+**An aliased library name is not a blocker.** `config/<target>/library-names.md` can record two
+SDK names on one address — `dpadd` and `dpmul` at both 0x0012C218 and 0x0012C2D8 — and the
+borrower correctly refuses to choose between them, so neither reaches `borrowed_symbols.txt`.
+The address still has its own split, so call it by the split's name instead:
+`double func_0012C2D8(double, double);` resolves (retail's own `jal func_0012C2D8` confirms it),
+which is honest — the name comes from the address, not from a guess between two aliases. Before
+that, `draw_floor` could not even be placed ("the object references `dpmul`").
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:
