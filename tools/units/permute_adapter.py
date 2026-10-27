@@ -141,9 +141,9 @@ def split_words(tu: cc.Tu, function: cc.Function, target) -> bytes:
     word is not the function's address is a stale generated tree, and the remedy is a
     configure, not a guess.
     """
-    geometry = target.geometry_required()
     directory = pathlib.Path(target.config_dir).parent.parent / "asm" / "nonmatchings"
-    path = directory / geometry.code_segment / f"{function.name}.s"
+    # An overlay unit's splits live under its own module directory, not the main tree's.
+    path = directory / tu.split_directory / f"{function.name}.s"
     if not path.is_file():
         raise FileNotFoundError(
             f"{path} is missing: the split for {function.name} has to be generated before "
