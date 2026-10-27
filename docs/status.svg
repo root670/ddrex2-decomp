@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 71 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 28.5% of units, 9.01% of functions and 6.28% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 75 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 30.1% of units, 9.37% of functions and 6.41% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 71 / 249 units promoted (28.5%)</text>
-<text x="24" y="52" font-size="12" fill="#57606a">402 / 4,463 functions (9.01%) &#183; 102,496 / 1,631,596 code bytes (6.28%) &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 75 / 249 units promoted (30.1%)</text>
+<text x="24" y="52" font-size="12" fill="#57606a">418 / 4,463 functions (9.37%) &#183; 104,576 / 1,631,596 code bytes (6.41%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
-<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 9/18 units · 49/182 funcs · 12,960/67,808 bytes (19.1%)</text>
+<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 units · 44/182 funcs · 9,424/67,808 bytes (13.9%)</text>
 <rect class="cell" data-state="partial" x="24" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/play/onimode.c - 15,216 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/play/oni_list.c - 0 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="54" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/disp/b_anime.c - 5,072 code bytes - partial</title></rect>
@@ -17,7 +17,7 @@
 <rect class="cell" data-state="promoted" x="129" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/matrix.c - 768 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="144" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/model1.c - 1,152 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="159" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/model2.c - 9,392 code bytes - partial</title></rect>
-<rect class="cell" data-state="promoted" x="174" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/motion1.c - 3,536 code bytes - promoted</title></rect>
+<rect class="cell" data-state="partial" x="174" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/motion1.c - 3,536 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="189" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/motion2.c - 4,576 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="204" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/ps1lib.c - 1,776 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="219" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dcamera.c - 6,960 code bytes - partial</title></rect>
@@ -69,7 +69,7 @@
 <rect class="cell" data-state="partial" x="324" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/freeplay/fp_opt.c - 12,720 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="339" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_data.c - 2,816 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="354" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_disp.c - 5,232 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="369" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_init.c - 1,088 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="369" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/dancemaster/dmm_init.c - 1,088 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="384" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_main.c - 704 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="399" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/freeplay/fp_doll.c - 2,992 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="414" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_msel_obj.c - 36,336 code bytes - untouched</title></rect>
@@ -103,12 +103,12 @@
 <rect class="cell" data-state="partial" x="84" y="197" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/train/tra_chk.c - 7,104 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="99" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/freeplay/fp_qmenu.c - 1,888 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="114" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/edit/ed_ssq_func.c - 2,144 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="129" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_calc.c - 1,728 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="129" y="197" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/edit/ed_calc.c - 1,728 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="144" y="197" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/edit/ed_edit.c - 5,040 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="159" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/edit/ed_menu.c - 2,816 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="174" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit/ed_select.c - 9,200 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="189" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/edit_lib/el_mes.c - 64 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="204" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit_lib/el_name.c - 12,016 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="204" y="197" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/edit_lib/el_name.c - 12,016 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="219" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/edit_lib/el_disp_obj.c - 12,976 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="234" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/edit/ed_edit_disp.c - 2,848 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="249" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/infosel.c - 6,960 code bytes - untouched</title></rect>
@@ -169,7 +169,7 @@
 <text x="24" y="245" font-size="12" font-weight="600" fill="#24292f">eyetoy - 0/3 units · 0/30 funcs · 0/13,300 bytes (0.0%)</text>
 <rect class="cell" data-state="partial" x="24" y="250" width="12" height="12" rx="2" fill="#bf8700"><title>src/eyetoy/eye_system.c - 11,264 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="250" width="12" height="12" rx="2" fill="#d0d7de"><title>src/eyetoy/eye_ref.c - 1,824 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="54" y="250" width="12" height="12" rx="2" fill="#d0d7de"><title>src/eyetoy/eye_filter.c - 384 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="54" y="250" width="12" height="12" rx="2" fill="#bf8700"><title>src/eyetoy/eye_filter.c - 384 code bytes - partial</title></rect>
 </g>
 <g class="module" data-module="fft">
 <text x="24" y="283" font-size="12" font-weight="600" fill="#24292f">fft - 0/1 units · 0/9 funcs · 0/12,084 bytes (0.0%)</text>
@@ -181,7 +181,7 @@
 <rect class="cell" data-state="untouched" x="39" y="326" width="12" height="12" rx="2" fill="#d0d7de"><title>src/gs/gs_vu0.c - 864 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="network">
-<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 26/82 units · 152/542 funcs · 32,768/208,732 bytes (15.7%)</text>
+<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 30/82 units · 171/542 funcs · 38,352/208,732 bytes (18.4%)</text>
 <rect class="cell" data-state="untouched" x="24" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net.c - 7,616 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_main.c - 2,480 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_type.c - 896 code bytes - untouched</title></rect>
@@ -189,9 +189,9 @@
 <rect class="cell" data-state="untouched" x="84" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_prg.c - 41,248 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="99" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_read_data.c - 2,128 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="114" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_main.c - 2,864 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="129" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_window.c - 3,280 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="129" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_game/net_game_window.c - 3,280 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="144" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_opt.c - 5,056 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="159" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_logout.c - 1,360 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="159" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_game/net_game_logout.c - 1,360 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="174" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_menu.c - 2,656 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="189" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_match.c - 5,888 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="204" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_data.c - 15,984 code bytes - untouched</title></rect>
@@ -200,7 +200,7 @@
 <rect class="cell" data-state="promoted" x="249" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_cnf/net_cnf_mes_e.c - 96 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="264" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_any.c - 528 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="279" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_menu.c - 720 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="294" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_main.c - 784 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="294" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_sys/net_sys_main.c - 784 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="309" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_menu.c - 2,624 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="324" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_new.c - 3,232 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="339" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_top.c - 3,104 code bytes - untouched</title></rect>
@@ -208,7 +208,7 @@
 <rect class="cell" data-state="untouched" x="369" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_rule.c - 2,640 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="384" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_connect.c - 208 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="399" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_info.c - 3,616 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="414" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_logout.c - 2,112 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="414" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_logout.c - 2,112 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="429" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_suser.c - 2,352 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="444" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_tab.c - 1,024 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="459" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_watch.c - 960 code bytes - promoted</title></rect>
@@ -237,15 +237,15 @@
 <rect class="cell" data-state="promoted" x="54" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_listdtl3.c - 1,952 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="69" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_infoboard.c - 224 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="84" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_rc.c - 9,728 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="99" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_challenge.c - 1,584 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="99" y="379" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_game/net_game_challenge.c - 1,584 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="114" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_infosel.c - 960 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="129" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_rccssel.c - 4,592 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="144" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_vs_win.c - 6,496 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="159" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_prg.c - 2,656 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="174" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_base.c - 1,168 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="189" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_peruser.c - 544 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="189" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_peruser.c - 544 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="204" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perhead.c - 1,904 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="219" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perpoint.c - 1,568 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="219" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_perpoint.c - 1,568 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="234" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perrank.c - 960 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="249" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_window/net_win_perstats.c - 2,112 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="264" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_dhead.c - 864 code bytes - promoted</title></rect>
@@ -273,9 +273,9 @@
 <rect class="cell" data-state="partial" x="69" y="417" width="12" height="12" rx="2" fill="#bf8700"><title>src/sound/fft/sd_fft.c - 6,352 code bytes - partial</title></rect>
 </g>
 <g class="module" data-module="sys">
-<text x="24" y="450" font-size="12" font-weight="600" fill="#24292f">sys - 1/2 units · 2/4 funcs · 64/80 bytes (80.0%)</text>
+<text x="24" y="450" font-size="12" font-weight="600" fill="#24292f">sys - 2/2 units · 4/4 funcs · 96/80 bytes (120.0%)</text>
 <rect class="cell" data-state="promoted" x="24" y="455" width="12" height="12" rx="2" fill="#2da44e"><title>src/sys/sys_scf.c - 64 code bytes - promoted</title></rect>
-<rect class="cell" data-state="partial" x="39" y="455" width="12" height="12" rx="2" fill="#bf8700"><title>src/sys/sys_demo.c - 32 code bytes - partial</title></rect>
+<rect class="cell" data-state="promoted" x="39" y="455" width="12" height="12" rx="2" fill="#2da44e"><title>src/sys/sys_demo.c - 32 code bytes - promoted</title></rect>
 </g>
 <g class="module" data-module="(root)">
 <text x="24" y="488" font-size="12" font-weight="600" fill="#24292f">(root) - 1/3 units · 3/43 funcs · 304/7,232 bytes (4.2%)</text>

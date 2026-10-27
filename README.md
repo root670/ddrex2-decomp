@@ -39,7 +39,7 @@ why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before edit
 
 <!-- status:start -->
 
-**Overall: 71 / 249 translation units promoted (28.5%); 402 / 4,463 functions reconstructed (9.01%); 102,496 / 1,631,596 code bytes reconstructed (6.28%).**
+**Overall: 75 / 249 translation units promoted (30.1%); 418 / 4,463 functions reconstructed (9.37%); 104,576 / 1,631,596 code bytes reconstructed (6.41%).**
 
 Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
 
@@ -49,20 +49,20 @@ Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python
 
 | module | units | promoted units | functions | reconstructed functions | code bytes | reconstructed bytes | units % | functions % | bytes % |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `AM` | 18 | 9 | 182 | 49 | 67,808 | 12,960 | 50.0% | 26.92% | 19.11% |
+| `AM` | 18 | 8 | 182 | 44 | 67,808 | 9,424 | 44.4% | 24.18% | 13.90% |
 | `common` | 15 | 8 | 147 | 62 | 44,708 | 18,624 | 53.3% | 42.18% | 41.66% |
 | `CS` | 118 | 22 | 814 | 116 | 433,844 | 34,096 | 18.6% | 14.25% | 7.86% |
 | `eyetoy` | 3 | 0 | 30 | 0 | 13,300 | 0 | 0.0% | 0.00% | 0.00% |
 | `fft` | 1 | 0 | 9 | 0 | 12,084 | 0 | 0.0% | 0.00% | 0.00% |
 | `gs` | 2 | 1 | 18 | 15 | 3,172 | 2,416 | 50.0% | 83.33% | 76.17% |
-| `network` | 82 | 26 | 542 | 152 | 208,732 | 32,768 | 31.7% | 28.04% | 15.70% |
+| `network` | 82 | 30 | 542 | 171 | 208,732 | 38,352 | 36.6% | 31.55% | 18.37% |
 | `sound` | 4 | 3 | 20 | 3 | 7,520 | 1,264 | 75.0% | 15.00% | 16.81% |
-| `sys` | 2 | 1 | 4 | 2 | 80 | 64 | 50.0% | 50.00% | 80.00% |
+| `sys` | 2 | 2 | 4 | 4 | 80 | 96 | 100.0% | 100.00% | 120.00% |
 | `(root)` | 3 | 1 | 43 | 3 | 7,232 | 304 | 33.3% | 6.98% | 4.20% |
 | `(external)` | 1 | 0 | 7 | 0 | 1,420 | 0 | 0.0% | 0.00% | 0.00% |
 | `(library)` | 0 | 0 | 439 | 0 | 117,800 | 0 | 0.0% | 0.00% | 0.00% |
 | `(unattributed)` | 0 | 0 | 2,208 | 0 | 713,896 | 0 | 0.0% | 0.00% | 0.00% |
-| **total** | **249** | **71** | **4,463** | **402** | **1,631,596** | **102,496** | **28.5%** | **9.01%** | **6.28%** |
+| **total** | **249** | **75** | **4,463** | **418** | **1,631,596** | **104,576** | **30.1%** | **9.37%** | **6.41%** |
 
 Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
 
