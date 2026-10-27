@@ -93,12 +93,28 @@ class _Function:
 
 
 class _Tu:
+    """A translation unit as `_split_extent` reads one: its functions, its span, its module.
+
+    `overlay`/`is_overlay`/`split_directory` arrived with overlay support (a unit's splits live
+    under its module's stem, and an overlay's extent stops at the window's `code_end`); a main
+    image unit like this stub's is spelled `main`, the segment splat puts its splits under.
+    """
+
     file = "src/example.c"
+    overlay = "main"
 
     def __init__(self, functions, end):
         self.functions = [_Function(address) for address in functions]
         self.address = min(functions) if functions else end
         self.end = end
+
+    @property
+    def is_overlay(self):
+        return self.overlay != "main"
+
+    @property
+    def split_directory(self):
+        return self.overlay
 
 
 def split(directory, name, address):
