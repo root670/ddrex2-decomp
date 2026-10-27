@@ -1830,6 +1830,14 @@ def main(argv=None) -> int:
     args, flags = parser.parse_known_args(argv)
     try:
         target = targets.get(args.target)
+        # A hand-run measurement must use the pair the unit was measured with: `--compiler`
+        # defaults to the required build and `flags` to the default set, so without this a
+        # manual `compile.py <src> <out>` silently measures with the wrong compiler and reports
+        # a false negative (title_demo's ti_movie_SetDecTag read 0x1C short that way).  The
+        # build's own `cc` edge passes both explicitly, so it is unaffected.
+        recorded = target.build_pair(args.source)
+        if recorded is not None and args.compiler == fetch.REQUIRED:
+            args.compiler = recorded[0]
         if args.syntax_only:
             return syntax_only(args.source, flags, args.compiler, args.include)
         if args.data:
@@ -1841,6 +1849,8 @@ def main(argv=None) -> int:
             return 0
         manifests = Manifests(target)
         tu = manifests.tu_named(args.source)
+        if recorded is not None and not flags:
+            flags = recorded[1].split()
         placed = build(tu, args.out, flags or DEFAULT_FLAGS, args.compiler, manifests,
                        keep=args.keep, target=target, normalise=args.normalise_debug,
                        adopt=args.adopt_retail_meta)
