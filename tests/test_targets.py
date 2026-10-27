@@ -33,9 +33,9 @@ from tests import target_support  # noqa: E402
 # from these is the finding.
 ELF_SHA = "ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd"
 IMAGE_SHA = "70a9056657665e978c7de9fc223cb753956902416418993176438316f6cd652b"
-IMAGE = pathlib.Path(
-    "$HOME/Downloads/Dance Dance Revolution Extreme 2 (May 10, 2005 prototype)"
-    "/PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso")
+IMAGE = (pathlib.Path(__file__).resolve().parents[1] / "disc" /
+         "Dance Dance Revolution Extreme 2 (May 10, 2005 prototype)"
+         " - PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso")
 
 #: "No tool spells a target name or a retail path": every file this task threaded, minus the
 #: descriptor itself.  `tools/sdk/borrow.py` and `match.py` joined it with retarget Task 9, which

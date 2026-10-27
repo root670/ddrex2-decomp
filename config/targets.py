@@ -752,9 +752,11 @@ DDREX2P = Target(
     include_dirs=("include", "hwinclude"),
     elf=REPO_ROOT / "orig" / "SLUS_211.74",
     elf_sha256="ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd",
-    image=pathlib.Path(
-        "$HOME/Downloads/Dance Dance Revolution Extreme 2 (May 10, 2005 "
-        "prototype)/PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso"),
+    # The disc image is the user's to place: the gitignored `disc/` directory is the default,
+    # and `--iso` (or an edit here) points at wherever your copy lives.
+    image=REPO_ROOT / "disc" / ("Dance Dance Revolution Extreme 2 (May 10, 2005 prototype)"
+                                " - PS2 - Dance Dance Revolution Extreme 2 PS2 Preview"
+                                " Code 6-22-05.iso"),
     image_sha256="70a9056657665e978c7de9fc223cb753956902416418993176438316f6cd652b",
     # Measured from `orig/SLUS_211.74` (sha256 ef31c90f…c02cd, 7,725,036 B) and from the
     # pinned image it was copied out of: the ELF header, the program headers and the section
