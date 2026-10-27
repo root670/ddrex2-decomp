@@ -129,8 +129,7 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
 
 8. **`python3 -m pytest -q` is part of the loop, not a formality.**  A green suite is what makes the
    next change safe: the tests run the real tools (splat, the assembler, the linker, the compiler
-   through its host runner — wibo on macOS/Linux, directly on Windows), not stubs.  The suite takes
-   roughly nine minutes.
+   under wibo), not stubs.  The suite takes roughly nine minutes.
 
 9. **A promoted unit contributes code and debug bytes — and nothing else.**  `compile.py` links
    only the object's `.text`; its `.debug`/`.line` payloads replace the retail databins of the

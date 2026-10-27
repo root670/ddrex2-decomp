@@ -10,9 +10,8 @@ This is the program behind the ninja ``cc`` rule::
 edge's *implicit* inputs (``| ...``, R35a), so editing the driver invalidates the object it
 produced without changing the command line.
 
-It runs ``mwccps2`` (under wibo where the host needs a runner, through
-:mod:`toolchain.probe`) over a C source and turns the Metrowerks object it writes into the
-one object the pinned build needs:
+It runs ``mwccps2`` (under wibo, through :mod:`toolchain.probe`) over a C source and turns
+the Metrowerks object it writes into the one object the pinned build needs:
 
 * ``.text`` -- the unit's functions, laid out and relocated at the virtual addresses the
   retail image has them at and labelled with their DWARF names, so the pinned ``ld`` script
@@ -115,16 +114,13 @@ AS = ("mips-linux-gnu-as", "-Iasm/include", "--no-pad-sections", "-EL", "-march=
       "-mabi=eabi")
 
 #: The staging root.  The compiler records the *absolute* path of the file it is given,
-#: canonicalised, and spells it the way its host does: under wibo the guest sees the host
-#: root as the ``Z:`` drive and ``/tmp`` is resolved first (macOS records ``/private/tmp``),
-#: while a native Windows run is handed the host path itself and records that.  Retail's CU
-#: name records the original build host's path, and a staged copy is put at a path whose
-#: *recorded* spelling (:func:`recorded_name`) is exactly as long as retail's, so that
-#: replacing the recorded name cannot resize a DIE.  ``/tmp`` is the shortest root every host
-#: has (the repo's own path is longer than the retail build's recorded one); it is resolved
-#: here because the *real* path is the one that has to fit, and ``pad`` in
-#: :func:`staged_path` is measured from this root's own recorded spelling rather than from a
-#: hardcoded ``Z:``, so a native run pads by the host path and not by a guest one.
+#: canonicalised -- wibo resolves the host path, so a staged copy under macOS's ``/tmp``
+#: is recorded under ``/private/tmp`` -- and spells the host root as the ``Z:`` drive.
+#: Retail's CU name records the original build host's path, and a staged copy is put at a
+#: path whose guest spelling is exactly as long as retail's, so that replacing the
+#: recorded name cannot resize a DIE.  ``/tmp`` is the shortest root every host has (the
+#: repo's own path is longer than the retail build's recorded one); it is resolved here because
+#: the *real* path is the one that has to fit.
 STAGING_ROOT = pathlib.Path("/tmp").resolve()
 
 #: The oracle's own word for the one reason that still has an address to place: an object
@@ -1132,33 +1128,15 @@ def gp_value(retail=RETAIL) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _recorded_spelling(path: pathlib.Path, wibo) -> str:
-    """``path`` as the compiler records it, for this runner (``None``: no runner).
-
-    Under wibo the guest's root is the ``Z:`` drive and the separators are backslashes; a
-    native Windows run receives the host path and spells it with backslashes alone.  Both
-    spellings are what the compiler writes into DWARF, which is what retail's CU name is
-    compared with — never the host path this driver uses to write the staged copy.
-    """
-    spelling = str(path).replace("/", "\\")
-    return spelling if wibo is None else "Z:" + spelling
-
-
-def staged_path(tu: Tu, wibo) -> pathlib.Path:
-    """Where to compile ``tu``'s source so that the DWARF path has retail's length.
-
-    ``wibo`` is the runner (:func:`fetch.wibo`), or ``None`` where the compilers are native:
-    it decides how the staged path is *recorded*, and therefore how long the padding
-    directory must be.  Retail's name is the whole budget, so the root's own recorded
-    spelling, the two separators and the basename are what the directory has left.
-    """
+def staged_path(tu: Tu) -> pathlib.Path:
+    """Where to compile ``tu``'s source so that the DWARF path has retail's length."""
     basename = tu.source.name
-    root = _recorded_spelling(STAGING_ROOT, wibo)
-    pad = len(tu.name) - len(root) - 1 - len(basename) - 1
+    pad = len(tu.name) - len("Z:") - 1 - len(basename) - len(str(STAGING_ROOT)) - 1
     if pad < 1:
         raise Unusable(
             f"{tu.file}: retail's path spelling is {len(tu.name)} bytes, too short to stage "
-            f"{basename!r} under {root}; this unit's DWARF name cannot be reproduced")
+            f"{basename!r} under {STAGING_ROOT}; this unit's DWARF name cannot be "
+            f"reproduced")
     stem = re.sub(r"\W", "_", basename)
     # The directory must stay exactly `pad` long, so a per-unit digest is mixed in: two
     # units that share a basename and a retail-name length (`src/sys/foo.c` and
@@ -1169,9 +1147,9 @@ def staged_path(tu: Tu, wibo) -> pathlib.Path:
     return STAGING_ROOT / directory / basename
 
 
-def recorded_name(staged: pathlib.Path, wibo) -> bytes:
-    """The source path as mwcc records it: ``Z:``-rooted with wibo, the host path without."""
-    return _recorded_spelling(staged, wibo).encode()
+def recorded_name(staged: pathlib.Path) -> bytes:
+    """The source path as mwcc records it: wibo spells a host path as the ``Z:`` drive."""
+    return ("Z:" + str(staged)).replace("/", "\\").encode()
 
 
 def retail_name_in(payload: bytes, recorded: bytes, retail: bytes) -> bytes:
@@ -1784,10 +1762,10 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
     compile the *before* spelling -- the one still carrying directives -- that its rewrite is
     checked against.
     """
-    staged = staged_path(tu, wibo)
+    staged = staged_path(tu)
     staged.parent.mkdir(parents=True, exist_ok=True)
     staged.write_bytes(source)
-    recorded = recorded_name(staged, wibo)
+    recorded = recorded_name(staged)
     if len(recorded) != len(tu.name):
         raise Unusable(f"staging {staged} spells {len(recorded)} bytes, retail "
                        f"{len(tu.name)}")

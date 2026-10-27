@@ -292,10 +292,10 @@ def compile_bodies(tu, pair, target, manifests, scratch=None) -> list:
     flags = flags_text.split()
     compiler_dir = fetch.compiler(compiler_version)
     wibo = fetch.wibo()
-    staged = cc.staged_path(tu, wibo)
+    staged = cc.staged_path(tu)
     staged.parent.mkdir(parents=True, exist_ok=True)
     staged.write_bytes(tu.source.read_bytes())
-    recorded = cc.recorded_name(staged, wibo)
+    recorded = cc.recorded_name(staged)
     if len(recorded) != len(tu.name):
         raise cc.Unusable(f"staging {staged} spells {len(recorded)} bytes, retail "
                           f"{len(tu.name)}")

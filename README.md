@@ -1,6 +1,6 @@
 # DDR Extreme 2 (US) preview
 
-![Translation-unit heatmap — one square per unit, green means promoted](docs/status.svg)
+![Translation-unit heatmap](docs/status.svg)
 
 A matching decompilation of *Dance Dance Revolution Extreme 2 (US)* for the PlayStation 2.
 
@@ -8,53 +8,63 @@ This repository does **not** contain any game assets, retail code or disassembly
 
 Supported version: `SLUS_211.74`, sha256 `ef31c90f321328906c51144152d68676975b52cf157b3adb65aa1969a97c02cd`.
 
-Requirements
-============
+## Requirements
 
-Python 3.11+, ninja, a MIPS binutils, `splat` and `objdiff-cli`; `python3 tools/toolchain/check_deps.py` names anything missing. [wibo](https://github.com/decompals/wibo) is fetched automatically on macOS and Linux.
+Python 3.11+, ninja, a MIPS binutils, `splat` and `objdiff-cli`. `python3 tools/toolchain/check_deps.py` names anything missing. wibo is fetched automatically on macOS and Linux.
 
-macOS
------
+### macOS
 
-- `brew install mips-linux-gnu-binutils ninja`
-- `python3 -m pip install --user 'splat64[mips]' pytest`
-- `curl -sL -o ~/.local/bin/objdiff-cli https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64 && chmod +x ~/.local/bin/objdiff-cli`
+```sh
+brew install mips-linux-gnu-binutils ninja
+python3 -m pip install --user 'splat64[mips]' pytest
+curl -sL -o ~/.local/bin/objdiff-cli \
+  https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64
+chmod +x ~/.local/bin/objdiff-cli
+```
 
-Linux (x86_64)
---------------
+### Linux (x86_64)
 
-- `sudo apt install build-essential ninja-build binutils-mips-linux-gnu`
-- `python3 -m pip install --user 'splat64[mips]' pytest`
-- Same release, the `objdiff-cli-linux-x86_64` asset.
+```sh
+sudo apt install build-essential ninja-build binutils-mips-linux-gnu
+python3 -m pip install --user 'splat64[mips]' pytest
+curl -sL -o ~/.local/bin/objdiff-cli \
+  https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-linux-x86_64
+chmod +x ~/.local/bin/objdiff-cli
+```
 
-Windows (x86_64)
-----------------
+### Windows (x86_64)
 
-- Native tooling; WSL and msys2 are not needed.
-- `winget install Python.Python.3.12 Ninja-build.Ninja`, then `python -m pip install --user splat64[mips] pytest`.
-- Same release, the Windows asset. The CodeWarrior tools are Windows binaries, so nothing is emulated; call the driver as `python ddr <verb>`.
+Native tooling: WSL and msys2 are not needed, and the CodeWarrior tools are Windows binaries, so nothing is emulated.
 
-Building
-========
+```bat
+winget install Python.Python.3.12 Ninja-build.Ninja
+python -m pip install --user splat64[mips] pytest
+```
 
-- Fetch the compilers, hash-verified: `python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126`
-- Copy your retail ELF to `orig/SLUS_211.74`.
-- Build and check: `./ddr build && ./ddr verify`
-- G3 only: place the disc image at its path in `config/targets.py`, then `./ddr verify --iso`.
+Put `objdiff-cli-windows-x86_64.exe` from the same release on `%PATH%`. Call the driver as `python ddr <verb>`.
 
-Verifying
-=========
+## Building
 
-|gate|command|proves|
+```sh
+python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
+cp /path/to/your/SLUS_211.74 orig/
+./ddr build
+./ddr verify
+```
+
+The compilers are fetched and hash-verified into the gitignored `toolchain/`. The disc image is needed only for G3: place it at its path in `config/targets.py` and run `./ddr verify --iso`.
+
+## Verifying
+
+| gate | command | proves |
 |---|---|---|
-|G1|`./ddr verify`|the built ELF's sha256 equals the retail ELF's|
-|G2|`./ddr verify --tu <unit>`|that unit's `.text`, `.debug` chunk and `.line` chunks equal retail's|
-|G3|`./ddr verify --iso`|splicing the built ELF into the image reproduces the image|
+| G1 | `./ddr verify` | the built ELF's sha256 equals the retail ELF's |
+| G2 | `./ddr verify --tu <unit>` | that unit's `.text`, `.debug` chunk and `.line` chunks equal retail's |
+| G3 | `./ddr verify --iso` | splicing the built ELF into the image reproduces the image |
 
 A red gate is never worked around: the tool names the unit, function and chunk that own the first divergent byte.
 
-Progress
-========
+## Progress
 
 <!-- status:start -->
 
@@ -87,8 +97,7 @@ Legend: green = promoted (G2 green); amber = partial (draft or source, unproven)
 
 <!-- status:end -->
 
-Everyday commands
-=================
+## Everyday commands
 
 ```sh
 ./ddr build                     # configure + ninja: split, assemble, compile, link, G1
@@ -99,14 +108,12 @@ python3 -m pytest -q tests      # the suite runs the real tools, not stubs
 
 Unit work: `tools/units/line_map.py`, `twins.py`, `measure.py`, `m2c_draft.py`, `slots.py`, `permute.py`.
 
-Docs
-====
+## Docs
 
 - [`AGENTS.md`](AGENTS.md) — the operating contract: the rules, the loop, why each exists.
 - [`docs/unit-work.md`](docs/unit-work.md) — how a unit is promoted, and the measured codegen rules.
-- [`docs/`](docs) — the design, the milestones, and the measured codegen rules.
+- [`docs/`](docs) — the design, the milestones, and the evidence each milestone closed on.
 
-Credits
-=======
+## Credits
 
 - [splat](https://github.com/ethteck/splat), [wibo](https://github.com/decompals/wibo), [objdiff](https://github.com/encounter/objdiff), [m2c](https://github.com/matt-kempster/m2c), [decomp-permuter](https://github.com/simonlindholm/decomp-permuter), and the [dtk-template](https://github.com/encounter/dtk-template) layout.
