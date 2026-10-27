@@ -537,3 +537,53 @@ def test_a_list_of_only_dropped_declarations_is_removed_whole_when_retail_has_no
 
     assert adopted.chunk == retail
     assert [die.name for die, _span in adopted.dropped] == ["D_006B2F58"]
+
+
+# -- the emitted .line is a measurement, not a fit ----------------------------------------
+
+
+def longer_line_chunk():
+    """A statement table retail's ``.line`` slice cannot hold: one record more."""
+    return line_chunk([(10, 0, 0), (11, 0, 4), (11, 0, 6), (0, 0, 8)])
+
+
+def test_a_larger_emitted_line_is_adopted_whole(capsys):
+    """A source layout that emits more statement records than retail's chunk holds adopts.
+
+    ``--adopt-retail-meta`` places retail's pinned ``.line`` bytes, so our table's size is
+    only the report's measurement: the emitted chunk here is 0x30 bytes against retail's
+    0x26, is not row-for-row comparable, and adoption says so and takes retail's whole.
+    """
+    retail = build(tree(location=6, anon="@anon1"))
+    emitted = build(tree(location=2, anon="@anon0"))
+    longer = longer_line_chunk()
+    assert len(longer) > len(RETAIL_LINE)
+
+    placed = cc.debug_promotion(UNIT, text=b"code", line=longer, debug=emitted,
+                                retail_text=b"code", retail_line=RETAIL_LINE,
+                                retail_debug=retail, adopt=True)
+
+    assert placed == retail, "the adopted .debug is retail's bytes, byte for byte"
+    adopted = da.adopt(emitted, retail, 0, longer, RETAIL_LINE)
+    assert adopted.line == RETAIL_LINE, "the placed .line is retail's pinned chunk"
+    error = capsys.readouterr().err
+    assert "not row-for-row comparable" in error
+    assert "retail's chunk is adopted whole" in error
+    assert "byte for byte after adoption" in error
+
+
+def test_a_larger_emitted_line_still_refuses_without_adoption():
+    """Without adoption the same emitted table is evidence: condition 1 reports the bytes."""
+    retail = build(tree(location=6, anon="@anon1"))
+    emitted = build(tree(location=2, anon="@anon0"))
+    longer = longer_line_chunk()
+
+    with pytest.raises(cc.Unusable) as excinfo:
+        cc.debug_promotion(UNIT, text=b"code", line=longer, debug=emitted,
+                           retail_text=b"code", retail_line=RETAIL_LINE,
+                           retail_debug=retail)
+
+    message = str(excinfo.value)
+    assert "condition 1 (.text and .line byte-equal) failed" in message
+    assert f".line is 0x{len(longer):X} bytes against retail's " \
+           f"0x{len(RETAIL_LINE):X}" in message

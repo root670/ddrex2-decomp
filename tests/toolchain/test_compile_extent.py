@@ -196,6 +196,49 @@ def test_adoption_measures_a_short_line_block_instead_of_refusing_it():
     assert sizes == [("a", ".line", 2, 4), ("b", ".line", 4, 4)]
 
 
+class _LongMW:
+    """A block that is *bigger* than the slot retail pinned for it."""
+
+    relocs = {}
+
+    @staticmethod
+    def data(_index):
+        return b"\xAA\xBB\xCC\xDD\xEE\xFF"
+
+    @staticmethod
+    def resolve(_tu, _symbol):
+        return 0
+
+
+def test_a_long_line_block_is_refused_by_the_fit_guard():
+    """The fit guard is a non-adopting rule: the emitted chunk has to land in retail's slice.
+
+    A block that overruns the pinned chunk would reflow every later table, so a size over
+    retail's is refused with the measured message rather than silently padded.
+    """
+    with pytest.raises(cc.Unusable) as excinfo:
+        cc._fill(_LongMW(), _SmallTu(), 0, 4, [(0, 4, 0, "a")], 0, ".line",
+                 unit_file="src/example.c")
+
+    assert str(excinfo.value) == (
+        "src/example.c: a .line is 0x6 bytes where retail's is 0x4; it does not fit the "
+        "pinned chunk at 0x0")
+
+
+def test_adoption_measures_a_long_line_block_instead_of_refusing_it():
+    """Under ``adopt`` the emitted ``.line`` may be any size: retail's chunk is the payload.
+
+    The guard above is a *placement* rule, and adoption places retail's pinned bytes, so the
+    emitted table is only the report's measurement of how many statement records the source
+    produced.  A block that overruns its slot is concatenated like every other, which is
+    what lets the row-count difference be reported and retail's chunk be adopted whole.
+    """
+    chunk, sizes = cc._adopted_line(_LongMW(), _SmallTu(), [(0, 4, 0, "a")], 0)
+
+    assert chunk == b"\xAA\xBB\xCC\xDD\xEE\xFF"
+    assert sizes == [("a", ".line", 6, 4)]
+
+
 
 # -- a unit with no code at all ----------------------------------------------------------
 
