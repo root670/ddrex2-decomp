@@ -73,3 +73,54 @@ def without_binary(tmp_path, monkeypatch, module, name="probe"):
     target = probe(tmp_path, name)
     monkeypatch.setattr(module.targets, "get", lambda name=None: target)
     return target
+
+
+#: The bytes a synthetic ELF's program headers start at: a 52-byte ELF header, then 32-byte
+#: program headers.  Small enough to keep a fixture readable and exact enough for
+#: ``tools/oracle/elf.py``, which is the only reader the tests hand these files to.
+EHDR = 52
+PHDR = 32
+
+
+def write_elf(path, segments=(), sections=()):
+    """Write a minimal 32-bit little-endian MIPS ELF the tools' own reader accepts.
+
+    ``segments`` is ``[(vaddr, memsz, data)]`` in one file-backed ``PT_LOAD`` each (``filesz``
+    is ``len(data)``, so ``memsz - filesz`` is the zero-fill tail) and ``sections`` is
+    ``[(name, data)]`` in ``SHT_PROGBITS`` sections named in a ``.shstrtab``.  Both are what
+    the reader under test actually looks at: ``file_offset``/``read`` for the program headers,
+    and ``.sections``/``.data`` for the chunk reads.  Nothing else (symbols, relocations,
+    ``.reginfo``) is needed, and inventing them would only make the fixture look like a build.
+    """
+    import struct
+
+    path = pathlib.Path(path)
+    body = bytearray()
+    phdrs = bytearray()
+    for vaddr, memsz, data in segments:
+        phdrs += struct.pack("<8I", 1, EHDR + len(segments) * PHDR + len(body), vaddr, vaddr,
+                             len(data), memsz, 5, 4)
+        body += data
+    strings = bytearray(b"\x00")
+    offsets = {}
+    for name, _data in sections:
+        offsets[name] = len(strings)
+        strings += name.encode() + b"\x00"
+    offsets[".shstrtab"] = len(strings)
+    strings += b".shstrtab\x00"
+    shdrs = bytearray(b"\x00" * 40)
+    for name, data in sections:
+        shdrs += struct.pack("<10I", offsets[name], 1, 2, 0,
+                             EHDR + len(segments) * PHDR + len(body), len(data), 0, 0, 4, 0)
+        body += data
+    strings_offset = EHDR + len(segments) * PHDR + len(body)
+    body += strings
+    shoff = EHDR + len(segments) * PHDR + len(body)
+    shdrs += struct.pack("<10I", offsets[".shstrtab"], 3, 0, 0, strings_offset, len(strings),
+                         0, 0, 1, 0)
+    header = bytearray(EHDR)
+    header[0:4] = b"\x7fELF"
+    header[4:7] = bytes((1, 1, 1))          # 32-bit, little-endian, current version
+    struct.pack_into("<HHIIIIIHHHHHH", header, 16, 2, 8, 1, 0, EHDR, shoff, 0, EHDR,
+                     PHDR, len(segments), 40, len(sections) + 2, len(sections) + 1)
+    path.write_bytes(bytes(header) + bytes(phdrs) + bytes(body) + bytes(shdrs))

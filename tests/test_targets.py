@@ -27,6 +27,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from config import targets  # noqa: E402
+from tests import target_support  # noqa: E402
 
 # The plan's target table for the one registered target, as literals: a descriptor that drifts
 # from these is the finding.
@@ -415,3 +416,123 @@ def test_the_address_guard_reads_code_and_not_provenance(tmp_path):
     literal = tmp_path / "literal.py"
     literal.write_text("# its game start\nGAME_START = 0x0021C410\n")
     assert scan_addresses(literal) == [(2, "0x0021C410", FOREIGN_ADDRESSES[0x21C410])]
+
+
+# ---------------------------------------------------------------------------
+# the overlay windows: measured rows, read from the oracle's artifact
+# ---------------------------------------------------------------------------
+
+#: The ten rows, as literals: ``(name, vaddr, filesize, code_end, data_size, bss,
+#: image_offset)``.  They come from two files that agree -- the ELF's ten zero-fill ``PT_LOAD``
+#: reservations and the ``DATA*.BIN`` headers in the pinned image -- and the identity between
+#: them is ``0x40 + code_end + data_size == filesize`` with ``filesize + bss`` equal to the
+#: reservation's ``p_memsz``, which `tools/oracle/emit_overlays.py` checks on every run and
+#: `tests/oracle/test_emit_overlays.py` re-derives from both files.
+OVERLAYS = (
+    ("info_rel4cd", 0x007F0000, 0x00012200, 0x00010040, 0x00002180, 0x00005C80, 0x0009B000),
+    ("les_rel4cd", 0x007F0000, 0x0000B800, 0x0000A0C0, 0x00001700, 0x00003380, 0x000AD800),
+    ("workout_rel4cd", 0x007F0000, 0x00011D00, 0x00011140, 0x00000B80, 0x00000900, 0x000B9000),
+    ("rec_rel4cd", 0x007F0000, 0x0000C280, 0x0000BC40, 0x00000600, 0x00000700, 0x000CB000),
+    ("opt_rel4cd", 0x007F0000, 0x00008800, 0x00007DC0, 0x00000A00, 0x0000B000, 0x000D7800),
+    ("net_dnas_rel4cd", 0x01884000, 0x00090B00, 0x00070440, 0x00020680, 0x00081300, 0x000E0000),
+    ("dmm_rel4cd", 0x007F0000, 0x0001D600, 0x00015F40, 0x00007680, 0x00000000, 0x00171000),
+    ("net_rel4cd", 0x007F0000, 0x00019480, 0x00016440, 0x00003000, 0x00004400, 0x0018E800),
+    ("net_https_rel4cd", 0x01884000, 0x00059A00, 0x0004F3C0, 0x0000A600, 0x00000D00, 0x001A8000),
+    ("net_upnp_rel4cd", 0x00E4D380, 0x0000CC00, 0x00008BC0, 0x00004000, 0x0002A300, 0x00202000),
+)
+
+
+def test_the_overlay_rows_are_the_committed_measurement():
+    target = targets.get()
+    geometry = target.geometry_required()
+    assert [(overlay.name, overlay.vaddr, overlay.filesize, overlay.code_end,
+             overlay.data_size, overlay.bss, overlay.image_offset)
+            for overlay in geometry.overlays] == list(OVERLAYS)
+    # ...and the artifact is what the descriptor reads, row for row.
+    assert targets.load_overlays(target.overlays) == geometry.overlays
+    assert target.overlays == target.config_dir / "overlays.txt"
+    # The window size is what pairs a blob with its reservation, so no two may share one.
+    assert len({overlay.memsz for overlay in geometry.overlays}) == len(OVERLAYS)
+    # The header is part of the blob and not of the code: `code_end` counts from `vaddr+0x40`.
+    net = geometry.overlay_named("net_rel4cd")
+    assert (net.code_vram, net.code_end_vram, net.data_vram) \
+        == (0x007F0040, 0x00806480, 0x00806480)
+    assert net.end == 0x0080D880 and net.memsz == 0x1D880
+    assert net.image_offset_of(0x00806410) == 0x1A4C10
+
+
+def test_an_address_outside_the_loadable_image_has_no_file_offset():
+    """The bug this refuses: ``offset_of(0x7F8810)`` used to land inside ``.line``, so
+    ``verify --tu`` compared statement-table bytes with themselves and printed ``text ok``."""
+    geometry = targets.get().geometry_required()
+    with pytest.raises(targets.OutsideLoadableImage) as refusal:
+        geometry.offset_of(0x007F8810)
+    message = str(refusal.value)
+    assert "0x007F8810" in message
+    assert f"0x{geometry.loadable_vram:08X}" in message \
+        and f"0x{geometry.bss_vram:08X}" in message
+    assert "dmm_rel4cd" in message and "disc image" in message
+    # The file-backed image still maps, and its two edges are the whole range.
+    assert geometry.offset_of(geometry.loadable_vram) == geometry.loadable_rom
+    assert geometry.offset_of(geometry.bss_vram - 4) == geometry.loadable_end - 4
+    for address in (geometry.loadable_vram - 4, geometry.bss_vram, geometry.bss_end, 0):
+        with pytest.raises(targets.OutsideLoadableImage):
+            geometry.offset_of(address)
+
+
+def test_overlays_at_names_every_module_that_shares_the_address():
+    """An address alone is not an overlay identity: seven modules are alternatives at one base,
+    which is why the unit's DWARF overlay DIE — not a lookup — supplies the name."""
+    geometry = targets.get().geometry_required()
+    names = [overlay.name for overlay in geometry.overlays_at(0x007F8810)]
+    assert "dmm_rel4cd" in names and "opt_rel4cd" in names and len(names) > 1
+    assert [overlay.name for overlay in geometry.overlays_at(0x00E4D380)] == ["net_upnp_rel4cd"]
+
+
+def test_an_overlay_row_that_does_not_add_up_is_refused():
+    def overlay(**overrides):
+        fields = dict(name="probe_rel4cd", vaddr=0x00200000, filesize=0x200, code_end=0x100,
+                      data_size=0xC0, bss=0x100, image_offset=0x1000)
+        fields.update(overrides)
+        return targets.Overlay(**fields)
+
+    assert overlay().filesize == 0x200
+    with pytest.raises(ValueError, match="does not add up|not"):
+        overlay(data_size=0x100)
+    with pytest.raises(ValueError, match="no code after"):
+        overlay(code_end=0, filesize=0x40)
+    with pytest.raises(ValueError, match="image_offset"):
+        overlay(image_offset=0)
+    with pytest.raises(ValueError, match="identifier"):
+        overlay(name="probe/rel4cd")
+
+
+@pytest.mark.parametrize("overlays, message", [
+    ((targets.Overlay("a_rel4cd", 0x00200000, 0x200, 0x100, 0xC0, 0x100, 0x1000),
+      targets.Overlay("b_rel4cd", 0x00300000, 0x200, 0x100, 0xC0, 0x100, 0x2000)),
+     "both claim"),
+    ((targets.Overlay("a_rel4cd", 0x000FFF00, 0x200, 0x100, 0xC0, 0x0, 0x1000),),
+     "overlaps the loadable image"),
+    ((targets.Overlay("a_rel4cd", 0x00100000, 0x200, 0x100, 0xC0, 0x100, 0x1000),),
+     "overlaps the loadable image"),
+    ((targets.Overlay("a_rel4cd", 0x00200000, 0x200, 0x100, 0xC0, 0x100, 0x1000),
+      targets.Overlay("b_rel4cd", 0x00200100, 0x300, 0x200, 0xC0, 0x100, 0x2000)),
+     "overlap at"),
+])
+def test_a_geometry_whose_overlay_rows_disagree_with_the_image_is_refused(overlays, message):
+    geometry = target_support.geometry()
+    with pytest.raises(ValueError) as refusal:
+        dataclasses.replace(geometry, overlays=overlays)
+    assert message in str(refusal.value)
+
+
+def test_the_overlay_ledger_refuses_a_line_that_is_not_a_row(tmp_path):
+    path = tmp_path / "overlays.txt"
+    path.write_text("# a comment\nprobe_rel4cd 0x200000 0x200\n")
+    with pytest.raises(ValueError, match="is not `name vaddr"):
+        targets.load_overlays(path)
+    path.write_text("# only comments\n")
+    with pytest.raises(ValueError, match="records no overlays"):
+        targets.load_overlays(path)
+    with pytest.raises(FileNotFoundError):
+        targets.load_overlays(tmp_path / "absent.txt")

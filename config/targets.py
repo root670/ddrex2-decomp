@@ -56,6 +56,131 @@ class NotMeasured(RuntimeError):
     """The target's geometry has not been measured from its own retail ELF yet."""
 
 
+class OutsideLoadableImage(ValueError):
+    """An address the retail ELF maps no file bytes at.
+
+    The retail binary has one file-backed ``PT_LOAD`` and eleven zero-fill reservations, so
+    only part of its address space has a *file offset* at all.  A caller that asks for one
+    outside that part is asking for a number that does not exist -- and the old arithmetic
+    answered anyway, landing inside ``.line`` and comparing a section against itself.  Refusing
+    is the only honest answer.
+    """
+
+
+#: The header every overlay blob starts with: `MWo3`, an overlay id, the window's base, the
+#: code length, the data length, the bss length and ``vaddr + filesize``, then the module name.
+#: The header itself occupies :data:`OVERLAY_HEADER` bytes, so the code starts ``0x40`` bytes
+#: into the blob and at ``vaddr + 0x40`` in memory.
+OVERLAY_HEADER = 0x40
+
+#: What Metrowerks appends to the module name the DWARF's `DW_TAG_MW_overlay` carries
+#: (`dmm_rel4cd.prg`), so a blob's own name and the DWARF's are one spelling apart.
+OVERLAY_SUFFIX = ".prg"
+
+_OVERLAY_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def overlay_stem(name: str) -> str:
+    """``dmm_rel4cd.prg`` -> ``dmm_rel4cd``: the module name a directory and a ledger use.
+
+    The DWARF records the overlay's name with the suffix and the blob's header does too, so
+    both sides agree on it; a split directory (``asm/nonmatchings/<overlay>/``) and the
+    ``overlays.txt`` row are spelled without it because a dot in a segment name reads like a
+    file extension in a path that is a directory.
+    """
+    return name[:-len(OVERLAY_SUFFIX)] if name.endswith(OVERLAY_SUFFIX) else name
+
+
+@dataclasses.dataclass(frozen=True)
+class Overlay:
+    """One overlay blob: where its bytes are in the disc image, and where they load.
+
+    The ten rows are *measured* from two files that agree byte for byte -- the ELF's zero-fill
+    program headers (one reservation per blob, ``(vaddr, memsz)`` unique) and the blob's own
+    ``MWo3`` header in the pinned disc image -- and the identity this class checks is the
+    layout that measurement found::
+
+        0x40 + code_end + data_size == filesize        (the blob is exactly its header + code + data)
+        filesize + bss == memsz                        (the reservation is exactly its code + data + bss)
+
+    ``code_end`` and ``data_size`` are the header's own fields, counted from the first code
+    byte at ``vaddr + 0x40``: the 0x40-byte run of zeros (one pad split) between the header and
+    the first function is the header's, not the code's.  ``image_offset`` is the blob's byte
+    offset in the disc image, which is where :func:`overlay_bytes` reads it from.
+    """
+
+    name: str
+    vaddr: int
+    filesize: int
+    code_end: int
+    data_size: int
+    bss: int
+    image_offset: int
+
+    def __post_init__(self):
+        if not isinstance(self.name, str) or not _OVERLAY_NAME.fullmatch(self.name):
+            raise ValueError(
+                f"overlay name {self.name!r} is not an identifier: it names a split directory "
+                f"(asm/nonmatchings/<overlay>/) and a ledger row")
+        for field in ("vaddr", "filesize", "code_end", "data_size", "bss", "image_offset"):
+            value = getattr(self, field)
+            if not isinstance(value, int) or value < 0:
+                raise ValueError(f"overlay {self.name}: {field} is {value!r}, not a measured "
+                                 f"non-negative integer")
+        if self.filesize <= OVERLAY_HEADER or self.code_end <= 0:
+            raise ValueError(
+                f"overlay {self.name}: filesize 0x{self.filesize:X} and code_end "
+                f"0x{self.code_end:X} describe no code after the 0x{OVERLAY_HEADER:X}-byte "
+                f"header")
+        if self.image_offset <= 0:
+            raise ValueError(f"overlay {self.name}: image_offset is 0, but the disc's first "
+                             f"sector is the filesystem's, not a blob's")
+        if OVERLAY_HEADER + self.code_end + self.data_size != self.filesize:
+            raise ValueError(
+                f"overlay {self.name}: 0x{OVERLAY_HEADER:X} header + 0x{self.code_end:X} code "
+                f"+ 0x{self.data_size:X} data is 0x{OVERLAY_HEADER + self.code_end + self.data_size:X}, "
+                f"not the 0x{self.filesize:X}-byte blob: the measurement does not add up")
+
+    @property
+    def memsz(self) -> int:
+        """The window's size: the blob plus the zero-filled tail above it."""
+        return self.filesize + self.bss
+
+    @property
+    def end(self) -> int:
+        """One past the last address the window claims."""
+        return self.vaddr + self.memsz
+
+    @property
+    def code_vram(self) -> int:
+        """Where the blob's code begins: the header is not copied to ``vaddr``."""
+        return self.vaddr + OVERLAY_HEADER
+
+    @property
+    def code_end_vram(self) -> int:
+        """One past the last code byte -- the extent the last split is clamped to."""
+        return self.code_vram + self.code_end
+
+    @property
+    def data_vram(self) -> int:
+        """Where the initialised data begins, right after the code."""
+        return self.code_end_vram
+
+    def image_offset_of(self, address: int) -> int:
+        """The disc image's byte offset for ``address`` -- ``image_offset + (VA - vaddr)``.
+
+        The blob is one fixed-address image whose header is *in* it, so the ELF's own mapping
+        does not apply: an overlay address has no file offset in the retail ELF at all (its
+        program header claims no bytes), and the image's blob is where they are.
+        """
+        if not self.vaddr <= address < self.vaddr + self.filesize:
+            raise OutsideLoadableImage(
+                f"0x{address:08X} is outside overlay {self.name} "
+                f"(0x{self.vaddr:08X}..0x{self.vaddr + self.filesize:08X}), which is the only "
+                f"range its blob in the disc image maps")
+        return self.image_offset + address - self.vaddr
+
+
 @dataclasses.dataclass(frozen=True)
 class Geometry:
     """The measured shape of one retail ELF and of the disc image that carries it.
@@ -82,6 +207,10 @@ class Geometry:
     line_size: int
     image_elf_offset: int
     code_segment: str = "main"
+    #: The ten overlay windows, in the disc image's own order (:class:`Overlay`).  Empty for a
+    #: target whose binary has no overlay reservations -- a target's *own* measurement, so
+    #: nothing here is fitted to this game.
+    overlays: tuple = ()
 
     def __post_init__(self):
         for field in ("elf_size", "loadable_end", "loadable_vram", "bss_end", "debug_size",
@@ -138,6 +267,50 @@ class Geometry:
                     f"geometry {section}_size is {size}, but the .{section} section in "
                     f"trailing is {self.trailing_of(section)[1]} bytes: one measurement, "
                     f"two numbers")
+        self._check_overlays()
+
+    def _check_overlays(self) -> None:
+        """The overlay rows must be the ELF's reservations, not a plausible list of addresses.
+
+        A row is one blob, and a blob is identified in the ELF by ``(vaddr, memsz)`` alone, so
+        the two sizes have to be unique across the ten: two windows of one size would make the
+        pairing with the blobs ambiguous, and the measurement would have to be re-taken rather
+        than guessed.  Everything here is checked against the *same* geometry's numbers -- the
+        main image's range and the other rows -- so a row cannot silently claim main's
+        addresses or another overlay's window.
+        """
+        if not isinstance(self.overlays, tuple):
+            raise ValueError(f"geometry overlays is {self.overlays!r}, not a tuple of Overlay")
+        seen, sizes = set(), {}
+        for overlay in self.overlays:
+            if not isinstance(overlay, Overlay):
+                raise ValueError(f"geometry overlays entry {overlay!r} is not an Overlay")
+            if overlay.name in seen:
+                raise ValueError(f"geometry overlays names {overlay.name} twice")
+            seen.add(overlay.name)
+            if overlay.memsz in sizes:
+                raise ValueError(
+                    f"geometry overlays {overlay.name!r} and {sizes[overlay.memsz]!r} both "
+                    f"claim 0x{overlay.memsz:X} bytes: the window size is what identifies a "
+                    f"blob's reservation in the ELF, so two equal sizes cannot be paired")
+            sizes[overlay.memsz] = overlay.name
+            if overlay.vaddr < self.bss_end and overlay.end > self.loadable_vram:
+                raise ValueError(
+                    f"geometry overlay {overlay.name} claims 0x{overlay.vaddr:X}.."
+                    f"0x{overlay.end:X}, which overlaps the loadable image "
+                    f"0x{self.loadable_vram:X}..0x{self.bss_end:X}: the overlay windows load "
+                    f"where main does not")
+        by_base = {}
+        for overlay in self.overlays:
+            by_base[overlay.vaddr] = max(by_base.get(overlay.vaddr, 0), overlay.end)
+        spans = sorted(by_base.items())
+        for (start, end), (next_start, _) in zip(spans, spans[1:]):
+            if next_start < end:
+                raise ValueError(
+                    f"geometry overlays overlap at 0x{next_start:X}: the window at "
+                    f"0x{start:X} reaches 0x{end:X}.  Seven modules may share one base "
+                    f"address (they are alternatives), but two windows at different bases "
+                    f"are different memory")
 
     @property
     def code_size(self) -> int:
@@ -175,8 +348,92 @@ class Geometry:
         return self.loadable_vram + file_offset - self.loadable_rom
 
     def offset_of(self, address: int) -> int:
-        """The file offset of a loadable-image virtual address (the inverse of `address_of`)."""
+        """The file offset of a loadable-image virtual address (the inverse of `address_of`).
+
+        Only the file-backed part of the address space has a file offset: exactly
+        ``[loadable_vram, bss_vram)``, the bytes the one file-backed ``PT_LOAD`` maps.  An
+        address outside it -- the bss tail has zeros there, and an overlay window has the disc
+        image's blob and no ELF bytes at all -- raises :class:`OutsideLoadableImage` instead of
+        returning a number that lands in another section.  That number is what made
+        ``verify --tu`` print ``text ok`` while comparing ``.line`` against itself.
+        """
+        low, high = self.loadable_vram, self.bss_vram
+        if not low <= address < high:
+            where = ""
+            in_overlays = [overlay.name for overlay in self.overlays
+                           if overlay.vaddr <= address < overlay.end]
+            if in_overlays:
+                where = (f"; it is in overlay {', '.join(in_overlays)}, whose retail bytes are "
+                         f"in the disc image at image_offset + (VA - vaddr), not in the ELF")
+            raise OutsideLoadableImage(
+                f"0x{address:08X} has no file offset in the retail ELF: the file-backed image "
+                f"is 0x{low:08X}..0x{high:08X}{where}")
         return self.loadable_rom + address - self.loadable_vram
+
+    def overlay_named(self, name: str):
+        """The overlay ``name`` (:class:`Overlay`), or ``None`` when ``name`` is ``main``.
+
+        A unit's name is ``main`` or a module stem (:func:`overlay_stem`); this is the one
+        place that turns it into geometry, so nothing re-derives "is this unit an overlay".
+        """
+        if not isinstance(name, str) or not name or name == self.code_segment:
+            return None
+        for overlay in self.overlays:
+            if overlay.name == name:
+                return overlay
+        raise KeyError(f"no overlay named {name!r} in this target's geometry "
+                       f"({', '.join(o.name for o in self.overlays) or 'none recorded'})")
+
+    def overlays_at(self, address: int) -> tuple:
+        """The overlays whose window contains ``address`` -- several share one base address.
+
+        Seven modules are alternatives at ``0x7F0000``, so an address alone does not name an
+        overlay: the DWARF's ``DW_TAG_MW_overlay`` does.  This is the *candidate* list, used to
+        explain a refusal and to check a name's window; never to guess the name.
+        """
+        return tuple(overlay for overlay in self.overlays
+                     if overlay.vaddr <= address < overlay.end)
+
+
+def load_overlays(path) -> tuple:
+    """Read a target's ``overlays.txt``: the ten measured rows, validated as they are read.
+
+    The file is the oracle's committed artifact (``tools/oracle/emit_overlays.py``), one row
+    per overlay in the disc image's order, six hex numbers after the module name::
+
+        # name        vaddr      filesize   code_end   data_size  bss        image_offset
+        info_rel4cd   0x007F0000 0x00012200 0x00010040 0x00002180 0x00005C80 0x0009B000
+
+    Everything a row can get wrong on its own is refused by :class:`Overlay`; this refuses a
+    line that is not a row at all, so a hand-edited file cannot half-parse.  A row count other
+    than the target's is not checked here -- the artifact is the measurement, and the suite
+    pins its content against the two files it came from.
+    """
+    path = pathlib.Path(path)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"{path}: the overlay ledger is missing; it is the oracle's artifact -- generate "
+            f"it with `python3 tools/oracle/emit_overlays.py` and commit it")
+    rows = []
+    for number, line in enumerate(path.read_text().splitlines(), start=1):
+        text = line.strip()
+        if not text or text.startswith("#"):
+            continue
+        fields = text.split()
+        if len(fields) != 7:
+            raise ValueError(
+                f"{path} line {number} is not `name vaddr filesize code_end data_size bss "
+                f"image_offset`: {text!r}")
+        try:
+            values = [int(field, 16) for field in fields[1:]]
+        except ValueError:
+            raise ValueError(f"{path} line {number} has a field that is not hex: {text!r}") \
+                from None
+        rows.append(Overlay(fields[0], *values))
+    if not rows:
+        raise ValueError(f"{path} records no overlays: an empty ledger would silently make "
+                         f"every overlay unit unresolvable")
+    return tuple(rows)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -292,6 +549,11 @@ class Target:
     def unplaced(self) -> pathlib.Path:
         """Symbols the oracle found but could not place."""
         return self.config_dir / "unplaced_symbols.txt"
+
+    @property
+    def overlays(self) -> pathlib.Path:
+        """The oracle's overlay ledger: one measured row per ``DATA*.BIN`` blob."""
+        return self.config_dir / "overlays.txt"
 
     @property
     def splat_symbols(self) -> pathlib.Path:
@@ -471,13 +733,15 @@ DDREX2P = Target(
     #
     # `bss_end` is the file-backed PT_LOAD's `vaddr + memsz` (0x100000 + 0x623700): the
     # zero-filled tail that segment claims.  It is *not* the highest address any PT_LOAD
-    # claims -- the binary also reserves eleven disjoint zero-fill regions for the overlay
-    # blobs (`0x7F0000`, `0xE4D380`, `0x1884000`, `filesz` 0, together reaching 0x1995E00) --
-    # because one bss extent spanning 0x723700..0x1995E00 would claim the unmapped gaps
-    # between those reservations as addressable, and `Geometry` has no way to express several
-    # disjoint zero-fill regions.  The overlays are out of this milestone's scope anyway (the
-    # spec defers DATA00-09.BIN), so this is recorded as *not represented* rather than
-    # guessed; see the Task 4 report.
+    # claims -- the binary also reserves eleven disjoint zero-fill regions (`0x7F0000`,
+    # `0xE4D380`, `0x1884000`, `filesz` 0, together reaching 0x1995E00), ten of which hold
+    # one overlay blob each and one of which (`0x770000`) claims nothing and holds none.
+    # One bss extent spanning 0x723700..0x1995E00 would claim the unmapped gaps between them
+    # as addressable, so the ten blob windows are ``overlays``: their own rows, measured from
+    # those reservations *and* from the blobs' headers in the pinned image by
+    # `tools/oracle/emit_overlays.py`, and read back here from the committed ledger.
+    # `bss_end` therefore stays where the file-backed segment puts it: an address in an
+    # overlay is not part of the loadable image, and `offset_of` refuses it by name.
     geometry=Geometry(
         elf_size=0x75DFEC,          # .reginfo ends at 0x75DCCC, then 20 * 40 B section headers
         loadable_rom=0x200,         # PT_LOAD 0's p_offset
@@ -495,6 +759,7 @@ DDREX2P = Target(
         debug_size=0x491376,        # .debug (4,789,110 B, matching the spec's table)
         line_size=0xEE546,          # .line (976,198 B)
         image_elf_offset=0x6D261000,  # LBA 894146 in the pinned image
+        overlays=load_overlays(REPO_ROOT / "config" / "ddrex2p" / "overlays.txt"),
     ),
     # (source, compiler build, flags): measured, never inherited -- see the note above.
     # Promotion is always adoption: `.text` byte equality is the proof, and

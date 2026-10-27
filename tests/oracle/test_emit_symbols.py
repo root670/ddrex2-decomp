@@ -8,6 +8,7 @@ ledger's shape is an error rather than a skipped line.
 """
 
 import pathlib
+import re
 import sys
 
 import pytest
@@ -214,11 +215,13 @@ def ledger_records(path):
             continue
         name, _, rest = line.partition(" = 0x")
         address, _, attrs = rest.partition(";")
-        reason = ""
-        for attr in attrs.split():
-            if attr.startswith("reason:"):
-                reason = attrs[attrs.index("reason:") + len("reason:"):].split(" dwarf_name:")[0]
-                break
+        reason, module = "", None
+        if "reason:" in attrs:
+            reason = attrs.split("reason:", 1)[1]
+            reason = re.split(r"\s+(?=\w+:|$)", reason, maxsplit=1)[0].strip()
+        module = re.search(r"\boverlay:(\S+)", attrs)
+        if module is not None:
+            reason = f"{reason} overlay:{module.group(1)}"    # kept for the caller to split
         out.append((name, int(address, 16), reason))
     return out
 
@@ -239,7 +242,7 @@ def test_the_committed_ledger_places_one_record_per_address():
     assert all(low <= address < high for address in addresses)
 
     unplaced = ledger_records(TARGET.unplaced)
-    reasons = {reason: sum(1 for _, _, seen in unplaced if seen == reason)
+    reasons = {reason: sum(1 for _, _, seen in unplaced if seen.split(" overlay:")[0] == reason)
                for reason in (emit_symbols.OUTSIDE_REASON, emit_symbols.UNPLACED_REASON)}
     # The deferred overlays: 1,009 records over 933 addresses, none of them placeable.  The
     # count is the exclusion's own record count -- a deferred milestone, not a silent drop.
@@ -249,3 +252,9 @@ def test_the_committed_ledger_places_one_record_per_address():
     assert reasons[emit_symbols.UNPLACED_REASON] == 136
     assert len(unplaced) == 1145
     assert all(reason for _, _, reason in unplaced), "every withheld record says why"
+    # ...and the overlay records name their module: seven modules share one base, so an
+    # address alone cannot tell a unit's function from another module's at the same word.
+    with_module = [reason for _, _, reason in unplaced if " overlay:" in reason]
+    assert len(with_module) == 1007
+    assert all(reason.split(" overlay:")[0] == emit_symbols.OUTSIDE_REASON
+               for reason in with_module)

@@ -404,3 +404,129 @@ def test_diff_hands_objdiff_the_two_objects_it_was_given(ledger, tmp_path, monke
     err = capsys.readouterr().err
     assert ledger["tu"] in err and ledger["name"] in err
     assert "the retail bytes" in err and "the object you named" in err
+
+
+# ---------------------------------------------------------------------------
+# verify --tu: the evidence has to be current, or there is no verdict at all
+# ---------------------------------------------------------------------------
+
+#: The synthetic unit the evidence tests are about, and the two paths the directory layout
+#: would otherwise decide (the object under ``build/`` and the descriptor ``tu_builds`` is
+#: written in).
+EVIDENCE_TU = "src/probe/evidence.c"
+PAIR = ("3.0b38-030307", "-c -lang c -O3 -opt full -g")
+
+
+@pytest.fixture
+def evidence_tree(tmp_path, monkeypatch):
+    """A synthetic tree whose stamps a test controls: source, object, graph, image, row.
+
+    ``config.targets``'s own ``REPO_ROOT`` is patched so the probe's ``built``/``ld_script``
+    resolve *inside* the temp tree -- otherwise the rule would be pointed at the real
+    ``out/`` and ``build/`` and would be testing them, not itself.  Nothing is built and no
+    real path is written.
+    """
+    ddr = load_ddr()
+    monkeypatch.setattr(ddr, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(targets, "REPO_ROOT", tmp_path)
+    config_dir = tmp_path / "config" / "probe_evidence"
+    config_dir.mkdir(parents=True)
+    (config_dir / "cus.json").write_text(json.dumps([
+        dict(index=0, kind="tu", offset=0, size=0x20, name="evidence.c", file=EVIDENCE_TU,
+             overlay="main", low_pc=None, high_pc=None, stmt_list=None),
+        dict(index=1, kind="function", offset=0x20, size=0x20, name="evidence.c",
+             file=EVIDENCE_TU, overlay="main", low_pc=0x00100000, high_pc=0x00100020,
+             stmt_list=0)]))
+    (config_dir / "debug_chunks.json").write_text(json.dumps([
+        dict(section=".debug", offset=0, size=0x400, tunits=[0, 1]),
+        dict(section=".line", offset=0, size=0x40, tunits=[1])]))
+    (config_dir / "symbol_addrs.txt").write_text(
+        "probe_one = 0x00100000; // type:func size:0x20 provenance:dwarf\n")
+    (config_dir / "unplaced_symbols.txt").write_text("")
+    (config_dir / "data_placements.txt").write_text("")
+    (config_dir / "unit_symbols.txt").write_text("")
+    target = target_support.probe(tmp_path, "probe_evidence",
+                                  config_dir=config_dir,
+                                  elf=tmp_path / "SLUS_000.01",
+                                  geometry=target_support.geometry())
+    return ddr, tmp_path, config_dir, target
+
+
+def stamp(path, when):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("")
+    os.utime(path, ns=(when, when))
+
+
+def test_verify_tu_refuses_a_unit_with_no_source_or_row(evidence_tree):
+    """AGENTS.md rule 6: this is the case that printed three green lines for a path that
+    names nothing."""
+    ddr, tree, config_dir, target = evidence_tree
+    problems = ddr._evidence_problems(EVIDENCE_TU, target, tree=tree)
+    assert any("no source" in problem for problem in problems)
+    assert any("no measured compiler pair" in problem for problem in problems)
+
+
+def test_verify_tu_refuses_an_object_the_link_does_not_name(evidence_tree):
+    """The row and the source exist, but the graph was generated before them: the bytes in
+    ``out/`` are the split's, so a verdict on them is retail compared with retail."""
+    ddr, tree, config_dir, target = evidence_tree
+    target = dataclasses.replace(target, tu_builds=((EVIDENCE_TU, *PAIR),))
+    now = 1_000_000_000_000_000_000
+    stamp(tree / EVIDENCE_TU, now)
+    stamp(tree / "build" / f"{EVIDENCE_TU}.o", now)
+    stamp(target.built, now)
+    stamp(tree / "descriptor.py", now)
+    problems = ddr._evidence_problems(EVIDENCE_TU, target, tree=tree,
+                                      descriptor=tree / "descriptor.py")
+    assert problems and "not one of the link's inputs" in problems[0]
+
+    target.ld_script.parent.mkdir(parents=True, exist_ok=True)
+    target.ld_script.write_text(f"build/{EVIDENCE_TU}.o(.text)\n")
+    assert ddr._evidence_problems(EVIDENCE_TU, target, tree=tree,
+                                  descriptor=tree / "descriptor.py") == []
+
+
+def test_verify_tu_refuses_an_image_older_than_the_source_or_the_row(evidence_tree):
+    ddr, tree, config_dir, target = evidence_tree
+    target = dataclasses.replace(target, tu_builds=((EVIDENCE_TU, *PAIR),))
+    base = 1_000_000_000_000_000_000
+    stamp(tree / EVIDENCE_TU, base)
+    stamp(tree / "build" / f"{EVIDENCE_TU}.o", base + 10)
+    target.ld_script.parent.mkdir(parents=True, exist_ok=True)
+    target.ld_script.write_text(f"build/{EVIDENCE_TU}.o(.text)\n")
+    stamp(target.built, base + 20)
+    stamp(tree / "descriptor.py", base + 5)
+    assert ddr._evidence_problems(EVIDENCE_TU, target, tree=tree,
+                                  descriptor=tree / "descriptor.py") == []
+
+    # A source edited after the build: what the image carries is not this file.
+    stamp(tree / EVIDENCE_TU, base + 30)
+    problems = ddr._evidence_problems(EVIDENCE_TU, target, tree=tree,
+                                      descriptor=tree / "descriptor.py")
+    assert problems and "is older than its source" in problems[0]
+
+    # A row recorded after the build (the descriptor is newer than out/).
+    stamp(tree / EVIDENCE_TU, base + 30)
+    stamp(tree / "build" / f"{EVIDENCE_TU}.o", base + 31)
+    stamp(tree / "descriptor.py", base + 40)
+    problems = ddr._evidence_problems(EVIDENCE_TU, target, tree=tree,
+                                      descriptor=tree / "descriptor.py")
+    assert any("is older than its measured pair" in problem for problem in problems), problems
+
+
+def test_verify_tu_exits_two_on_a_unit_with_no_source(evidence_tree, capsys):
+    """The verb itself: exit 2, the reason on stderr, and no verdict line at all."""
+    ddr, tree, config_dir, target = evidence_tree
+    # Both files G1 compares exist and are equal, so the gates get past their own checks and
+    # the unit's evidence is what stops the run.
+    data = b"\x3D" * target_support.geometry().elf_size
+    target.built.parent.mkdir(parents=True, exist_ok=True)
+    target.built.write_bytes(data)
+    target.elf.write_bytes(data)
+    ddr._target = lambda args: target
+    assert ddr.main(["verify", "--tu", "evidence.c"]) == 2
+    captured = capsys.readouterr()
+    assert "no source" in captured.err and "no measured compiler pair" in captured.err
+    assert "run ./ddr build" in captured.err
+    assert "text " not in captured.out, "a refused unit prints no verdict line"

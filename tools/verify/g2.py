@@ -39,12 +39,14 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import re
 import sys
 from typing import NamedTuple
 
 HERE = pathlib.Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
-for extra in (str(HERE), str(REPO_ROOT)):  # `python3 tools/verify/g2.py`, and configure
+for extra in (str(HERE), str(REPO_ROOT / "tools" / "oracle"), str(REPO_ROOT)):
+    # `python3 tools/verify/g2.py`, `configure.py`'s import, and `ddr`'s
     if extra not in sys.path:
         sys.path.insert(0, extra)
 
@@ -53,6 +55,7 @@ try:
 except ImportError:  # imported flat, as `python3 tools/verify/g2.py` does
     import g1
 
+import elf  # noqa: E402  the vendored reader: which bytes a built ELF maps, and where
 from config import targets  # noqa: E402  the target's geometry: LOADABLE_ROM/VRAM, not a copy
 
 #: The default target's names, so a bare call means "the target this tree is built for".  The
@@ -101,6 +104,60 @@ def _first_difference_in(built, retail, start, end):
     return start + min(len(left), len(right)) if len(left) != len(right) else None
 
 
+#: One ``unplaced_symbols.txt`` record that names its module: the overlay's records carry
+#: `overlay:`, which is what makes an overlay address resolvable at all (seven modules share
+#: one base, so the address alone is ambiguous).
+UNPLACED_OVERLAY = re.compile(r"^(?P<name>\S+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);.*?"
+                              r"\boverlay:(?P<overlay>\S+)")
+
+
+def _overlay_names(path) -> dict:
+    """``{(overlay, address): name}`` from a target's ``unplaced_symbols.txt``, or ``{}``.
+
+    ``symbol_addrs.txt`` is the *placed* ledger, so it never carries an overlay name; the
+    oracle writes them to the unplaced file with the reason and the module.  Read here for the
+    same purpose ``compile.Manifests`` reads it: to spell a function the split will be called,
+    instead of falling back to ``func_<ADDR>``.
+    """
+    path = pathlib.Path(path)
+    if not path.is_file():
+        return {}
+    out = {}
+    for line in path.read_text().splitlines():
+        match = UNPLACED_OVERLAY.match(line.strip())
+        if match is not None:
+            out.setdefault((match["overlay"], int(match["address"], 16)), match["name"])
+    return out
+
+
+def _file_bytes(path, offset, size) -> bytes:
+    """``size`` bytes of ``path`` at ``offset``; a short file is a refusal, not a short read."""
+    with open(path, "rb") as handle:
+        handle.seek(offset)
+        data = handle.read(size)
+    if len(data) != size:
+        raise ValueError(f"{path}: ends at 0x{offset + len(data):X}, inside the "
+                         f"0x{offset:X}+0x{size:X} read")
+    return data
+
+
+def _built_bytes(built, address, size):
+    """The built image's own bytes for ``address``, or None when it maps none there.
+
+    The built ELF carries retail's *program headers* -- one file-backed ``PT_LOAD`` and the ten
+    overlay reservations with ``p_filesz == 0`` -- so "None" is the honest answer for an
+    overlay address today: the link asserts ``.main``'s exact size and places no overlay bytes,
+    and the reservation claims no file bytes at all.  A build that ever does carry them would
+    answer with bytes and be compared like any other, so nothing here is hard-coded to fail.
+    """
+    image = elf.Elf(str(built))
+    offset = image.file_offset(address)
+    if offset is None:
+        return None
+    data = image.data[offset:offset + size]
+    return data if len(data) == size else None
+
+
 class Manifests:
     """``cus.json`` + ``debug_chunks.json`` + ``symbol_addrs.txt``, read once and joined.
 
@@ -117,6 +174,9 @@ class Manifests:
         except (OSError, json.JSONDecodeError, TypeError):
             self.records, self.chunks = [], []
         self.symbols = g1._symbol_table(symbols_path)
+        # The overlay records live in the unplaced ledger, next to the placed one.
+        self.overlay_symbols = _overlay_names(
+            pathlib.Path(symbols_path).with_name("unplaced_symbols.txt"))
         self.geometry = geometry if geometry is not None else geometry_of()
 
     # -- names ---------------------------------------------------------------
@@ -148,12 +208,37 @@ class Manifests:
         """Every compile-unit record the translation unit owns, in `.debug` order."""
         return [record for record in self.records if record.get("file") == tu]
 
+    def overlay_of(self, tu: str):
+        """The overlay the translation unit loads in, or ``None`` for a main-image unit.
+
+        The evidence is the record's own ``overlay`` field -- the DWARF ``DW_TAG_MW_overlay``
+        the oracle wrote into ``cus.json`` -- because an address cannot answer this: seven of
+        this target's modules are alternatives at ``0x7F0000`` and their windows overlap.  A
+        name the geometry does not record is a ``KeyError`` from ``overlay_named``, which the
+        CLI reports as a configuration error rather than falling back to the main image (whose
+        bytes are a different image entirely).
+        """
+        for record in self.records:
+            if record.get("file") == tu and record.get("kind") == "tu":
+                return self.geometry.overlay_named(
+                    record.get("overlay") or self.geometry.code_segment)
+        return None
+
     def functions_of(self, tu: str) -> list:
         return [record for record in self.records_of(tu)
                 if record.get("kind") == "function" and record.get("low_pc") is not None]
 
-    def symbol_at(self, address: int) -> str:
-        """The DWARF (or Ghidra) name at ``address``, or the ``func_`` fallback splat uses."""
+    def symbol_at(self, address: int, overlay=None) -> str:
+        """The DWARF (or Ghidra) name at ``address``, or the ``func_`` fallback splat uses.
+
+        ``overlay`` is the module the caller is asking about: an overlay address resolves
+        through ``unplaced_symbols.txt``'s `(module, address)` records, because the placed
+        ledger has none there and seven modules share one base.
+        """
+        if overlay is not None:
+            name = self.overlay_symbols.get((overlay, address))
+            if name is not None:
+                return name
         return self.symbols.get(address) or f"func_{address:08X}"
 
     # -- addresses -----------------------------------------------------------
@@ -249,16 +334,20 @@ def describe(located) -> str:
 
 
 def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbols=g1.SYMBOLS,
-             geometry=None):
+             geometry=None, image=None):
     """The per-TU report ``verify --tu NAME`` prints: text, then `.debug`, then `.line`.
 
     A translation unit is promoted only when its code *and* its debug chunk match retail
     (the spec's promotion rule), so all three are compared here and neither is implied by
     the other: G1 could be green while a chunk is not, and vice versa.
+
+    ``image`` is the pinned disc image, needed only by an overlay unit: its retail ``.text``
+    is a blob in that image (the ELF maps no bytes at an overlay address), while its
+    ``.debug``/``.line`` chunks stay in the ELF.
     """
     manifests = Manifests(cus, chunks, symbols, geometry)
     tu = manifests.tu_named(name)
-    report = [_text_verdict(manifests, built, retail, tu)]
+    report = [_text_verdict(manifests, built, retail, tu, image)]
     sections = manifests.geometry.sections
     report.append(_section_verdict("debug chunk", manifests.debug_chunks_of(tu),
                                    sections[0][1], built, retail))
@@ -267,13 +356,16 @@ def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbol
     return tu, report
 
 
-def _text_verdict(manifests, built, retail, tu) -> Verdict:
+def _text_verdict(manifests, built, retail, tu, image=None) -> Verdict:
     geo = manifests.geometry
     functions = manifests.functions_of(tu)
     if not functions:
         return Verdict("text", True, "the translation unit declares no code")
     low = min(record["low_pc"] for record in functions)
     high = max(record["high_pc"] for record in functions)
+    overlay = manifests.overlay_of(tu)
+    if overlay is not None:
+        return _overlay_text_verdict(manifests, built, image, low, high, overlay)
     start = geo.offset_of(low)
     end = geo.offset_of(high)
     span = f"VA 0x{low:08X}-0x{high:08X}, {end - start} bytes"
@@ -287,6 +379,41 @@ def _text_verdict(manifests, built, retail, tu) -> Verdict:
     address = geo.address_of(offset)
     return Verdict("text", False,
                    f"{span}: first differing byte at 0x{offset:X} (VA 0x{address:08X}, {name})")
+
+
+def _overlay_text_verdict(manifests, built, image, low, high, overlay) -> Verdict:
+    """An overlay unit's ``.text``: the disc blob's bytes against what the build maps there.
+
+    The retail side is the blob at ``overlay.image_offset + (VA - overlay.vaddr)`` -- the
+    formula the geometry's rows were measured with -- and the build side is the built image's
+    own answer for that address.  For an overlay unit that answer is *none*: the linker
+    script's ``.main`` is asserted to the file-backed image's exact size, so no overlay byte
+    is in the built ELF, and its reservation claims no file bytes.  Saying "the build carries
+    no bytes there, and retail's first byte differs" is the honest verdict; the old
+    arithmetic said the opposite by comparing ``.line`` against itself.
+    """
+    size = high - low
+    span = f"VA 0x{low:08X}-0x{high:08X}, {size} bytes, overlay {overlay.name}"
+    if image is None:
+        raise UnknownUnit(
+            f"{overlay.name} is an overlay: its retail bytes are in the disc image and this "
+            f"call supplied none (`verify` passes the target's image)")
+    start = overlay.image_offset_of(low)
+    theirs = _file_bytes(image, start, size)
+    ours = _built_bytes(built, low, size)
+    record = manifests.record_at_pc(low)
+    name = manifests.symbol_at(record["low_pc"], overlay.name) if record else "?"
+    if ours is None:
+        return Verdict("text", False,
+                       f"{span}: the build maps no bytes there (an overlay's reservation is "
+                       f"zero-fill), and retail's first byte at image 0x{start:X} "
+                       f"(VA 0x{low:08X}, {name}) is 0x{theirs[0]:02X}")
+    for index, (one, other) in enumerate(zip(ours, theirs)):
+        if one != other:
+            return Verdict("text", False,
+                           f"{span}: first differing byte at image 0x{start + index:X} "
+                           f"(VA 0x{low + index:08X}, 0x{one:02X} here, 0x{other:02X} retail)")
+    return Verdict("text", True, span)
 
 
 def _section_verdict(what, chunks, base, built, retail) -> Verdict:

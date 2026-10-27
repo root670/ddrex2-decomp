@@ -180,9 +180,9 @@ def cmd_oracle(args) -> int:
     if outside:
         addresses = {r["address"] for r in outside}
         print(f"oracle: {len(outside)} records over {len(addresses)} addresses are in no "
-              f"segment this geometry declares (the zero-fill overlay reservations the yaml "
-              f"does not model), so they are excluded from the split, not linked: "
-              f"-> {_display(target.unplaced)}")
+              f"segment the yaml declares (the overlay windows the geometry records "
+              f"separately), so they are excluded from the split, not linked, and each one's "
+              f"module is recorded with it: -> {_display(target.unplaced)}")
     if ghidra is None:
         print(f"oracle: {_display(target.ghidra)}: no Ghidra function list for this target, "
               f"so every symbol here is the DWARF's own")
@@ -309,12 +309,96 @@ def _g3(args) -> int:
     return 1
 
 
+def _unit_object(tu: str, tree=REPO_ROOT) -> pathlib.Path:
+    """The object a promoted unit's ``cc`` edge writes: ``build/<file>.o``.
+
+    Spelled the way ``configure.Promotion.object`` is (``build/<src>.o``) and the way the
+    pinned linker script names it, so the check below compares the same path the link does.
+    """
+    return pathlib.Path(tree) / "build" / f"{tu}.o"
+
+
+def _evidence_problems(tu: str, target, tree=REPO_ROOT, descriptor=None) -> list:
+    """Why a verdict on ``tu`` would not be evidence about its source, or ``[]``.
+
+    Two kinds, both configuration errors (exit 2) rather than verdicts, because a green line
+    from either is a comparison that says nothing about any C:
+
+    * **no source, no row** -- ``AGENTS.md`` rule 6: a source with no measured pair, or a row
+      whose source is gone, is a configuration error.  A unit with neither is the same thing,
+      and it was the one printing ``text ok`` for a path that names nothing.
+    * **stale evidence** -- the source and the row both exist, but the built image the verdict
+      reads was not produced from them.  ``out/`` must be newer than the unit's source, the
+      descriptor its row lives in, and the unit's own object; that object must be newer than
+      the source, must exist, and must be one the pinned linker script places.  Otherwise the
+      ``.text`` in ``out/`` is the *split* (retail's own bytes), so ``text ok`` compares retail
+      with retail -- the failure that reported ``model2`` and ``motion1`` green.
+
+    ``tree`` and ``descriptor`` are the two paths the directory layout would otherwise decide;
+    they are parameters so a test can point the same rule at a synthetic tree (the object lives
+    under ``tree``; ``descriptor`` is the file ``tu_builds`` is written in).
+    """
+    tree = pathlib.Path(tree)
+    descriptor = pathlib.Path(descriptor) if descriptor is not None else pathlib.Path(
+        targets.__file__)
+    source = tree / tu
+    problems = []
+    if not source.is_file():
+        problems.append(f"no source at {tu} in this checkout")
+    if target.build_pair(tu) is None:
+        problems.append(f"no measured compiler pair in {target.name}'s tu_builds")
+    if problems:
+        return problems
+    obj = _unit_object(tu, tree)
+    if not obj.is_file():
+        return [f"its object {_display(obj)} is missing"]
+    script = target.ld_script
+    if not script.is_file() or obj.relative_to(tree).as_posix() not in script.read_text():
+        return [f"{_display(obj)} is not one of the link's inputs ({_display(script)} does not "
+                f"name it): the graph predates its row"]
+    if obj.stat().st_mtime_ns < source.stat().st_mtime_ns:
+        return [f"its object {_display(obj)} is older than its source {tu}"]
+    out = target.built
+    if not out.is_file():
+        return [f"{_display(out)} is missing"]
+    stamps = (("its source", source),
+              ("its measured pair", descriptor),
+              ("its object", obj))
+    return [f"{_display(out)} is older than {label} {_display(path)}"
+            for label, path in stamps
+            if path.stat().st_mtime_ns > out.stat().st_mtime_ns]
+
+
 def _tu_report(built, retail, name, target) -> int:
-    """``verify --tu``: the per-TU verdict, one line per thing the promotion rule needs."""
+    """``verify --tu``: the per-TU verdict, one line per thing the promotion rule needs.
+
+    The unit has to be *promotable and current* before its bytes are compared, and that is
+    checked first: three green lines from a stale ``out/`` or from a unit with no source are
+    the false evidence that gets a unit reported as satisfied.  A configuration error exits 2
+    naming what is missing or stale and what to run; only then are the three verdicts taken
+    and printed, and their exit code is 0 (all three ok) or 1 (one of them failed).
+    """
+    manifests = g2.Manifests(target.cus, target.chunks, target.symbols)
+    try:
+        tu = manifests.tu_named(name)
+    except g2.UnknownUnit as exc:
+        # A name that matches no unit is a usage error, answered before anything is compared.
+        print(f"ddr: {exc}", file=sys.stderr)
+        return 2
+    problems = _evidence_problems(tu, target)
+    if problems:
+        print(f"ddr: {tu}: {'; '.join(problems)}: the bytes in {_display(built)} say nothing "
+              f"about this unit's source -- run ./ddr build, then verify again",
+              file=sys.stderr)
+        return 2
     try:
         tu, report = g2.verdicts(built, retail, name, target.cus, target.chunks,
-                                 target.symbols, target.geometry_required())
-    except g2.UnknownUnit as exc:
+                                 target.symbols, target.geometry_required(),
+                                 image=target.image)
+    except (g2.UnknownUnit, targets.OutsideLoadableImage, KeyError, ValueError, OSError,
+            FileNotFoundError) as exc:
+        # An address the retail ELF maps no bytes at, a module the geometry does not record,
+        # a missing manifest: configuration problems, named rather than a traceback.
         print(f"ddr: {exc}", file=sys.stderr)
         return 2
     for verdict in report:

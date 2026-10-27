@@ -91,6 +91,7 @@ import elf  # noqa: E402  the vendored 32-bit little-endian MIPS reader
 from config import targets  # noqa: E402  the one place a target's facts are written down
 from toolchain import (check_deps, debug_adopt, debug_normalize, debug_set, fetch,
                        line_reflow, probe)  # noqa: E402
+from toolchain.retail import Retail  # noqa: E402  which file holds a unit's retail bytes
 
 #: The target a direct invocation works on when ``--target`` names none: the one the tree is
 #: configured for.  The ninja graph always names the target it was generated for, so a build
@@ -125,14 +126,16 @@ STAGING_ROOT = pathlib.Path("/tmp").resolve()
 #: whose DWARF `AT_location` carries none, which is 0 in retail's bytes (`emit_symbols.py`
 #: writes the reason; `tests/toolchain/test_compile_relocations.py` pins this spelling to
 #: it).  The other reason, "outside every declared segment", is *not* address 0 -- those
-#: objects live in the overlay reservations this layout does not model.
+#: objects live in the overlay windows ``Geometry`` records, whose bytes are in the disc
+#: image and whose names resolve to their absolute addresses (see `address_of`).
 UNPLACED_NO_ADDRESS = "no AT_location address"
 
 #: The oracle's word for the other way a name misses the placed ledger: the record lives
-#: outside every declared segment (one of this target's overlay reservations), so this
-#: layout has no place to relocate it to and the promotion is refused *by design* until the
-#: overlay milestone models those segments.  Kept distinct from `UNPLACED_NO_ADDRESS` so the
-#: refusal can say which of the two it is instead of looking like a lookup that broke.
+#: outside every declared segment, i.e. in one of this target's overlay windows.  The link
+#: places no section there (`.main` is asserted to the file-backed image's exact size), so
+#: a *reference* resolves to the window's absolute address and a *placement* is refused.
+#: Kept distinct from `UNPLACED_NO_ADDRESS` so a refusal can say which of the two it is
+#: instead of looking like a lookup that broke.
 UNPLACED_OUTSIDE = "outside every declared segment"
 
 R_MIPS_NONE, R_MIPS_32, R_MIPS_26, R_MIPS_HI16, R_MIPS_LO16, R_MIPS_GPREL16 = 0, 2, 4, 5, 6, 7
@@ -144,6 +147,9 @@ SHT_REL = 9
 STT_SECTION, STT_FUNC = 3, 2
 SYMBOL_LINE = re.compile(
     r"^(?P<name>\S+)\s*=\s*(?P<address>0x[0-9A-Fa-f]+);\s*//\s*(?P<attrs>.*)$")
+#: The module a withheld record belongs to, when the oracle could place it in a window it
+#: knows about but the link does not (``unplaced_symbols.txt``'s `overlay:` field).
+OVERLAY_ATTR = re.compile(r"\boverlay:(\S+)")
 #: The global labels a generated split defines (`asm/include/macro.inc`'s macros).  The one
 #: label at an address is the same name the link knows, and `_split_symbols` binds each to the
 #: address of the piece of data or instruction that follows it.
@@ -217,10 +223,10 @@ class Tu:
     """One translation unit of the retail build, with its pinned placement."""
 
     __slots__ = ("file", "name", "records", "debug_offset", "debug_size",
-                 "line_offset", "line_size", "functions", "anchor")
+                 "line_offset", "line_size", "functions", "anchor", "overlay")
 
     def __init__(self, file, name, records, debug_offset, debug_size, line_offset,
-                 line_size, functions, anchor=None):
+                 line_size, functions, anchor=None, overlay="main"):
         self.file = file                  # repo-relative, e.g. "src/sys/sys_scf.c"
         self.name = name                  # the retail spelling, with its drive
         self.records = records            # cus.json indices, in .debug order
@@ -229,12 +235,28 @@ class Tu:
         self.line_offset = line_offset    # the unit's run of .line chunks
         self.line_size = line_size
         self.functions = functions        # in address order
+        # The module the unit's code loads in: `main` (the file-backed image) or an overlay's
+        # stem (`dmm_rel4cd`), from the DWARF `DW_TAG_MW_overlay` via `cus.json`.  Addresses
+        # alone cannot answer this -- seven modules are alternatives at 0x7F0000 -- and it
+        # decides *which file* the unit's retail bytes and splits come from, so it is part of
+        # the unit's identity rather than something a caller re-derives.
+        self.overlay = overlay
         # A unit with no code is a data-only unit: its DWARF declares no function, and the
         # address it starts at is the first datum the placement ledger pins for its source.
         # With no functions and no anchor there is nothing to place, which is a refusal.
         if not functions and anchor is None:
             raise Unusable(f"{file} declares no functions and no data placement")
         self.anchor = anchor
+
+    @property
+    def is_overlay(self) -> bool:
+        """Whether the unit's code loads in an overlay rather than in the main image."""
+        return self.overlay != "main"
+
+    @property
+    def split_directory(self) -> str:
+        """The segment name splat's splits for this unit live under."""
+        return self.overlay
 
     @property
     def source(self) -> pathlib.Path:
@@ -306,8 +328,10 @@ class Manifests:
     addresses, and a ``-T`` assignment only counts where this layout holds its address.
 
     A name that misses all of it is refused, and the refusal says which way: an address
-    outside every declared segment (an overlay window this layout does not model) is a
-    boundary deferred by design, while a name with no record at all is a gap.
+    outside every declared segment is either inside an overlay window -- which resolves to
+    its absolute address, because the window loads at a fixed VA -- or in no window at all,
+    which is a gap in this target's measurement.  A name with no record anywhere is the
+    other gap.
     """
 
     def __init__(self, target=None, root=REPO_ROOT):
@@ -320,6 +344,13 @@ class Manifests:
         self.placed = {}
         self.withheld = {}
         self.by_address = {}
+        #: ``{(overlay, address): name}`` for the overlay records the oracle withheld.
+        #: ``by_address`` cannot hold them: seven modules are alternatives at one base, so 64
+        #: function addresses belong to two or more overlays and one address-keyed name would
+        #: silently pick the wrong module's.  A unit's own overlay is the other half of the
+        #: key, and `cus.json` carries it.
+        self.overlay_symbols = {}
+        self._retail = None
         # A *block-scope* static is mangled by the compiler with a per-file counter
         # (`ofs$338`), and that counter moves when the file is edited, so a record naming
         # one number rots the moment the source is reformatted.  The ledger's wildcard form
@@ -354,6 +385,12 @@ class Manifests:
             else:
                 self.withheld.setdefault(
                     name, (address, attrs["reason"], self.dir / "unplaced_symbols.txt"))
+                overlay = attrs.get("overlay")
+                if overlay is not None and address:
+                    # The ledger names the module each withheld record belongs to, so a unit
+                    # whose functions are all outside the declared segments resolves its own
+                    # names without one module's entry answering for another's address.
+                    self.overlay_symbols.setdefault((overlay, address), name)
         for line in (self.dir / "symbol_addrs.txt").read_text().splitlines():
             match = SYMBOL_LINE.match(line.strip())
             if match is None:
@@ -423,6 +460,17 @@ class Manifests:
                     out.append((match.group(1), int(match.group(2), 16), path))
         return out
 
+    @property
+    def retail(self) -> Retail:
+        """The target's retail bytes: the ELF for main units, the disc image for overlays.
+
+        One provider per manifest set, because the image handle is opened once and reading a
+        1.8 GB file twice per unit is not a thing to do casually.
+        """
+        if self._retail is None:
+            self._retail = Retail(self.target)
+        return self._retail
+
     def _within_segments(self, address) -> bool:
         """Whether ``address`` is one this layout places: inside the declared segments.
 
@@ -489,13 +537,18 @@ class Manifests:
             if match is None:
                 continue
             # The reason is prose and carries spaces ("no AT_location address"), so it is the
-            # one field that cannot come out of the keyword split; `dwarf_name:` follows it
-            # when the oracle had to rename a duplicate.
+            # one field that cannot come out of the keyword split; it ends at the next
+            # `key:value` field (`overlay:`, `dwarf_name:`), which may or may not follow.
             tail = match["attrs"]
             if "reason:" not in tail:
                 continue
-            reason = tail.split("reason:", 1)[1].split(" dwarf_name:", 1)[0].strip()
-            out.append((match["name"], int(match["address"], 16), {"reason": reason}))
+            reason = tail.split("reason:", 1)[1]
+            reason = re.split(r"\s+(?=\w+:)", reason, maxsplit=1)[0].strip()
+            attrs = {"reason": reason}
+            module = OVERLAY_ATTR.search(tail)
+            if module is not None:
+                attrs["overlay"] = module.group(1)
+            out.append((match["name"], int(match["address"], 16), attrs))
         return out
 
     @staticmethod
@@ -584,11 +637,23 @@ class Manifests:
         withheld = self.withheld.get(name)
         if withheld is not None:
             address, reason, source = withheld
+            windows = self._overlay_windows(address)
+            if windows:
+                # An overlay loads at a fixed address, so a reference to anything in it is
+                # that absolute address and needs no linker placement: `jal` takes the VA's
+                # word index (`R_MIPS_26`), a pointer is the VA (`R_MIPS_32`), and a
+                # `lui`/`%lo` pair is the VA's two halves.  The link places no section for a
+                # window (`.main` is asserted to the file-backed image's exact size), so the
+                # name has to resolve here or a main-image unit that calls into an overlay
+                # could never be placed.  Which module the name belongs to does not matter
+                # for the address -- `withheld` is name-keyed and the ledger's names are
+                # unique -- so an address no window claims is still a hard error.
+                return address
             raise Unusable(
                 f"the object references {name!r}, which is at 0x{address:08X}, {reason} "
-                f"({_display(source)}); this layout has no place to relocate it to -- the "
-                f"segments that hold it are the overlay milestone's -- so the unit cannot "
-                f"be placed")
+                f"({_display(source)}); this layout has no place to relocate it to -- no "
+                f"overlay window this target's geometry records claims that address -- so "
+                f"the unit cannot be placed")
         # Nothing exact resolves it, so it may be a block-scope static's mangled name: the
         # compiler emits `name$<counter>`, and the ledger can record the stable prefix as
         # `name$*`.  Exact records win above; this is the fallback, so a `name$N` record and
@@ -601,6 +666,18 @@ class Manifests:
             f"split labels the link places, not in {_display(self.target.symbols)}, not in "
             f"the link's -T files, and not in {self._unplaced_path()}; the unit cannot be "
             f"placed")
+
+    def _overlay_windows(self, address) -> tuple:
+        """The overlay windows this target's geometry records at ``address``, if any.
+
+        Empty for a target nobody has measured and for an address no window claims -- the two
+        states in which an overlay reference stays a hard error, because there is no evidence
+        where its bytes would be.
+        """
+        geometry = getattr(self.target, "geometry", None)
+        if geometry is None or not getattr(geometry, "overlays", ()):
+            return ()
+        return geometry.overlays_at(address)
 
     def _static_pattern(self, name):
         """The address a ``$*`` record gives ``name``'s mangled counter, or ``None``.
@@ -652,6 +729,10 @@ class Manifests:
 
     def _tu(self, index: int) -> Tu:
         record = self.cus[index]
+        # The unit's module, from the DWARF overlay DIE the oracle wrote into `cus.json`.
+        # `main` covers every unit in the file-backed image; anything else names an overlay's
+        # split directory and the disc blob its retail bytes are in.
+        overlay = record.get("overlay") or "main"
         chunk = next((c for c in self.chunks if c.get("section") == ".debug"
                       and c.get("tunits", [None])[0] == index), None)
         if chunk is None:
@@ -666,8 +747,15 @@ class Manifests:
                     f"{record['file']}: cus.json record {number} is "
                     f"{entry.get('kind')!r}, not a function this build can place")
             name = self.by_address.get(entry["low_pc"])
+            if name is None and overlay != "main":
+                # An overlay address is not in `by_address`: the ledger's records there are
+                # withheld ("outside every declared segment"), and the address alone cannot
+                # name one -- seven modules share one base.  The module is the other half of
+                # the key, and the unit's own DWARF overlay DIE is what supplies it.
+                name = self.overlay_symbols.get((overlay, entry["low_pc"]))
             if name is None:
-                raise Unusable(f"{record['file']}: no symbol at 0x{entry['low_pc']:08X}")
+                where = "" if overlay == "main" else f" in overlay {overlay}"
+                raise Unusable(f"{record['file']}: no symbol at 0x{entry['low_pc']:08X}{where}")
             line = next((c for c in self.chunks if c.get("section") == ".line"
                          and c.get("tunits", [None])[0] == number), None)
             if line is None:
@@ -686,7 +774,8 @@ class Manifests:
                     f"{record['file']} declares no functions and no data placement names "
                     f"it")
             return Tu(record["file"], record["name"], records, chunk["offset"],
-                      chunk["size"], 0, 0, [], min(row["address"] for row in placed))
+                      chunk["size"], 0, 0, [], min(row["address"] for row in placed),
+                      overlay=overlay)
         functions.sort(key=lambda f: f.address)
         if not _contiguous(line_chunks):
             raise Unusable(
@@ -695,7 +784,7 @@ class Manifests:
                 f"cannot be assembled from one payload")
         return Tu(record["file"], record["name"], records, chunk["offset"], chunk["size"],
                   min(offset for offset, _ in line_chunks),
-                  sum(size for _, size in line_chunks), functions)
+                  sum(size for _, size in line_chunks), functions, overlay=overlay)
 
     def section_chunks(self, section: str):
         """A section's chunks in file order -- the order ``configure.py`` cuts databins."""
@@ -730,16 +819,29 @@ def _split_extent(tu: Tu, manifests: Manifests, root=None) -> tuple[int, int]:
     Splat's function split includes the trailing bytes up to the next split, which can be
     padding outside the function's DWARF ``high_pc``.  The linker removes that whole run,
     so a promoted object has to fill it too.
+
+    An overlay unit's splits are a *different* splat run (``asm/nonmatchings/<overlay>/``):
+    the module's bytes are the only ones that can load at its base, and the module's code ends
+    at the window's ``code_end`` -- so the last split's extent stops there rather than running
+    into another module's address at the same base, which is where the main-image ``tu.end``
+    rule would put it.
     """
     root = manifests.root if root is None else root
     geometry = manifests.target.geometry_required()
+    overlay = geometry.overlay_named(tu.overlay) if tu.is_overlay else None
     if not tu.functions:
         # A data-only unit displaces no split: its span is empty.  The anchor is the start of
         # the loadable image, not 0: retail's VA 0 is the ELF header, outside every loaded
         # segment, and `Elf.read` refuses it -- an empty read still needs a mapped address.
-        base = geometry.loadable_vram
+        base = overlay.vaddr if overlay is not None else geometry.loadable_vram
         return base, base
-    segment = geometry.code_segment
+    if overlay is not None:
+        if tu.address < overlay.code_vram or tu.end > overlay.code_end_vram:
+            raise Unusable(
+                f"{tu.file}: its code is 0x{tu.address:08X}..0x{tu.end:08X}, outside overlay "
+                f"{overlay.name}'s code 0x{overlay.code_vram:08X}.."
+                f"0x{overlay.code_end_vram:08X}: the unit is not the module its DWARF says")
+    segment = tu.split_directory if overlay is not None else geometry.code_segment
     directory = pathlib.Path(root) / "asm" / "nonmatchings" / segment
     if not directory.is_dir():
         raise Unusable(f"{tu.file}: {directory} is missing; run the oracle and "
@@ -762,7 +864,14 @@ def _split_extent(tu: Tu, manifests: Manifests, root=None) -> tuple[int, int]:
     first, last = min(positions), max(positions)
     if sorted(positions) != list(range(first, last + 1)):
         raise Unusable(f"{tu.file}: its function splits are not one contiguous run")
-    end = rows[last + 1][0] if last + 1 < len(rows) else tu.end
+    if last + 1 < len(rows):
+        end = rows[last + 1][0]
+        if overlay is not None:
+            # The next split may belong to another module's run only if the directory is not
+            # the module's own; the clamp is the measurement's, so it wins either way.
+            end = min(end, overlay.code_end_vram)
+    else:
+        end = overlay.code_end_vram if overlay is not None else tu.end
     if end < tu.end:
         raise Unusable(f"{tu.file}: split extent ends at 0x{end:08X}, before its "
                        f"last function ends at 0x{tu.end:08X}")
@@ -1595,8 +1704,7 @@ def placed_text(tu: Tu, mw: MWObject, manifests: Manifests, gp: int,
         labels.append((at, function.name, body))
         sizes.append((function.name, ".text", len(body), function.size))
 
-    retail = elf.Elf(str(manifests.target.elf))
-    expected_text = retail.read(text_start, text_size)
+    expected_text = manifests.retail.text(tu, text_size)
     text = _text_extent(bytes(text), expected_text, body_spans,
                         tu.end - text_start, tu.file)
     return text, labels, sizes, expected_text
@@ -1662,7 +1770,7 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
     groups = mw.groups(tu)
 
     text, labels, sizes, expected_text = placed_text(tu, mw, manifests, gp, groups)
-    retail = elf.Elf(str(manifests.target.elf))
+    retail = manifests.retail.elf()
 
     types = manifests.cus[tu.records[0]]
     # `.line` first: condition 1 pairs it with `.text`, and the `.debug` policy needs both.
@@ -1693,23 +1801,37 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
                   adopted=adopt, emitted_line=line, data=placed_data)
 
 
-def retail_bytes(tu: Tu, retail=RETAIL, text_size=None) -> dict:
-    """The unit's bytes in the retail image: its replaced text extent and payloads."""
-    image = elf.Elf(str(retail))
-    text = image.read(tu.address, tu.end - tu.address if text_size is None else text_size)
-    spans = {}
-    for section, (base, size) in ((".debug", (tu.debug_offset, tu.debug_size)),
-                                  (".line", (tu.line_offset, tu.line_size))):
-        entry = next((s for s in image.sections if s.name == section), None)
-        if entry is None:
-            raise Unusable(f"{retail}: no {section} section")
-        spans[section] = image.data[entry.offset + base:entry.offset + base + size]
-    return {"text": text, "debug": spans[".debug"], "line": spans[".line"]}
+def retail_for(retail=None, target=None) -> Retail:
+    """A :class:`Retail` provider for ``retail`` (a provider, a path, or nothing).
+
+    :func:`retail_bytes` and :func:`compare` accepted an ELF path for years, and the six
+    tools that call them still pass one; a path is wrapped with the target's geometry, so the
+    *text* read goes wherever the unit lives (the ELF for main, the disc image for an
+    overlay) while ``.debug``/``.line`` stay on the ELF.  A provider is used as it is, because
+    a caller that built one has already chosen the target.
+    """
+    if isinstance(retail, Retail):
+        return retail
+    return Retail(target if target is not None else DEFAULT_TARGET,
+                  elf_path=retail if retail is not None else None)
 
 
-def compare(tu: Tu, placed: Placed, retail=RETAIL) -> dict:
+def retail_bytes(tu: Tu, retail=None, text_size=None, target=None) -> dict:
+    """The unit's bytes in the retail image: its replaced text extent and payloads.
+
+    The text extent comes from :meth:`Retail.text`, so an overlay unit's bytes are the disc
+    blob's at ``image_offset + (VA - vaddr)`` rather than the zeros the ELF's zero-fill
+    reservation answers with.  ``.debug`` and ``.line`` are ELF sections and stay there.
+    """
+    provider = retail_for(retail, target)
+    return {"text": provider.text(tu, text_size),
+            "debug": provider.section(tu, ".debug"),
+            "line": provider.section(tu, ".line")}
+
+
+def compare(tu: Tu, placed: Placed, retail=None, target=None) -> dict:
     """Per part: ``(ok, detail)`` -- what the gates would say, for the selection loop."""
-    want = retail_bytes(tu, retail, text_size=len(placed.text))
+    want = retail_bytes(tu, retail, text_size=len(placed.text), target=target)
     mine = {"text": placed.text, "debug": placed.debug, "line": placed.line}
     out = {}
     for part, expected in want.items():

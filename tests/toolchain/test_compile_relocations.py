@@ -5,9 +5,11 @@ type-level, so they are pinned here rather than trusted:
 
 * the two reasons the oracle withholds a record are read apart: "no AT_location address"
   is the only one whose value is 0 and can be placed, while "outside every declared
-  segment" (an overlay reservation this layout does not model) is a refusal by design and
-  is reported as one.  Both spellings are the *oracle's* own words
-  (`emit_symbols.UNPLACED_REASON`, `emit_symbols.OUTSIDE_REASON`).
+  segment" is kept aside.  A record there whose address one of the geometry's overlay
+  windows claims resolves to that absolute address (the window loads at a fixed VA and no
+  section is placed for it); a target whose geometry records no windows -- these fixtures --
+  still refuses it, which is what the refusal below pins.  Both spellings are the *oracle's*
+  own words (`emit_symbols.UNPLACED_REASON`, `emit_symbols.OUTSIDE_REASON`).
 * a relocation resolves against the symbols the *link* knows -- the ledger, and the global
   labels of the split objects the generated ld script lists (a `func_001C43E8` has a split
   but no DWARF record, and the old ledger-only lookup refused it falsely) -- and the two
@@ -166,8 +168,11 @@ def test_the_ledger_name_wins_over_a_split_label_at_the_same_address(tmp_path):
     assert m.by_address[0x2B33C0] == "mesLanguage"
 
 
-def test_a_name_outside_every_declared_segment_is_refused_by_design(tmp_path):
-    """`NetRouterMain` is an overlay function: it has an address, but no place here."""
+def test_a_name_outside_every_declared_segment_is_refused_when_no_window_claims_it(tmp_path):
+    """`NetRouterMain` in a target whose geometry records no overlay windows: the record has
+    an address, but nothing on this target says where that address would be.  (With the
+    windows recorded it resolves -- see `test_a_reference_to_an_overlay_symbol_is_its
+    _absolute_address`.)"""
     m = manifests(tmp_path, unplaced=[
         "NetRouterMain = 0x008062B0; // type:func provenance:dwarf "
         "reason:outside every declared segment\n"])

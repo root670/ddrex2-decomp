@@ -337,14 +337,17 @@ def _switch_bound(lines, index: int) -> int | None:
 def retail_words(target, address: int, count: int) -> list:
     """Up to ``count`` little-endian words of the retail image at virtual ``address``."""
     geometry = target.geometry_required()
-    offset = geometry.offset_of(address)
     low = geometry.loadable_vram
     high = low + geometry.loadable_end - geometry.loadable_rom
     if not low <= address < high:
+        # Before the mapping, because `offset_of` now refuses an address the file-backed image
+        # does not map (an overlay window has no ELF bytes at all): the reader should be told
+        # what this function wanted, not what the mapping refused.
         raise DraftError(
             f"0x{address:08X} lies outside the retail binary's loadable image "
             f"(0x{low:08X}..0x{high:08X}), so it names no table"
         )
+    offset = geometry.offset_of(address)
     try:
         data = target.elf.read_bytes()
     except OSError as exc:

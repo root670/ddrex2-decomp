@@ -51,6 +51,13 @@ def build(elf_path):
                 size=None,
                 name=cu.name,
                 file=relpath(tu.name),
+                # The module the unit loads in: `main`, or the stem of the DWARF
+                # `DW_TAG_MW_overlay` name (`dmm_rel4cd`, whose blob names itself
+                # `dmm_rel4cd.prg`).  This is the *only* evidence that separates the seven
+                # modules that are alternatives at 0x7F0000 -- their addresses overlap, so
+                # nothing downstream can recover it from a PC.  It decides a unit's split
+                # directory and which disc blob its retail bytes come from.
+                overlay=targets.overlay_stem(tu.overlay),
                 low_pc=cu.attrs.get(dwarf1.AT_low_pc),
                 high_pc=cu.attrs.get(dwarf1.AT_high_pc),
                 stmt_list=cu.attrs.get(dwarf1.AT_stmt_list)))

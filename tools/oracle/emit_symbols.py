@@ -38,14 +38,24 @@ def build(elf_path, ghidra_json_path=None):
     dw = Dwarf(str(elf_path))
     out = []
     for tu in dw.tus:
+        home = targets.overlay_stem(tu.overlay)
         for f in tu.functions():
             lo = f.attrs[dwarf1.AT_low_pc]
             hi = f.attrs[dwarf1.AT_high_pc]
-            out.append(dict(name=f.name, address=lo, size=hi - lo, kind="func",
-                            provenance="dwarf"))
+            record = dict(name=f.name, address=lo, size=hi - lo, kind="func",
+                          provenance="dwarf")
+            if home != "main":
+                record["overlay"] = home
+            out.append(record)
     for (qn, addr, home, _), _g in dw.globals(None).items():
-        out.append(dict(name=qn, address=addr or 0, size=0, kind="obj",
-                        provenance="dwarf"))
+        record = dict(name=qn, address=addr or 0, size=0, kind="obj", provenance="dwarf")
+        module = targets.overlay_stem(home)
+        if module != "main" and addr:
+            # Only an *addressed* record in an overlay gets the module: the name disambiguates
+            # the 64 addresses several modules share, and a record with no address at all
+            # (addressed by `AT_location` never) has nothing for it to disambiguate.
+            record["overlay"] = module
+        out.append(record)
     if ghidra_json_path:
         known = {r["address"] for r in out}
         for f in json.loads(pathlib.Path(ghidra_json_path).read_text())["functions"]:
@@ -87,9 +97,10 @@ def outside_segments(records, geometry):
 
     A record outside :func:`declared_range` cannot be placed by any subsegment, and splat
     refuses even the records it *can* place when two symbols share an address no segment
-    claims ("Duplicate symbol detected!").  The overlays are a target layout the geometry
-    does not model yet, so this is the exclusion that keeps them out of the link -- measured
-    per record, never a hand-written list.
+    claims ("Duplicate symbol detected!").  The geometry *records* the overlay windows, but
+    the yaml declares no segment for them (their bytes are the disc image's blobs), so this
+    is the exclusion that keeps them out of the split -- measured per record, never a
+    hand-written list.
     """
     low, high = declared_range(geometry)
     placeable, outside = [], []
@@ -263,6 +274,8 @@ def _orphan(r):
     line = (f'{r["name"]} = 0x{r["address"]:08X}; '
             f'// type:{r["kind"]} provenance:{r["provenance"]} '
             f'reason:{r.get("reason", UNPLACED_REASON)}')
+    if r.get("overlay"):
+        line += f' overlay:{r["overlay"]}'
     if r.get("dwarf_name"):
         line += f' dwarf_name:{r["dwarf_name"]}'
     return line
