@@ -832,13 +832,13 @@ DDREX2P = Target(
         # is runtime scratch whose pointee is struct _NSV_USER_FILE_WORK.
         ("src/network/net_window/net_win_peruser.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
-        # .text 0x840 word-exact (Key 0x168, Main 0x534, Init 0x18C).  The unit inlines
-        # `_NETWORK_W` because include/types/_NETWORK_W.h stops at 0x76DC while retail's DIE
-        # says 0x7700: a 0x24-byte `tail` member makes the size right and adoption drops it.
-        # .debug is retail's 0x3B6C / 403 DIEs after adoption (dropped extra DIE and its
-        # array_type, 403 sibling/reference words rewritten); .line adopted whole.  The
-        # free-list bound is `if (D_0102FFCC > 1) n = 1; else n = D_0102FFCC;`, and the pad
-        # tests are `!!(x & mask) != 0` for retail's `andi; sltu`.
+        # .text 0x840 word-exact (Key 0x168, Main 0x534, Init 0x18C).  The unit includes
+        # types/_NETWORK_W.h, which the emitter now writes as `aligned(64)`: retail's DIE is
+        # 0x7700 while its members end at 0x76DC, so the header reproduces the record and
+        # adoption drops nothing (0 dropped DIEs, 388 sibling words) where the old inline copy
+        # needed 1 drop and 403.  .debug is retail's 0x3B6C / 403 DIEs, .line adopted whole.
+        # The free-list bound is `if (D_0102FFCC > 1) n = 1; else n = D_0102FFCC;`, and the
+        # pad tests are `!!(x & mask) != 0` for retail's `andi; sltu`.
         ("src/network/net_sys/net_sys_logout.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         # .text 0x550 in retail's 0x560 extent, all eight bodies word-exact; .line adopted
