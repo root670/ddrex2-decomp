@@ -892,6 +892,41 @@ home register into an instruction retail encodes with a different one, so `.text
 The chunk is short by exactly the unused parameters' DIEs (18 records, 0x262 bytes). This is
 a *compiler DWARF-emission* difference, not a C shape: record it and do not fabricate.
 
+### 14. Designated initialisers are accepted; mixing forms is not
+
+`.field = x` compiles under the pinned pair, **including on bitfields** (`unsigned a : 4`
+may be named), so a struct table can be written sparsely — `src/music_all.c`'s
+`.link_num = 0,` style — and omitted members still zero-fill. What b38 rejects is mixing
+inside one brace: `{ .a = 1, 2, 3 }` is an "expression syntax error". Two traps that cost a
+wrong conclusion once: `compile.py --syntax-only` mis-parses a trailing `-c -lang c …` flag
+string and will report a *promoted* unit as broken (it "fails" `music_all.c`), so probe
+through `drafts/regalloc/rules/cc.py` instead; and a rejected *mixed* initialiser is not
+evidence that designation is unsupported.
+
+### 15. A unit's generated prototypes are shorter than the real parameter lists
+
+MWCC writes a `formal_parameter` DIE only for a parameter that reaches emitted code (the
+`vu0.c` mechanism), so `include/src/…h` under-declares any signature with unused arguments —
+and the *used* ones therefore sit in later registers than the prototype implies. Measured on
+`AM/s573/doll/model2.c`: `drawLcore` really takes 8 arguments (`rp=a1`, `r=t0`, `g=t1`,
+`b=t2`, `prmask=t3`) while the header shows 4, and `drawGT3`'s `cull`/`prmask` arrive on the
+stack, so it has 8 register formals before them. Two consequences: a header include is
+unusable for such a unit (the short prototype is "redeclared" against the definition), so it
+declares its own types inline like `model1.c`; and the missing formals can be declared
+freely, because unreached parameters emit no DIE and the `.debug` inventory still matches.
+
+### 16. A "fold" residue may be a pragma, not a shape
+
+Where retail keeps three separate `addiu $15,$15,0x20` (or three `tag += 2`) and this build
+forwards them into one chain sunk to the latch, the source is not the lever:
+`#pragma opt_propagation off` **and** `#pragma opt_pulloutconstants off`, scoped before the
+function, reproduce retail exactly — measured on `AM/s573/demo/title_demo.c`'s
+`ti_movie_SetDecTag`, which went from five words short to byte-equal. With propagation off the
+strength reduction disappears too, so an accumulating index may then need to be a source local
+(`j4`) rather than a `j*0x10` expression. Same unit, two more `.debug`-only tricks worth knowing:
+routing an address through a local (`tmp_addr`) is what makes MWCC record the variable's DIE,
+and a dead first assignment (`i_ct = val; i_ct = i_ct % 2;`) is what keeps a local's DIE alive.
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:

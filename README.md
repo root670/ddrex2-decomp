@@ -39,7 +39,7 @@ why each rule exists — is [`AGENTS.md`](AGENTS.md).  Read that one before edit
 
 <!-- status:start -->
 
-**Overall: 67 / 249 translation units promoted (26.9%); 389 / 4,463 functions reconstructed (8.72%); 96,560 / 1,631,596 code bytes reconstructed (5.92%).**
+**Overall: 69 / 249 translation units promoted (27.7%); 389 / 4,463 functions reconstructed (8.72%); 96,560 / 1,631,596 code bytes reconstructed (5.92%).**
 
 Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
 
@@ -56,13 +56,13 @@ Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python
 | `fft` | 1 | 0 | 9 | 0 | 12,084 | 0 | 0.0% | 0.00% | 0.00% |
 | `gs` | 2 | 1 | 18 | 15 | 3,172 | 2,416 | 50.0% | 83.33% | 76.17% |
 | `network` | 82 | 26 | 542 | 152 | 208,732 | 32,768 | 31.7% | 28.04% | 15.70% |
-| `sound` | 4 | 1 | 20 | 3 | 7,520 | 1,264 | 25.0% | 15.00% | 16.81% |
+| `sound` | 4 | 3 | 20 | 3 | 7,520 | 1,264 | 75.0% | 15.00% | 16.81% |
 | `sys` | 2 | 1 | 4 | 2 | 80 | 64 | 50.0% | 50.00% | 80.00% |
 | `(root)` | 3 | 1 | 43 | 3 | 7,232 | 304 | 33.3% | 6.98% | 4.20% |
 | `(external)` | 1 | 0 | 7 | 0 | 1,420 | 0 | 0.0% | 0.00% | 0.00% |
 | `(library)` | 0 | 0 | 439 | 0 | 117,800 | 0 | 0.0% | 0.00% | 0.00% |
 | `(unattributed)` | 0 | 0 | 2,208 | 0 | 713,896 | 0 | 0.0% | 0.00% | 0.00% |
-| **total** | **249** | **67** | **4,463** | **389** | **1,631,596** | **96,560** | **26.9%** | **8.72%** | **5.92%** |
+| **total** | **249** | **69** | **4,463** | **389** | **1,631,596** | **96,560** | **27.7%** | **8.72%** | **5.92%** |
 
 Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
 
