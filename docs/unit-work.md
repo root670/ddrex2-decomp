@@ -1030,14 +1030,65 @@ Measured on `AM/s573/doll/model2.c`, where four draw bodies became exact:
 ### 18. Check for a twin before writing a body
 
 Two splits with the same instruction words need the same source. Signature every split's words
-(`re.findall(r"/\* [0-9A-F]+ [0-9A-F]+ ([0-9A-F]{8}) \*/", text)`) and group them: this tree has
-**57 identical-body groups covering 349 splits**, and five groups have a body that is already
-*promoted*, so their unpromoted members are copies rather than reconstructions —
-`NetWin_VSWinEnd`/`NetWin_ListdtlEnd`/`NetWin_ListbkEnd`/`NetWin_PerPointEnd` share
+(`re.findall(r"/\* [0-9A-F]+ [0-9A-F]+ ([0-9A-F]{8}) \*/", text)`) and group them — ask the
+tool, which is that measurement plus the promoted lookup:
+
+```bash
+python3 tools/units/twins.py --tu src/CS/train/tra_menu.c   # this unit's bodies
+python3 tools/units/twins.py --all                          # every group in the tree
+python3 tools/units/twins.py --all --limit 0                # no row cap
+```
+
+Measured when this rule was written: **57 identical-body groups covering 349 splits**, five of
+them with a member that was already promoted, so their unpromoted members are copies rather
+than reconstructions — `NetWin_VSWinEnd`/`NetWin_ListdtlEnd`/`NetWin_ListbkEnd` share
 `NetWin_DHeadEnd`'s body, `adv_ds_display_disap` and `fp_ss_display_apper` share
 `fp_es_warn_disap`'s, `NetWin_ListdtlSetPlayerListFile` is `NetWin_Listdtl2SetPlayerListFile`'s
-twin. A twin gives the exact body (and its `.line` shape) for free; verify it, do not retype it.
-Caveat: the group is *whole-function* identical only — a body that merely looks similar is not a
+twin. The split tree is generated and not committed, so the count is a measurement of one
+checkout rather than a constant (this tree printed 62 groups over 361 splits with 10 promoted
+groups on 2026-10-27). The relations above are retail's words and do not move; the command is
+the current answer.
+
+`--tu` prints one line per body of the unit, under ~40 lines unless `--limit 0` lifts the cap:
+
+```
+  body                  words  twins
+  NetWin_MenuSetSelect     24  no twin
+  NetWin_MenuEnd            8  29 twins, 18 promoted: NetWin_AnyEnd (src/network/net_window/net_win_any.c), NetWin_BarEnd (src/network/net_window/net_win_bar.c), +16 more — copy asm/nonmatchings/main/NetWin_AnyEnd.s
+  NetWin_MenuMain           4  57 twins, 11 promoted: NetWin_BarMain (src/network/net_window/net_win_bar.c), ...
+```
+
+What the line means:
+
+- **`words`** is every four-byte word the body's split prints, in order; a twin shares *all*
+  of them, so the whole body is identical, not merely similar.
+- **`N twins, K promoted`** names the promoted twins, three at a time. A name in parentheses is
+  that twin's **unit source**: committed under `src/` *and* carrying a `tu_builds` row, which
+  is what promoted means here (`units.screen.is_promoted`). Read the body in that file and
+  verify it against the split; do not retype it.
+- **`copy <split>`** is the split the shared shape is read from — a promoted twin's when one
+  exists, otherwise the first twin's. It is the same disassembly either way; the promoted
+  source is what says the shape already compiles.
+- **`N twin candidates, none promoted - one source shape serves all`** means the group exists
+  but nobody has written it yet: one correct body serves every member, and the split named by
+  `copy` is the one to reverse.
+- **`no twin`** means this body's words are unique in the split tree; it gets written from
+  scratch.
+- **`split absent — run ./ddr build`**: the split tree is generated, not committed, so a missing
+  split is a build shortfall, not an empty body. When none of the unit's splits exist the
+  command says so and exits 2.
+
+`--all` prints the groups, largest first, with the split count, the word count, the promoted
+count and the first six members (`+N more`); the first promoted member is named after `|` with
+its source. A group with a promoted member is a cheap unit to pick: every unpromoted member is
+a copy.
+
+Exit codes: 0 a report, 2 the unit does not resolve, its functions are outside
+`asm/nonmatchings/main` (an overlay window), or the splits are absent. Nothing here compiles,
+links or reads the retail ELF — the generated splits and the target manifests are the whole
+input.
+
+Caveat: the group is *whole-split* identical only — a body that merely looks similar is not a
 twin, and a twin in a unit with a different compiler pair still needs its own measurement.
 
 ### 19. A handwritten body is a whole-function `asm`, not an `asm` block
