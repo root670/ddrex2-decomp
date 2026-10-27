@@ -267,15 +267,19 @@ class Measured:
         }
 
 
-def require_splits(tu, target) -> None:
+def require_splits(tu) -> None:
     """Refuse a unit whose splits are absent: the comparison has no generated tree to read.
 
     The image is what the numbers come from, but a missing ``asm/nonmatchings`` means the
     build has not run, and every other tool in this directory refuses that state by naming
     the command rather than reporting a body of zero words.
+
+    The directory is the *unit's* (``tu.split_directory``): a main-image unit's splits are
+    under the code segment's name, an overlay unit's under its module's stem -- and asking for
+    the code segment's for an overlay unit would report every split missing whatever the
+    build had done.
     """
-    segment = target.geometry_required().code_segment
-    directory = REPO_ROOT / "asm" / "nonmatchings" / segment
+    directory = REPO_ROOT / "asm" / "nonmatchings" / tu.split_directory
     if not directory.is_dir():
         raise Missing(f"{_display(directory)} does not exist: the split tree is generated, "
                       f"not committed; run {BUILD}")
@@ -292,10 +296,10 @@ def compile_bodies(tu, pair, target, manifests, scratch=None) -> list:
     flags = flags_text.split()
     compiler_dir = fetch.compiler(compiler_version)
     wibo = fetch.wibo()
-    staged = cc.staged_path(tu)
+    staged = cc.staged_path(tu, wibo)
     staged.parent.mkdir(parents=True, exist_ok=True)
     staged.write_bytes(tu.source.read_bytes())
-    recorded = cc.recorded_name(staged)
+    recorded = cc.recorded_name(staged, wibo)
     if len(recorded) != len(tu.name):
         raise cc.Unusable(f"staging {staged} spells {len(recorded)} bytes, retail "
                           f"{len(tu.name)}")
@@ -328,7 +332,7 @@ def measure(unit: str, function: str | None = None, target=None, scratch=None) -
             f"compile to compare with. Measure the pair that reproduces it "
             f"(python3 tools/toolchain/select_build.py --tu {tu.file}) and add the row to "
             f"config/targets.py once its .text is retail's")
-    require_splits(tu, target)
+    require_splits(tu)
     if function is not None and tu.function_named(function) is None:
         names = ", ".join(f.name for f in tu.functions)
         raise Missing(f"{tu.file} declares no function {function!r}; it has {names}")

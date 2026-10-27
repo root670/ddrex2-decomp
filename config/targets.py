@@ -580,6 +580,37 @@ class Target:
         """The pinned linker script ``configure.py`` generates for this target."""
         return REPO_ROOT / "build" / f"{self.elf.name}.ld"
 
+    # -- one overlay module's generated paths, all keyed by its name -------------
+
+    #: An overlay module's inputs and link live under ``build/overlays/``, and the ELF that
+    #: link produces under ``out/overlays/`` -- the same division the main image uses.  The
+    #: key is the module's *name*: seven of this target's ten modules load at one address, so
+    #: an address names no blob, and two runs keyed by one would overwrite each other.
+
+    def overlay_workdir(self, name: str) -> pathlib.Path:
+        """``build/overlays/<name>/``: the module's blob, yaml, symbol file and splat output."""
+        return REPO_ROOT / "build" / "overlays" / name
+
+    def overlay_blob(self, name: str) -> pathlib.Path:
+        """``build/overlays/<name>.bin``: the module's blob, cut out of the disc image.
+
+        splat reads one file and its segments are file offsets, so the blob is copied out of
+        the image (which is 1.8 GB and is read at an offset, never slurped) once per configure.
+        """
+        return REPO_ROOT / "build" / "overlays" / f"{name}.bin"
+
+    def overlay_ld_script(self, name: str) -> pathlib.Path:
+        """``build/overlays/<name>.ld``: the link that pins the module's promoted objects."""
+        return REPO_ROOT / "build" / "overlays" / f"{name}.ld"
+
+    def overlay_elf(self, name: str) -> pathlib.Path:
+        """``out/overlays/<name>.elf``: the image of the module's promoted objects.
+
+        A *second* link's output, not part of :attr:`built`: the blob's bytes are the disc
+        image's, and the file G1 compares is assembled from the retail ELF's own two halves.
+        """
+        return REPO_ROOT / "out" / "overlays" / f"{name}.elf"
+
     # -- the include search path, spelled from the repository root -----------
 
     @property
@@ -938,6 +969,10 @@ DDREX2P = Target(
         # .text 0x58, three bodies word-exact; .line adopted (11 records / 3 tables, 8 numbers
         # moved); .debug 0xFC9 / 90 DIEs after AUTH_RUN/AUTH_OK locations and 68 ref words.
         ("src/network/net_auth/net_auth_mes_e.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
+        # The first overlay-resident unit: net_rel4cd's code 0x00806410..0x00806468, three
+        # bodies word-exact against the blob at image offset 0x1A4C10.
+        ("src/network/net_router/net_router_mes_e.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/network/net_dnas/net_dnas_mes_e.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),

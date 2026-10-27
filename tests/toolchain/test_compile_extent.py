@@ -93,7 +93,7 @@ class _Function:
 
 
 class _Tu:
-    """A translation unit as `_split_extent` reads one: its functions, its span, its module.
+    """A translation unit as `split_extent` reads one: its functions, its span, its module.
 
     `overlay`/`is_overlay`/`split_directory` arrived with overlay support (a unit's splits live
     under its module's stem, and an overlay's extent stops at the window's `code_end`); a main
@@ -132,7 +132,7 @@ def test_the_extent_runs_to_the_next_split_past_the_last_function(tmp_path):
                           ("after", 0x100010)):
         split(directory, name, address)
 
-    start, end = cc._split_extent(_Tu([0x100000, 0x100004], 0x100008), _Manifests(),
+    start, end = cc.split_extent(_Tu([0x100000, 0x100004], 0x100008), _Manifests(),
                                   root=tmp_path)
 
     assert (start, end) == (0x100000, 0x100010)
@@ -143,7 +143,7 @@ def test_the_extent_is_the_last_function_when_nothing_follows(tmp_path):
     directory.mkdir(parents=True)
     split(directory, "a", 0x100000)
 
-    assert cc._split_extent(_Tu([0x100000], 0x100008), _Manifests(), root=tmp_path) == \
+    assert cc.split_extent(_Tu([0x100000], 0x100008), _Manifests(), root=tmp_path) == \
         (0x100000, 0x100008)
 
 
@@ -153,7 +153,7 @@ def test_a_function_with_no_split_is_refused(tmp_path):
     split(directory, "a", 0x100000)
 
     with pytest.raises(cc.Unusable, match="no code split at 0x00100008"):
-        cc._split_extent(_Tu([0x100000, 0x100008], 0x100010), _Manifests(), root=tmp_path)
+        cc.split_extent(_Tu([0x100000, 0x100008], 0x100010), _Manifests(), root=tmp_path)
 
 
 # -- .debug and .line are never padded ----------------------------------------------------
@@ -263,7 +263,7 @@ def test_a_data_only_unit_displaces_no_split(tmp_path):
     """A declaration-only unit owns data and no code: its ``.text`` span is empty, anchored at
     the loadable image's base -- retail's VA 0 is the ELF header, outside every segment, and
     ``Elf.read`` refuses it even for a zero-byte read."""
-    assert cc._split_extent(_Tu([], 0x100000), _Manifests(), root=tmp_path) == \
+    assert cc.split_extent(_Tu([], 0x100000), _Manifests(), root=tmp_path) == \
         (0x100000, 0x100000)
 
 

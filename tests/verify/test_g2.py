@@ -267,3 +267,24 @@ def test_a_main_unit_at_an_overlay_address_is_refused_not_mapped(tmp_path, manif
     with pytest.raises(targets.OutsideLoadableImage) as refusal:
         g2.verdicts(built, retail, TU, cus, chunks, symbols, GEOMETRY)
     assert "0x007F0000" in str(refusal.value) and "no file offset" in str(refusal.value)
+
+
+def test_an_overlay_unit_reads_its_text_from_the_modules_own_link(tmp_path,
+                                                                  overlay_manifests):
+    """The main image never carries an overlay blob's bytes, so the built side comes from the
+    module's link; without it the verdict has nothing to compare and says so."""
+    cus, chunks, symbols = overlay_manifests
+    payload = OVERLAY_BLOB[0x40:0x140]
+    image = overlay_image(tmp_path)
+    retail = target_image(tmp_path, "retail")
+    main_only = overlay_built(tmp_path, None, "main.elf", mapped=False)
+    linked = overlay_built(tmp_path, payload, "net_rel4cd.elf")
+    with pytest.raises(AssertionError):
+        # The main image alone is still the "no bytes there" refusal, not a silent pass.
+        assert g2.verdicts(main_only, retail, OVERLAY_TU, cus, chunks, symbols,
+                           overlay_geometry(), image=image)[1][0].ok
+    _, report = g2.verdicts(main_only, retail, OVERLAY_TU, cus, chunks, symbols,
+                            overlay_geometry(), image=image, overlay_elf=linked)
+    assert report[0].ok, report[0].detail
+    assert "overlay probe_rel4cd" in report[0].detail
+    assert report[1].ok and report[2].ok

@@ -14,6 +14,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import types
 
 import pytest
 
@@ -585,3 +586,133 @@ def test_a_configuration_that_cannot_be_placed_writes_nothing(monkeypatch, capsy
     err = capsys.readouterr().err
     assert status == 2 and "cus.json not found" in err and "Traceback" not in err
     assert {path: path.read_text() for path in before} == before
+
+
+# ---------------------------------------------------------------------------
+# overlay blobs: one splat run per module, and a link of its own
+# ---------------------------------------------------------------------------
+
+#: A second window at the *same* base as a plausible sibling: seven of this target's modules
+#: load at 0x7F0000, which is why a run (and its directory) is keyed by name, never address.
+OVERLAY = targets.Overlay("probe_rel4cd", 0x00200000, 0x200, 0x100, 0xC0, 0x100, 0x1000)
+SIBLING = targets.Overlay("other_rel4cd", 0x00200000, 0x100, 0x80, 0x40, 0x80, 0x2000)
+
+
+def overlay_geometry():
+    fields = dataclasses.asdict(geometry())
+    return targets.Geometry(**{**fields, "overlays": (OVERLAY, SIBLING)})
+
+
+def test_an_overlay_run_splits_its_blob_at_the_windows_code_addresses():
+    """The run is the module's *code window*: it starts at the blob's first code byte, loads at
+    that byte's address, and stops at the blob -- so every split comment carries the absolute
+    VA the DWARF records, which is what `compile.split_extent` matches a unit's functions on.
+    """
+    text = configure.overlay_splat_yaml(OVERLAY, probe())
+    assert f"  basename: {OVERLAY.name}\n" in text
+    assert f"    start: 0x{targets.OVERLAY_HEADER:X}\n" in text
+    assert f"    vram: 0x{OVERLAY.code_vram:X}\n" in text
+    assert f"      - [0x{targets.OVERLAY_HEADER:X}, c, {OVERLAY.name}]\n" in text
+    assert f"  - [0x{OVERLAY.filesize:X}]\n" in text
+    # The main run's split-shaping options, because a split must be the text splat would write.
+    assert "  subalign: 1\n" in text
+    assert "  named_regs_for_c_funcs: false\n" in text
+    assert "  detect_redundant_function_end: false\n" in text
+    # ... and the files that belong to the main link are not this run's to write.
+    assert "  create_undefined_funcs_auto: false\n" in text
+    assert "  generate_asm_macros_files: false\n" in text
+    assert f"{OVERLAY.name}/symbol_addrs.txt" in text
+    assert "asm/nonmatchings" not in text, "asm_path is `asm`; splat appends the segment"
+    # Two modules at one base are two runs with two sets of inputs.
+    assert configure.overlay_splat_yaml(SIBLING, probe()) != text
+
+
+def test_overlay_symbols_come_from_the_modules_own_records(tmp_path):
+    """The oracle withholds an overlay record from the placed ledger; the module it names is
+    the only thing that makes an address resolvable, so the run's symbol file is filtered by
+    module *and* by the code window it splits."""
+    unplaced = tmp_path / "unplaced_symbols.txt"
+    unplaced.write_text(
+        f"inside = 0x{OVERLAY.code_vram:08X}; // type:func provenance:dwarf "
+        f"reason:outside every declared segment overlay:{OVERLAY.name}\n"
+        f"data = 0x{OVERLAY.data_vram:08X}; // type:obj provenance:dwarf "
+        f"reason:outside every declared segment overlay:{OVERLAY.name}\n"
+        f"elsewhere = 0x{OVERLAY.code_vram:08X}; // type:func provenance:dwarf "
+        f"reason:outside every declared segment overlay:{SIBLING.name}\n")
+    text = configure.overlay_symbols_text(types.SimpleNamespace(unplaced=unplaced), OVERLAY)
+    assert f"inside = 0x{OVERLAY.code_vram:08X}; // type:func" in text
+    assert "elsewhere" not in text, "another module's record at the same address is not ours"
+    assert "data = " not in text, "the run splits the code window, not the data section"
+    # splat reads `key:value` attributes; the oracle's reason/provenance must not leak in.
+    assert "reason" not in text and "provenance" not in text
+
+
+def promotion(module, file, address):
+    return configure.Promotion(file, address, "--compiler 3.0b38-030307 -c -O3 -g", 
+                               f"build/{file}.o", f"build/{file}.o.debug",
+                               f"build/{file}.o.line", ".debug_000", [".line_000"],
+                               set(), module=module)
+
+
+def test_an_overlay_link_places_a_unit_at_the_retail_address_inside_the_window():
+    """The script pins the object at the unit's address, with the blob offset as its LMA, and
+    asserts both the retail extent and the window's own end."""
+    unit = promotion(OVERLAY.name, "src/probe/ov.c", 0x00200080)
+    script = configure.overlay_link_script(OVERLAY, [(unit, (0x00200080, 0x002000C0))],
+                                           probe())
+    assert "  .ovl_probe_rel4cd_ov 0x00200080 : AT(0x00000080) SUBALIGN(1)\n" in script
+    assert "    build/src/probe/ov.c.o(.text)\n" in script
+    assert "SIZEOF(.ovl_probe_rel4cd_ov) == 0x40" in script
+    assert f"<= 0x{OVERLAY.code_end_vram:X}" in script
+    # It is not the image: nothing here is objcopied into out/, so no byte G1 compares moves.
+    assert "NOT the image" in script
+
+
+def test_two_units_of_one_module_get_two_sections(tmp_path):
+    first = promotion(OVERLAY.name, "src/probe/a.c", 0x00200080)
+    second = promotion(OVERLAY.name, "src/probe/b.c", 0x002000A0)
+    script = configure.overlay_link_script(
+        OVERLAY, [(first, (0x00200080, 0x002000A0)), (second, (0x002000A0, 0x002000C0))],
+        probe())
+    assert ".ovl_probe_rel4cd_a 0x00200080" in script
+    assert ".ovl_probe_rel4cd_b 0x002000A0" in script
+
+
+def test_overlay_splits_are_not_the_main_links(tmp_path, monkeypatch):
+    """A module's splits live under `asm/nonmatchings/<module>/`, and the main link must never
+    read them: their addresses are a blob's window, not the file-backed image's."""
+    asm = tmp_path / "asm" / "nonmatchings"
+    (asm / "main").mkdir(parents=True)
+    (asm / OVERLAY.name).mkdir(parents=True)
+    (asm / "main" / "a.s").write_text(".text\n")
+    (asm / OVERLAY.name / "b.s").write_text(".text\n")
+    monkeypatch.setattr(configure, "REPO_ROOT", tmp_path)
+    assert set(configure.split_sources()) == {f"asm/nonmatchings/main/a.s",
+                                              f"asm/nonmatchings/{OVERLAY.name}/b.s"}
+    assert set(configure.split_sources(skip={OVERLAY.name})) == {"asm/nonmatchings/main/a.s"}
+
+
+def test_the_main_graph_gains_no_edge_without_an_overlay_link():
+    """No promoted overlay unit, no second link: the graph is the one that was there before."""
+    target = probe()
+    ninja = configure.ninja_text([], configure.databin_segments(chunks(), target.geometry),
+                                 False, [], target, target.geometry)
+    built = target.built.relative_to(ROOT).as_posix()
+    assert "ldovl" not in ninja and "out/overlays" not in ninja
+    assert f"\ndefault {built} g1\n" in ninja
+
+
+def test_an_overlay_link_is_an_edge_of_its_own_and_a_default_target():
+    target = probe()
+    script = ROOT / "build" / "overlays" / "probe_rel4cd.ld"
+    ninja = configure.ninja_text([], configure.databin_segments(chunks(), target.geometry),
+                                 False, [], target, target.geometry,
+                                 overlay_links=[("probe_rel4cd", script,
+                                                 ["build/src/probe/ov.c.o"])])
+    overlay_elf = target.overlay_elf("probe_rel4cd").relative_to(ROOT).as_posix()
+    assert f"build {overlay_elf}: ldovl build/src/probe/ov.c.o" in ninja
+    assert f"  script = {script.relative_to(ROOT).as_posix()}\n" in ninja
+    # The image's own edges are untouched: the same `ld`, `bin` and `cat` lines as before.
+    built = target.built.relative_to(ROOT).as_posix()
+    assert f"build {built}: cat build/PROBE.loadable" in ninja
+    assert f"\ndefault {built} {overlay_elf} g1\n" in ninja

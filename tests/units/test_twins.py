@@ -169,3 +169,58 @@ def test_the_generated_tree_groups_the_twin_rule_18_names():
 
     assert "NetWin_DHeadEnd" in index[signatures["NetWin_VSWinEnd"]]
     assert all(members == tuple(sorted(members)) for members in index.values())
+
+
+# ---------------------------------------------------------------------------
+# overlay units: their names and their splits come from their own module
+# ---------------------------------------------------------------------------
+
+
+def overlay_manifests(overlay="probe_rel4cd", low_pc=0x00200080):
+    """The two lookups `unit_functions` makes, in the shape `compile.Manifests` gives them."""
+    return types.SimpleNamespace(
+        chunks=[dict(section=".debug", offset=0, size=0x40, tunits=[0, 1])],
+        cus=[dict(index=0, kind="tu", file="src/probe/ov.c", overlay=overlay),
+             dict(index=1, kind="function", file="src/probe/ov.c", low_pc=low_pc)],
+        by_address={},
+        overlay_symbols={(overlay, low_pc): "nrmesGetNo"})
+
+
+def test_an_overlay_function_is_named_from_its_modules_records():
+    """`by_address` holds no overlay record -- seven modules share one base -- so the name
+    comes from the withheld ledger's `(module, address)` key, which is the build's rule."""
+    _, by_unit, declared = twins.unit_functions(overlay_manifests())
+
+    assert by_unit == {"src/probe/ov.c": ("nrmesGetNo",)}
+    assert declared == {"src/probe/ov.c": 1}
+
+
+def test_a_main_unit_never_reads_an_overlay_record():
+    manifests = overlay_manifests(overlay="main")
+
+    _, by_unit, declared = twins.unit_functions(manifests)
+
+    assert by_unit == {} and declared == {"src/probe/ov.c": 1}
+
+
+def test_a_units_split_tree_is_its_own_modules(tmp_path):
+    manifests = overlay_manifests()
+
+    assert twins.split_directory(manifests, "src/probe/ov.c") == \
+        pathlib.PurePosixPath("asm/nonmatchings/probe_rel4cd")
+    assert twins.split_directory(overlay_manifests(overlay="main"), "src/probe/ov.c") == \
+        twins.SPLITS
+    # A unit nothing names is still reported against the main tree, not against nothing.
+    assert twins.split_directory(manifests, "src/unknown.c") == twins.SPLITS
+
+
+def test_the_copy_hint_points_into_the_units_own_tree(tmp_path):
+    write_split(tmp_path, "Alpha", *A)
+    write_split(tmp_path, "Beta", *B)
+    signatures = twins.read_splits(tmp_path)
+    body = twins.bodies(["Alpha"], signatures, twins.groups(signatures))[0]
+
+    hinted = twins.note(body, {"Beta": "src/probe/ov.c"}, frozenset(),
+                        pathlib.PurePosixPath("asm/nonmatchings/probe_rel4cd"))
+
+    assert "copy asm/nonmatchings/probe_rel4cd/Beta.s" in hinted

@@ -86,14 +86,32 @@ class Body:
 # ---------------------------------------------------------------------------
 
 
-def split_path(name: str) -> str:
-    """The repo-relative split a function's body is read from."""
-    return f"{SPLITS}/{name}.s"
+def split_path(name: str, splits=SPLITS) -> str:
+    """The repo-relative split a function's body is read from, in the unit's own tree."""
+    return f"{splits}/{name}.s"
 
 
 def signature(text: str) -> tuple:
     """Every four-byte word one split prints, in order -- its body's identity."""
     return tuple(_WORD.findall(text))
+
+
+def split_directory(manifests, unit: str) -> pathlib.PurePosixPath:
+    """Where ``unit``'s splits are: the code segment's tree, or its overlay module's.
+
+    A main-image unit's bodies are under ``asm/nonmatchings/<code segment>``; an overlay
+    unit's are under ``asm/nonmatchings/<module>``, because that module's own splat run is
+    the only thing that writes them.
+    """
+    for chunk in manifests.chunks:
+        if chunk.get("section") != ".debug":
+            continue
+        tunits = chunk.get("tunits") or ()
+        if not tunits or manifests.cus[tunits[0]]["file"] != unit:
+            continue
+        module = manifests.cus[tunits[0]].get("overlay") or "main"
+        return pathlib.PurePosixPath("asm/nonmatchings") / module
+    return SPLITS
 
 
 def read_splits(directory=None) -> dict:
@@ -141,8 +159,11 @@ def unit_functions(manifests) -> tuple:
 
     Read from the same manifests the build places: each ``.debug`` chunk names its translation
     unit and the function records that follow it, and ``by_address`` names a record's
-    ``low_pc``.  Functions the layout gives no symbol (overlay windows) are counted but not
-    named, so a report can say how many it could not list.
+    ``low_pc``.  An *overlay* address is not in ``by_address`` -- the oracle withholds those
+    records, because seven modules are alternatives at one base -- so the name comes from the
+    same place the build's does: ``unplaced_symbols.txt``'s ``(module, address)`` records,
+    with the module the unit's own DWARF overlay name gives.  A function nothing names is
+    still counted, so a report can say how many it could not list.
     """
     by_name: dict = {}
     by_unit: dict = {}
@@ -154,14 +175,19 @@ def unit_functions(manifests) -> tuple:
         if not tunits:
             continue
         unit = manifests.cus[tunits[0]]["file"]
+        overlay = manifests.cus[tunits[0]].get("overlay") or "main"
         for number in tunits[1:]:
             declared[unit] += 1
-            name = manifests.by_address.get(manifests.cus[number].get("low_pc"))
+            low_pc = manifests.cus[number].get("low_pc")
+            name = manifests.by_address.get(low_pc)
+            if name is None and overlay != "main":
+                name = manifests.overlay_symbols.get((overlay, low_pc))
             if name is None:
                 continue
             by_name.setdefault(name, unit)
             by_unit.setdefault(unit, []).append(name)
-    return by_name, {unit: tuple(found) for unit, found in by_unit.items()}, dict(declared)
+    return (by_name, {unit: tuple(found) for unit, found in by_unit.items()},
+            dict(declared))
 
 
 def unit_file(manifests, name: str) -> str:
@@ -215,7 +241,7 @@ def _count(number: int, noun: str) -> str:
     return f"{number} {noun}" if number == 1 else f"{number} {noun}s"
 
 
-def note(body: Body, unit_of: dict, promoted) -> str:
+def note(body: Body, unit_of: dict, promoted, splits=SPLITS) -> str:
     """One body's twin line: what it shares, who is promoted, and the split to copy from.
 
     ``unit_of`` maps a function to the unit that owns it and ``promoted`` holds the units
@@ -229,17 +255,17 @@ def note(body: Body, unit_of: dict, promoted) -> str:
     known = [twin for twin in body.twins if unit_of.get(twin) in promoted]
     if not known:
         return (f"{_count(len(body.twins), 'twin candidate')}, none promoted - "
-                f"one source shape serves all — copy {split_path(body.twins[0])}")
+                f"one source shape serves all — copy {split_path(body.twins[0], splits)}")
     shown = known[:3]
     names = ", ".join(f"{twin} ({unit_of[twin]})" for twin in shown)
     if len(known) > len(shown):
         names += f", +{len(known) - len(shown)} more"
     return (f"{_count(len(body.twins), 'twin')}, {len(known)} promoted: {names} — "
-            f"copy {split_path(shown[0])}")
+            f"copy {split_path(shown[0], splits)}")
 
 
 def render_unit(unit: str, found, unit_of: dict, promoted, *, target: str = "?", limit: int = LIMIT,
-                note_text: str | None = None) -> str:
+                note_text: str | None = None, splits=SPLITS) -> str:
     """One line per body of ``unit``: its word count, its twins, the split to copy from."""
     lines = [
         f"{unit} — identical-body twins ({target})",
@@ -255,7 +281,8 @@ def render_unit(unit: str, found, unit_of: dict, promoted, *, target: str = "?",
     shown = found[:limit] if limit > 0 else found
     for body in shown:
         words = "-" if body.words is None else str(body.words)
-        lines.append(f"  {body.name:<{width}}  {words:>5}  {note(body, unit_of, promoted)}")
+        lines.append(f"  {body.name:<{width}}  {words:>5}  "
+                     f"{note(body, unit_of, promoted, splits)}")
     if len(shown) < len(found):
         lines.append(f"  … {len(found) - len(shown)} more bodies (--limit 0 prints all)")
     return "\n".join(lines) + "\n"
@@ -321,10 +348,19 @@ def main(argv=None) -> int:
 
     try:
         target = resolve_target(args.target)
-        signatures = read_splits()
-        index = groups(signatures)
         promoted = promoted_units(target.tu_builds)
-        manifests = cc.Manifests(target)
+        # `--all` is the main image's tree: an overlay module's bodies are alternatives to
+        # it, not the same address space, so only `--tu` asks for a module's.
+        if args.all:
+            manifests, directory = None, SPLITS
+        else:
+            manifests = cc.Manifests(target)
+            directory = split_directory(manifests, unit_file(manifests, args.tu))
+        # The tree is read before the manifests: a missing one is a build shortfall, and that
+        # is the answer a reader needs whether or not its config has been generated.
+        signatures = read_splits(directory)
+        index = groups(signatures)
+        manifests = manifests or cc.Manifests(target)
         unit_of, by_unit, declared = unit_functions(manifests)
         if args.all:
             text = render_all(index, unit_of, promoted, target=target.name, limit=args.limit)
@@ -335,19 +371,19 @@ def main(argv=None) -> int:
                 if declared.get(unit):
                     raise cc.Unusable(
                         f"{unit}: the manifests name none of its {declared[unit]} function(s) "
-                        f"(an overlay window is outside {SPLITS})")
+                        f"(nothing in {directory.as_posix()} names them)")
                 text = (f"{unit}: declares no code — a data-only unit has no body to twin\n")
             else:
                 found = bodies(names, signatures, index)
                 if all(body.words is None for body in found):
-                    raise Missing(f"{unit}: none of its splits exist under {SPLITS}; "
-                                  f"run {BUILD}")
+                    raise Missing(f"{unit}: none of its splits exist under "
+                                  f"{directory.as_posix()}; run {BUILD}")
                 note_text = None
                 if declared.get(unit, 0) > len(names):
                     note_text = (f"{declared[unit] - len(names)} function(s) of this unit "
                                  f"have no symbol in this layout and are not listed")
                 text = render_unit(unit, found, unit_of, promoted, target=target.name,
-                                   limit=args.limit, note_text=note_text)
+                                   limit=args.limit, note_text=note_text, splits=directory)
     except targets.UnknownTarget as exc:
         print(f"twins: {exc}", file=sys.stderr)
         return 2

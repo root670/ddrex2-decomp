@@ -334,7 +334,7 @@ def describe(located) -> str:
 
 
 def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbols=g1.SYMBOLS,
-             geometry=None, image=None):
+             geometry=None, image=None, overlay_elf=None):
     """The per-TU report ``verify --tu NAME`` prints: text, then `.debug`, then `.line`.
 
     A translation unit is promoted only when its code *and* its debug chunk match retail
@@ -343,11 +343,13 @@ def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbol
 
     ``image`` is the pinned disc image, needed only by an overlay unit: its retail ``.text``
     is a blob in that image (the ELF maps no bytes at an overlay address), while its
-    ``.debug``/``.line`` chunks stay in the ELF.
+    ``.debug``/``.line`` chunks stay in the ELF.  ``overlay_elf`` is that module's own linked
+    image (``build/overlays/<module>.ld``'s output): it is where the *built* side of an
+    overlay unit's ``.text`` is, because the main image never carries those bytes.
     """
     manifests = Manifests(cus, chunks, symbols, geometry)
     tu = manifests.tu_named(name)
-    report = [_text_verdict(manifests, built, retail, tu, image)]
+    report = [_text_verdict(manifests, built, retail, tu, image, overlay_elf)]
     sections = manifests.geometry.sections
     report.append(_section_verdict("debug chunk", manifests.debug_chunks_of(tu),
                                    sections[0][1], built, retail))
@@ -356,7 +358,7 @@ def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbol
     return tu, report
 
 
-def _text_verdict(manifests, built, retail, tu, image=None) -> Verdict:
+def _text_verdict(manifests, built, retail, tu, image=None, overlay_elf=None) -> Verdict:
     geo = manifests.geometry
     functions = manifests.functions_of(tu)
     if not functions:
@@ -365,7 +367,8 @@ def _text_verdict(manifests, built, retail, tu, image=None) -> Verdict:
     high = max(record["high_pc"] for record in functions)
     overlay = manifests.overlay_of(tu)
     if overlay is not None:
-        return _overlay_text_verdict(manifests, built, image, low, high, overlay)
+        return _overlay_text_verdict(manifests, built, image, low, high, overlay,
+                                     overlay_elf)
     start = geo.offset_of(low)
     end = geo.offset_of(high)
     span = f"VA 0x{low:08X}-0x{high:08X}, {end - start} bytes"
@@ -381,16 +384,18 @@ def _text_verdict(manifests, built, retail, tu, image=None) -> Verdict:
                    f"{span}: first differing byte at 0x{offset:X} (VA 0x{address:08X}, {name})")
 
 
-def _overlay_text_verdict(manifests, built, image, low, high, overlay) -> Verdict:
-    """An overlay unit's ``.text``: the disc blob's bytes against what the build maps there.
+def _overlay_text_verdict(manifests, built, image, low, high, overlay,
+                          overlay_elf=None) -> Verdict:
+    """An overlay unit's ``.text``: the disc blob's bytes against what the build links there.
 
     The retail side is the blob at ``overlay.image_offset + (VA - overlay.vaddr)`` -- the
-    formula the geometry's rows were measured with -- and the build side is the built image's
-    own answer for that address.  For an overlay unit that answer is *none*: the linker
-    script's ``.main`` is asserted to the file-backed image's exact size, so no overlay byte
-    is in the built ELF, and its reservation claims no file bytes.  Saying "the build carries
-    no bytes there, and retail's first byte differs" is the honest verdict; the old
-    arithmetic said the opposite by comparing ``.line`` against itself.
+    formula the geometry's rows were measured with.  The build side is the module's *own*
+    link, whose script places each promoted object at the address its splits sat at inside the
+    window; the main image is asked only when that link does not exist, and then the honest
+    answer is that it maps no bytes there (``.main`` is asserted to the file-backed image's
+    exact size, and the overlay reservation is zero-fill).  Comparing against the main image
+    either way is what once made an overlay unit print ``text ok`` by reading ``.line`` at
+    its address.
     """
     size = high - low
     span = f"VA 0x{low:08X}-0x{high:08X}, {size} bytes, overlay {overlay.name}"
@@ -400,13 +405,16 @@ def _overlay_text_verdict(manifests, built, image, low, high, overlay) -> Verdic
             f"call supplied none (`verify` passes the target's image)")
     start = overlay.image_offset_of(low)
     theirs = _file_bytes(image, start, size)
-    ours = _built_bytes(built, low, size)
+    ours = (None if overlay_elf is None else _built_bytes(overlay_elf, low, size))
+    if ours is None:
+        ours = _built_bytes(built, low, size)
     record = manifests.record_at_pc(low)
     name = manifests.symbol_at(record["low_pc"], overlay.name) if record else "?"
     if ours is None:
         return Verdict("text", False,
-                       f"{span}: the build maps no bytes there (an overlay's reservation is "
-                       f"zero-fill), and retail's first byte at image 0x{start:X} "
+                       f"{span}: the build maps no bytes there (the module's overlay link "
+                       f"is missing, and the main image's reservation is zero-fill), and "
+                       f"retail's first byte at image 0x{start:X} "
                        f"(VA 0x{low:08X}, {name}) is 0x{theirs[0]:02X}")
     for index, (one, other) in enumerate(zip(ours, theirs)):
         if one != other:

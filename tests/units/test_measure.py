@@ -236,12 +236,11 @@ def test_json_reports_the_measurement_and_keeps_the_common_span_count():
 
 def test_a_missing_split_tree_names_the_build():
     """A generated tree that is absent is a build shortfall, not a body of zero words."""
-    target = types.SimpleNamespace(geometry_required=lambda: types.SimpleNamespace(
-        code_segment="no-such-segment-for-measure-test"))
-    unit = types.SimpleNamespace(file="src/example.c", functions=[])
+    unit = types.SimpleNamespace(file="src/example.c", functions=[],
+                                 split_directory="no-such-segment-for-measure-test")
 
     with pytest.raises(measure.Missing) as caught:
-        measure.require_splits(unit, target)
+        measure.require_splits(unit)
 
     assert "./ddr build" in str(caught.value)
 
@@ -250,14 +249,12 @@ def test_a_missing_function_split_names_the_build():
     """A split tree without this body is the same shortfall, and names the same command."""
     if not (ROOT / "asm" / "nonmatchings" / "main").is_dir():
         pytest.skip("generated split tree absent")
-    from config import targets
-
     unit = types.SimpleNamespace(
-        file="src/example.c",
+        file="src/example.c", split_directory="main",
         functions=[types.SimpleNamespace(name="NoBodyNamedThis_measure_test")])
 
     with pytest.raises(measure.Missing) as caught:
-        measure.require_splits(unit, targets.get())
+        measure.require_splits(unit)
 
     assert "NoBodyNamedThis_measure_test" in str(caught.value)
     assert "./ddr build" in str(caught.value)

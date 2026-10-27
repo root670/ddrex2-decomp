@@ -164,7 +164,7 @@ def test_an_overlay_units_last_split_ends_at_the_windows_code_end(tmp_path):
         splits=[("probe_first.s", split("probe_first", 0x00200080)),
                 ("probe_second.s", split("probe_second", 0x00200090))])
     tu = manifests.tu_named("src/probe/ov.c")
-    assert cc._split_extent(tu, manifests) == (0x00200080, CODE_END)
+    assert cc.split_extent(tu, manifests) == (0x00200080, CODE_END)
 
 
 def test_the_next_split_bounds_the_extent_and_the_window_clamps_it(tmp_path):
@@ -175,7 +175,7 @@ def test_the_next_split_bounds_the_extent_and_the_window_clamps_it(tmp_path):
                 ("probe_second.s", split("probe_second", 0x00200090)),
                 ("probe_after.s", split("probe_after", 0x00200100))])
     tu = followed.tu_named("src/probe/ov.c")
-    assert cc._split_extent(tu, followed) == (0x00200080, 0x00200100)
+    assert cc.split_extent(tu, followed) == (0x00200080, 0x00200100)
 
     # A split past the code end is another module's address at the same base: the window's
     # measurement wins, so the extent stops at the code end instead of claiming those bytes.
@@ -185,7 +185,7 @@ def test_the_next_split_bounds_the_extent_and_the_window_clamps_it(tmp_path):
                 ("probe_second.s", split("probe_second", 0x00200090)),
                 ("probe_other_module.s", split("probe_other_module", 0x00200200))])
     tu = beyond.tu_named("src/probe/ov.c")
-    assert cc._split_extent(tu, beyond) == (0x00200080, CODE_END)
+    assert cc.split_extent(tu, beyond) == (0x00200080, CODE_END)
 
 
 def test_a_missing_overlay_split_directory_names_it(tmp_path):
@@ -194,7 +194,7 @@ def test_a_missing_overlay_split_directory_names_it(tmp_path):
     tu = manifests.tu_named("src/probe/ov.c")
     tu.functions = tu.functions[:1]
     with pytest.raises(cc.Unusable) as refusal:
-        cc._split_extent(tu, manifests)
+        cc.split_extent(tu, manifests)
     assert "asm/nonmatchings/probe_rel4cd" in str(refusal.value)
 
 
@@ -205,5 +205,5 @@ def test_a_unit_outside_its_modules_code_is_refused(tmp_path):
         splits=[("probe_first.s", split("probe_first", 0x00200010))])
     tu = manifests.tu_named("src/probe/ov.c")
     with pytest.raises(cc.Unusable) as refusal:
-        cc._split_extent(tu, manifests)
+        cc.split_extent(tu, manifests)
     assert "not the module its DWARF says" in str(refusal.value)
