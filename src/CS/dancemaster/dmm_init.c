@@ -1,4 +1,7 @@
 #include "src/CS/dancemaster/dmm_init.h"
+#define D_0104A9D0 ((unsigned char *)0x104A9D0)
+#define D_00FB4C40 ((unsigned char *)0xFB4C40)
+#define D_00E62B80 ((unsigned char *)0xE62B80)
 
 #define DMM_LAST_DATA (g_game_w.last_data_addr)
 
@@ -29,7 +32,7 @@ void dmm_init(anon_0_87 *work) {
     switch (work->step) {
     case 0:
         dmm_quit_off();
-        DMM_LAST_DATA = (unsigned char *)0x104A9D0;
+        DMM_LAST_DATA = D_0104A9D0;
         func_00128600();
         dmm_sys_fade_init();
         dmm_sys_fade_set(0);
@@ -47,13 +50,13 @@ void dmm_init(anon_0_87 *work) {
         if (dmm_icon()) work->step++;
         break;
     case 4:
-        if (func_0011E090(dmm_font, (unsigned char *)0xFB4C40)) work->step++;
+        if (func_0011E090(dmm_font, D_00FB4C40)) work->step++;
         break;
     case 5:
         if (func_0011DE80()) work->step++;
         break;
     case 6:
-        co_movie_set(1, (unsigned char *)0xE62B80);
+        co_movie_set(1, D_00E62B80);
         work->step++;
         break;
     case 7:
