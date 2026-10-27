@@ -1499,6 +1499,11 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
     yaml_path = config_dir / "splat.yaml"
     write_if_different(yaml_path, splat_yaml(chunks, target, geometry))
 
+    # splat emits a split only when it creates the C file for the run, and it never overwrites
+    # one that exists: a stale artifact makes it write only the functions its deps file names,
+    # and the link then refuses with "the code splits are not the retail ... bytes".
+    for stale in sorted((REPO_ROOT / "build" / "src").glob("*.c")):
+        stale.unlink()
     print(f"configure: splat split {_display(yaml_path)}")
     splat = [*SPLAT, _display(yaml_path)]
     proc = subprocess.run(splat, cwd=REPO_ROOT)
