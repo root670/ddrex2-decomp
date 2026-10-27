@@ -199,6 +199,11 @@ adoption.  `_pair` only returns leftovers for our side, and the refusal names th
 retail DIE (`no counterpart in the emitted chunk`, or `a missing record is not fabricated`
 when the chunk is shorter).
 
+The emitted `.line` may be any size -- larger or shorter than retail's pinned chunk --
+because the payload `place` assembles is retail's chunk itself: the fit guard that refuses
+an emitted table overrunning its pinned slot is a *non-adopting* rule (there the table has
+to land in retail's slice) and does not run under `--adopt-retail-meta`.
+
 **A drop moves positional words.**  `AT_sibling` is not a reference: it names the laid-out
 end of the record's subtree, so a drop invalidates it even though every reference word stays
 put.  After the layout is final every surviving record that carries the word is recomputed
@@ -301,6 +306,28 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    multiplies and the three `m1->t[…] = m0[3][…]` copies in the source's statement order, with the
    last three rows addressed as `m0->unk10/unk14/…` because `sceVu0FVECTOR` is an array typedef —
    a spelling to fix by hand, not a shape to doubt.
+
+   **A `jr $reg` dispatch is fed its table.** A body that ends in `jr $2` (anything but `jr $31`)
+   reads a case address out of a jump table, and the table is *not* in the function's split: it sits
+   outside the function, so m2c refuses the whole body with *"Found jr instruction … but the
+   corresponding jump table is not provided"*. m2c's contract is that the table must be in the
+   assembly it parses — a data label whose name starts with `jtbl`/`jpt_`/`jumptable_`/`lbl_`,
+   named by the `%lo(...)` macro before the `jr`, with one word per case label. `m2c_draft.py` now
+   supplies exactly that: it takes the address the split's symbol carries (`jtbl_002D7110` →
+   `0x002D7110`), reads the words out of `orig/SLUS_211.74` through the measured geometry, stops at
+   the first word that is not an instruction of this function (capped by the `sltiu` bounds check
+   when the split shows one), writes them to a second `.s` file, and inserts the case labels the
+   split lacks — splat labels branch targets, not table entries — before the instructions they name.
+   A body with no table is handed over byte-for-byte as before, so nothing else changes.
+
+   Measured: `extras_main` (`CS/advanced/adv_main.c`) refuses without this and now drafts as a
+   `switch (temp_2)` with `case 0:` … `case 12:` and a `default:` — 13 cases read from
+   `jtbl_002D7110`, whose two zero-indexed entries are 0x0026A3B0 and 0x0026A438. The tool prints
+   the recovered table on stderr (`switch recovered from jtbl_002D7110 at 0x002D7110 has 13
+   case(s): 0:0x0026A3B0, …`), and when it cannot help it says so instead: a table whose entries
+   all point outside the split (`func_001A8770`) gets a note listing them, because those case blocks
+   belong to a neighbouring split and the switch has to be written by hand. Either way the switch is
+   a *shape*: the case values are retail's, the C in each case is not.
 
 5. **Write the C on retail's line numbers.** The line numbers are evidence, not a suggestion. If the
    generated header spells a tag bare (`_tag_X`, C++ syntax), write `struct _tag_X` in the C; if a
@@ -1136,7 +1163,20 @@ gave it one, where the split shows a single register); `SaveData.NonstopRecord[.
 bitfield- or macro-heavy unit the DWARF local list (`dwarf1.py fn`) is a better seed than the m2c
 body, and m2c is most valuable for control flow and packet arithmetic.
 
-## Source permutation: `tools/units/permute.py`
+### 20. `movz` needs arms that are not 1/0, and the alignment attribute follows the brace
+
+Two compiler facts measured on `fp_style.c`/`fp_opt.c`:
+- MW's `movz $rd,$0,$rs` select form comes from a `? :` whose arms are **not** the literal pair
+  1/0: every 1/0 spelling (`x ? 1 : 0`, `x == 0 ? 0 : 1`, `x != 0`, unsigned/long/short arms,
+  in isolation and in context) compiles to `sltu`. When retail shows `addiu` + `movz` + store,
+  look for a select whose arms are real values (as `EyeSystemInit`'s `(x & 2) ? 2 : 1`).
+- `__attribute__((aligned(16)))` must sit **after the closing brace, before the typedef name**
+  (`} __attribute__((aligned(16))) tag;`). The other spelling
+  (`typedef struct {…} tag __attribute__((aligned(16)));`) is silently ignored by 3.0b38 - probe:
+  `p[1].step` stayed at 0x34 instead of 0x38 - which is why a padded aggregate's `sizeof` stayed
+  short and the bodies indexing it could not match.
+
+## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
 single one, and the reasons are the useful part. `cws_win_multi`'s one register pair went 284 → 270
