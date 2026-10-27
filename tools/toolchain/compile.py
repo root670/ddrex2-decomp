@@ -173,8 +173,13 @@ SPLAT_DATA_NAME = re.compile(r"^D_(?P<address>[0-9A-Fa-f]{8})$")
 #: never named is numbered by the compiler, and that number is what the object's relocations
 #: carry.  A pool slot is a datum like any other -- the address is the pool entry's, proved by
 #: the same byte comparison -- so the ledger has to be able to spell one.
+#:
+#: ``<identifier>$<digits>`` names a *block-scope* static, which Metrowerks mangles with a
+#: per-file counter (`ofs$338`); ``<identifier>$*`` is the wildcard form of the same record,
+#: and the preferred one -- see :meth:`Manifests.unit_symbols`.
 UNIT_SYMBOL = re.compile(
-    r"^(?P<name>[A-Za-z_]\w*|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*source:(?P<source>\S+)$")
+    r"^(?P<name>[A-Za-z_]\w*(?:\$\d+|\$\*)?|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);"
+    r"\s*//\s*source:(?P<source>\S+)$")
 DATA_PLACEMENT = re.compile(
     r"^(?P<name>[A-Za-z_]\w*|@\d+)\s*=\s*0x(?P<address>[0-9A-Fa-f]+);\s*//\s*"
     r"size:0x(?P<size>[0-9A-Fa-f]+)\s+extent:0x(?P<extent>[0-9A-Fa-f]+)\s+"
@@ -315,6 +320,29 @@ class Manifests:
         self.placed = {}
         self.withheld = {}
         self.by_address = {}
+        # A *block-scope* static is mangled by the compiler with a per-file counter
+        # (`ofs$338`), and that counter moves when the file is edited, so a record naming
+        # one number rots the moment the source is reformatted.  The ledger's wildcard form
+        # (`ofs$*`) records the stable prefix instead; patterns are kept apart from `symbols`
+        # because a pattern is not a name -- it is matched only for a name nothing else
+        # resolves (see `address_of`), and an exact record always wins over it.
+        self.static_patterns = {}
+        ledger = self.dir / "unit_symbols.txt"
+        for name, address, source in self._unit_symbols():
+            if not name.endswith("$*"):
+                continue
+            prefix = name[:-1]
+            previous = self.static_patterns.get(prefix)
+            if previous is not None:
+                raise Unusable(
+                    f"{_display(ledger)} has two `{prefix}*` records: "
+                    f"0x{previous[0]:08X} (source:{previous[1]}) and "
+                    f"0x{address:08X} (source:{source}).  A `$*` pattern names one address, "
+                    f"so it cannot resolve a compiler-mangled name that matches both; give "
+                    f"the records distinct prefixes, or write the count out in an exact "
+                    f"`{prefix}<N>` record (which rots on reformat, which is why `$*` is "
+                    f"preferred)")
+            self.static_patterns[prefix] = (address, source)
         # An object the oracle could not place *because retail's own DWARF gives it no
         # address* still has a value a placement has to reproduce: 0, which is what retail's
         # `AT_location` holds for it.  Anything else it withheld is a refusal, not an address:
@@ -476,29 +504,50 @@ class Manifests:
             raise Unusable(f"{path.relative_to(REPO_ROOT)} is missing; run ./ddr oracle")
         return json.loads(path.read_text())
 
+    def _unit_symbols(self):
+        """``[(name, address, source)]`` the ``unit_symbols.txt`` records, in file order.
+
+        Every record is one line, ``name = 0xADDR; // source:FILE``; the name is a C
+        identifier, Metrowerks' literal-pool slot ``@N``, a mangled block-scope static
+        ``name$N``, or the wildcard ``name$*``.  A line that does not parse is refused here,
+        naming the file and the line, because a typo in this ledger would otherwise read as
+        "no record" for a unit that has one.
+        """
+        path = self.dir / "unit_symbols.txt"
+        if not path.is_file():
+            return []
+        out = []
+        for number, line in enumerate(path.read_text().splitlines(), start=1):
+            text = line.strip()
+            if not text or text.startswith("//"):
+                continue
+            match = UNIT_SYMBOL.match(text)
+            if match is None:
+                raise Unusable(
+                    f"{_display(path)} line {number} is not `name = 0xADDR; // "
+                    f"source:FILE`: {text}")
+            out.append((match["name"], int(match["address"], 16), match["source"]))
+        return out
+
     def unit_symbols(self, source: str):
-        """``[(name, address)]`` the unit's own static resolves to, from ``unit_symbols.txt``.
+        """``[(name, address)]`` the unit's own statics resolve to, from ``unit_symbols.txt``.
 
         Two units may each declare a file-scope static of one name (`step0` in `dmm_main.c`
         and in `shop_main.c`); the oracle numbers the second `step0_1`, so the bare name
         only resolves to the first.  A line `name = 0xADDR; // source:FILE` says which retail
         address the named unit's reference means.  Unlike a data placement it links nothing:
         the static lives in a split the link already holds.
+
+        A *block-scope* static is mangled by Metrowerks as `name$N`, where `N` is a counter
+        over the whole compile unit: `ofs$338` today, `ofs$387` after an unrelated edit to
+        the same file.  An exact `ofs$338` record therefore works only until the next
+        reformat of that source.  The wildcard `ofs$* = 0xADDR; // source:FILE` names the
+        stable prefix instead, and :meth:`address_of` resolves any `ofs$<digits>` against it;
+        prefer it for every block-scope static.  A `$*` record is not a name, so it is not
+        returned here.
         """
-        path = self.dir / "unit_symbols.txt"
-        if not path.is_file():
-            return []
-        out = []
-        for line in path.read_text().splitlines():
-            text = line.strip()
-            if not text or text.startswith("//"):
-                continue
-            match = UNIT_SYMBOL.match(text)
-            if match is None:
-                raise Unusable(f"{_display(path)}: not `name = 0xADDR; // source:FILE`: {text}")
-            if match["source"] == source:
-                out.append((match["name"], int(match["address"], 16)))
-        return out
+        return [(name, address) for name, address, record_source in self._unit_symbols()
+                if record_source == source and not name.endswith("$*")]
 
     def prefer_source(self, source: str) -> None:
         """Let ``source``'s own placement records win over another unit's of the same name.
@@ -540,11 +589,34 @@ class Manifests:
                 f"({_display(source)}); this layout has no place to relocate it to -- the "
                 f"segments that hold it are the overlay milestone's -- so the unit cannot "
                 f"be placed")
+        # Nothing exact resolves it, so it may be a block-scope static's mangled name: the
+        # compiler emits `name$<counter>`, and the ledger can record the stable prefix as
+        # `name$*`.  Exact records win above; this is the fallback, so a `name$N` record and
+        # a `name$*` record can coexist while the count is being re-measured.
+        pattern = self._static_pattern(name)
+        if pattern is not None:
+            return pattern
         raise Unusable(
             f"the object references {name!r}, which has no record at all: not among the "
             f"split labels the link places, not in {_display(self.target.symbols)}, not in "
             f"the link's -T files, and not in {self._unplaced_path()}; the unit cannot be "
             f"placed")
+
+    def _static_pattern(self, name):
+        """The address a ``$*`` record gives ``name``'s mangled counter, or ``None``.
+
+        A block-scope static is mangled ``name$<counter>`` by Metrowerks, so the stable part
+        of the name is what precedes the trailing digits (`ofs$` for `ofs$338`).  The
+        ledger's `ofs$*` record is stored under exactly that prefix; a name with no trailing
+        digits, or one whose prefix has no record, is not a match.
+        """
+        if not isinstance(name, str):
+            return None
+        prefix = name.rstrip("0123456789")
+        if prefix == name:
+            return None
+        record = self.static_patterns.get(prefix)
+        return None if record is None else record[0]
 
     def _unplaced_path(self):
         """The target's unplaced ledger, as a reader types it."""

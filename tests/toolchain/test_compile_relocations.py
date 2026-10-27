@@ -43,7 +43,8 @@ class Symbol:
         self.name = name
 
 
-def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=(), placements=()):
+def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=(), placements=(),
+               unit_symbols=()):
     """A synthetic config: only the files a `Manifests` reads have to exist.
 
     `splits` are `(name, text)` under the code segment's split directory -- the objects the
@@ -51,13 +52,15 @@ def config_dir(tmp_path, placed=(), unplaced=(), splits=(), data=(), placements=
     written under `tmp_path` on purpose: `Manifests` is given `root=tmp_path`, so a test can
     never see (or depend on) the repository's generated `asm/`.  `data` are the same, under
     `asm/data`: the data splits the link places (`g_game_w` lives in `bss.bss.s`).
-    `placements` are the target's own `data_placements.txt` lines.
+    `placements` are the target's own `data_placements.txt` lines; `unit_symbols` are the
+    `unit_symbols.txt` lines (a unit's own statics, block-scope ones possibly mangled).
     """
     (tmp_path / "cus.json").write_text(json.dumps([]))
     (tmp_path / "debug_chunks.json").write_text(json.dumps([]))
     (tmp_path / "symbol_addrs.txt").write_text("".join(placed))
     (tmp_path / "unplaced_symbols.txt").write_text("".join(unplaced))
     (tmp_path / "data_placements.txt").write_text("".join(placements))
+    (tmp_path / "unit_symbols.txt").write_text("".join(unit_symbols))
     for name, text in splits:
         path = tmp_path / "asm" / "nonmatchings" / "main" / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -341,6 +344,55 @@ def test_the_section_encoding_cannot_collide():
     """A C identifier that spells the escape is still a different section from the slot."""
     assert cc.data_section("@40") == ".datum._4040"
     assert cc.data_section("_4040") == ".datum._5f4040"
+
+
+# -- block-scope statics: the `$N` mangle and the `$*` wildcard --------------------------
+
+
+def test_a_wildcard_static_record_resolves_any_compiler_count(tmp_path):
+    """`ofs$*`: a block-scope static's count moves with edits, its prefix does not.
+
+    Measured on `src/AM/s573/doll/dinit.c`'s `get_free_motbuf`, whose `static unsigned int
+    ofs;` retail addresses at 0x002DE4C4 (the ``-0x3C2C($gp)`` addend).  Metrowerks mangled
+    it `ofs$338` in one revision of the file and `ofs$387` in another, so the ledger records
+    the prefix and `address_of` resolves whichever count the object carries.
+    """
+    m = manifests(tmp_path, unit_symbols=[
+        "ofs$* = 0x002DE4C4; // source:src/AM/s573/doll/dinit.c\n"])
+    assert m.static_patterns == {"ofs$": (0x2DE4C4, "src/AM/s573/doll/dinit.c")}
+    assert m.address_of("ofs$338") == 0x2DE4C4
+    assert m.address_of("ofs$999") == 0x2DE4C4
+    # The record is a pattern, not a name: it never enters `symbols`, and a source listing
+    # it owns no exact record.
+    m.prefer_source("src/AM/s573/doll/dinit.c")
+    assert "ofs$*" not in m.symbols
+    assert m.unit_symbols("src/AM/s573/doll/dinit.c") == []
+    # A name the prefix does not cover is still a gap, not a wildcard hit.
+    for name in ("ofs", "other$338"):
+        with pytest.raises(cc.Unusable, match="no record at all"):
+            m.address_of(name)
+
+
+def test_an_exact_mangled_record_wins_over_the_wildcard(tmp_path):
+    """While a count is being re-measured, its exact record is the more specific evidence."""
+    m = manifests(tmp_path, unit_symbols=[
+        "ofs$338 = 0x002DE5A0; // source:src/AM/s573/doll/dinit.c\n",
+        "ofs$* = 0x002DE4C4; // source:src/AM/s573/doll/dinit.c\n"])
+    m.prefer_source("src/AM/s573/doll/dinit.c")
+    assert m.address_of("ofs$338") == 0x2DE5A0
+    assert m.address_of("ofs$999") == 0x2DE4C4
+
+
+def test_two_wildcards_for_one_prefix_are_refused_naming_both(tmp_path):
+    """A `$*` pattern names one address; two of them leave a mangled name ambiguous."""
+    with pytest.raises(cc.Unusable) as refusal:
+        manifests(tmp_path, unit_symbols=[
+            "ofs$* = 0x002DE4C4; // source:src/AM/s573/doll/dinit.c\n",
+            "ofs$* = 0x002DE900; // source:src/AM/s573/doll/dance.c\n"])
+    text = str(refusal.value)
+    assert "ofs$*" in text
+    assert "0x002DE4C4" in text and "0x002DE900" in text
+    assert "src/AM/s573/doll/dinit.c" in text and "src/AM/s573/doll/dance.c" in text
 
 
 #: The range the synthetic tests measure: the split bases above sit inside it, the overlay

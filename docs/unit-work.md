@@ -1149,6 +1149,18 @@ and `ed_edit_disp`.  Each item cost somebody an hour once.
     owns, e.g. `step0`).  An 8-byte-or-shorter literal shared with other code may need padding
     (`"(%+d)\0\0\0"`) so it leaves `.sdata`; strings are not linked, so the padding changes no
     image byte.
+
+    A *block-scope* static — one declared inside a function, like `get_free_motbuf`'s
+    `static unsigned int ofs;` in `src/AM/s573/doll/dinit.c` — has no bare name in the object:
+    Metrowerks mangles it `name$N`, where `N` is a counter over the whole compile unit, so the
+    same `ofs` was `ofs$338` in one revision of that file and `ofs$387` in another.  An exact
+    `ofs$338 = 0xADDR;` record therefore rots on the next reformat.  Record the stable prefix
+    instead — `ofs$* = 0x002DE4C4; // source:FILE` — and `Manifests.address_of` resolves any
+    `ofs$<digits>` the object carries; prefer the wildcard for every block-scope static, and
+    keep an exact `name$N` record only as a stopgap while re-measuring.  Exact records win over
+    the pattern, and two `$*` records for one prefix are a configuration error that names both
+    addresses and both sources, because a pattern can only mean one address.
+
 13. **Never reference data by a hard-coded address.**  A name comes from the debug info; with
     no debug symbol, use splat's address-derived `D_<8 hex digits>` (they are in
     `config/ddrex2p/undefined_syms_auto.txt`), the same way unnamed functions keep
