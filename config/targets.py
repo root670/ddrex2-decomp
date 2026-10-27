@@ -904,6 +904,13 @@ DDREX2P = Target(
         # overlay window, so nothing here needs a literal or a ledger row.
         ("src/network/net_sys/net_sys_connect.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x2CC, both bodies word-exact (172/7); .debug retail's 0x2B1 / 689 bytes
+        # byte-equal after adoption; .line adopted.  -sdatathreshold 0 is required (otherwise the
+        # 0x0102xxxx slots come out gp-relative and refuse) and -opt full is required (Disp is
+        # short by 0x18 without it).  D_0102FE00 stays a named macro: every extern spelling lets
+        # MWCC hoist a load above a store and costs 3 words.
+        ("src/network/net_game/net_game_help.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
