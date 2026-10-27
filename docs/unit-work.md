@@ -1011,6 +1011,22 @@ The address still has its own split, so call it by the split's name instead:
 which is honest — the name comes from the address, not from a guess between two aliases. Before
 that, `draw_floor` could not even be placed ("the object references `dpmul`").
 
+### 17. GIF packet bodies: separate ORs, and the loop pre-advance
+
+Measured on `AM/s573/doll/model2.c`, where four draw bodies became exact:
+- **The A+D tag must not be one 64-bit literal.** `0x1000400000008000 | …` folds to
+  `(lui 0x1000 | ori 0x4000) << 32`; retail keeps five separate ORs. The reproducing spelling is
+  `0x4000UL << 32 | 0x8000 | (nface * 6) | ((unsigned long)(prmask & 0x8B) << 47) | 0x10000000UL << 32`,
+  and the mask and high pieces (`0x89`/`0x8B`, `0x1000C000`/`0x1001C000`, `0x20000000`) are what
+  distinguish the four draw functions.
+- **`pkt += 3;` before the loop** is what puts `addiu $2,$2,0x30` in the `beqz` delay slot;
+  indexing `pkt[3]` in the body gives a 48-byte displacement and a 24-word residue.
+- **The `fg` broadcast is a chained assignment** where no `fg` local exists
+  (`pkt[0].ui32[3] = pkt[1].ui32[3] = pkt[3].ui32[3] = a|b|c;`); with a declared local, use
+  separate stores.
+- **A comparison constant reused as an argument** is passed as the literal: `if (i == 0xF) call(…, 0xF, …)`
+  lets MWCC reuse the compare constant and closes the last words.
+
 ## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
