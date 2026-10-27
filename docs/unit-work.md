@@ -1005,6 +1005,17 @@ that, `draw_floor` could not even be placed ("the object references `dpmul`").
 
 ## Source permutation: `tools/units/permute.py`
 
+Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
+single one, and the reasons are the useful part. `cws_win_multi`'s one register pair went 284 → 270
+(unseeded, 4,855 candidates) and then found nothing in 3,922 (seed 1) and 2,930 (seed 2);
+`com_keyboard` plateaued at 221 of 16,495; `dinit`'s seven-word pair was flat at 7 across 4,739
+candidates; `dancer` and `mmenu_obj` were **unscoreable** because those bodies are the wrong
+length (0x374 against 0x38C, +0x44, −0x4, −0x8, −0x18) — the scorer compares words, so a body of a
+different size cannot be ranked at all. So: fix the size first, and expect a *single* register pair
+to plateau, because rule 10 says that pair is free-list state rather than a source decision. What
+it is good for is a body that is loose by tens of words; the artefacts (`best-N.c` per target,
+plus the run logs) record exactly where each body stalls.
+
 The permuter ([decomp-permuter](https://github.com/simonlindholm/decomp-permuter), MIT) is a
 *candidate generator* for the one residue class that is left when the shape is right: a unit is
 promoted, its bodies are retail's length, and a handful of words differ because a web was coloured
