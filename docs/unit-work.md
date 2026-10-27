@@ -1076,6 +1076,15 @@ at 0x770000. So an overlay function's address names its *window* but not which o
 resident there: the disc blobs decide, which is why a per-overlay splat segment has to be keyed by
 the blob, not by the address.
 
+**What m2c gets wrong, measured** (`onimode.c`): gp-relative globals come back as
+`saved_reg_gp->unk-3C60` with the declared locals erased, so struct macros become nested `goto`s;
+bitfields come back as raw shift/mask chains (`(x << 0x3A) >> 0x3E`) instead of `boost`/`hidden`/
+`turn`; callee arity is invented per call site (one draft gave a function three arguments, the next
+gave it one, where the split shows a single register); `SaveData.NonstopRecord[...]` becomes
+`&SaveData + course * 0x28 + 0x318C`; and it invents `D_` globals for `g_game_w` fields. For a
+bitfield- or macro-heavy unit the DWARF local list (`dwarf1.py fn`) is a better seed than the m2c
+body, and m2c is most valuable for control flow and packet arithmetic.
+
 ## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
