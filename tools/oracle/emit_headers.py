@@ -219,55 +219,116 @@ def decl(dw, tree, inner, tagger):
     return declare(_c_tree(dw, tree, tagger), inner)
 
 
-def _gap(indent, start, end, align):
-    """Bytes no member covers, in the vendored renderer's own words.
+def _gap(indent, start, end):
+    """Bytes no member covers that C's own alignment explains, as a comment.
 
-    DWARF has no alignment attributes (`sceVu0FVECTOR` and friends are 16-byte aligned
-    typedefs), so a gap that rounding up to 16 explains is only probably padding -- unless
-    `align` is 16, which is what `_stated_alignment` passes once the member after the gap
-    carries the alignment its offset implies, or the aggregate's own size confirms it.
-    There is no vtable-pointer case: these are C translation units, and none of them has one.
+    Only reached once `definition` has established the gap is explained -- by the next
+    member's own alignment or by the alignment an emitted `__attribute__((aligned(N)))`
+    states -- because a gap the evidence does not explain is spelled as a member
+    (`_omitted_member`), never left as a comment that cannot move anything.  The number and
+    the wording are the vendored renderer's, so a reader comparing a generated header with
+    `dwarf1.py type` sees the same line.  There is no vtable-pointer case: these are C
+    translation units, and none of them has one.
     """
-    up = lambda n: (start + n - 1) // n * n
-    if up(align) == end:
-        why = "padding"
-    elif up(16) == end:
-        why = "padding if 16-byte aligned, else a member DWARF omits"
-    else:
-        why = "not in DWARF (a member CodeWarrior did not describe)"
-    return f"{indent}/* 0x{start:03x} */ // 0x{end - start:x} bytes {why}"
+    return f"{indent}/* 0x{start:03x} */ // 0x{end - start:x} bytes padding"
+
+
+#: The alignments a definition may state, in the order the emitter tries them.
+#:
+#: 16 comes first because the tree already spells it and retail's DWARF cannot tell it from a
+#: narrower claim: `fp_style.c`'s `anon_5_73` (DIE 0x1254e3, members end 0x1c, size 0x20,
+#: natural 4) is reproduced by 8 and 16 alike, and the promoted units were measured with 16.
+#: 32 and 64 are what retail's wider aggregates need: `_NETWORK_W`'s members end at 0x76DC
+#: and its `AT_byte_size` is 0x7700, which only 64 reaches; `_mio_message` jumps 0x24..0x40
+#: and ends 0x45A..0x480; `_ddrnet` 0x36D8..0x3700 and 0x2B599..0x2B5C0; `_tag_cNetCnf`
+#: 0x50..0x80 and 0xE04..0xE40.  Every one of those four is a multiple of 0x40 bytes long.
+#: 8 is the last resort -- a gap no 16-byte alignment reaches -- because the narrower claim is
+#: all the evidence supports.
+ALIGNMENTS = (16, 32, 64, 8)
+
+
+def _rounded(start, natural):
+    """`start` rounded up to a multiple of `natural`."""
+    return (start + natural - 1) // natural * natural
 
 
 def _stated_alignment(start, offset, natural, size):
     """The alignment a member has to state to sit where retail put it, or `None`.
 
-    DWARF records a member's offset, not its alignment, so a gap that only rounding up to
-    16 explains is ambiguous: it is either padding for a 16-byte-aligned member or a member
-    DWARF omits.  Measured on `fp_qmenu.c`: `float cam_p[4]` declares alignment 4, but
-    retail puts it at 0x60 after `float timer` ends at 0x54, and the type is 0x90 bytes --
-    a multiple of 16 whose tail rounds 0x88 up to 0x90 exactly the same way.  The offset
-    and the size together therefore state an alignment the declaration does not, and the
-    spelling that carries it is `__attribute__((aligned(16)))`.  Only emitted when the
-    aggregate's own size is a multiple of it, so the attribute cannot move any later member
-    or change the recorded size.  `_tail_alignment` below asks the same question about the
-    bytes after the last member.
+    DWARF records a member's offset, not its alignment, so a gap is ambiguous: it is either
+    padding for an aligned member or a member DWARF omits.  Measured on `fp_qmenu.c`:
+    `float cam_p[4]` declares alignment 4, but retail puts it at 0x60 after `float timer`
+    ends at 0x54, and the type is 0x90 bytes -- a multiple of 16 whose tail rounds 0x88 up to
+    0x90 exactly the same way.  The offset and the size together therefore state an
+    alignment the declaration does not, and the spelling that carries it is
+    `__attribute__((aligned(N)))`.
+
+    N is searched over :data:`ALIGNMENTS` because 16 is not the widest alignment the pinned
+    compiler honours or retail's image uses: `_NETWORK_W` (DIE 0x77470) records `byte_size`
+    0x7700 with its last member ending at 0x76DC, and only 64 rounds one onto the other.
+    Only a candidate that reproduces the recorded offset is returned, and only when the
+    aggregate's own size is a multiple of it, so the attribute cannot move a later member or
+    change the recorded size; otherwise the gap is still unexplained and `_omitted_member`
+    spells it rather than the header claiming an alignment the evidence does not support.
+    `_tail_alignment` below asks the same question about the bytes after the last member.
     """
-    if offset <= start or natural >= 16:
+    if offset <= start or _rounded(start, natural) == offset:
         return None
-    up = lambda n: (start + n - 1) // n * n
-    if up(natural) == offset:
-        return None
-    if up(16) == offset and size % 16 == 0:
-        return 16
+    for align in ALIGNMENTS:
+        if _rounded(start, align) == offset and size % align == 0:
+            return align
     return None
+
+
+def _padded_by_alignment(start, end, natural):
+    """Whether C's own padding from `start` reaches exactly `end`.
+
+    The *next* member gives a gap its alignment: if rounding `start` up to that member's
+    natural alignment lands on its recorded offset, the compiler places it there unaided and
+    the gap is padding.  When it does not -- and no stated alignment covers it either -- the
+    bytes have to be spelled, because a comment cannot move the member after them (see
+    `_omitted_member`).
+    """
+    return natural > 0 and _rounded(start, natural) == end
+
+
+def _omitted_member(indent, start, end):
+    """A member covering bytes neither the members nor any stated alignment explain.
+
+    The fallback of `_stated_alignment` and `_tail_alignment`: when no alignment reproduces
+    the gap, DWARF's own facts -- the following member's offset, or the aggregate's
+    `byte_size` -- still say the bytes are there, and a comment cannot move a member nor grow
+    a type.  So the bytes are spelled as a member of their own.  The pinned image has no
+    such gap left (every one is rounding to 8, 16, 32 or 64), so this is the safety net: a
+    gap the evidence does not explain is stated, never silently dropped.
+
+    The name is synthetic, because DWARF has none: `pad_<offset>` is unique within its
+    aggregate and cannot name a retail member.  `unsigned char` is the element type that
+    cannot round the following member up -- the gap ends on the offset retail recorded -- and,
+    being an array, the member states the byte count the DIE's `byte_size` implies.  The
+    member itself is not in the DIE, so a promoted unit's `.debug` carries one extra record
+    where retail has none; adoption drops it, as it does for `net_sys_logout.c`'s hand-written
+    `unsigned char tail[0x24]`.
+    """
+    n = end - start
+    text = f"unsigned char pad_{start:x}[0x{n:x}];"
+    return (f"{indent}/* 0x{start:03x} */ {text}".ljust(len(indent) + 48)
+            + f"  // 0x{n:x} bytes no alignment or member explains")
+
+
+#: The alignments an aggregate's tail can state, smallest first.  Eight is where a type of
+#: 4-byte members first gains a padded tail (`fp_style.c`'s `anon_5_73`: 0x1c -> 0x20), 16 is
+#: the SDK's vector alignment, and 64 is measured on `_NETWORK_W` (members end 0x76dc, size
+#: 0x7700, and only 64 rounds one to the other).  Nothing in this image needs more.
+TAIL_ALIGNMENTS = (8, 16, 32, 64)
 
 
 def _tail_alignment(cursor, size, natural):
     """The alignment an aggregate's own size states beyond its members, or `None`.
 
     The member rule above reads a gap *between* members; this reads the gap *after* the last
-    one.  DWARF records the aggregate's size, so a size that rounds the cursor up to 16 states
-    16-byte alignment the members do not: measured on `fp_style.c`, DIE 0x1254e3 (`@anon5`,
+    one.  DWARF records the aggregate's size, so a size that rounds the cursor up states an
+    alignment the members do not: measured on `fp_style.c`, DIE 0x1254e3 (`@anon5`,
     `anon_5_73` in `include/src/CS/freeplay/fp_style.h`) ends its members at 0x1c, DWARF says
     0x20, and retail's item stride is 0x20 (`addiu $3,$3,0x20`) -- an unstated tail makes the
     emitted typedef 0x1c bytes, so `((anon_5_73 *)w)[i].step` strides 0x1c and every body that
@@ -280,9 +341,27 @@ def _tail_alignment(cursor, size, natural):
     the same attribute after the name (`typedef struct {...} tag __attribute__((aligned(16)));`)
     is silently ignored -- `p[1].step` stayed at 0x34 and `sizeof` at 0x1c.  A named type gets
     the identical placement, `struct tag {...} __attribute__((aligned(16)));` (measured: stride
-    0x38, `sizeof` 0x20).
+    0x38, `sizeof` 0x20); 64 is measured the same way on `_NETWORK_W` (members end 0x76DC,
+    `sizeof` 0x7700 with the attribute, 0x76DC without).
+
+    The alignment is not always 16, so the search takes the *smallest* of `TAIL_ALIGNMENTS`
+    that rounds the cursor up to exactly the recorded size.  A smaller claim is the one DWARF
+    supports, and a use that needs more states it on the member the offset demands
+    (`_stated_alignment`).  When no alignment reproduces the size, the tail is not alignment
+    padding at all: `None` leaves the caller to spell the bytes (`_omitted_member`) instead of
+    inventing the next power of two.
     """
-    return _stated_alignment(cursor, size, natural, size)
+    if size <= cursor:
+        return None
+    up = lambda n: (cursor + n - 1) // n * n
+    if up(natural) == size:
+        return None                     # the members' own alignment explains the size
+    for align in TAIL_ALIGNMENTS:
+        if align > natural and up(align) == size:
+            return align
+    return None
+
+
 
 
 def _enum_lines(die, tag, indent, typedef=False):
@@ -317,6 +396,13 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
     The layout is the vendored renderer's: member offsets in hex, a member's size or its bit
     range, and the bytes no member covers described in words -- so a reader comparing these
     headers with `dwarf1.py type` sees the same numbers in the same places.
+
+    Describing a gap is not enough to reproduce it: C places the next member by its own
+    alignment and closes the aggregate on its widest member's, so a gap that alignment
+    explains needs the comment alone, one that a stated alignment reproduces gets
+    `__attribute__((aligned(N)))` (`_stated_alignment`, `_tail_alignment`), and one no
+    alignment explains is spelled as a member of its own (`_omitted_member`) -- the header
+    must reach the recorded offsets and `byte_size`, and a comment does neither.
 
     `tagger` names every aggregate the members mention.  An anonymous one is named by the
     shared typedef that defines it (`anon_<layout digest>`), never spelled out here: two
@@ -355,7 +441,10 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
         stated = None if offset is None or kind == "union" else _stated_alignment(
             cursor, offset, align, size)
         if offset is not None and offset > cursor and kind != "union":
-            lines.append(_gap(ind, cursor, offset, stated or align))
+            if stated is None and not _padded_by_alignment(cursor, offset, align):
+                lines.append(_omitted_member(ind, cursor, offset))
+            else:
+                lines.append(_gap(ind, cursor, offset))
         text = decl(dw, tree, child.name or "", tagger)
         if stated:
             text += f" __attribute__((aligned({stated})))"
@@ -377,7 +466,10 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
     elif size > cursor:
         tail = _tail_alignment(cursor, size, tail_align)
         if kind != "union":
-            lines.append(_gap(ind, cursor, size, tail or tail_align))
+            if tail or _padded_by_alignment(cursor, size, tail_align):
+                lines.append(_gap(ind, cursor, size))
+            else:
+                lines.append(_omitted_member(ind, cursor, size))
     stated = f" __attribute__((aligned({tail})))" if tail else ""
     lines.append(f"{indent}}}{stated}{' ' + tag if typedef and tag else ''};")
     if typedef and not tag:

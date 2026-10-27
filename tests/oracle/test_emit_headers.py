@@ -69,20 +69,29 @@ def test_the_committed_header_matches_a_fresh_render():
     assert emit_headers.render(TARGET.elf, a_unit_name()) == committed.read_text()
 
 
-def test_the_tail_rule_states_an_alignment_the_members_do_not():
-    """The aggregate's own size states a 16-byte alignment its members do not.
+def test_the_tail_rule_states_the_smallest_alignment_the_size_needs():
+    """The aggregate's own size states an alignment its members do not -- the smallest one.
 
     Measured on `fp_style.c`: DIE 0x1254e3's members end at 0x1c, DWARF says 0x20, and retail
-    strides the type by 0x20.  Members that give the type 8-byte alignment already explain a
-    0x20 size, so there is nothing to state -- the rule is about a size that implies *more*
-    than the members do.
+    strides the type by 0x20.  Eight already reproduces that size, so eight is what is stated:
+    a smaller claim is the one DWARF supports, and a use that needs more says so on the member
+    its offset demands.  Members that give the type 8-byte alignment themselves explain a 0x20
+    size, so there is nothing to state -- the rule is about a size that implies *more* than the
+    members do.  `_NETWORK_W` is the other end: 0x76dc of members and a 0x7700 size need 64.
     """
-    assert emit_headers._tail_alignment(0x1C, 0x20, 4) == 16
-    assert emit_headers._tail_alignment(0x1C, 0x20, 8) is None
+    assert emit_headers._tail_alignment(0x1C, 0x20, 4) == 8
+    assert emit_headers._tail_alignment(0x74, 0x80, 4) == 16, "8 reaches 0x78, not 0x80"
+    assert emit_headers._tail_alignment(0x66, 0x80, 4) == 32
+    assert emit_headers._tail_alignment(0x76DC, 0x7700, 4) == 64, "_NETWORK_W"
+    assert emit_headers._tail_alignment(0x45A, 0x480, 4) == 64, "_mio_message"
+    assert emit_headers._tail_alignment(0x1C, 0x20, 8) is None, "the members explain it"
+    assert emit_headers._tail_alignment(0x9C, 0xA0, 8) is None, "music_info: 8 explains 0xa0"
     assert emit_headers._tail_alignment(0x1C, 0x20, 16) is None
     assert emit_headers._tail_alignment(0x1C, 0x30, 4) is None, "the size is a wider tail"
     assert emit_headers._tail_alignment(0x20, 0x20, 4) is None, "there is no tail"
     assert emit_headers._tail_alignment(0x1C, 0x2C, 4) is None, "not a multiple of 16"
+    assert emit_headers._tail_alignment(0x15, 0x16, 1) is None, "no alignment fits: a pad"
+    assert emit_headers._tail_alignment(0x8A, 0x8C, 4) is None, "no power of two is invented"
 
 
 def test_a_definition_states_the_tail_alignment_right_after_the_brace():
@@ -91,17 +100,83 @@ def test_a_definition_states_the_tail_alignment_right_after_the_brace():
     The other spelling -- the attribute after the typedef's name -- is silently ignored by the
     pinned compiler (`sizeof` stayed 0x1c), so a header that used it would look right and stride
     wrong.  This searches the binary's own DWARF for an aggregate that trips the rule rather
-    than naming a unit or a member.
+    than naming a unit or a member, and accepts any alignment the rule can state: 8 and 64 are
+    both measured through this placement (`fp_style.c`'s `anon_5_73` and `_NETWORK_W`).
     """
     dw = emit_headers.dwarf(TARGET.elf)
+    import re
     for die in dw.dies.values():
         if die.tag not in emit_headers.AGGREGATES:
             continue
         lines = emit_headers.definition(dw, die, "probe", lambda d: "ANON", typedef=True)
-        if "__attribute__((aligned(16)))" in lines[-1]:
-            assert lines[-1] == "} __attribute__((aligned(16))) probe;"
+        match = re.fullmatch(r"\} __attribute__\(\(aligned\((8|16|32|64)\)\)\) probe;",
+                             lines[-1])
+        if match:
             return
-    pytest.skip("this binary's DWARF has no aggregate whose size states a 16-byte tail")
+    pytest.skip("this binary's DWARF has no aggregate whose size states a tail alignment")
+
+
+def test_the_member_rule_searches_wider_alignments():
+    """A member's offset states its alignment, and 16 is not the widest retail uses.
+
+    Measured on the pinned image: `_mio_message`'s `body` sits at 0x40 after `head` ends at
+    0x24 (32 reaches it, 16 stops at 0x30), `_ddrnet`'s `msg` at 0x3700 after `msys` ends at
+    0x36D8 (only 64 reaches it).  16 is still tried first, because the tree already spells it
+    and retail's DWARF cannot distinguish it from a narrower claim; a candidate is returned
+    only when it reproduces the offset *and* divides the aggregate's recorded size.
+    """
+    assert emit_headers._stated_alignment(0x54, 0x60, 4, 0x90) == 16
+    assert emit_headers._stated_alignment(0x24, 0x40, 1, 0x480) == 32, "_mio_message.body"
+    assert emit_headers._stated_alignment(0x36D8, 0x3700, 4, 0x2B5C0) == 64, "_ddrnet.msg"
+    assert emit_headers._stated_alignment(0x54, 0x60, 16, 0x90) is None, "the member's own"
+    assert emit_headers._stated_alignment(0x54, 0x60, 4, 0x91) is None, "the size would move"
+    assert emit_headers._stated_alignment(0x10, 0x30, 4, 0x40) is None, "nothing reaches 0x30"
+
+
+def test_a_gap_alignment_explains_stays_a_comment():
+    """The next member's own alignment is enough: no statement and no member.
+
+    Measured shape: `_ddrnet`'s `use_pindex` ends at 0x8FD5 and `use_pid`, an `int`, starts
+    at 0x8FD8; `_mio_message`'s 0x24..0x40 jump is not that kind of gap.
+    """
+    assert emit_headers._padded_by_alignment(0x8FD5, 0x8FD8, 4)
+    assert not emit_headers._padded_by_alignment(0x24, 0x40, 4)
+    assert emit_headers._padded_by_alignment(0x30, 0x30, 4), "no gap, nothing to place"
+
+
+def test_a_gap_no_alignment_explains_is_spelled_as_a_member():
+    """The fallback: bytes the DIE's offsets or `byte_size` demand but nothing explains.
+
+    Nothing in this image needs it (the sweep below finds no such aggregate), so the spelling
+    is pinned here -- exactly the missing length, a name no retail member can have, and an
+    element type that cannot round the following member up.
+    """
+    line = emit_headers._omitted_member("    ", 0x76DC, 0x7700)
+    assert "unsigned char pad_76dc[0x24];" in line, line
+    assert "0x24 bytes no alignment or member explains" in line, line
+    assert emit_headers._omitted_member("", 0x15, 0x16).startswith("/* 0x015 */")
+
+
+def test_no_aggregate_in_this_image_leaves_a_gap_unexplained():
+    """Every gap in the binary's own named aggregates is padding or a stated alignment.
+
+    Measured: the member rule states 16, 32 and 64 here (64 on the 0x40-multiple aggregates
+    -- `_NETWORK_W`, `_mio_message`, `_ddrnet`, `_tag_cNetCnf`), and not one gap is written
+    as an omission any more.
+    """
+    import re
+    dw = emit_headers.dwarf(TARGET.elf)
+    alignments, gaps = set(), 0
+    for name, dies in emit_headers.named_types(dw).items():
+        for line in emit_headers.definition(dw, dies[0], name, lambda d: "ANON"):
+            if "// 0x" not in line:
+                continue
+            assert "not in DWARF" not in line, line
+            assert "no alignment or member explains" not in line, line
+            alignments.update(int(value) for value in re.findall(r"aligned\((\d+)\)", line))
+            gaps += "bytes padding" in line
+    assert {16, 32, 64} <= alignments, sorted(alignments)
+    assert gaps, "the image has padding gaps, and they are comments only"
 
 
 def test_no_generated_header_states_alignment_after_the_typedef_name():

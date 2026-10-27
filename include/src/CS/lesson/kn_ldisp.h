@@ -142,7 +142,7 @@ typedef struct {   // size 0x40
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
     /* 0x03C */ // 0x4 bytes padding
-} __attribute__((aligned(16))) anon_9_191;
+} __attribute__((aligned(8))) anon_9_191;
 
 /* anon_10_191 -- @anon10, 0x88 bytes, kn_ldisp.c (DIE 0x35C651) */
 typedef struct {   // size 0x88

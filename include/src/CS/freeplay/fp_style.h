@@ -102,7 +102,7 @@ typedef struct {   // size 0x20
     /* 0x014 */ float rot_y;                          // 0x4
     /* 0x018 */ int step;                             // 0x4
     /* 0x01C */ // 0x4 bytes padding
-} __attribute__((aligned(16))) anon_5_73;
+} __attribute__((aligned(8))) anon_5_73;
 
 /* anon_7_73 -- @anon7, 0x8 bytes, fp_style.c (DIE 0x127CC5) */
 typedef struct {   // size 0x8

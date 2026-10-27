@@ -15,13 +15,13 @@ struct _mio_message {   // size 0x480
     /* 0x004 */ int len;                              // 0x4
     /* 0x008 */ unsigned int serial;                  // 0x4
     /* 0x00C */ char head[24];                        // 0x18
-    /* 0x024 */ // 0x1C bytes not in DWARF (a member CodeWarrior did not describe)
-    /* 0x040 */ char body[1024];                      // 0x400
+    /* 0x024 */ // 0x1C bytes padding
+    /* 0x040 */ char body[1024] __attribute__((aligned(32)));  // 0x400
     /* 0x440 */ char digest[16];                      // 0x10
     /* 0x450 */ int hp;                               // 0x4
     /* 0x454 */ int bp;                               // 0x4
     /* 0x458 */ short stat;                           // 0x2
-    /* 0x45A */ // 0x26 bytes not in DWARF (a member CodeWarrior did not describe)
-};
+    /* 0x45A */ // 0x26 bytes padding
+} __attribute__((aligned(64)));
 
 #endif /* DDR_types__mio_message_H */

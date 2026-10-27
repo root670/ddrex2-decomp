@@ -51,8 +51,8 @@ struct _ddrnet {   // size 0x2B5C0
     /* 0x100 */ struct _ddrnet_svrlist svrlist;       // 0x2584
     /* 0x2684 */ unsigned int svrtime;                // 0x4
     /* 0x2688 */ struct _mio_system msys;             // 0x1050
-    /* 0x36D8 */ // 0x28 bytes not in DWARF (a member CodeWarrior did not describe)
-    /* 0x3700 */ struct _mio_message msg[4];          // 0x1200
+    /* 0x36D8 */ // 0x28 bytes padding
+    /* 0x3700 */ struct _mio_message msg[4] __attribute__((aligned(64)));  // 0x1200
     /* 0x4900 */ int mresult;                         // 0x4
     /* 0x4904 */ int login_border;                    // 0x4
     /* 0x4908 */ struct _ddrnet_infolist infolist;    // 0x46CC
@@ -86,7 +86,7 @@ struct _ddrnet {   // size 0x2B5C0
     /* 0x2A2B4 */ int count_ranking;                  // 0x4
     /* 0x2A2B8 */ struct _ddrnet_ranking_column ranking[100];  // 0x12C0
     /* 0x2B578 */ unsigned char ploption[33];         // 0x21
-    /* 0x2B599 */ // 0x27 bytes not in DWARF (a member CodeWarrior did not describe)
+    /* 0x2B599 */ // 0x27 bytes padding
 };
 
 #endif /* DDR_types__ddrnet_H */

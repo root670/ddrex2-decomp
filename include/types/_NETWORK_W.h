@@ -71,7 +71,7 @@ struct _NETWORK_W {   // size 0x7700
     /* 0x76D0 */ int bsdsocki_irx_result;             // 0x4
     /* 0x76D4 */ int bsdsocki_irx_flag;               // 0x4
     /* 0x76D8 */ int mc_init_flag;                    // 0x4
-    /* 0x76DC */ // 0x24 bytes not in DWARF (a member CodeWarrior did not describe)
-};
+    /* 0x76DC */ // 0x24 bytes padding
+} __attribute__((aligned(64)));
 
 #endif /* DDR_types__NETWORK_W_H */

@@ -129,7 +129,7 @@ typedef struct {   // size 0x40
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
     /* 0x03C */ // 0x4 bytes padding
-} __attribute__((aligned(16))) anon_3_196;
+} __attribute__((aligned(8))) anon_3_196;
 
 
 /* variables (9) */
