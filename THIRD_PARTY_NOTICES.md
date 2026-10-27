@@ -25,3 +25,33 @@ per-file headers; see the repository above for `LICENSE-MIT` / `LICENSE-APACHE`.
 
 `tools/oracle/README.md` records the same source, licence, fetch date, hashes
 and unmodified statement.
+
+## m2c (GPL-3.0-only) — fetched, **not** vendored
+
+Source repository: <https://github.com/matt-kempster/m2c>
+
+Pinned commit: `c632946b8cfbe8fce442b522dba92dfa72f1f317` (2026-10-22,
+"Don't crash decompiling functions declared as data"). Fetched on **2026-10-27** from
+`https://codeload.github.com/matt-kempster/m2c/tar.gz/c632946b8cfbe8fce442b522dba92dfa72f1f317`
+by `tools/toolchain/fetch.py m2c` into `toolchain/m2c/<commit>/` — a gitignored tree, like the
+compilers, so **no m2c file is committed to this repository**. `tools/units/m2c_draft.py` runs it
+as a subprocess; nothing here imports it.
+
+| Pin | Value |
+| --- | --- |
+| archive sha256 | `b95b6eabd4c879292b896120cbf8e2bb8aed9700cd83d45e964f145f99be47e2` (713,313 bytes) |
+| tree sha256 | `54a4a71f5aa3d0f1b9d5cef82b0fba4c485cf167793acd4154569ed3cb1ee7b4` (1,519 files) |
+
+The tree digest is sha256 over `"<file sha256>  <relpath>\n"` for every regular file, sorted by
+relpath; it is recomputed before the tree is published and again by `installed_m2c()` before the
+drafter runs, so the bytes in use are the pinned ones rather than a plausible checkout.
+
+Licence: **GPL-3.0-only** upstream (`LICENSE`, GPL v3). It is used here as a fetch-on-demand
+development tool, not linked or redistributed; GPL code is deliberately not vendored into this
+tree. The assignment's premise that m2c is MIT is wrong — pinning by content and keeping it out
+of the repository is what makes that safe.
+
+m2c vendors its own fork of **pycparser** as `m2c_pycparser/` (BSD-3-Clause, upstream commit
+`b5c6024ff01346b194e43435af71a210b1e8e2ae`); it is part of the pinned tree above. Nothing else is
+needed to run the drafter: m2c's only declared dependency is `graphviz ~= 0.20.1`, which **only**
+`--visualize` uses, and `m2c_draft.py` never passes it.

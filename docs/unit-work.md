@@ -277,12 +277,37 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    written sits, before the compiler says anything. A `.line` mismatch is corroboration or a
    localiser, never a gate: chase `.text` first.
 
-4. **Write the C on retail's line numbers.** The line numbers are evidence, not a suggestion. If the
+4. **Draft the shape with m2c when the function is hard.** The pinned decompiler (fetched into the
+   gitignored `toolchain/`, never vendored) turns one function's split into plausible C, seeded with
+   this tree's own types: `include/src/<unit>.h` and the `include/types/**` headers it includes are
+   handed over as m2c's context, so arguments and struct members come back with retail's names.
+
+   ```bash
+   python3 tools/toolchain/fetch.py m2c                       # once per checkout; digest-verified
+   python3 tools/units/m2c_draft.py src/AM/s573/doll/ps1lib.c GsInitCoordinate2
+   python3 tools/units/m2c_draft.py src/AM/s573/doll/matrix.c convert_matrix_dx2ps --out drafts/convert.c
+   ```
+
+   It prints to stdout, or writes under `drafts/` with `--out` — a path into `src/` is refused,
+   because the draft is input to your work, not the work. Read it for the **control flow** (which
+   branches, loops and calls exist, and in what order), then write the C yourself on retail's line
+   numbers: m2c emits `unk24` fields, `var_N` temporaries and `(bitwise s16)` casts, none of which
+   match retail, and nothing here is a promotion proof.
+
+   Measured: `GsInitCoordinate2` (`ps1lib.c`, promoted) drafts as one `do { … } while (var_9 < 3)`
+   over `var_8->m[0][0]`, `m[0][1]`, `m[0][2]` — the compiler's flattened form of the source's two
+   nested `for` loops — followed by exactly the tail `base->flg = 0; base->workm.* = …; base->super =
+   super;` the promoted C has. `convert_matrix_dx2ps` (`matrix.c`) drafts as the nine `4096.0f`
+   multiplies and the three `m1->t[…] = m0[3][…]` copies in the source's statement order, with the
+   last three rows addressed as `m0->unk10/unk14/…` because `sceVu0FVECTOR` is an array typedef —
+   a spelling to fix by hand, not a shape to doubt.
+
+5. **Write the C on retail's line numbers.** The line numbers are evidence, not a suggestion. If the
    generated header spells a tag bare (`_tag_X`, C++ syntax), write `struct _tag_X` in the C; if a
    gap between two statements is large, the original had lines you have not reproduced yet — often an
    inline, sometimes a declaration — and the map will show the hole until they are accounted for.
 
-5. **Iterate with the diff, not with the gate.** The gate compiles the whole unit; the diff scores one
+6. **Iterate with the diff, not with the gate.** The gate compiles the whole unit; the diff scores one
    function against **retail's bytes**:
 
    ```bash
@@ -293,7 +318,7 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    split's own bytes when the unit has no C). A 100.0% on an unpromoted function is normal and is the
    signal to move on.
 
-6. **Gate the unit**, then commit it alone:
+7. **Gate the unit**, then commit it alone:
 
    ```bash
    ./ddr --target ddrex2p verify --tu <tu>
@@ -338,7 +363,7 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    gate.  The file covers every promoted unit, so it is a shared document: the controller
    updates it with the `tu_builds` row rather than each unit agent committing its own copy.
 
-7. **Record the compiler.** Measure the pair that reproduces this unit with
+8. **Record the compiler.** Measure the pair that reproduces this unit with
    `tools/toolchain/select_build.py --tu <tu>` and add it to `tu_builds` in `config/targets.py`.
    `configure.py` refuses to promote a source nobody has measured.  Record
    `("src/<path>.c", "<build>", "<flags>")` -- the row is exactly the measured pair, and

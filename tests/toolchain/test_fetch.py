@@ -42,3 +42,34 @@ def test_tampered_wibo_is_rejected(tmp_path):
     with pytest.raises(fetch.HashMismatch):
         fetch.wibo(root=root, override_url=f"file://{tampered}")
     assert not (root / "wibo").exists()
+
+M2C_TREE_SHA256 = "54a4a71f5aa3d0f1b9d5cef82b0fba4c485cf167793acd4154569ed3cb1ee7b4"
+
+def test_m2c_tree_matches_the_pinned_digest(tmp_path):
+    d = fetch.m2c(root=tmp_path)
+    assert (d / "m2c.py").is_file() and (d / "m2c_pycparser/c_parser.py").is_file()
+    assert fetch._tree_digest(d) == (M2C_TREE_SHA256, 1519)
+
+def test_m2c_is_reverified_in_place(tmp_path):
+    d = fetch.m2c(root=tmp_path)
+    assert fetch.m2c(root=tmp_path) == d
+    assert fetch.installed_m2c(tmp_path) == d
+
+def test_corrupt_m2c_archive_is_rejected(tmp_path):
+    bad = tmp_path / "m2c.tar.gz"
+    bad.write_bytes(b"not a tarball")
+    root = tmp_path / "tc"
+    with pytest.raises(fetch.HashMismatch):
+        fetch.m2c(root=root, override_url=f"file://{bad}")
+    assert not fetch.m2c_dir(root).exists()
+
+def test_unpinned_m2c_content_is_rejected(tmp_path):
+    import io, tarfile
+    archive = tmp_path / "m2c.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        blob = b"print('not m2c')\n"
+        info = tarfile.TarInfo(f"m2c-{'0' * 40}/m2c.py")
+        info.size = len(blob)
+        tar.addfile(info, io.BytesIO(blob))
+    with pytest.raises(fetch.HashMismatch, match="tree sha256"):
+        fetch.m2c(root=tmp_path / "tc", override_url=f"file://{archive}")

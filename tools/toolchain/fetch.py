@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Fetch and hash-verify the CodeWarrior PS2 compilers and wibo into ``toolchain/``.
+"""Fetch and hash-verify the CodeWarrior PS2 compilers, wibo, m2c and the permuter.
 
 Nothing is ever extracted, installed, cached or *executed* before it has been checked
-against ``PINNED`` / ``WIBO_PINNED`` (spec Review Focus 3: verify *before* use).  A
+against ``PINNED`` / ``WIBO_PINNED`` / ``M2C_PINNED`` (spec Review Focus 3: verify *before* use).  A
 corrupt or partial download is rejected with :class:`HashMismatch` while the bytes are
 still a ``.part`` file in ``toolchain/.downloads/``, so a half-verified compiler — or an
 altered runner — can never be mistaken for a working one.
@@ -13,14 +13,18 @@ re-verified against the pinned digests on every fetch.
 
 Usage::
 
-    python3 tools/toolchain/fetch.py                 # wibo + every candidate build
+    python3 tools/toolchain/fetch.py                 # wibo + m2c + every candidate build
     python3 tools/toolchain/fetch.py 2.4-001213      # the required build only
     python3 tools/toolchain/fetch.py wibo
+    python3 tools/toolchain/fetch.py m2c
     python3 tools/toolchain/fetch.py --root /tmp/tc 2.4-001213
 
 ``2.4-001213`` is the *required* build, as is wibo: if either fails the command
-exits non-zero.  The other candidate builds are optional alternates used later to
-select the compiler build by byte-matching a known function; a failure there is
+exits non-zero.  ``m2c`` is pinned by commit and by a digest of its whole extracted
+tree; it is a drafting aid (``tools/units/m2c_draft.py``) rather than a build input,
+so a failure to fetch it is recorded and does not fail the sweep.  The other candidate
+builds are optional alternates used later to select the compiler build by
+byte-matching a known function; a failure there is
 recorded in ``toolchain/PROVENANCE.txt`` and the run continues.  A candidate named
 explicitly on the command line is required for that run.
 """
@@ -74,7 +78,8 @@ WIBO_LOCAL_FALLBACK = pathlib.Path.home() / "ac-decomp" / ".cache" / "wibo"
 ALREADY_INSTALLED = "already installed"
 IN_PLACE = "in place (origin not recorded)"
 TIMEOUT = 120
-DESCRIPTION = "Fetch and hash-verify the CodeWarrior PS2 compilers and wibo into toolchain/."
+DESCRIPTION = ("Fetch and hash-verify the CodeWarrior PS2 compilers, wibo, m2c "
+               "and decomp-permuter into toolchain/.")
 
 # wibo is published under ``releases/latest``, so its URL cannot be pinned: the digest of the
 # binary we accept is pinned here instead and is checked *before* wibo is executed (R15).
@@ -84,6 +89,58 @@ WIBO_PINNED = {
     "wibo-macos": "2b3000ef6a7a490c24ccd71967735ae0005e218922e51806cca1b8d77fd3cf7c",  # 1.2.0
 }
 WIBO_FALLBACK_PINNED = "d94d832136c74fec3960047e55a30382e74bb06848bba5386b15abd17380b314"  # 1.2.0-1-g09b973a
+
+# ---------------------------------------------------------------------------
+# decomp-permuter: the source-permutation search `tools/units/permute.py` drives.
+#
+# It is a tool, not a compiler: MIT-licensed Python, fetched from GitHub and verified
+# before it is imported.  The project publishes no tag or release, so the *commit* is the
+# version.  ``archive`` detects a corrupt or partial download before it is opened;
+# ``tree`` -- the same digest of every regular file m2c pins -- is what is verified
+# before the tree is published or imported, so a re-packaged tarball is accepted only
+# when its content is exactly this.  Nothing is vendored: ``toolchain/`` is gitignored
+# exactly like the compiler archives.
+# ---------------------------------------------------------------------------
+PERMUTER_NAME = "decomp-permuter"
+PERMUTER_VERSION = "8556c81d80d1c1af98a858c8f4dc951357f29139"
+PERMUTER_URL = ("https://codeload.github.com/simonlindholm/decomp-permuter/tar.gz/"
+                + PERMUTER_VERSION)
+PERMUTER_ARCHIVE = f"{PERMUTER_NAME}-{PERMUTER_VERSION}.tar.gz"
+PERMUTER_PINNED = {
+    "archive": ("57cfb45141a2f97ce27e74c1882aab162ff203c2f4688b4617fc2ec3a6ca9907", 2870176),
+    "tree": ("7a073645521e41b202cf59c8b6150daf8f627cd63b5d2b6f84486b48ac39ae89", 255),
+}
+#: The entry point the driver imports; it needs its own directory on ``sys.path``.
+PERMUTER_ENTRY = "permuter.py"
+PERMUTER_REMEDY = "python3 tools/toolchain/fetch.py decomp-permuter"
+
+
+# ---------------------------------------------------------------------------
+# m2c: the MIPS-to-C decompiler used to seed a draft (tools/units/m2c_draft.py).
+#
+# It is a pure-Python tool that vendors its own pycparser fork (``m2c_pycparser``,
+# BSD-3-Clause), so it has no third-party dependency we would have to install; only
+# ``--visualize`` wants ``graphviz``, and the draft path never asks for it.  m2c itself
+# is GPL-3.0-only, which is exactly why it is *fetched* into the gitignored
+# ``toolchain/`` and never vendored into this tree (THIRD_PARTY_NOTICES.md records it).
+#
+# Two digests are pinned.  ``archive`` detects a corrupt or partial download before it
+# is opened; ``tree`` -- sha256 over ``"<file sha256>  <relpath>\n"`` for every regular
+# file, sorted by relpath -- is what is actually verified before the tree is published
+# or used, because it names the *content* rather than GitHub's tarball packaging (a
+# re-generated archive is accepted only when it holds exactly this tree).
+# ---------------------------------------------------------------------------
+M2C_NAME = "m2c"
+M2C_COMMIT = "c632946b8cfbe8fce442b522dba92dfa72f1f317"
+M2C_TARBALL = f"m2c-{M2C_COMMIT}.tar.gz"
+M2C_URL = f"https://codeload.github.com/matt-kempster/m2c/tar.gz/{M2C_COMMIT}"
+M2C_PINNED = {
+    "archive": ("b95b6eabd4c879292b896120cbf8e2bb8aed9700cd83d45e964f145f99be47e2", 713313),
+    "tree": ("54a4a71f5aa3d0f1b9d5cef82b0fba4c485cf167793acd4154569ed3cb1ee7b4", 1519),
+}
+#: The repository's entry point; running it needs its own directory on ``sys.path``.
+M2C_ENTRY = "m2c.py"
+M2C_REMEDY = "python3 tools/toolchain/fetch.py m2c"
 
 # ---------------------------------------------------------------------------
 # Pinned digests: the gate every artifact must pass before it is used.
@@ -426,6 +483,300 @@ def wibo(root: pathlib.Path | str | None = None, override_url: str | None = None
 
 
 # ---------------------------------------------------------------------------
+# m2c
+# ---------------------------------------------------------------------------
+
+
+class MissingTool(FetchError):
+    """An installed, pinned tool is absent; the message names the command that installs it."""
+
+
+def _tree_digest(root: pathlib.Path) -> tuple[str, int]:
+    """``(sha256, files)`` of a directory's content: every regular file, by relpath.
+
+    The digest is over ``"<file sha256>  <relpath>\\n"`` lines sorted by relpath, so it
+    names what the tree *is* and is blind to an archive's mtimes or gzip settings.
+    Interpreted bytecode is not content -- m2c is run with ``-B`` so it writes none, and
+    a ``__pycache__`` left by a careless run must not make an installed tree "differ".
+    """
+    rows: list[str] = []
+    count = 0
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        relpath = path.relative_to(root)
+        if "__pycache__" in relpath.parts or path.suffix == ".pyc":
+            continue
+        rows.append(f"{sha256_file(path)}  {relpath.as_posix()}\n")
+        count += 1
+    return hashlib.sha256("".join(rows).encode()).hexdigest(), count
+
+
+def _m2c_tree_ok(root: pathlib.Path) -> bool:
+    """True when ``root`` already holds the pinned m2c tree, byte for byte."""
+    if not (root / M2C_ENTRY).is_file():
+        return False
+    expected_sha, expected_count = M2C_PINNED["tree"]
+    sha, count = _tree_digest(root)
+    return sha == expected_sha and count == expected_count
+
+
+def _verify_m2c_tree(root: pathlib.Path, what: str) -> None:
+    expected_sha, expected_count = M2C_PINNED["tree"]
+    sha, count = _tree_digest(root)
+    if sha != expected_sha or count != expected_count:
+        raise HashMismatch(
+            f"{what}: tree sha256 {sha} ({count} files) "
+            f"!= pinned {expected_sha} ({expected_count} files)"
+        )
+
+
+def _extract_m2c(archive: pathlib.Path, dest: pathlib.Path) -> None:
+    """Unpack ``archive`` (one top-level ``m2c-<commit>/``) into ``dest``, strictly.
+
+    Only regular files and directories are accepted: a link, an absolute member or a
+    ``..`` component refuses the archive rather than writing outside ``dest``.
+    """
+    try:
+        with tarfile.open(archive, "r:gz") as tar:
+            for member in tar.getmembers():
+                parts = pathlib.PurePosixPath(member.name).parts
+                if not parts or pathlib.PurePosixPath(member.name).is_absolute() or ".." in parts:
+                    raise HashMismatch(f"{archive.name}: unsafe member {member.name!r}")
+                relative = pathlib.PurePosixPath(*parts[1:]) if len(parts) > 1 else None
+                if relative is None or not relative.parts:
+                    continue
+                if member.isdir():
+                    (dest / relative).mkdir(parents=True, exist_ok=True)
+                elif member.isfile():
+                    payload = tar.extractfile(member)
+                    if payload is None:
+                        raise HashMismatch(f"{archive.name}:{member.name}: unreadable member")
+                    target = dest / relative
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(payload.read())
+                else:
+                    raise HashMismatch(f"{archive.name}:{member.name}: not a regular file")
+    except tarfile.TarError as exc:
+        raise HashMismatch(f"{archive.name} is not a readable tar archive: {exc}") from exc
+
+
+def m2c_dir(root: pathlib.Path | str | None = None) -> pathlib.Path:
+    """Where m2c is installed under ``root`` (``toolchain/m2c/<commit>/``)."""
+    root = pathlib.Path(root) if root is not None else TOOLCHAIN_ROOT
+    return root / M2C_NAME / M2C_COMMIT
+
+
+def installed_m2c(root: pathlib.Path | str | None = None) -> pathlib.Path:
+    """The verified m2c tree, or :class:`MissingTool` naming the command that installs it."""
+    dest = m2c_dir(root)
+    if _m2c_tree_ok(dest):
+        return dest
+    raise MissingTool(
+        f"m2c {M2C_COMMIT[:12]} is not installed at {_relative(dest)} (or its tree no longer "
+        f"matches the pinned digest); install it with: {M2C_REMEDY}"
+    )
+
+
+def _publish_m2c(archive: pathlib.Path, dest: pathlib.Path) -> pathlib.Path:
+    """Extract ``archive`` beside ``dest``, prove the tree, then publish it."""
+    staging = dest.parent / f"{dest.name}.staging"
+    shutil.rmtree(staging, ignore_errors=True)
+    try:
+        staging.mkdir(parents=True)
+        _extract_m2c(archive, staging)
+        for cache in staging.rglob("__pycache__"):
+            shutil.rmtree(cache, ignore_errors=True)
+        # The tree digest is the gate: packaging may differ, content may not.
+        _verify_m2c_tree(staging, M2C_TARBALL)
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        staging.rename(dest)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return dest
+
+
+def _install_m2c(
+    root: pathlib.Path, override_url: str | None = None
+) -> tuple[pathlib.Path, str]:
+    """Fetch, verify and install pinned m2c; return (directory, how it was obtained)."""
+    dest = m2c_dir(root)
+    if _m2c_tree_ok(dest):
+        return dest, ALREADY_INSTALLED
+    if override_url is not None:
+        # Overrides are never cached, so a bad URL cannot poison the cache.
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=CACHE_DIR, prefix=".m2c-") as scratch:
+            archive = pathlib.Path(scratch) / M2C_TARBALL
+            _download(override_url, archive)
+            return _publish_m2c(archive, dest), override_url
+    archive = CACHE_DIR / M2C_TARBALL
+    if archive.is_file():
+        try:
+            # A corrupt or partial cached download is rejected without extracting it.
+            _verify_archive_digest(archive, M2C_PINNED["archive"], M2C_TARBALL)
+            return _publish_m2c(archive, dest), "cache"
+        except HashMismatch:
+            archive.unlink()  # poisoned cache entry: never reuse it
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    partial = CACHE_DIR / f"{M2C_TARBALL}.part"
+    partial.unlink(missing_ok=True)
+    _download(M2C_URL, partial)
+    partial.replace(archive)
+    try:
+        return _publish_m2c(archive, dest), "download"
+    except BaseException:
+        archive.unlink(missing_ok=True)
+        raise
+
+
+def _verify_archive_digest(
+    path: pathlib.Path, pin: tuple[str, int], what: str
+) -> None:
+    """Size and sha256 against a ``(sha256, bytes)`` pin, before the archive is opened."""
+    expected_sha, expected_size = pin
+    actual_size = path.stat().st_size
+    actual_sha = sha256_file(path)
+    if actual_sha != expected_sha or actual_size != expected_size:
+        raise HashMismatch(
+            f"{what}: sha256 {actual_sha} ({actual_size} bytes) "
+            f"!= pinned {expected_sha} ({expected_size} bytes)"
+        )
+
+
+def m2c(root: pathlib.Path | str | None = None, override_url: str | None = None) -> pathlib.Path:
+    """Fetch, verify and extract pinned m2c; return its directory.
+
+    The archive digest is a fast rejection of a corrupt download; the *extracted tree*
+    must match :data:`M2C_PINNED` ``["tree"]`` before it is published, so a re-generated
+    tarball can only replace the archive, never the content.
+    """
+    root = pathlib.Path(root) if root is not None else TOOLCHAIN_ROOT
+    return _install_m2c(root, override_url)[0]
+
+
+# ---------------------------------------------------------------------------
+# decomp-permuter
+# ---------------------------------------------------------------------------
+
+
+def permuter_dir(root: pathlib.Path | str | None = None) -> pathlib.Path:
+    """Where the permuter is installed under ``root`` (``toolchain/decomp-permuter/<commit>/``)."""
+    root = pathlib.Path(root) if root is not None else TOOLCHAIN_ROOT
+    return root / PERMUTER_NAME / PERMUTER_VERSION
+
+
+def _permuter_tree_ok(root: pathlib.Path) -> bool:
+    """True when ``root`` already holds the pinned permuter tree, byte for byte."""
+    if not (root / PERMUTER_ENTRY).is_file():
+        return False
+    expected_sha, expected_count = PERMUTER_PINNED["tree"]
+    sha, count = _tree_digest(root)
+    return sha == expected_sha and count == expected_count
+
+
+def _verify_permuter_tree(root: pathlib.Path, what: str) -> None:
+    expected_sha, expected_count = PERMUTER_PINNED["tree"]
+    sha, count = _tree_digest(root)
+    if sha != expected_sha or count != expected_count:
+        raise HashMismatch(
+            f"{what}: tree sha256 {sha} ({count} files) "
+            f"!= pinned {expected_sha} ({expected_count} files)"
+        )
+
+
+def _extract_permuter(archive: pathlib.Path, dest: pathlib.Path) -> None:
+    """Unpack ``archive`` (one top-level ``decomp-permuter-<commit>/``) into ``dest``.
+
+    The archive is GitHub's tarball of one repository at one commit, which is exactly
+    the shape :func:`_extract_m2c` unpacks -- and its strictness (no links, no absolute
+    or ``..`` members) is what both want.
+    """
+    _extract_m2c(archive, dest)
+
+
+def _publish_permuter(archive: pathlib.Path, dest: pathlib.Path) -> pathlib.Path:
+    """Extract ``archive`` beside ``dest``, prove the tree, then publish it."""
+    staging = dest.parent / f"{dest.name}.staging"
+    shutil.rmtree(staging, ignore_errors=True)
+    try:
+        staging.mkdir(parents=True)
+        _extract_permuter(archive, staging)
+        for cache in staging.rglob("__pycache__"):
+            shutil.rmtree(cache, ignore_errors=True)
+        _verify_permuter_tree(staging, PERMUTER_ARCHIVE)
+        if dest.is_dir():
+            shutil.rmtree(dest)
+        staging.rename(dest)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
+    return dest
+
+
+def _install_permuter(
+    root: pathlib.Path, override_url: str | None = None
+) -> tuple[pathlib.Path, str]:
+    """Fetch, verify and install the pinned permuter; return (directory, how it was obtained)."""
+    dest = permuter_dir(root)
+    if _permuter_tree_ok(dest):
+        return dest, ALREADY_INSTALLED
+    if override_url is not None:
+        # Overrides are never cached, so a bad URL cannot poison the cache.
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=CACHE_DIR, prefix=".permuter-") as scratch:
+            archive = pathlib.Path(scratch) / PERMUTER_ARCHIVE
+            _download(override_url, archive)
+            return _publish_permuter(archive, dest), override_url
+    archive = CACHE_DIR / PERMUTER_ARCHIVE
+    if archive.is_file():
+        try:
+            _verify_archive_digest(archive, PERMUTER_PINNED["archive"], PERMUTER_ARCHIVE)
+            return _publish_permuter(archive, dest), "cache"
+        except HashMismatch:
+            archive.unlink()  # poisoned cache entry: never reuse it
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    partial = CACHE_DIR / f"{PERMUTER_ARCHIVE}.part"
+    partial.unlink(missing_ok=True)
+    _download(PERMUTER_URL, partial)
+    partial.replace(archive)
+    try:
+        return _publish_permuter(archive, dest), "download"
+    except BaseException:
+        archive.unlink(missing_ok=True)
+        raise
+
+
+def permuter(root: pathlib.Path | str | None = None,
+             override_url: str | None = None) -> pathlib.Path:
+    """Fetch, verify and extract the pinned permuter; return its directory.
+
+    The archive digest is a fast rejection of a corrupt download; the *extracted tree*
+    must match :data:`PERMUTER_PINNED` ``["tree"]`` before it is published, so a
+    re-generated tarball can only replace the archive, never the content.
+    """
+    root = pathlib.Path(root) if root is not None else TOOLCHAIN_ROOT
+    return _install_permuter(root, override_url)[0]
+
+
+def installed_permuter(root: pathlib.Path | str | None = None) -> pathlib.Path:
+    """The verified permuter tree, or :class:`MissingTool` naming the command that installs it.
+
+    This is the *read* side: it never downloads.  ``tools/units/permute.py`` calls it so a
+    checkout without the tool gets one line naming the remedy instead of a traceback.
+    """
+    dest = permuter_dir(root)
+    if _permuter_tree_ok(dest):
+        return dest
+    raise MissingTool(
+        f"decomp-permuter {PERMUTER_VERSION[:12]} is not installed at {_relative(dest)} "
+        f"(or its tree no longer matches the pinned digest); install it with: "
+        f"{PERMUTER_REMEDY}")
+
+
+# ---------------------------------------------------------------------------
 # Provenance manifest
 # ---------------------------------------------------------------------------
 
@@ -458,6 +809,7 @@ _PROVENANCE_KEYS = (
     "installed",
     "installed_sha256",
     "pinned_sha256",
+    "files",
     "reason",
 )
 
@@ -469,7 +821,7 @@ def _render_provenance(state: dict, host_tools: str = "") -> str:
         "# releases, never vendored. Every artifact below passed the digests pinned in",
         "# tools/toolchain/fetch.py before it was extracted or run; failures are recorded",
         "# here, never silently skipped.",
-        f"# required: {REQUIRED} and {WIBO_NAME}; optional alternates: "
+        f"# required: {REQUIRED} and {WIBO_NAME}; optional: {M2C_NAME} and the alternates "
         + ", ".join(v for v in CANDIDATES if v != REQUIRED),
         f"# host tools (assembler, linker, objcopy, ninja, splat, objdiff) are recorded by {HOST_TOOLS_OWNER}",
         "",
@@ -538,6 +890,40 @@ def _compiler_entry(version: str, dest: pathlib.Path, source: str, required: boo
     }
 
 
+def _m2c_entry(source: str, installed: pathlib.Path, required: bool) -> dict:
+    sha, count = _tree_digest(installed)
+    return {
+        "kind": "decompiler",
+        "status": "verified",
+        "required": required,
+        "observed": _now(),
+        "url": M2C_URL,
+        "source": source,
+        "version": M2C_COMMIT,
+        "installed": _relative(installed),
+        "installed_sha256": sha,
+        "pinned_sha256": M2C_PINNED["tree"][0],
+        "files": f"{count} files, tree digest {sha}",
+    }
+
+
+def _permuter_entry(source: str, installed: pathlib.Path, required: bool) -> dict:
+    sha, count = _tree_digest(installed)
+    return {
+        "kind": "permuter",
+        "status": "verified",
+        "required": required,
+        "observed": _now(),
+        "url": PERMUTER_URL,
+        "source": source,
+        "version": PERMUTER_VERSION,
+        "installed": _relative(installed),
+        "installed_sha256": sha,
+        "pinned_sha256": PERMUTER_PINNED["tree"][0],
+        "files": f"{count} files, tree digest {sha}",
+    }
+
+
 def _wibo_entry(source: str, installed: pathlib.Path, required: bool) -> dict:
     digest = sha256_file(installed)
     pinned = WIBO_FALLBACK_PINNED if digest == WIBO_FALLBACK_PINNED else wibo_pin()
@@ -561,23 +947,25 @@ def main(argv: list[str] | None = None) -> int:
         "targets",
         nargs="*",
         metavar="TARGET",
-        help="compiler build (e.g. 2.4-001213) or 'wibo'; default: wibo and every build",
+        help="compiler build (e.g. 2.4-001213), 'wibo', 'm2c' or 'decomp-permuter'; "
+             "default: all four and every build",
     )
     parser.add_argument("--root", default=None, help="destination root (default: toolchain/)")
     parser.add_argument("--state", default=None, help="fetch state file (default: toolchain/.fetched.json)")
     parser.add_argument("--provenance", default=None, help="manifest to write (default: toolchain/PROVENANCE.txt)")
     args = parser.parse_args(argv)
 
-    unknown = [t for t in args.targets if t != WIBO_NAME and t not in ARTIFACTS]
+    known = (WIBO_NAME, M2C_NAME, PERMUTER_NAME, *CANDIDATES)
+    unknown = [t for t in args.targets if t not in known]
     if unknown:
-        parser.error(f"unknown target(s): {', '.join(unknown)} (known: {WIBO_NAME}, {', '.join(CANDIDATES)})")
+        parser.error(f"unknown target(s): {', '.join(unknown)} (known: {', '.join(known)})")
 
     root = pathlib.Path(args.root) if args.root else TOOLCHAIN_ROOT
     state_file = pathlib.Path(args.state) if args.state else STATE_FILE
     provenance = pathlib.Path(args.provenance) if args.provenance else PROVENANCE_FILE
 
     sweep = not args.targets
-    targets = [WIBO_NAME, *CANDIDATES] if sweep else args.targets
+    targets = [WIBO_NAME, M2C_NAME, PERMUTER_NAME, *CANDIDATES] if sweep else args.targets
     previous = load_state(state_file)
 
     entries: dict[str, dict] = {}
@@ -587,7 +975,19 @@ def main(argv: list[str] | None = None) -> int:
         # alternates may legitimately be unavailable and must not fail the run.
         required = not sweep or target in (REQUIRED, WIBO_NAME)
         try:
-            if target == WIBO_NAME:
+            if target == PERMUTER_NAME:
+                dest, source = _install_permuter(root)
+                if source == ALREADY_INSTALLED:
+                    source = previous.get(PERMUTER_NAME, {}).get('source') or IN_PLACE
+                entries[target] = _permuter_entry(source, dest, required)
+                print(f"{target}: verified {PERMUTER_VERSION[:12]} at {dest} (source: {source})")
+            elif target == M2C_NAME:
+                dest, source = _install_m2c(root)
+                if source == ALREADY_INSTALLED:
+                    source = previous.get(M2C_NAME, {}).get("source") or IN_PLACE
+                entries[target] = _m2c_entry(source, dest, required)
+                print(f"{target}: verified {M2C_COMMIT[:12]} at {dest} (source: {source})")
+            elif target == WIBO_NAME:
                 dest, source = _install_wibo(
                     root, in_place_source=previous.get(WIBO_NAME, {}).get("source")
                 )
@@ -602,11 +1002,15 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{target}: verified {dest} (source: {source})")
         except FetchError as exc:
             entries[target] = {
-                "kind": "compiler" if target != WIBO_NAME else "runner",
+                "kind": {WIBO_NAME: "runner", M2C_NAME: "decompiler",
+                 PERMUTER_NAME: "permuter"}.get(target, "compiler"),
                 "status": "FAILED",
                 "required": required,
                 "observed": _now(),
-                "url": wibo_url() if target == WIBO_NAME else f"{BASE_URL}/{ARTIFACTS[target]}",
+                "url": wibo_url() if target == WIBO_NAME
+                else (M2C_URL if target == M2C_NAME
+                      else (PERMUTER_URL if target == PERMUTER_NAME
+                            else f"{BASE_URL}/{ARTIFACTS[target]}")),
                 "reason": f"{type(exc).__name__}: {exc}",
             }
             label = "REQUIRED" if required else "optional"
