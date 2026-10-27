@@ -857,6 +857,10 @@ DDREX2P = Target(
         # does not reach 0x002D78xx.
         ("src/network/net_window/net_win_perpoint.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x630, three bodies word-exact; .line 0x59a adopted; .debug retail's 0x7815 /
+        # 787 DIEs byte-equal after adoption.  Ships the switch's @67 jump table.
+        ("src/network/net_game/net_game_challenge.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
