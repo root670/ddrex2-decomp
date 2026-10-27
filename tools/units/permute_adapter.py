@@ -211,7 +211,7 @@ class Candidate:
         self.wibo = fetch.wibo()
         self.scratch = pathlib.Path(scratch or tempfile.mkdtemp(prefix="ddr-permute-"))
         self.scratch.mkdir(parents=True, exist_ok=True)
-        self.staged = cc.staged_path(self.tu)
+        self.staged = cc.staged_path(self.tu, self.wibo)
         self.object = self.scratch / "candidate.mw.o"
 
     # -- setup ------------------------------------------------------------
@@ -267,7 +267,7 @@ class Candidate:
         """Compile ``source`` as this unit; return the object and retail's ``$gp``."""
         self.staged.parent.mkdir(parents=True, exist_ok=True)
         self.staged.write_bytes(self.commit(source))
-        recorded = cc.recorded_name(self.staged)
+        recorded = cc.recorded_name(self.staged, self.wibo)
         if len(recorded) != len(self.tu.name):
             raise cc.Unusable(f"staging {self.staged} spells {len(recorded)} bytes, "
                               f"retail {len(self.tu.name)}")

@@ -1,10 +1,89 @@
 # tests/toolchain/test_fetch.py
-import hashlib, pathlib, pytest, sys
+import hashlib, pathlib, pytest, sys, types
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 from toolchain import fetch
 
 MWCCPS2_SHA256 = "98d3fb6fc362c6b28208e1cc05ff25e32b7c78ffca0c3114cde5392a67c06294"
+
+
+def _a_host(monkeypatch, name):
+    """Make this process *look like* ``name``: asset selection is the only question asked."""
+    monkeypatch.setattr(fetch, "platform", types.SimpleNamespace(system=lambda: name))
+
+
+@pytest.mark.parametrize("host, asset", [
+    ("Darwin", "wibo-macos"),
+    ("Linux", "wibo-x86_64"),
+    ("Windows", None),          # native compilers: nothing to translate, nothing to fetch
+])
+def test_the_runner_asset_follows_the_host(monkeypatch, host, asset):
+    _a_host(monkeypatch, host)
+    assert fetch.wibo_asset() == asset
+
+
+def test_the_url_names_the_hosts_asset(monkeypatch):
+    _a_host(monkeypatch, "Linux")
+    assert fetch.wibo_url() == f"{fetch.WIBO_BASE}/wibo-x86_64"
+
+
+def test_windows_installs_no_runner_and_says_why(monkeypatch, capsys):
+    """``wibo()`` returns ``None`` there, which is what probe passes through to run natively."""
+    _a_host(monkeypatch, "Windows")
+    assert fetch.wibo() is None
+    assert "native" in capsys.readouterr().err
+    with pytest.raises(fetch.UnpinnedArtifact, match="native"):
+        fetch.wibo_pin()
+
+
+def test_a_host_with_no_asset_is_refused_not_guessed(monkeypatch):
+    """An unlisted host must not be handed a runner it cannot execute."""
+    _a_host(monkeypatch, "FreeBSD")
+    assert fetch.wibo_asset() is None
+    with pytest.raises(fetch.UnpinnedArtifact, match="WIBO_ASSETS"):
+        fetch.wibo_pin()
+    with pytest.raises(fetch.UnpinnedArtifact):
+        fetch.wibo_url()
+
+
+def test_an_unpinned_asset_is_refused(monkeypatch):
+    _a_host(monkeypatch, "Linux")
+    with pytest.raises(fetch.UnpinnedArtifact, match="no pinned digest"):
+        fetch.wibo_pin("wibo-arm64")
+
+
+#: The 1.2.0 release assets, hashed after download (the URL is ``releases/latest``, so the
+#: digest -- not the tag -- is what is pinned) and recorded here so a silent re-pin is a test
+#: failure rather than a diff nobody reads.
+WIBO_1_2_0 = {
+    "wibo-macos": "2b3000ef6a7a490c24ccd71967735ae0005e218922e51806cca1b8d77fd3cf7c",
+    "wibo-x86_64": "13f86a2d618f0dbe67179d349625345eabf9b46450295cb4c904e49f6aff85af",
+}
+
+
+@pytest.mark.parametrize("asset", sorted(WIBO_1_2_0))
+def test_every_release_asset_is_pinned_to_its_observed_digest(asset):
+    digest = fetch.WIBO_PINNED[asset]
+    assert digest == WIBO_1_2_0[asset]
+    assert len(digest) == 64 and digest == digest.lower()
+
+
+def test_every_asset_a_host_runs_is_pinned():
+    """No asset is selectable unless its digest is pinned: ``wibo_pin`` is the only gate."""
+    assert set(fetch.WIBO_ASSETS.values()) <= set(fetch.WIBO_PINNED)
+
+
+def test_a_windows_sweep_records_no_runner_and_still_succeeds(monkeypatch, tmp_path):
+    """The ``wibo`` target on a native host is *not needed*, not a failed download."""
+    _a_host(monkeypatch, "Windows")
+    state, provenance = tmp_path / "state.json", tmp_path / "PROVENANCE.txt"
+    assert fetch.main(["wibo", "--root", str(tmp_path / "tc"),
+                       "--state", str(state),
+                       "--provenance", str(provenance)]) == 0
+    assert not (tmp_path / "tc" / "wibo").exists()
+    record = provenance.read_text()
+    assert "[wibo] runner not needed" in record
+    assert "native" in record and "no runner" in record
 
 def test_compiler_archive_has_expected_members(tmp_path):
     d = fetch.compiler("2.4-001213", root=tmp_path)
