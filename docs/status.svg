@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="656" viewBox="0 0 800 656" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 82/249 (32.9%) promoted</title>
-<desc>One square per translation unit, grouped by module. 82/249 (32.9%) units, 437/4,897 (8.9%) functions and 107,492/1,817,876 (5.9%) code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 84/249 (33.7%) promoted</title>
+<desc>One square per translation unit, grouped by module. 84/249 (33.7%) units, 457/5,054 (9.0%) functions and 112,048/1,886,844 (5.9%) code bytes are reconstructed.</desc>
 <rect width="800" height="656" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 82/249 (32.9%) units</text>
-<text x="24" y="52" font-size="12" fill="#57606a">437/4,897 (8.9%) functions &#183; 107,492/1,817,876 (5.9%) code bytes &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 84/249 (33.7%) units</text>
+<text x="24" y="52" font-size="12" fill="#57606a">457/5,054 (9.0%) functions &#183; 112,048/1,886,844 (5.9%) code bytes &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 (44.4%) units · 44/182 (24.2%) functions · 9,172/67,808 (13.5%) bytes</text>
@@ -45,7 +45,7 @@
 <rect class="cell" data-state="promoted" x="234" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/com_scrollbar.c - 1,344 code bytes - promoted</title></rect>
 </g>
 <g class="module" data-module="CS">
-<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 25/118 (21.2%) units · 125/1,020 (12.3%) functions · 36,336/532,880 (6.8%) bytes</text>
+<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 27/118 (22.9%) units · 145/1,176 (12.3%) functions · 40,892/601,844 (6.8%) bytes</text>
 <rect class="cell" data-state="untouched" x="24" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_e.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/bk_load.c - 116 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_j.c - 0 code bytes - untouched</title></rect>
@@ -115,7 +115,7 @@
 <rect class="cell" data-state="untouched" x="264" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/info.c - 10,476 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="279" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/info/infodoll.c - 700 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="294" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/info/infoshow.c - 14,424 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="309" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll.c - 2,080 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="309" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/staffroll/cs_staffroll.c - 2,080 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="324" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_fft.c - 12,752 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="339" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_mov.c - 2,272 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="354" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/staffroll/cs_staffroll_pic.c - 4,068 code bytes - untouched</title></rect>
@@ -148,19 +148,19 @@
 <rect class="cell" data-state="untouched" x="759" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_mc.c - 776 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="24" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_menu.c - 8,940 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_win.c - 8,464 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="54" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_setting.c - 48 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="69" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usermanage.c - 128 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="84" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_user.c - 1,092 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="99" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_userlist.c - 1,232 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="114" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_useredit.c - 1,920 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="129" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usrrpass.c - 0 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="144" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_cursor.c - 0 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="159" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_menu.c - 0 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="174" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_message.c - 0 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="189" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_main.c - 1,524 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="204" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_co.c - 228 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="54" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_setting.c - 8,696 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="69" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usermanage.c - 948 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="84" y="212" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/workout/workout_user.c - 2,476 code bytes - promoted</title></rect>
+<rect class="cell" data-state="untouched" x="99" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_userlist.c - 35,096 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="114" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_useredit.c - 13,228 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="129" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usrrpass.c - 7,204 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="144" y="212" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/workout/workout_cursor.c - 756 code bytes - partial</title></rect>
+<rect class="cell" data-state="untouched" x="159" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_menu.c - 3,316 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="174" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_message.c - 764 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="189" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_main.c - 2,160 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="204" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_co.c - 444 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="219" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_top.c - 1,336 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="234" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_hi.c - 404 code bytes - untouched</title></rect>
+<rect class="cell" data-state="untouched" x="234" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_hi.c - 452 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="249" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_cha.c - 160 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="264" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_end.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="279" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_hand.c - 0 code bytes - untouched</title></rect>
@@ -291,7 +291,7 @@
 <text x="24" y="564" font-size="12" font-weight="600" fill="#24292f">(library) - 0/0 (0.0%) units · 0/439 (0.0%) functions · 0/117,800 (0.0%) bytes</text>
 </g>
 <g class="module" data-module="(unattributed)">
-<text x="24" y="587" font-size="12" font-weight="600" fill="#24292f">(unattributed) - 0/0 (0.0%) units · 0/2,246 (0.0%) functions · 0/724,540 (0.0%) bytes</text>
+<text x="24" y="587" font-size="12" font-weight="600" fill="#24292f">(unattributed) - 0/0 (0.0%) units · 0/2,247 (0.0%) functions · 0/724,544 (0.0%) bytes</text>
 </g>
 <g transform="translate(0 626)" class="legend"><rect x="24" y="0" width="12" height="12" rx="2" fill="#2da44e" stroke="#8c959f" stroke-width="0.5"/><text x="42" y="10" font-size="12" fill="#24292f">promoted</text><rect x="148" y="0" width="12" height="12" rx="2" fill="#bf8700" stroke="#8c959f" stroke-width="0.5"/><text x="166" y="10" font-size="12" fill="#24292f">partial</text><rect x="272" y="0" width="12" height="12" rx="2" fill="#d0d7de" stroke="#8c959f" stroke-width="0.5"/><text x="290" y="10" font-size="12" fill="#24292f">untouched</text></g>
 </svg>
