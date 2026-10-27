@@ -10,45 +10,7 @@
 #include "types/_nsv_rc_table_param_work.h"
 #include "types/sceNetcnfifData.h"
 
-struct _NETWORK_W {
-                int counter;
-                unsigned int status;
-                unsigned char *free_data_addr;
-                int step;
-                int dc_code;
-                int cursor;
-                void (*NewFunc)();
-                void (*SubFunc)();
-                void (*MainFunc)();
-                void (*OldFunc)();
-                void (*KeyFunc)();
-                void (*OldKeyFunc)();
-                struct _net_pad_w padw;
-                struct _NET_READ_DATA_W readw;
-                struct _net_prg_w prgw;
-                struct _net_inter_w interw;
-                int sel_user_file_num;
-                struct _NSV_USER_FILE_WORK *dur_user_file;
-                struct _NSV_USER_FILE_WORK UserFile[2];
-                 struct _NSV_PLAYER_LIST *player_list;
-                 struct _NSV_DATA ServerData;
-                 struct _nsv_rc_table_param_work RcData[2];
-                 struct _nsv_rc_table_list_work RcDataTbl;
-                 struct _nsv_rc_table_param_work *dur_rc_data;
-                 int work[320];
-                 char work_set_mode;
-
-                 struct _net_pack_w pack;
-                 struct sceNetcnfifData netcnfdata;
-                 unsigned int *net_cnf_addr;
-                 int net_loaded_flag;
-                 int upnp_loaded_flag;
-                 int bsdsocki_irx_mid;
-                 int bsdsocki_irx_result;
-                 int bsdsocki_irx_flag;
-                 int mc_init_flag;
-                 unsigned char tail[0x24];
-};
+#include "types/_NETWORK_W.h"
 #include "types/_CWS_WIN_W.h"
 
 #define D_0102FAD8 (*(struct _CWS_WIN_W **)0x0102FAD8)
