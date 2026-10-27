@@ -576,6 +576,16 @@ DDREX2P = Target(
         # tests are `!!(x & mask) != 0` for retail's `andi; sltu`.
         ("src/network/net_sys/net_sys_logout.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x550 in retail's 0x560 extent, all eight bodies word-exact; .line adopted
+        # whole (retail 0x3CE, 91 records against our 87 -- the switch dispatch puts retail's
+        # statements on other lines); .debug retail's 0x3FC4 / 419 DIEs after adoption (5
+        # subroutine-type references rewritten).  The three 0x0102xxxx addresses are runtime
+        # scratch written as literals (a cursor byte and two struct _CWS_WIN_W * slots), all
+        # outside every declared segment and absent from every ledger.  The type is declared
+        # inline because retail's _NETWORK_W is 64-byte aligned (members end 0x76DC, size
+        # 0x7700) and include/types/_NETWORK_W.h cannot say so yet.
+        ("src/network/net_game/net_game_logout.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
