@@ -416,8 +416,8 @@ typedef struct {   // size 0x320
     /* 0x308 */ float (*np)[4];                       // 0x4
     /* 0x30C */ float (*tp)[4];                       // 0x4
     /* 0x310 */ float (*cp)[4];                       // 0x4
-    /* 0x314 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_8_222;
+    /* 0x314 */ // 0xC bytes padding
+} __attribute__((aligned(16))) anon_8_222;
 
 /* anon_10_222 -- @anon10, 0x68 bytes, dmm_select.c (DIE 0x4157AF) */
 typedef struct {   // size 0x68

@@ -249,7 +249,8 @@ def _stated_alignment(start, offset, natural, size):
     and the size together therefore state an alignment the declaration does not, and the
     spelling that carries it is `__attribute__((aligned(16)))`.  Only emitted when the
     aggregate's own size is a multiple of it, so the attribute cannot move any later member
-    or change the recorded size.
+    or change the recorded size.  `_tail_alignment` below asks the same question about the
+    bytes after the last member.
     """
     if offset <= start or natural >= 16:
         return None
@@ -259,6 +260,29 @@ def _stated_alignment(start, offset, natural, size):
     if up(16) == offset and size % 16 == 0:
         return 16
     return None
+
+
+def _tail_alignment(cursor, size, natural):
+    """The alignment an aggregate's own size states beyond its members, or `None`.
+
+    The member rule above reads a gap *between* members; this reads the gap *after* the last
+    one.  DWARF records the aggregate's size, so a size that rounds the cursor up to 16 states
+    16-byte alignment the members do not: measured on `fp_style.c`, DIE 0x1254e3 (`@anon5`,
+    `anon_5_73` in `include/src/CS/freeplay/fp_style.h`) ends its members at 0x1c, DWARF says
+    0x20, and retail's item stride is 0x20 (`addiu $3,$3,0x20`) -- an unstated tail makes the
+    emitted typedef 0x1c bytes, so `((anon_5_73 *)w)[i].step` strides 0x1c and every body that
+    indexes it misses.  `natural` is the alignment the members already give the type: when
+    rounding the cursor up by *that* lands on the size, the members explain the tail and there
+    is nothing to state.
+
+    The spelling is the one 3.0b38 honours, measured: the attribute goes **immediately after
+    the closing brace**, before the typedef's name (`} __attribute__((aligned(16))) tag;`), and
+    the same attribute after the name (`typedef struct {...} tag __attribute__((aligned(16)));`)
+    is silently ignored -- `p[1].step` stayed at 0x34 and `sizeof` at 0x1c.  A named type gets
+    the identical placement, `struct tag {...} __attribute__((aligned(16)));` (measured: stride
+    0x38, `sizeof` 0x20).
+    """
+    return _stated_alignment(cursor, size, natural, size)
 
 
 def _enum_lines(die, tag, indent, typedef=False):
@@ -347,11 +371,15 @@ def definition(dw, die, tag, tagger, indent="", typedef=False):
                      f"{text};".ljust(len(ind) + 48) + f"  // {note}")
         if offset is not None and size_of is not None:
             cursor = max(cursor, offset + size_of)
+    tail = None
     if not members:
         lines.append(f"{ind}// no data members")
-    elif kind != "union" and size > cursor:
-        lines.append(_gap(ind, cursor, size, tail_align))
-    lines.append(f"{indent}}}{' ' + tag if typedef and tag else ''};")
+    elif size > cursor:
+        tail = _tail_alignment(cursor, size, tail_align)
+        if kind != "union":
+            lines.append(_gap(ind, cursor, size, tail or tail_align))
+    stated = f" __attribute__((aligned({tail})))" if tail else ""
+    lines.append(f"{indent}}}{stated}{' ' + tag if typedef and tag else ''};")
     if typedef and not tag:
         raise NotSpellable(f"DIE 0x{die.off:x}: a typedef needs the name the C will use")
     return lines

@@ -250,8 +250,8 @@ typedef struct {   // size 0x7E0
     /* 0x234 */ anon_6_150 music;                     // 0x494
     /* 0x6C8 */ anon_15_150 option;                   // 0x70
     /* 0x738 */ anon_23_150 result;                   // 0xA0
-    /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_4_150;
+    /* 0x7D8 */ // 0x8 bytes padding
+} __attribute__((aligned(16))) anon_4_150;
 
 /* anon_5_150 -- @anon5, 0x34 bytes, adv_nonstop_obj.c (DIE 0x296F36) */
 typedef struct {   // size 0x34

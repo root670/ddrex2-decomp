@@ -214,8 +214,8 @@ typedef struct {   // size 0x320
     /* 0x308 */ float (*np)[4];                       // 0x4
     /* 0x30C */ float (*tp)[4];                       // 0x4
     /* 0x310 */ float (*cp)[4];                       // 0x4
-    /* 0x314 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_15_18;
+    /* 0x314 */ // 0xC bytes padding
+} __attribute__((aligned(16))) anon_15_18;
 
 /* anon_23_18 -- @anon23, 0x4 bytes, model2.c (DIE 0x29F38) */
 typedef struct {   // size 0x4

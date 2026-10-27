@@ -320,8 +320,8 @@ typedef struct {   // size 0x7E0
     /* 0x234 */ anon_11_72 music;                     // 0x494
     /* 0x6C8 */ anon_20_72 option;                    // 0x70
     /* 0x738 */ anon_0_72 result;                     // 0xA0
-    /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_18_72;
+    /* 0x7D8 */ // 0x8 bytes padding
+} __attribute__((aligned(16))) anon_18_72;
 
 /* anon_22_72 -- @anon22, 0x8 bytes, freeplay.c (DIE 0x11FA2E) */
 typedef struct {   // size 0x8

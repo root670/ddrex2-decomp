@@ -128,8 +128,8 @@ typedef struct {   // size 0x40
     /* 0x036 */ short move_flg;                       // 0x2
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
-    /* 0x03C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_3_196;
+    /* 0x03C */ // 0x4 bytes padding
+} __attribute__((aligned(16))) anon_3_196;
 
 
 /* variables (9) */

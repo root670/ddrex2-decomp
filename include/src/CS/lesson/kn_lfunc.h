@@ -134,8 +134,8 @@ typedef struct {   // size 0x40
     /* 0x036 */ short move_flg;                       // 0x2
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
-    /* 0x03C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_7_194;
+    /* 0x03C */ // 0x4 bytes padding
+} __attribute__((aligned(16))) anon_7_194;
 
 /* anon_8_194 -- @anon8, 0x14 bytes, kn_lfunc.c (DIE 0x363A03) */
 typedef struct {   // size 0x14

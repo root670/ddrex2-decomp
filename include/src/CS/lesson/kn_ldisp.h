@@ -94,8 +94,8 @@ typedef struct {   // size 0x60
     /* 0x04C */ int scr_z;                            // 0x4
     /* 0x050 */ int alpha;                            // 0x4
     /* 0x054 */ int tex_id;                           // 0x4
-    /* 0x058 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_6_191;
+    /* 0x058 */ // 0x8 bytes padding
+} __attribute__((aligned(16))) anon_6_191;
 
 /* anon_8_191 -- @anon8, 0x68 bytes, kn_ldisp.c (DIE 0x35BBD3) */
 typedef struct {   // size 0x68
@@ -141,8 +141,8 @@ typedef struct {   // size 0x40
     /* 0x036 */ short move_flg;                       // 0x2
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
-    /* 0x03C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_9_191;
+    /* 0x03C */ // 0x4 bytes padding
+} __attribute__((aligned(16))) anon_9_191;
 
 /* anon_10_191 -- @anon10, 0x88 bytes, kn_ldisp.c (DIE 0x35C651) */
 typedef struct {   // size 0x88

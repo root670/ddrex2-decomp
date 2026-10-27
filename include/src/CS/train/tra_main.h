@@ -225,8 +225,8 @@ typedef struct {   // size 0x7E0
     /* 0x234 */ anon_10_154 music;                    // 0x494
     /* 0x6C8 */ anon_3_154 option;                    // 0x70
     /* 0x738 */ anon_13_154 result;                   // 0xA0
-    /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_2_154;
+    /* 0x7D8 */ // 0x8 bytes padding
+} __attribute__((aligned(16))) anon_2_154;
 
 /* anon_4_154 -- @anon4, 0xB8 bytes, tra_main.c (DIE 0x2AEB19) */
 typedef struct {   // size 0xB8

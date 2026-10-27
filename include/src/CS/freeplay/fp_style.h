@@ -101,8 +101,8 @@ typedef struct {   // size 0x20
     /* 0x010 */ float t;                              // 0x4
     /* 0x014 */ float rot_y;                          // 0x4
     /* 0x018 */ int step;                             // 0x4
-    /* 0x01C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_5_73;
+    /* 0x01C */ // 0x4 bytes padding
+} __attribute__((aligned(16))) anon_5_73;
 
 /* anon_7_73 -- @anon7, 0x8 bytes, fp_style.c (DIE 0x127CC5) */
 typedef struct {   // size 0x8
@@ -241,8 +241,8 @@ typedef struct {   // size 0x7E0
     /* 0x234 */ anon_1_73 music;                      // 0x494
     /* 0x6C8 */ anon_11_73 option;                    // 0x70
     /* 0x738 */ anon_26_73 result;                    // 0xA0
-    /* 0x7D8 */ // 0x8 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_8_73;
+    /* 0x7D8 */ // 0x8 bytes padding
+} __attribute__((aligned(16))) anon_8_73;
 
 /* anon_22_73 -- @anon22, 0x4 bytes, fp_style.c (DIE 0x129E4B) */
 typedef struct {   // size 0x4

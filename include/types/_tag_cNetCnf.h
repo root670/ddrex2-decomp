@@ -51,7 +51,7 @@ struct _tag_cNetCnf {   // size 0x9100
     /* 0x8AE4 */ unsigned char net_ifc_name[6][256];  // 0x600
     /* 0x90E4 */ struct _tag_cCoCursor01 cursor_work;  // 0xC
     /* 0x90F0 */ int hcounter;                        // 0x4
-    /* 0x90F4 */ // 0xC bytes padding if 16-byte aligned, else a member DWARF omits
-};
+    /* 0x90F4 */ // 0xC bytes padding
+} __attribute__((aligned(16)));
 
 #endif /* DDR_types__tag_cNetCnf_H */

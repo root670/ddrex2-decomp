@@ -114,8 +114,8 @@ typedef struct {   // size 0x40
     /* 0x036 */ short move_flg;                       // 0x2
     /* 0x038 */ short pos;                            // 0x2
     /* 0x03A */ short release;                        // 0x2
-    /* 0x03C */ // 0x4 bytes padding if 16-byte aligned, else a member DWARF omits
-} anon_3_197;
+    /* 0x03C */ // 0x4 bytes padding
+} __attribute__((aligned(16))) anon_3_197;
 
 /* anon_4_197 -- @anon4, 0x14 bytes, les_play.c (DIE 0x373554) */
 typedef struct {   // size 0x14
