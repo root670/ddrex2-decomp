@@ -38,3 +38,7 @@ __pycache__/
 
 # Permuter scratch copies (tools/units/permute.py): a run never touches src/.
 /drafts/permute/
+
+# m2c/parser byproducts
+/parser.out
+/yacctab.py
