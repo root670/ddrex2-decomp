@@ -329,21 +329,61 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    belong to a neighbouring split and the switch has to be written by hand. Either way the switch is
    a *shape*: the case values are retail's, the C in each case is not.
 
+   **Then measure what you wrote, not what m2c wrote.**  `python3 tools/units/measure.py <tu>`
+   is the body-by-body reading (step 6): it compiles with the unit's recorded pair and says which
+   of the draft's choices survived, which is the only question a draft answers.
+
 5. **Write the C on retail's line numbers.** The line numbers are evidence, not a suggestion. If the
    generated header spells a tag bare (`_tag_X`, C++ syntax), write `struct _tag_X` in the C; if a
    gap between two statements is large, the original had lines you have not reproduced yet — often an
    inline, sometimes a declaration — and the map will show the hole until they are accounted for.
 
-6. **Iterate with the diff, not with the gate.** The gate compiles the whole unit; the diff scores one
-   function against **retail's bytes**:
+6. **Iterate body by body with `measure.py`, not with the gate.** The gate compiles and links the
+   whole unit; `measure.py` compiles it with the unit's **recorded pair**, applies the object's
+   relocations the way `placed_text` does, and prints **one line per body** against retail's own
+   bytes at that address:
 
    ```bash
-   ./ddr --target ddrex2p diff <symbol> <tu>
+   python3 tools/units/measure.py <tu>                    # every body
+   python3 tools/units/measure.py <tu> --fn <name> --side  # one body, line by line
+   python3 tools/units/measure.py <tu> --json              # for tooling
    ```
 
-   It prints what it compared (target = the retail bytes of the symbol, base = your C object, or the
-   split's own bytes when the unit has no C). A 100.0% on an unpromoted function is normal and is the
-   signal to move on.
+   The header states the **masking rule**, so the number is unambiguous: only the bits a
+   relocation actually writes are ignored (`R_MIPS_26` jump target, `R_MIPS_32` whole word,
+   `R_MIPS_HI16`/`R_MIPS_LO16`/`R_MIPS_GPREL16` low half), and a body that differs from retail
+   only there is `EXACT`.
+
+   ```
+   measure: src/sys/sys_demo.c (ddrex2p)
+   pair: 3.0b38-030307 -c -lang c -O3 -opt full -g
+   masking: a body is EXACT when it differs from retail only in the bits a relocation writes
+            (R_MIPS_26 jump target; R_MIPS_32 whole word; R_MIPS_HI16, R_MIPS_LO16 and
+            R_MIPS_GPREL16 low half); every other differing word is counted.
+     body          ours/retail words           differing  first diff
+     ----------------------------------------------------------------
+     Exact                       2/2                   0  -
+     RegisterSwap                2/2                   1  +0x4
+     Short                       1/2  short by 0x4 bytes  -
+   ```
+
+   A body whose length is not retail's prints `short by N bytes` or `N bytes too large` instead of a
+   word count: the gate refuses such a body, so a word count would suggest the size is already
+   right. `--fn <name> --side` is the reading you want for a residue — retail and ours one
+   instruction per line, with the field that moved named (`rt $v0 -> $v1`,
+   `offset -0x30 -> -0x34`), and a word that differs only inside a relocated field marked
+   `(relocation field)`.
+
+   The command measures a **measured** unit: a source with no `tu_builds` row is refused (exit 2)
+   and the refusal names the remedy, `tools/toolchain/select_build.py --tu <tu>` — that is step 8's
+   tool, and it works before the unit is green, so for a unit being written the order is: measure
+   the pair, add the row, then iterate with `measure.py`. A missing `asm/nonmatchings` tree is
+   refused with `./ddr build`, like every other tool here.
+
+   `./ddr --target ddrex2p diff <symbol> <tu>` stays the *objdiff-cli* view of one symbol against
+   the object the build produced (`./ddr build` first); it needs the linked object and says nothing
+   about the unit's other bodies, so `measure.py` is the per-body count and the diff is the
+   side-by-side report when one body needs a second opinion.
 
 7. **Gate the unit**, then commit it alone:
 
@@ -889,8 +929,10 @@ went through with `.text`/`.debug`/`.line` byte-identical -- 0x968 and 0x958 byt
 
 Controlled experiments under `3.0b38-030307 -c -lang c -O3 -opt full -g`, one factor at a time;
 the probe sources and drivers are `drafts/regalloc/rules/` (`cc.py` compiles + disassembles one
-file, `cmpfn.py <file> <fn>` prints the register substitution ours -> retail's split asm,
-`climb.py` hill-climbs declaration order against it, `gen1..gen8.py` are the experiments below).
+file, `climb.py` hill-climbs declaration order against the split's registers, `gen1..gen8.py` are
+the experiments below).  Reading the *result* on a real unit is `tools/units/measure.py`'s job --
+`--fn <name> --side` names the field that moved on every differing instruction, which is what
+turns a colouring residue into a substitution table.
 All callee-saved results read the register a value lives in from the instruction that uses it.
 
 | # | finding | evidence |
@@ -901,7 +943,7 @@ All callee-saved results read the register a value lives in from the instruction
 | 4 | **An SR pointer whose base is a declared, non-constant pointer `p` that dies at the loop is coloured as `p`** (it inherits `p`'s declaration slot). `p,w,i` declared in that order gives `ptr=s2, w=s1, i=s0` -- the exact retail shape of `shop_bind_nm`; `w,p,i` gives `ptr=s1`. So when retail's SR pointer outranks a declared value, look for a declared pointer (or struct base) the pointer is derived from, and put that declaration where the pointer's colour belongs. | `gen7` (6 permutations, all as stated) |
 | 5 | **This does not survive constant propagation**: with `tbl = (unsigned int *)0xA7D350;` the SR pointer is initialised from the folded constant, not from `tbl`, and stays `s0` in all 720 declaration permutations (`sb_search2`). The explicit-pointer spelling (`ofs = *tbl++`) does colour `tbl` first (`ptr=s2,work=s1,i=s0`, retail's colours) but loses retail's loop shape: the preheader is emitted inline (`ori s2` in the delay slot of the entry `b`) and the unit is 4 words short, because the compiler-made pointer is what places `lui/ori` in the out-of-line preheader after the function body. So both halves of `shop_bind_nm` are reachable, never together by declarations alone. | `sb_explicit_ptr.c`, `sb_search2.py` |
 | 6 | **A web used heavily in a *later* loop outranks earlier-loop webs regardless of declaration order** (w read in loop 2 -> `w=s2` for all six declaration orders; its competitors then follow rule 2 among themselves). A variable used in two loops is split into two webs and the second is coloured after the SR temps (rule 3). | `gen3` (`loop2`, `loop2b`), `gen4` |
-| 7 | **Short scalar copies of struct fields do not follow rule 2.** In `CwsWin_ListbkDisp` the `wx/wy/ww/wh` and `loop_cut` declarations can be permuted freely (120 orders) without moving the `loop_cut`/`wy` pair (`s0`/`s1`), nor does moving `loop_cut = 0;` before or after the field loads. The set is retail's; only that pair is swapped. | `cmpfn.py` + permutation loop on `net_win_listbk.c` |
+| 7 | **Short scalar copies of struct fields do not follow rule 2.** In `CwsWin_ListbkDisp` the `wx/wy/ww/wh` and `loop_cut` declarations can be permuted freely (120 orders) without moving the `loop_cut`/`wy` pair (`s0`/`s1`), nor does moving `loop_cut = 0;` before or after the field loads. The set is retail's; only that pair is swapped. | `measure.py --fn CwsWin_ListbkDisp --side` + permutation loop on `net_win_listbk.c` |
 | 8 | At nine or more live values the n<=5 rule above generalises as the existing "register assignment is declaration order" row (first six reversed into `s5..s0`, 7th..9th `s6..s8`); retail's `ListbkDisp` set (`dr=s3 dg=s5 db=s7 da=fp dz=s6 objw=s4`) is not a monotone function of its DWARF declaration order, so at that size treat the DWARF order as evidence, not as the declaration order to write. | `CwsWin_ListbkDisp` DWARF vs ours |
 
 **How to use them.** (a) Read retail's colouring off the DWARF (`dwarf1.py fn`) *and* the asm; a
@@ -910,8 +952,9 @@ register, the C needs a declared value for the compiler to derive it from (rule 
 base will not do (rule 5). (c) If two declared values are swapped, permute their declarations
 first (rule 2); if permuting the pair changes nothing (rule 7), the pair is not decided by
 declaration order and the cause is the web structure (rule 6), not the spelling.
-`cmpfn.py <file> <fn>` is the quickest way to tell: it reports the substitution table
-(`{('s0','s1'): 7, ('s1','s0'): 10}` is a clean pairwise swap).
+`python3 tools/units/measure.py <tu> --fn <name> --side` is the quickest way to tell: every
+differing line names the field that moved (`rt $v0 -> $v1`), so a clean pairwise swap reads as the
+same two register names all the way down.
 
 **Not fixed by these rules (parked, with what was learned):** `shop_bind_nm` (rule 5),
 `CwsWin_ListbkDisp` (rule 7), `down_load_anime`, `back_anime_step`, `freeze_eff_disp`
@@ -1176,6 +1219,50 @@ Two compiler facts measured on `fp_style.c`/`fp_opt.c`:
   `p[1].step` stayed at 0x34 instead of 0x38 - which is why a padded aggregate's `sizeof` stayed
   short and the bodies indexing it could not match.
 
+### 21. m2c's range guard, varargs and string walkers are all wrong by default
+
+Measured on `cws_str.c`, where each of these differing spellings cost whole-body mismatches:
+- **Range guard.** m2c emits a nested `if (x >= 0) { if (x >= 0x10) goto fail; } ...`. Retail's
+  shape is the single fused `if (x < 0 || x >= 0x10) return 0;` (`bltz`; `slti $2; bnez`; one
+  return-0 block between the test and the body, with two nop pads). The fused form fixed 26 words
+  on fourteen bodies at once; never accept m2c's nesting here.
+- **Varargs.** m2c writes `M2C_ERROR(/* Read from unset register $a3 */)`. The repo idiom
+  (`net_grf.c`) is
+  `ap = (char *)__builtin_next_arg(string) - ((__builtin_args_info(2) >= 8) ? 0 : (8 - __builtin_args_info(2)) * 8);`
+  and for a variadic parameter that itself arrives on the stack the same expression still yields
+  it (`__builtin_args_info(2)` reports the named-argument count).
+- **String walker.** Retail holds `lbu` once into an `unsigned char` local and tests it, in a
+  `for (;;) { fp = string[i]; if (a == b) break; ... }`; a `while (a != b)` gets inverted to a
+  bottom-tested loop and cost 43 words.
+- **Hoist order is part of the frame.** In `CwsStrSetStrightAll`, `dest_num = 0;` above
+  `if (win->str[i] == 0) win->str[i] = GetStrFreeWork();` is what makes it the sixth
+  callee-saved value and fixes the 0x70 frame - the statement order that looks arbitrary is the
+  register allocation.
+
+Known prior art comes from `grep`ping `__builtin_next_arg` and `__builtin_args_info` under `src/`.
+
+## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`### 21. m2c's range guard, varargs and string walkers are all wrong by default
+
+Measured on `cws_str.c`, where each of these differing spellings cost whole-body mismatches:
+- **Range guard.** m2c emits a nested `if (x >= 0) { if (x >= 0x10) goto fail; } ...`. Retail's
+  shape is the single fused `if (x < 0 || x >= 0x10) return 0;` (`bltz`; `slti $2; bnez`; one
+  return-0 block between the test and the body, with two nop pads). The fused form fixed 26 words
+  on fourteen bodies at once; never accept m2c's nesting here.
+- **Varargs.** m2c writes `M2C_ERROR(/* Read from unset register $a3 */)`. The repo idiom
+  (`net_grf.c`) is
+  `ap = (char *)__builtin_next_arg(string) - ((__builtin_args_info(2) >= 8) ? 0 : (8 - __builtin_args_info(2)) * 8);`
+  and for a variadic parameter that itself arrives on the stack the same expression still yields
+  it (`__builtin_args_info(2)` reports the named-argument count).
+- **String walker.** Retail holds `lbu` once into an `unsigned char` local and tests it, in a
+  `for (;;) { fp = string[i]; if (a == b) break; ... }`; a `while (a != b)` gets inverted to a
+  bottom-tested loop and cost 43 words.
+- **Hoist order is part of the frame.** In `CwsStrSetStrightAll`, `dest_num = 0;` above
+  `if (win->str[i] == 0) win->str[i] = GetStrFreeWork();` is what makes it the sixth
+  callee-saved value and fixes the 0x70 frame - the statement order that looks arbitrary is the
+  register allocation.
+
+Known prior art comes from `grep`ping `__builtin_next_arg` and `__builtin_args_info` under `src/`.
+
 ## Source permutation: `tools/units/permute.py`## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
@@ -1230,6 +1317,20 @@ words a 4 MiB `.text` can hold (`2**20`), so **any** candidate of retail's lengt
 candidate that is not, and a smaller size gap outranks a larger one.  Only `0` — retail's words at
 retail's length — is success and exit 0; a finite size-ranked score is a search position, never a
 promotion.
+
+**`measure.py` is the same measurement for the whole unit.**  The permuter prints one number for
+one body; before a run and again after importing a candidate by hand, ask for every body at once:
+
+```bash
+python3 tools/units/measure.py <unit>
+python3 tools/units/measure.py <unit> --fn <function> --side
+```
+
+The table is the gate's masking rule in the header (`R_MIPS_26` jump target, `R_MIPS_32` whole
+word, `R_MIPS_HI16`/`R_MIPS_LO16`/`R_MIPS_GPREL16` low half), one line per body with its word
+count, and `--side` is the body the permuter was chasing — retail and ours line by line with the
+moved field named.  A candidate that closes the target and opens a neighbour is visible there and
+nowhere in the one-number score.
 
 **How to read a run.**
 
