@@ -513,7 +513,9 @@ def run_overlay_splat(overlay, target) -> None:
     write_if_different(yaml_path, overlay_splat_yaml(overlay, target))
     # splat emits a module's asm splits only when it creates the C file for the run, and it
     # never overwrites one that exists: dropping the artifact makes the run a full rewrite.
-    generated_c = directory / "src" / overlay.name / f"{overlay.name}.c"
+    # splat writes `src/<module>.c`, not `src/<module>/<module>.c`: the nested path made the
+    # removal a no-op, so a second run in a tree kept the stale C and produced no splits.
+    generated_c = directory / "src" / f"{overlay.name}.c"
     if generated_c.exists():
         generated_c.unlink()
     print(f"configure: splat split {_display(yaml_path)}")
