@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 70 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 28.1% of units, 8.90% of functions and 6.07% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 71 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 28.5% of units, 9.01% of functions and 6.28% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 70 / 249 units promoted (28.1%)</text>
-<text x="24" y="52" font-size="12" fill="#57606a">397 / 4,463 functions (8.90%) &#183; 98,960 / 1,631,596 code bytes (6.07%) &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 71 / 249 units promoted (28.5%)</text>
+<text x="24" y="52" font-size="12" fill="#57606a">402 / 4,463 functions (9.01%) &#183; 102,496 / 1,631,596 code bytes (6.28%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
-<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 units · 44/182 funcs · 9,424/67,808 bytes (13.9%)</text>
+<text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 9/18 units · 49/182 funcs · 12,960/67,808 bytes (19.1%)</text>
 <rect class="cell" data-state="partial" x="24" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/play/onimode.c - 15,216 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/play/oni_list.c - 0 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="54" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/disp/b_anime.c - 5,072 code bytes - partial</title></rect>
@@ -17,7 +17,7 @@
 <rect class="cell" data-state="promoted" x="129" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/matrix.c - 768 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="144" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/model1.c - 1,152 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="159" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/model2.c - 9,392 code bytes - partial</title></rect>
-<rect class="cell" data-state="partial" x="174" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/motion1.c - 3,536 code bytes - partial</title></rect>
+<rect class="cell" data-state="promoted" x="174" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/motion1.c - 3,536 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="189" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/motion2.c - 4,576 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="204" y="106" width="12" height="12" rx="2" fill="#2da44e"><title>src/AM/s573/doll/ps1lib.c - 1,776 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="219" y="106" width="12" height="12" rx="2" fill="#bf8700"><title>src/AM/s573/doll/dcamera.c - 6,960 code bytes - partial</title></rect>
@@ -29,7 +29,7 @@
 <g class="module" data-module="common">
 <text x="24" y="139" font-size="12" font-weight="600" fill="#24292f">common - 8/15 units · 62/147 funcs · 18,624/44,708 bytes (41.7%)</text>
 <rect class="cell" data-state="promoted" x="24" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/cws/cws_obj.c - 3,664 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="39" y="144" width="12" height="12" rx="2" fill="#d0d7de"><title>src/common/cws/cws_str.c - 6,464 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="39" y="144" width="12" height="12" rx="2" fill="#bf8700"><title>src/common/cws/cws_str.c - 6,464 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="54" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/cws/cws_win.c - 4,864 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="69" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/cws/cws_wins.c - 1,904 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="84" y="144" width="12" height="12" rx="2" fill="#bf8700"><title>src/common/cws/cws_win_multi.c - 5,472 code bytes - partial</title></rect>
@@ -64,9 +64,9 @@
 <rect class="cell" data-state="promoted" x="249" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/freeplay/fp_eyetoy.c - 2,080 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="264" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_chara.c - 15,824 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="279" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/freeplay.c - 16,336 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="294" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_style.c - 9,072 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="294" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/freeplay/fp_style.c - 9,072 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="309" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_res.c - 29,744 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="324" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_opt.c - 12,720 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="324" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/freeplay/fp_opt.c - 12,720 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="339" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_data.c - 2,816 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="354" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_disp.c - 5,232 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="369" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_init.c - 1,088 code bytes - untouched</title></rect>
@@ -90,10 +90,10 @@
 <rect class="cell" data-state="untouched" x="639" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_cmb.c - 1,936 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="654" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_topmenu_obj.c - 17,344 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="669" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_endless_obj.c - 27,584 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="684" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_main.c - 7,632 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="684" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/advanced/adv_main.c - 7,632 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="699" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/advanced/adv_nonstop_obj.c - 24,128 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="714" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_menu.c - 12,288 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="729" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/train/tra_main.c - 6,432 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="714" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/train/tra_menu.c - 12,288 code bytes - partial</title></rect>
+<rect class="cell" data-state="partial" x="729" y="182" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/train/tra_main.c - 6,432 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="744" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/train/tra_msel.c - 3,552 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="759" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_func.c - 6,800 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="24" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/train/tra_str.c - 480 code bytes - promoted</title></rect>
@@ -270,7 +270,7 @@
 <rect class="cell" data-state="promoted" x="24" y="417" width="12" height="12" rx="2" fill="#2da44e"><title>src/sound/vxdecode/decode.c - 1,264 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="417" width="12" height="12" rx="2" fill="#2da44e"><title>src/sound/vxdecode/dectbl.c - 0 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="54" y="417" width="12" height="12" rx="2" fill="#2da44e"><title>src/sound/vxdecode/get4bit.c - 0 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="69" y="417" width="12" height="12" rx="2" fill="#d0d7de"><title>src/sound/fft/sd_fft.c - 6,352 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="69" y="417" width="12" height="12" rx="2" fill="#bf8700"><title>src/sound/fft/sd_fft.c - 6,352 code bytes - partial</title></rect>
 </g>
 <g class="module" data-module="sys">
 <text x="24" y="450" font-size="12" font-weight="600" fill="#24292f">sys - 1/2 units · 2/4 funcs · 64/80 bytes (80.0%)</text>
