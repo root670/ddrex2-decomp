@@ -1040,18 +1040,42 @@ twin. A twin gives the exact body (and its `.line` shape) for free; verify it, d
 Caveat: the group is *whole-function* identical only — a body that merely looks similar is not a
 twin, and a twin in a unit with a different compiler pair still needs its own measurement.
 
+### 19. A handwritten body is a whole-function `asm`, not an `asm` block
+
+`asm void Fn(signature) { <instructions> }` **at file scope** emits the body verbatim: no
+prologue, no frame, no register saves, no epilogue. That is what a `/* Handwritten function */`
+split needs. An `asm { }` block *inside* a C function is not equivalent — MWCC derives the frame
+from the registers the block names and emits its save block contiguously, while retail's prologue
+interleaves body instructions (`sq s2; sq s1; daddu s2,a0; sq s0`), which only compiler-scheduled C
+produces. Measured on `model2.c`: twelve of thirteen bodies word-exact this way
+(`NormCulcG3U`, `VertCulcU`, `drawGT3`, `drawGT3L`, `drawLcore`, `drawG3core`, `drawG3L`,
+`NMDSortObject5`, `nmd_model_disp`, `draw_dancer_model`, `PsGsGetLs`, `pre_draw_dancer_model`).
+Three traps: `mult $0,$rs,$rt` can assemble as MIPS32 `mult1` (use `.word`); a `jal` inside the
+body needs its target's prototype in scope, and a `static` callee must be *defined* before the
+call; and `asm void` conflicts with an earlier prototype of a different signature.
+
+**But it costs `.debug`.** A body written as whole-function `asm` whose retail source is C loses
+that function's local DIEs (`model2`'s raw `.debug` came out 0x2412 short), so condition 2 fails
+even with `.text` exact. Use the asm body as a **word-exact reference for writing the C**, and
+promote only when the C produces the same words.
+
 ## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
 single one, and the reasons are the useful part. `cws_win_multi`'s one register pair went 284 → 270
 (unseeded, 4,855 candidates) and then found nothing in 3,922 (seed 1) and 2,930 (seed 2);
 `com_keyboard` plateaued at 221 of 16,495; `dinit`'s seven-word pair was flat at 7 across 4,739
-candidates; `dancer` and `mmenu_obj` were **unscoreable** because those bodies are the wrong
-length (0x374 against 0x38C, +0x44, −0x4, −0x8, −0x18) — the scorer compares words, so a body of a
-different size cannot be ranked at all. So: fix the size first, and expect a *single* register pair
-to plateau, because rule 10 says that pair is free-list state rather than a source decision. What
-it is good for is a body that is loose by tens of words; the artefacts (`best-N.c` per target,
-plus the run logs) record exactly where each body stalls.
+candidates; `dancer` and `mmenu_obj` were **unscoreable** in that run because those bodies are the
+wrong length (0x374 against 0x38C, +0x44, −0x4, −0x8, −0x18) — the scorer compared words only, so a
+body of a different size could not be ranked at all.  The adapter now ranks a wrong-length body by
+its size gap first and its differing words second, so those units are **searchable** (the run that
+measured them predates that, so no saved artefact shows a gap shrinking).  A search that shrinks
+the gap is still **not a promotion**: `compile.py` refuses a body whose length is not the
+function's retail size, so `./ddr verify --tu` stays red until the size is right, and only a score
+of `0` means retail's words at retail's length.  So: fix the size first, and expect a *single*
+register pair to plateau, because rule 10 says that pair is free-list state rather than a source
+decision. What it is good for is a body that is loose by tens of words; the artefacts (`best-N.c`
+per target, plus the run logs) record exactly where each body stalls.
 
 The permuter ([decomp-permuter](https://github.com/simonlindholm/decomp-permuter), MIT) is a
 *candidate generator* for the one residue class that is left when the shape is right: a unit is
