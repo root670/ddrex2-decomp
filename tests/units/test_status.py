@@ -333,16 +333,14 @@ def test_the_rows_reconcile_with_the_summary_for_every_column():
         assert (part, total) == _pair(summary[column]), column
 
 
-def test_modules_are_ordered_by_code_bytes_descending():
-    units, code = fixture()
-    states = {unit.file: st.UNTOUCHED for unit in units}
-
+def test_modules_are_alphabetical_with_buckets_last():
+    units = [st.Unit("src/CS/a.c", 10), st.Unit("src/gs/b.c", 20)]
+    states = {unit.file: st.PROMOTED for unit in units}
+    code = st.Code({})
     order = [module for module, _ in st.report_modules(units, states, code)]
-
-    bytes_by_module = [code.fact_of(module).code_bytes for module in order]
-    assert bytes_by_module == sorted(bytes_by_module, reverse=True)
-    assert order[:2] == ["CS", "gs"]          # 500 each, then module_key's tie-break
-    assert order[-1] == st.LIBRARY            # 20 bytes, the smallest bucket
+    modules = [name for name in order if not name.startswith("(")]
+    assert modules == sorted(modules, key=str.lower)
+    assert order[len(modules):] == [name for name in order if name.startswith("(")]
 
 
 def test_every_table_row_has_the_module_and_three_promoted_over_total_cells():

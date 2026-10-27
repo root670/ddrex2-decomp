@@ -45,7 +45,7 @@ run; later runs replace only their contents), and ``docs/status.svg``, one cell 
 grouped and labelled by module with a per-cell ``<title>``.  Both are deterministic, and
 ``--check`` compares them without writing.  The README block is one summary line carrying the
 legend, the denominator clause and the pointer to this file, then a table row for **every**
-module -- ordered by code bytes, descending, and including the split-only buckets that have no
+module -- alphabetical by module key, including the split-only buckets that have no
 units -- so the rows reconcile with the summary to the byte and to the function.  The SVG
 groups the same modules in the same order, one band each, with one cell per unit.
 
@@ -393,19 +393,20 @@ def _module_groups(units: Iterable[Unit], states: dict[str, str]) -> dict[str, l
 
 def report_modules(units: Iterable[Unit], states: dict[str, str],
                    code: Code) -> list[tuple[str, list[Unit]]]:
-    """Every module in the report, ordered by its code bytes, descending.
+    """Every module in the report, in :func:`module_key` order -- alphabetical.
 
     A module is anything with a translation unit *or* split code, so the rows always
     partition the summary's denominators: units by the unit's own module, functions and
     bytes by the split ledger's attribution (``module_of`` of the owning unit's path, or the
     ``(library)``/``(unattributed)`` bucket).  Overlay-resident splits are attributed the
     same way -- through the owning unit's path -- so an overlay's code is in its unit's row,
-    not a second row that would double-count it.  Ordering is by code bytes, then by
-    :func:`module_key`, so the biggest code modules come first and ties are stable.
+    not a second row that would double-count it.  Ordering is :func:`module_key`: the real
+    modules alphabetically, then the non-directory buckets, so a table row's position never
+    moves when a unit is promoted.
     """
     groups = _module_groups(units, states)
     names = set(groups) | set(code.by_module)
-    ordered = sorted(names, key=lambda name: (-code.fact_of(name).code_bytes, module_key(name)))
+    ordered = sorted(names, key=module_key)
     return [(name, groups.get(name, [])) for name in ordered]
 
 
