@@ -917,6 +917,11 @@ DDREX2P = Target(
         # `crect` needs its own placement or it resolves to the other unit's 0x002DDE60.
         ("src/CS/option/opt_doll.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x2E0, five bodies word-exact; .debug retail's 0x6FD bytes byte-for-byte after
+        # adoption; .line 0x2B2 adopted.  Overlay info_rel4cd.  -opt full is required (without
+        # it the float constants pool to an unnamed @71); 2.4-001213 does not reproduce it.
+        ("src/CS/info/infodoll.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
