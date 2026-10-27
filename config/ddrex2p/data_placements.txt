@@ -210,3 +210,10 @@ nL = 0x002B6820; // size:0x100 extent:0x100 source:src/sound/vxdecode/get4bit.c
 // immediately at 0x002B6620, so the extent equals the size.  No word is a relocation.
 multbl = 0x002B5EA0; // size:0x780 extent:0x780 source:src/sound/vxdecode/dectbl.c
 ti_mv_list = 0x002B8B90; // size:0x18 extent:0x18 source:src/AM/s573/demo/title_demo.c
+@33 = 0x002D7800; // size:0x5 extent:0x8 source:src/network/net_window/net_win_peruser.c
+NetWin_PerUserPointFunc = 0x002C0F90; // size:0xc extent:0x10 source:src/network/net_window/net_win_peruser.c
+NetWin_PerUserCode = 0x002C0FA0; // size:0x10 extent:0x10 source:src/network/net_window/net_win_peruser.c
+netwinperuser_chara = 0x002C0FB0; // size:0x14 extent:0x20 source:src/network/net_window/net_win_peruser.c
+netwinperuser_name = 0x002C0FD0; // size:0x14 extent:0x20 source:src/network/net_window/net_win_peruser.c
+netwinperuser_point = 0x002C0FF0; // size:0x14 extent:0x20 source:src/network/net_window/net_win_peruser.c
+netwinperuser0 = 0x002C1010; // size:0x3c extent:0x40 source:src/network/net_window/net_win_peruser.c

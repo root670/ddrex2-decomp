@@ -560,6 +560,13 @@ DDREX2P = Target(
         # and unsigned char[256] -- which `unused_types`, an uncalled static function
         # whose parameters point at them, emits; only file-scope arrays need storage the
         # ledger cannot place.  pdemo is .bss: no initialiser, no placement.
+        # .text 0x220, all four bodies word-exact; .line adopted (35 records / 4 tables, 31
+        # rows moved by statement line, structure identical); .debug retail's 0x2104 / 220
+        # DIEs byte for byte with no drops.  -sdatathreshold 0 keeps the "%06d" literal out of
+        # .sdata so it is absolute-addressed as retail's 0x002D7800 is; the body's 0x01029FE4
+        # is runtime scratch whose pointee is struct _NSV_USER_FILE_WORK.
+        ("src/network/net_window/net_win_peruser.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
