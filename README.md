@@ -68,32 +68,18 @@ A red gate is never worked around: the tool names the unit, function and chunk t
 
 <!-- status:start -->
 
-**Overall: 38 / 249 translation units promoted (15.3%); 212 / 4,463 functions reconstructed (4.75%); 45,168 / 1,631,596 code bytes reconstructed (2.77%).**
+**77/249 (30.9%) units · 424/4,463 (9.5%) functions · 104,696/1,631,596 (6.4%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
 
-Green means a unit is **promoted** — this is not a draft count.  It has a source at its manifest path, a `tu_builds` row recording the compiler and flags it was measured with, and a green `./ddr verify --tu` verdict: its `.text` span, its `.debug` chunk and its `.line` chunks are retail's bytes.  Amber is **partial** — a draft named like the unit exists on some branch, or a source exists without a `tu_builds` row (or its verdict is not green).  Grey is **untouched**.
-
-**Code bytes are function sizes declared by the splits** (`nonmatching <fn>, 0xNN`), so debug information and data are excluded; a promoted unit contributes its pinned `.text` size (each function's span rounded to MWCC's 16-byte function alignment).  Split code no compile unit claims is `(library)` when the symbol has a name and `(unattributed)` when it is still `func_*`.
-
-Regenerate both this table and [`docs/status.svg`](docs/status.svg) with `python3 tools/units/status.py --target ddrex2p`; `python3 tools/units/status.py --check` fails when either is stale.  The heatmap has one cell per translation unit, grouped by module; hover a cell for its path, code bytes and state.
-
-| module | units | promoted units | functions | reconstructed functions | code bytes | reconstructed bytes | units % | functions % | bytes % |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `AM` | 18 | 8 | 182 | 44 | 67,808 | 9,424 | 44.4% | 24.18% | 13.90% |
-| `common` | 15 | 4 | 147 | 41 | 44,708 | 11,408 | 26.7% | 27.89% | 25.52% |
-| `CS` | 118 | 11 | 814 | 59 | 433,844 | 13,536 | 9.3% | 7.25% | 3.12% |
-| `eyetoy` | 3 | 0 | 30 | 0 | 13,300 | 0 | 0.0% | 0.00% | 0.00% |
-| `fft` | 1 | 0 | 9 | 0 | 12,084 | 0 | 0.0% | 0.00% | 0.00% |
-| `gs` | 2 | 1 | 18 | 15 | 3,172 | 2,416 | 50.0% | 83.33% | 76.17% |
-| `network` | 82 | 8 | 542 | 43 | 208,732 | 6,720 | 9.8% | 7.93% | 3.22% |
-| `sound` | 4 | 3 | 20 | 3 | 7,520 | 1,264 | 75.0% | 15.00% | 16.81% |
-| `sys` | 2 | 2 | 4 | 4 | 80 | 96 | 100.0% | 100.00% | 120.00% |
-| `(root)` | 3 | 1 | 43 | 3 | 7,232 | 304 | 33.3% | 6.98% | 4.20% |
-| `(external)` | 1 | 0 | 7 | 0 | 1,420 | 0 | 0.0% | 0.00% | 0.00% |
-| `(library)` | 0 | 0 | 439 | 0 | 117,800 | 0 | 0.0% | 0.00% | 0.00% |
-| `(unattributed)` | 0 | 0 | 2,208 | 0 | 713,896 | 0 | 0.0% | 0.00% | 0.00% |
-| **total** | **249** | **38** | **4,463** | **212** | **1,631,596** | **45,168** | **15.3%** | **4.75%** | **2.77%** |
-
-Legend: green = promoted (G2 green); amber = partial (draft or source, unproven); grey = untouched.
+| module | units | functions | reconstructed bytes |
+|---|---:|---:|---:|
+| `AM` | 8/18 (44.4%) | 44/182 (24.2%) | 9,172/67,808 (13.5%) |
+| `common` | 8/15 (53.3%) | 62/147 (42.2%) | 18,320/44,708 (41.0%) |
+| `CS` | 23/118 (19.5%) | 119/814 (14.6%) | 34,544/433,844 (8.0%) |
+| `gs` | 1/2 (50.0%) | 15/18 (83.3%) | 2,332/3,172 (73.5%) |
+| `network` | 31/82 (37.8%) | 174/542 (32.1%) | 38,708/208,732 (18.5%) |
+| `sound` | 3/4 (75.0%) | 3/20 (15.0%) | 1,244/7,520 (16.5%) |
+| `sys` | 2/2 (100.0%) | 4/4 (100.0%) | 80/80 (100.0%) |
+| `(root)` | 1/3 (33.3%) | 3/43 (7.0%) | 296/7,232 (4.1%) |
 
 <!-- status:end -->
 

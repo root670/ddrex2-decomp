@@ -530,3 +530,94 @@ def test_verify_tu_exits_two_on_a_unit_with_no_source(evidence_tree, capsys):
     assert "no source" in captured.err and "no measured compiler pair" in captured.err
     assert "run ./ddr build" in captured.err
     assert "text " not in captured.out, "a refused unit prints no verdict line"
+
+
+# ---------------------------------------------------------------------------
+# the status artifacts follow the build
+# ---------------------------------------------------------------------------
+
+
+def _fake(returncode=0):
+    return subprocess.CompletedProcess([], returncode)
+
+
+def test_build_refreshes_the_status_artifacts_after_ninja_succeeds(monkeypatch, tmp_path):
+    """``./ddr build`` is the hook: ninja's default target ends in ``g1``, so a zero exit
+    means ``out/`` is the image the numbers describe -- and nothing manual is left to run."""
+    ddr = load_ddr()
+    from units import status as st
+
+    elf = tmp_path / "out.elf"
+    elf.write_bytes(b"")
+    target = type("T", (), {"name": "probe", "elf": elf,
+                            "geometry_required": lambda self=None: None})()
+    calls = []
+    monkeypatch.setattr(ddr, "_target", lambda args: target)
+    monkeypatch.setattr(ddr, "_require", lambda *keys: None)
+    monkeypatch.setattr(ddr.configure, "main", lambda argv: 0)
+    monkeypatch.setattr(ddr.check_deps, "resolve", lambda tool: "ninja")
+    monkeypatch.setattr(ddr, "subprocess", type("S", (), {
+        "run": staticmethod(lambda *a, **k: _fake(0))}))
+    monkeypatch.setattr(st, "main", lambda argv=None: calls.append(argv) or 0)
+
+    assert ddr.cmd_build(None) == 0
+    assert calls == [["--target", "probe"]]
+
+
+def test_build_does_not_touch_the_artifacts_when_ninja_fails(monkeypatch, tmp_path):
+    ddr = load_ddr()
+    from units import status as st
+
+    elf = tmp_path / "out.elf"
+    elf.write_bytes(b"")
+    target = type("T", (), {"name": "probe", "elf": elf,
+                            "geometry_required": lambda self=None: None})()
+    calls = []
+    monkeypatch.setattr(ddr, "_target", lambda args: target)
+    monkeypatch.setattr(ddr, "_require", lambda *keys: None)
+    monkeypatch.setattr(ddr.configure, "main", lambda argv: 0)
+    monkeypatch.setattr(ddr.check_deps, "resolve", lambda tool: "ninja")
+    monkeypatch.setattr(ddr, "subprocess", type("S", (), {
+        "run": staticmethod(lambda *a, **k: _fake(1))}))
+    monkeypatch.setattr(st, "main", lambda argv=None: calls.append(argv) or 0)
+
+    assert ddr.cmd_build(None) == 1
+    assert calls == []
+
+
+def test_verify_refreshes_the_artifacts_after_the_gate_ran(monkeypatch, tmp_path):
+    ddr = load_ddr()
+    from units import status as st
+
+    built, retail = tmp_path / "out.elf", tmp_path / "retail.elf"
+    built.write_bytes(b"built")
+    retail.write_bytes(b"retail")
+    target = type("T", (), {
+        "name": "probe", "built": built, "elf": retail,
+        "cus": tmp_path / "cus.json", "chunks": tmp_path / "chunks.json",
+        "symbols": tmp_path / "symbols.txt", "checksums": tmp_path / "checksums.txt",
+        "geometry_required": lambda self=None: None})()
+    calls = []
+    monkeypatch.setattr(ddr, "_target", lambda args: target)
+    monkeypatch.setattr(ddr.g1, "pinned_hash", lambda checksums: None)
+    monkeypatch.setattr(ddr.g1, "sha256", lambda path: "0" * 64)
+    monkeypatch.setattr(ddr.g1, "compare", lambda *args: "ok")
+    monkeypatch.setattr(st, "main", lambda argv=None: calls.append(argv) or 0)
+    args = type("A", (), {"tu": None, "retail": None, "iso": None})()
+
+    assert ddr.cmd_verify(args) == 0
+    assert calls == [["--target", "probe"]]
+
+
+def test_the_status_refresh_is_skipped_when_the_gate_is_the_caller(monkeypatch):
+    """The promotion loop runs ``verify --tu`` hundreds of times; status.py calls it itself,
+    so the guard is what stops the generator being re-entered from the gate it called."""
+    ddr = load_ddr()
+    from units import status as st
+
+    calls = []
+    monkeypatch.setattr(st, "main", lambda argv=None: calls.append(argv) or 0)
+    monkeypatch.setenv(st.GATE_GUARD, "1")
+
+    assert ddr._refresh_status(type("T", (), {"name": "probe"})()) == 0
+    assert calls == []

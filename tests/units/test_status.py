@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -112,30 +113,15 @@ def test_no_sized_splits_is_a_loud_stop(tmp_path):
         st.load_splits(tmp_path / "asm")
 
 
-def test_unit_code_counts_functions_and_uses_the_pinned_text_span():
-    counts, spans = st.unit_code(RECORDS)
+def test_unit_split_shares_come_from_the_same_splits_as_the_denominator():
+    _, code = fixture()
 
-    assert counts["src/sys/sys_a.c"] == 1
-    assert spans["src/sys/sys_a.c"] == 112   # 100 rounded to the 16-byte function alignment
-    assert spans["libstr3.c"] == 80         # 75 rounded up
-
-
-def test_promoted_text_is_the_sum_of_aligned_function_spans():
-    # The five promoted units' measured .text sizes: 64, 192, 2384, 464 and 80 bytes.
-    records = [
-        {"kind": "function", "file": "a.c", "low_pc": 0x1000, "high_pc": 0x100C},  # 12
-        {"kind": "function", "file": "a.c", "low_pc": 0x1010, "high_pc": 0x1040},  # 48
-        {"kind": "function", "file": "b.c", "low_pc": 0x2000, "high_pc": 0x2068},  # 104
-        {"kind": "function", "file": "b.c", "low_pc": 0x2070, "high_pc": 0x20B8},  # 72
-        {"kind": "function", "file": "c.c", "low_pc": 0x3000, "high_pc": 0x3044},  # 68
-    ]
-
-    _, spans = st.unit_code(records)
-
-    assert spans == {"a.c": 64, "b.c": 192, "c.c": 80}
-    assert sum(spans.values()) == 336
-    # 0x40 + 0xC0 + 0x50 for these three; the full five-unit total is 3,184.
-    assert st.percent(3184, 1631596) < 0.2
+    assert code.functions_by_file["src/sys/sys_a.c"] == 1
+    assert code.bytes_by_file["src/sys/sys_a.c"] == 100
+    assert code.bytes_by_file["libstr3.c"] == 75
+    # Every per-file byte is one of the module denominators' bytes: a promoted unit's
+    # share can never exceed its module's total.
+    assert sum(code.bytes_by_file.values()) <= code.splits.code_bytes
 
 
 # ---------------------------------------------------------------------------
@@ -200,11 +186,11 @@ def test_verified_without_a_row_or_source_is_never_promoted():
 # ---------------------------------------------------------------------------
 
 
-def test_code_bytes_are_split_sizes_and_promoted_bytes_are_the_text_span():
+def test_code_bytes_are_split_sizes_and_a_promoted_unit_counts_its_share():
     units, code = fixture()
     promoted = {"src/sys/sys_a.c"}
 
-    totals = st.totals_of(units, st.classify(
+    totals = st.stats_of(units, st.classify(
         units, sources=promoted, drafts=set(), rows=promoted, verified=promoted), code)
 
     assert totals.units == 8
@@ -212,10 +198,51 @@ def test_code_bytes_are_split_sizes_and_promoted_bytes_are_the_text_span():
     assert totals.code_bytes == 1700           # 1,650 unit bytes + 20 + 30
     assert totals.promoted_units == 1
     assert totals.promoted_functions == 1
-    assert totals.promoted_code_bytes == 112   # 100 rounded to the pinned .text size
+    assert totals.promoted_code_bytes == 100   # the split's declaration, not a padded span
     assert totals.unit_percent == pytest.approx(12.5)
     assert totals.function_percent == pytest.approx(10.0)
-    assert totals.code_percent == pytest.approx(100 * 112 / 1700)
+    assert totals.code_percent == pytest.approx(100 * 100 / 1700)
+
+
+def test_a_promoted_unit_whose_padded_span_exceeds_its_size_still_reads_100_percent():
+    # sys's real shape: 12 + 40 + 28 = 80 bytes of code, but MWCC's 16-byte function
+    # alignment makes the object's .text 16 + 48 + 32 = 96.  Counting the padded span read
+    # "96 of 80" (120%); the split declaration is the unit's whole manifest size, so the
+    # row is 80/80 and the ceiling holds.
+    records = [
+        {"kind": "tu", "file": "src/sys/sys_a.c", "size": 80},
+        {"kind": "function", "file": "src/sys/sys_a.c", "low_pc": 0x1000, "high_pc": 0x100C},
+        {"kind": "function", "file": "src/sys/sys_a.c", "low_pc": 0x1010, "high_pc": 0x1038},
+        {"kind": "function", "file": "src/sys/sys_a.c", "low_pc": 0x1040, "high_pc": 0x105C},
+    ]
+    splits = [st.Split(0x1000, 12, "a"), st.Split(0x1010, 40, "b"),
+              st.Split(0x1040, 28, "c")]
+    units = st.units_of(records)
+    code = st.code_of(records, splits)
+    promoted = {"src/sys/sys_a.c"}
+
+    assert code.bytes_by_file == {"src/sys/sys_a.c": 80}     # not 16 + 48 + 32
+    totals = st.stats_of(units, st.classify(
+        units, sources=promoted, drafts=set(), rows=promoted, verified=promoted), code)
+    assert totals.promoted_code_bytes == 80
+    assert totals.code_percent == 100.0
+    assert totals.cells()[-1] == "80/80 (100.0%)"
+
+
+def test_a_numerator_above_its_denominator_is_refused_not_printed():
+    # The old 96-of-80 sys row cannot be constructed at all: the row itself refuses it.
+    with pytest.raises(ValueError):
+        st.Stats(units=1, promoted_units=1, functions=4, promoted_functions=4,
+                 code_bytes=80, promoted_code_bytes=96)
+    assert st.Stats(1, 1, 4, 4, 80, 80).code_percent == 100.0
+
+
+def test_every_cell_is_promoted_over_total_with_one_decimal():
+    assert st.cell(8, 18) == "8/18 (44.4%)"
+    assert st.cell(44, 182) == "44/182 (24.2%)"
+    assert st.cell(45168, 1631596) == "45,168/1,631,596 (2.8%)"
+    assert st.cell(3, 4) == "3/4 (75.0%)"
+    assert st.cell(0, 0) == "0/0 (0.0%)"
 
 
 def test_split_code_is_attributed_by_the_dwarf_function_start():
@@ -241,8 +268,9 @@ def test_percentages_pin_the_measured_repository_arithmetic():
 def test_a_zero_denominator_is_zero_percent_not_a_division_error():
     assert st.percent(0, 0) == 0.0
     assert st.percent(3, 0) == 0.0
-    empty = st.Totals(0, 0, 0, 0, 0, 0)
+    empty = st.Stats(0, 0, 0, 0, 0, 0)
     assert empty.unit_percent == empty.function_percent == empty.code_percent == 0.0
+    assert empty.cells() == ("0/0 (0.0%)", "0/0 (0.0%)", "0/0 (0.0%)")
 
 
 def test_module_is_the_directory_after_src():
@@ -252,7 +280,7 @@ def test_module_is_the_directory_after_src():
     assert st.module_of("libstr3.c") == "(external)"
 
 
-def test_markdown_labels_all_three_denominators_and_one_legend_line():
+def test_markdown_is_a_summary_line_and_the_three_column_table():
     units, code = fixture()
     states = st.classify(units, sources={"src/sys/sys_a.c"}, drafts={"dm_d.c"},
                          rows={"src/sys/sys_a.c"}, verified={"src/sys/sys_a.c"})
@@ -260,18 +288,43 @@ def test_markdown_labels_all_three_denominators_and_one_legend_line():
     markdown = st.render_markdown(units, states, "synthetic", code)
     lines = markdown.splitlines()
 
-    assert ("**Overall: 1 / 8 translation units promoted (12.5%); "
-            "1 / 10 functions reconstructed (10.00%); "
-            "112 / 1,700 code bytes reconstructed (6.59%).**") in lines
-    assert "| module | units | promoted units | functions |" in markdown
-    assert any(line.startswith("| `CS` |") for line in lines)
-    assert any(line.startswith("| `(root)` |") for line in lines)
-    assert any(line.startswith("| `(external)` |") for line in lines)
-    assert any(line.startswith("| `(library)` |") for line in lines)
-    assert any(line.startswith("| `(unattributed)` |") for line in lines)
-    legends = [line for line in lines if line.startswith("Legend:")]
-    assert len(legends) == 1
+    assert lines[0] == (
+        "**1/8 (12.5%) units · 1/10 (10.0%) functions · 100/1,700 (5.9%) code bytes "
+        "reconstructed** — green = promoted, amber = partial, grey = untouched; "
+        "`tools/units/status.py` counts only what `./ddr verify --tu` confirms.")
+    assert lines[1] == ""
+    assert lines[2] == "| module | units | functions | reconstructed bytes |"
+    assert lines[3] == "|---|---:|---:|---:|"
+    assert any(line.startswith("| `sys` |") for line in lines)
+    # A module with nothing promoted is not a repeated row: the overall line counts it and
+    # the heatmap keeps its band.
+    assert not any(line.startswith("| `(library)` |") for line in lines)
+    assert not any(line.startswith("| `(unattributed)` |") for line in lines)
+    assert len(lines) <= 12
 
+
+CELL = re.compile(r"^\d[\d,]*/\d[\d,]* \(\d+\.\d%\)$")
+
+
+def _table_rows(markdown):
+    return [line for line in markdown.splitlines() if line.startswith("|")]
+
+
+def test_every_table_row_has_the_module_and_three_promoted_over_total_cells():
+    units, code = fixture()
+    states = st.classify(units, sources={"src/sys/sys_a.c"}, drafts=set(),
+                         rows={"src/sys/sys_a.c"}, verified={"src/sys/sys_a.c"})
+    rows = _table_rows(st.render_markdown(units, states, "synthetic", code))
+
+    assert rows[0] == "| module | units | functions | reconstructed bytes |"
+    assert rows[1] == "|---|---:|---:|---:|"
+    for row in rows[2:]:
+        cells = [cell.strip().strip("*") for cell in row.strip("|").split("|")]
+        assert len(cells) == 4, row
+        assert cells[0], row
+        for cell in cells[1:]:
+            assert CELL.match(cell), f"{row}: {cell!r}"
+            assert float(cell.rsplit("(", 1)[1].rstrip("%)")) <= 100.0, row
 
 # ---------------------------------------------------------------------------
 # README marker idempotence
@@ -376,3 +429,99 @@ def test_svg_is_grouped_by_module_and_is_github_sized():
     assert "<script" not in svg
     assert "href=" not in svg
     assert "http://" not in svg.replace("http://www.w3.org/2000/svg", "")
+
+
+def test_svg_prints_the_tables_own_cells_for_every_row_and_the_overall_line():
+    units, code = fixture()
+    states = st.classify(units, sources={"src/sys/sys_a.c", "src/CS/dance/dm_b.c"},
+                         drafts=set(), rows={"src/sys/sys_a.c", "src/CS/dance/dm_b.c"},
+                         verified={"src/sys/sys_a.c"})
+    markdown = st.render_markdown(units, states, "synthetic", code)
+    svg = st.render_svg(units, states, "synthetic", code)
+    rows = _table_rows(markdown)
+
+    for row in rows[2:]:
+        name = row.split("|")[1].strip().strip("`")
+        if f'data-module="{name}"' not in svg:
+            continue                      # a split-only group has no module band
+        cells = [cell.strip() for cell in row.strip("|").split("|")][1:]
+        label = (f"{name} - {cells[0]} units \u00b7 {cells[1]} functions"
+                 f" \u00b7 {cells[2]} bytes")
+        assert label in svg, label
+
+    summary = markdown.splitlines()[0]
+    assert re.findall(r"\d[\d,]*/\d[\d,]* \(\d+\.\d%\)", summary)
+    for cell in re.findall(r"\d[\d,]*/\d[\d,]* \(\d+\.\d%\)", summary):
+        assert cell in svg, cell
+
+
+# ---------------------------------------------------------------------------
+# writing, checking and stale evidence
+# ---------------------------------------------------------------------------
+
+
+def test_the_write_path_updates_only_what_changed_and_check_never_writes(tmp_path):
+    readme, svg = tmp_path / "README.md", tmp_path / "docs/status.svg"
+    readme.write_text(BASE)
+    block, picture = "**Over: 1/2 (50.0%).**\n", "<svg/>\n"
+
+    changed = st.apply_artifacts(readme, svg, block, picture)
+
+    assert changed == [readme, svg]
+    assert st.START in readme.read_text() and st.END in readme.read_text()
+    assert svg.read_text() == picture
+    # A second identical run is a no-op, and --check agrees without touching either file.
+    assert st.apply_artifacts(readme, svg, block, picture) == []
+    assert st.apply_artifacts(readme, svg, block, picture, check=True) == []
+    before = readme.read_text()
+    assert st.apply_artifacts(readme, svg, "new body\n", picture, check=True) == [readme]
+    assert readme.read_text() == before
+
+
+def _fake_gate(tmp_path, body: str) -> pathlib.Path:
+    script = tmp_path / "ddr"
+    script.write_text("#!/bin/sh\n" + body)
+    script.chmod(0o755)
+    return script
+
+
+class _Target:
+    name = "synthetic"
+
+
+def test_a_gate_refusal_is_a_loud_stale_evidence_stop_not_a_smaller_count(tmp_path):
+    gate = _fake_gate(tmp_path, "echo 'src/sys/a.c: its object build/src/sys/a.c.o is "
+                                "missing: run ./ddr build, then verify again' >&2\nexit 2\n")
+
+    with pytest.raises(st.StaleEvidence) as caught:
+        st.verify_units([U("src/sys/a.c", 100)], _Target(), ddr=gate)
+
+    assert "src/sys/a.c" in str(caught.value)
+    assert "missing" in str(caught.value)
+
+
+def test_a_real_verdict_failure_is_partial_and_a_missing_file_is_fatal(tmp_path):
+    gate = _fake_gate(tmp_path, "echo 'src/sys/a.c: text FAIL'\nexit 1\n")
+
+    verified, failures = st.verify_units([U("src/sys/a.c", 100)], _Target(), ddr=gate)
+
+    assert verified == set()
+    assert failures == {"src/sys/a.c": "src/sys/a.c: text FAIL"}
+
+
+def test_main_exits_two_naming_the_stale_unit(monkeypatch, capsys, tmp_path):
+    from config import targets as target_module
+    unit = U("src/sys/a.c", 100)
+    monkeypatch.setattr(target_module, "get", lambda name=None: type(
+        "T", (), {"name": "synthetic", "config_dir": tmp_path,
+                  "tu_builds": [("src/sys/a.c", "cc", "flags")]})())
+    monkeypatch.setattr(st, "read_records", lambda path: [])
+    monkeypatch.setattr(st, "units_of", lambda records: [unit])
+    monkeypatch.setattr(st, "load_splits", lambda root: [st.Split(0x1000, 100, "a")])
+    monkeypatch.setattr(st, "collect_sources_and_drafts", lambda: ({"src/sys/a.c"}, set()))
+    monkeypatch.setattr(st, "verify_units", lambda candidates, target: (_ for _ in ()).throw(
+        st.StaleEvidence("src/sys/a.c: its object is missing: run ./ddr build")))
+
+    assert st.main(["--target", "synthetic"]) == 2
+    err = capsys.readouterr().err
+    assert "stale evidence" in err and "src/sys/a.c" in err

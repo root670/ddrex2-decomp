@@ -198,9 +198,6 @@ def cmd_oracle(args) -> int:
 # ---------------------------------------------------------------------------
 
 
-#: status.py's own gate calls carry this so a plain ``verify`` cannot refresh in turn.
-
-
 def _refresh_status(target) -> int:
     """Regenerate README.md and docs/status.svg from the build this command just made.
 
@@ -344,8 +341,7 @@ def _unit_object(tu: str, tree=REPO_ROOT) -> pathlib.Path:
     return pathlib.Path(tree) / "build" / f"{tu}.o"
 
 
-def _evidence_problems(tu: str, target, tree=REPO_ROOT, descriptor=None,
-                       overlay=None) -> list:
+def _evidence_problems(tu: str, target, tree=REPO_ROOT, descriptor=None) -> list:
     """Why a verdict on ``tu`` would not be evidence about its source, or ``[]``.
 
     Two kinds, both configuration errors (exit 2) rather than verdicts, because a green line
@@ -363,10 +359,7 @@ def _evidence_problems(tu: str, target, tree=REPO_ROOT, descriptor=None,
 
     ``tree`` and ``descriptor`` are the two paths the directory layout would otherwise decide;
     they are parameters so a test can point the same rule at a synthetic tree (the object lives
-    under ``tree``; ``descriptor`` is the file ``tu_builds`` is written in).  ``overlay`` is the
-    module the unit loads in, when it is one: its object is placed by *that module's* link, and
-    its bytes are read from that module's ELF -- asking the main script and the main image is
-    what would make an overlay verdict evidence about nothing.
+    under ``tree``; ``descriptor`` is the file ``tu_builds`` is written in).
     """
     tree = pathlib.Path(tree)
     descriptor = pathlib.Path(descriptor) if descriptor is not None else pathlib.Path(
@@ -382,14 +375,13 @@ def _evidence_problems(tu: str, target, tree=REPO_ROOT, descriptor=None,
     obj = _unit_object(tu, tree)
     if not obj.is_file():
         return [f"its object {_display(obj)} is missing"]
-    script = (target.ld_script if overlay is None
-              else target.overlay_ld_script(overlay.name))
+    script = target.ld_script
     if not script.is_file() or obj.relative_to(tree).as_posix() not in script.read_text():
         return [f"{_display(obj)} is not one of the link's inputs ({_display(script)} does not "
                 f"name it): the graph predates its row"]
     if obj.stat().st_mtime_ns < source.stat().st_mtime_ns:
         return [f"its object {_display(obj)} is older than its source {tu}"]
-    out = target.built if overlay is None else target.overlay_elf(overlay.name)
+    out = target.built
     if not out.is_file():
         return [f"{_display(out)} is missing"]
     stamps = (("its source", source),
@@ -416,12 +408,7 @@ def _tu_report(built, retail, name, target) -> int:
         # A name that matches no unit is a usage error, answered before anything is compared.
         print(f"ddr: {exc}", file=sys.stderr)
         return 2
-    try:
-        overlay = manifests.overlay_of(tu)
-    except KeyError as exc:
-        print(f"ddr: {exc}", file=sys.stderr)
-        return 2
-    problems = _evidence_problems(tu, target, overlay=overlay)
+    problems = _evidence_problems(tu, target)
     if problems:
         print(f"ddr: {tu}: {'; '.join(problems)}: the bytes in {_display(built)} say nothing "
               f"about this unit's source -- run ./ddr build, then verify again",
@@ -430,9 +417,7 @@ def _tu_report(built, retail, name, target) -> int:
     try:
         tu, report = g2.verdicts(built, retail, name, target.cus, target.chunks,
                                  target.symbols, target.geometry_required(),
-                                 image=target.image,
-                                 overlay_elf=None if overlay is None
-                                 else target.overlay_elf(overlay.name))
+                                 image=target.image)
     except (g2.UnknownUnit, targets.OutsideLoadableImage, KeyError, ValueError, OSError,
             FileNotFoundError) as exc:
         # An address the retail ELF maps no bytes at, a module the geometry does not record,
@@ -493,7 +478,7 @@ def cmd_verify(args) -> int:
         # Per-unit iteration, not a whole-tree claim: leave the artifacts to build/verify.
         return status
     # ``out/`` is the image this run just judged, so the two generated artifacts can be
-    # brought current from it; status.py's own ``verify --tu`` calls carry DDR_NO_STATUS.
+    # brought current from it; status.py's own ``verify --tu`` calls carry GATE_GUARD.
     return max(status, _refresh_status(target))
 
 
