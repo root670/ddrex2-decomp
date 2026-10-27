@@ -1,6 +1,7 @@
 #include "src/CS/dancemaster/dmm_chara.h"
 
 #define DMM_LAST_DATA (g_game_w.last_data_addr)
+#define D_00FC29D0 ((unsigned char *)0xFC29D0)
 
 anon_7_109 *dmm_get_work(void);
 void func_00128600(void);
@@ -14,7 +15,7 @@ void dmm_set_step(int step);
 
 static inline void dmm_chara_work_init(anon_7_109 *work) {
     anon_7_109 *w = dmm_get_work();
-    DMM_LAST_DATA = (unsigned char *)0xFC29D0;
+    DMM_LAST_DATA = D_00FC29D0;
     func_00128600();
     gsInit3d();
     w->chara_work_addr = DMM_LAST_DATA;

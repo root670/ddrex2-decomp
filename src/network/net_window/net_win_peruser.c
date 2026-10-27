@@ -1,5 +1,6 @@
 #include "src/network/net_window/net_win_peruser.h"
 #include "types/_NSV_USER_FILE_WORK.h"
+extern struct _NSV_USER_FILE_WORK *D_01029FE4;
 
 struct _CWS_OBJ *CwsObjCreate(struct _CWS_OBJ_SET *data);
 char CwsStrSetAll(struct _CWS_WIN_W *win, int str_num, int x, int y, int pri, unsigned char bri, unsigned char alpha, unsigned int flag, int type, unsigned char col, unsigned char *string, ...);
@@ -111,10 +112,10 @@ static int NetWin_PerUserPointInit(struct _CWS_WIN_W *win) {
     for (i = 0; i < 3; i++) {
         win->obj[i] = CwsObjCreate(&netwinperuser0[i]);
     }
-    CwsStrSetAll(win, 0, 0x6A, 0, 0x100, 0x80, 0x80, 0, 2, 0, ((struct _NSV_USER_FILE_WORK *)*(int *)0x01029FE4)->name);
-    CwsStrSetAll(win, 1, 0x6A, 0x18, 0x100, 0x80, 0x80, 1, 4, 3, (unsigned char *)"%06d", ((struct _NSV_USER_FILE_WORK *)*(int *)0x01029FE4)->points.year_param.points);
+    CwsStrSetAll(win, 0, 0x6A, 0, 0x100, 0x80, 0x80, 0, 2, 0, D_01029FE4->name);
+    CwsStrSetAll(win, 1, 0x6A, 0x18, 0x100, 0x80, 0x80, 1, 4, 3, (unsigned char *)"%06d", D_01029FE4->points.year_param.points);
     CwsStrSetTex(win, 1, 9);
-    num = NetGrfGetDancerIDToNumberPoint(((struct _NSV_USER_FILE_WORK *)*(int *)0x01029FE4)->dancer_number);
+    num = NetGrfGetDancerIDToNumberPoint(D_01029FE4->dancer_number);
     win->obj[0]->tu = num % 8 * 42;
     win->obj[0]->tv = num / 8 * 62;
     win->step[0]++;

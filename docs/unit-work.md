@@ -392,6 +392,27 @@ refusal case: adoption never fabricates a DIE retail has and we do not.
    about the unit's other bodies, so `measure.py` is the per-body count and the diff is the
    side-by-side report when one body needs a second opinion.
 
+   **When the residue is an allocation, read the prologue with `slots.py`.**
+   `python3 tools/units/slots.py <tu> <fn>` prints retail's and our **callee-saved and stack-slot
+   map** side by side — the saved-register order from the prologue's stores and the epilogue's loads
+   (GPR and FP separately), every `$sp` slot with the local (or struct member) whose home it is and
+   the size the DWARF gives it, the register that holds its *address* (`addiu $s4,$sp,0x1C0`) or the
+   registers that read its *value*, and the frame size — then a **diff** that names each exchange the
+   way a reader says it: `retail &sp.flg -> s4, ours -> s6`. Retail's instructions are the split at
+   `asm/nonmatchings/<segment>/<fn>.s`; ours are `measure.py`'s compile of the recorded pair, with the
+   same relocation masking. Names come from each side's **own** DWARF (retail's from the pinned ELF,
+   ours from the object just compiled); a slot neither side homes prints `0xOFF (unattributed)`, and a
+   slot *move* (`retail 0xA0 (unattributed) -> ours 0xB0 (def_y, 0x4 bytes)`) is read off the two
+   bodies' access multisets, never inferred from offsets. `--draft PATH --compiler V --flags "…"`
+   measures a draft that has no `tu_builds` row yet, and `--search N` tries the declaration orders of
+   the **address-taken locals only** (rotations then transpositions, fixed order, bounded) and prints
+   the best `N` by frame size, then saved-register set, then differing words — rejecting any candidate
+   whose **unmasked** count is not lower, because a permutation that changes the code is an artefact,
+   not a fix. The tool exists because `com_keyboard`'s `ComKeyBoardDisp` stalled at 327 differing words
+   on exactly this class: it reports `retail &sp.flg -> s4, ours -> s6`, `retail &sp.w -> s6, ours -> s4`
+   and `the two slots are exchanged: retail 0xA0 <-> ours 0xB0` (`def_y`), and no declaration order
+   lowers either count.
+
 7. **Gate the unit**, then commit it alone:
 
    ```bash
@@ -563,14 +584,38 @@ function's `0x2303` access list names it.  `--adopt-retail-meta` drops the DIE a
 `./ddr verify --tu`, for this**: the per-unit verdict can report ok while the full build refuses
 in adoption.
 
-Only a *name that exists* can be used.  A data address with no `D_<addr>` entry (an initialiser
-value such as `pOpening = (struct _tag_cOpening *)0x006D33A0` in a file-scope definition, whose
-bytes are not linked -- rule 9) has nothing to name; leave it and list it in the unit's report.
+**The spelling is chosen by measurement, and the gate enforces it.**  An address with no
+`D_<addr>` ledger name gets a `unit_symbols.txt` row (`D_01874000 = 0x01874000; // source:<file>`)
+and is then reached in one of two ways, in this order:
 
-An address used as an *integer constant* cannot be named at all: `ps2dancerPdataLoadInit((void *)0x01874000)`
-in `fp_doll_init` compiles to `lui; ori` in retail, while any symbol reference gives `lui; addiu`
-(measured with `extern char D_01874000[];`), so that one raw constant stays.  It is a value, not
-a data access; do not loosen adoption's `.text` equality for it.
+1. **a real extern** -- the default, because the symbol table and objdiff then carry the
+   reference: an incomplete array (`extern unsigned char D_01874000[];`), the pointer type for a
+   slot (`extern struct _CWS_WIN_W *D_0102FBCC;`), or an array of pointers for a table
+   (`extern struct _CWS_WIN_W *D_0102FAC4[];`);
+2. **one file-scope `#define` named for the address** (`#define D_01874000 ((unsigned char
+   *)0x01874000)`) -- the exception, only when the extern changes a word.
+
+Wrapping the access in that macro is byte-identical by construction: the tokens the compiler sees
+are the old ones.  The extern is *not* always: retail materialises an absolute address as `lui` +
+`ori` (it is a constant), while a symbol reference is a relocation whose `%lo` is a signed 16-bit
+addend, so MWCC emits `lui` + `addiu` -- one differing word whenever the address is materialised
+as a value.  Measured on `ddrex2p`: `ShopInit` (`0xE4D380`, `ori` -> `addiu`, 1 word),
+`dmm_chara` (`0xFC29D0`, 1 word) and `fp_doll_init` (`0x01874000`, `ori` -> `addiu` plus the
+register colouring it drags, 4 words) all need the macro; a second mechanism is CSE: retail
+re-emits the `lui` in two branch delay slots, so a symbol for `D_0102FE88` cost four words in
+`NetGameLogoutKey` (`beq ...$zero,+3` against `+2`) and the macro was 8/8 exact.  Where the symbol
+*is* exact, it is used: a slot read or written through the address (net_game_logout's two
+`_CWS_WIN_W *` slots, `0x01029FE4` in `net_win_peruser`/`net_win_perpoint`) and a file-scope
+initialiser in the image (`0x006D2E30` in `fp_qmenu`, `0x006D33A0` in `openinglogo`), because
+those are data relocations, not materialised values.
+
+`python3 tools/units/address_casts.py --check <file>` is the rule, and it is wired like the
+`#line` refusal: `configure.py` refuses a `tu_builds` source before it writes `build.ninja`, and
+`compile.py` refuses the same unit before the compiler runs, each naming the file, the count and
+the remedy.  A cast literal is legal only inside a `#define` whose *name is that address*; a
+`#define D_<addr>` is itself refused when that address already has a `unit_symbols.txt` row for
+the source, because then the measurable extern is available and preferred.  There is no allowlist
+of files.
 
 The overlay window (`D_00824450` and its neighbours, outside every declared segment) is named
 the same way: `compile.py` resolves a `D_<8 hex>` outside the segments as its own address, and
@@ -611,11 +656,13 @@ placeholder's presence is load-bearing even though its contents are not.
 
 ## Comment style
 
-**Four source-form rules cover a promoted file, and each has a mechanism that enforces it:**
+**Five source-form rules cover a promoted file, and each has a mechanism that enforces it:**
 no comments and no blank line directly inside a brace (`tools/units/strip_comments.py
 --check`), no cast to an absolute EE register or VU1 memory address (the same `--check`, via
-`tools/units/hw_names.py`), and no `#line` directive (`configure.py` before it writes
-`build.ninja`, and `compile.py` at the `cc` edge, both naming the count and the remedy).  They exist because the
+`tools/units/hw_names.py`), no `#line` directive and no cast literal outside a `#define`
+named for its address (`tools/units/address_casts.py`, run by `configure.py` before it writes
+`build.ninja` and by `compile.py` at the `cc` edge, both naming the file, the count and the
+remedy).  They exist because the
 source is evidence: a comment is an essay in the wrong place, a brace-padding blank is a style
 choice pretending to be layout, and a directive means the file a reader sees is not the file
 the compiler numbered.  The brace rule bends for a promoted source: its `.line` chunk pins

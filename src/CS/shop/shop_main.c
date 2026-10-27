@@ -1,5 +1,6 @@
 static int step0 = 0;
 #include "src/CS/shop/shop_main.h"
+#define D_00E4D380 ((unsigned char *)0xE4D380)
 
 void func_001B7C30(anon_3_124 *p, int n);
 void func_0017A8A0(int);
@@ -78,7 +79,7 @@ void ShopAddrInit(unsigned char *addr) {
 }
 
 void ShopInit(void) {
-    g_game_w.last_data_addr = (unsigned char *)0xE4D380;
+    g_game_w.last_data_addr = D_00E4D380;
     shop_w = (anon_3_124 *)g_game_w.last_data_addr;
     func_001B7C30(shop_w, 0x520);
     g_game_w.last_data_addr += 0x520;

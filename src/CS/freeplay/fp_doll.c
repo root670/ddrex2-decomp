@@ -1,6 +1,7 @@
 #include "types/_tag_cDDR8SaveData.h"
 #include "types/g_game_w.h"
 #include "types/oni_course.h"
+#define D_01874000 ((unsigned char *)0x01874000)
 
 typedef float FVEC4[4];
 typedef float FMAT4[4][4];
@@ -514,5 +515,5 @@ int fp_doll_load(void) {
 void fp_doll_init(void) {
     dw->step = 0;
     dw->loadaddr = ps2dancerInit(g_game_w.last_data_addr, 4);
-    ps2dancerPdataLoadInit((void *)0x01874000);
+    ps2dancerPdataLoadInit(D_01874000);
 }

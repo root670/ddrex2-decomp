@@ -5,10 +5,11 @@ int func_0011F000(int id);
 int func_00127F60(anon_0_25 *info, int tex);
 void func_00123CF0(anon_1_25 *sp);
 void func_0017CD50(int a, int b);
+#define D_006D33A0 ((struct _tag_cOpening *)0x006D33A0)
 
 struct _tag_cOpeninglogo *pOpeninglogo = &_pOpeninglogo;
 static int logo_tex_num[1] = { 0 };
-struct _tag_cOpening *pOpening = (struct _tag_cOpening *)0x006D33A0;
+struct _tag_cOpening *pOpening = D_006D33A0;
 static struct _tag_cOpeninglogo _pOpeninglogo = { 0 };
 
 int Init_Openinglogo(void) {

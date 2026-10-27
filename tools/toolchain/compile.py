@@ -92,6 +92,7 @@ from config import targets  # noqa: E402  the one place a target's facts are wri
 from toolchain import (check_deps, debug_adopt, debug_normalize, debug_set, fetch,
                        line_reflow, probe)  # noqa: E402
 from toolchain.retail import Retail  # noqa: E402  which file holds a unit's retail bytes
+from units import address_casts  # noqa: E402  rule 3: a datum is reached by a name
 
 #: The target a direct invocation works on when ``--target`` names none: the one the tree is
 #: configured for.  The ninja graph always names the target it was generated for, so a build
@@ -1669,6 +1670,22 @@ def refuse_line_directives(file: str, text: str) -> None:
         + LINE_REMEDY.format(file=file))
 
 
+def refuse_cast_literals(file: str, text: str) -> None:
+    """Refuse a promoted source that reaches a datum by a cast literal.
+
+    ``AGENTS.md`` rule 3: an object with no DWARF name is reached through a symbol, or --
+    when the bytes need a constant -- through one file-scope ``#define D_<ADDR>``.  A bare
+    ``(struct _T *)0x006D2E30`` at the use site is neither, so it cannot reach an object;
+    :mod:`units.address_casts` is the check and its message carries the two remedies and the
+    measured reason the choice between them is not free.  Like the ``#line`` refusal this
+    runs before the compiler, so a stale graph cannot build the file either.
+    """
+    try:
+        address_casts.require_named(text, file, path=REPO_ROOT / file)
+    except address_casts.CastAddress as exc:
+        raise Unusable(str(exc)) from exc
+
+
 def placed_text(tu: Tu, mw: MWObject, manifests: Manifests, gp: int,
                 groups) -> tuple[bytes, list, list, bytes]:
     """Lay one compiled object's bodies at retail's addresses: the unit's ``.text``.
@@ -1728,7 +1745,9 @@ def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
         if not tu.source.is_file():
             raise Unusable(f"{tu.source.relative_to(REPO_ROOT)} does not exist")
         source_text = tu.source.read_bytes()
-    refuse_line_directives(tu.file, source_text.decode("latin-1"))
+    text = source_text.decode("latin-1")
+    refuse_line_directives(tu.file, text)
+    refuse_cast_literals(tu.file, text)
     return _place_source(tu, manifests, compiler_dir, wibo, flags, source_text, keep,
                          normalise, adopt)
 

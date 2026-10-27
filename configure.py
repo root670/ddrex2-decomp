@@ -779,14 +779,21 @@ def promotions(manifests=None, target=None) -> list:
 
 
 def check_promoted_sources(target=None, root=None) -> None:
-    """Refuse a ``tu_builds`` source that still carries ``#line``, before anything is written.
+    """Refuse a ``tu_builds`` source the source-form rules forbid, before anything is written.
 
-    A promoted source is the evidence for the bytes the image carries, so a directive -- which
-    renumbers what a reader sees -- is not something the build may quietly rewrite away.  This
-    runs first in :func:`configure`, while ``build.ninja`` is still the previous file: a source
-    that was promoted with directives left in it stops the run instead of producing a graph
-    that hides the problem.  ``compile.py`` refuses the same source at the ``cc`` edge, so even
-    a stale graph cannot build it.
+    Two rules live here, and both are about the file a reader sees rather than the bytes the
+    compiler is handed:
+
+    * no ``#line`` directive -- a directive renumbers what a reader sees, and the rewrite that
+      removes it can move ``.line`` rows, so it is a promotion step the build never performs;
+    * no cast literal -- ``AGENTS.md`` rule 3: a datum with no DWARF name is reached through a
+      symbol, or through one file-scope ``#define D_<ADDR>``, never by ``(struct _T *)0x...``
+      at the use site (:mod:`units.address_casts`).
+
+    This runs first in :func:`configure`, while ``build.ninja`` is still the previous file: a
+    source that breaks a rule stops the run instead of producing a graph that hides the
+    problem.  ``compile.py`` refuses the same source at the ``cc`` edge, so even a stale graph
+    cannot build it.  Each refusal names the file, the count and the remedy.
 
     ``root`` is the tree the ``tu_builds`` paths are relative to; it is a parameter only so a
     test can point the same rule at a synthetic tree.
@@ -797,8 +804,10 @@ def check_promoted_sources(target=None, root=None) -> None:
         path = root / file
         if not path.is_file():
             continue        # a missing source is promotions()' error, and it names it there
+        text = path.read_bytes().decode("latin-1")
         try:
-            cc.refuse_line_directives(file, path.read_bytes().decode("latin-1"))
+            cc.refuse_line_directives(file, text)
+            cc.refuse_cast_literals(file, text)
         except cc.Unusable as exc:
             raise ConfigError(str(exc)) from exc
 
@@ -1156,10 +1165,10 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
     The geometry is resolved first and on purpose: a target whose segment list nobody has
     measured stops here, before anything is written, rather than producing a split of one
     file at another file's addresses.  The promoted sources are checked on the same principle
-    and nearly as early: a ``tu_builds`` source still carrying a ``#line`` directive stops the
-    run before ``splat`` runs and before ``build.ninja`` is written (see
-    :func:`check_promoted_sources`), which is the only moment a reader can still see the file
-    the build would hide.
+    and nearly as early: a ``tu_builds`` source that still carries a ``#line`` directive, or
+    that reaches a datum by a cast literal, stops the run before ``splat`` runs and before
+    ``build.ninja`` is written (see :func:`check_promoted_sources`), which is the only moment a
+    reader can still see the file the build would hide.
     """
     geometry = target.geometry_required()
     check_promoted_sources(target)

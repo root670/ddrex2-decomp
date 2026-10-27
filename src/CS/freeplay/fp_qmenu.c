@@ -1,5 +1,6 @@
 #include "src/CS/freeplay/fp_qmenu.h"
 extern void *D_00824450[];
+#define D_006D2E30 ((struct _tag_cCmes *)0x006D2E30)
 
 void fp_msel_sd_call(unsigned int call, float time);
 int co_obj_is_exist(void *chk_ow, int id);
@@ -53,7 +54,7 @@ static anon_0_170 *fp_ms_qm_edi_eye[4] = {
     &fp_qm_camera,
     0,
 };
-struct _tag_cCmes *pCmes = (struct _tag_cCmes *)0x006D2E30;
+struct _tag_cCmes *pCmes = D_006D2E30;
 
 int fp_qmenu_func(void) {
     switch (co_qmenu_get_stat() & 0xFF) {

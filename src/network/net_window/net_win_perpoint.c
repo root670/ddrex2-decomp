@@ -1,4 +1,5 @@
 #include "src/network/net_window/net_win_perpoint.h"
+extern unsigned char *D_01029FE4;
 
 struct _CWS_OBJ *CwsObjCreate(struct _CWS_OBJ_SET *data);
 void CwsObjDisp(struct _CWS_WIN_W *win, struct _CWS_OBJ *objw);
@@ -232,7 +233,7 @@ static int NetWin_PerPointMain(struct _CWS_WIN_W *win) {
     int pri;
     struct _nsv_user_point_week_log_work *log;
 
-    loop = *(int *)(*(unsigned char **)0x1029FE4 + 0x358);
+    loop = *(int *)(D_01029FE4 + 0x358);
     loop = loop < 6 ? loop : 6;
     pri = win->v.z + 0x100;
     func_00125540(win->v.a);
@@ -241,7 +242,7 @@ static int NetWin_PerPointMain(struct _CWS_WIN_W *win) {
     if (win->v.a > 0 && win->v.a < 0x81 && (win->status & 2)) {
         for (i = 0; i < 6; i++) {
             week = i + 1;
-            log = (struct _nsv_user_point_week_log_work *)(*(unsigned char **)0x1029FE4 + i * 8 + 0x374);
+            log = (struct _nsv_user_point_week_log_work *)(D_01029FE4 + i * 8 + 0x374);
             CsFontPrintf(win->v.x + 0xE, win->v.y + (i * 0x1B + 0x15), 0x80, pri, 0, win->v.a, 0xFB, 0x5250, 0, (unsigned char *)"%d", week);
             if (week % 100 == 11 || week % 100 == 12 || week % 100 == 13) {
                 CsFontPrintf(win->v.x + 0xE, win->v.y + (i * 0x1B + 0x15), 0x80, pri, 0, win->v.a, 0xFB, 0x1250, 0, (unsigned char *)"th WEEKS");

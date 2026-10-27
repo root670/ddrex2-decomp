@@ -1,5 +1,11 @@
 #include "src/network/net_game/net_game_challenge.h"
 #include "types/_CWS_WIN_W.h"
+#define D_0102FE44 (*(unsigned char *)0x0102FE44)
+#define D_0102FC08 (*(struct _CWS_WIN_W **)0x0102FC08)
+#define D_0102FAC4 ((struct _CWS_WIN_W **)0x0102FAC4)
+#define D_0102FFCC (*(int *)0x0102FFCC)
+#define D_0102FFD0 ((unsigned char *)0x0102FFD0)
+#define D_018FB800 ((unsigned char *)0x018FB800)
 
 struct oni_course *onimode_get_course_list(int id);
 struct music_info *func_00161E00(int id);
@@ -31,21 +37,21 @@ void NetGameChallengeInit(struct _NETWORK_W *netw) {
 
     switch (netw->step) {
     case 0:
-        rec = NetPrgGetRCEntry(0, *(unsigned char *)0x102FE44);
+        rec = NetPrgGetRCEntry(0, D_0102FE44);
         if (rec == 1)
             netw->step++;
         else if (rec < 0)
             netw->NewFunc = NetGameRCInit2;
         break;
     case 1:
-        NetWin_AnySetTexture(*(struct _CWS_WIN_W **)0x102FC08, 0x23, 0, 0, 0x280, 0x1A8);
+        NetWin_AnySetTexture(D_0102FC08, 0x23, 0, 0, 0x280, 0x1A8);
         for (i = 2; i < 0x51; i++) {
-            ((struct _CWS_WIN_W **)0x102FAC4)[i]->mode = 0;
-            CwsWinSetCode(((struct _CWS_WIN_W **)0x102FAC4)[i], 2);
+            D_0102FAC4[i]->mode = 0;
+            CwsWinSetCode(D_0102FAC4[i], 2);
         }
         co_caption_disap();
-        (*(struct _CWS_WIN_W **)0x102FC08)->mode = 0;
-        CwsWinSetCode(*(struct _CWS_WIN_W **)0x102FC08, 1);
+        (D_0102FC08)->mode = 0;
+        CwsWinSetCode(D_0102FC08, 1);
         netw->NewFunc = NetGameChallengeMain;
         break;
     }
@@ -69,8 +75,8 @@ static void NetGameChallengeMain(struct _NETWORK_W *netw) {
         netw->SubFunc = 0;
         CwsWinsDelete();
         func_00128600();
-        *(int *)0x102FFCC = 0;
-        func_0011EEC0((void *)0x102FFD0, 0x18);
+        D_0102FFCC = 0;
+        func_0011EEC0(D_0102FFD0, 0x18);
         no_clear_flag = 1;
         netw->step++;
         break;
@@ -89,7 +95,7 @@ static void NetGameChallengeMain(struct _NETWORK_W *netw) {
         no_clear_flag = 1;
         break;
     case 5:
-        ps2dancerInit((void *)0x18FB800, 0);
+        ps2dancerInit(D_018FB800, 0);
         if (InitNetRankPlay(netw) == 1)
             netw->step++;
         no_clear_flag = 1;
