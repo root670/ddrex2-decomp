@@ -151,6 +151,7 @@ def test_a_data_only_promotion_contributes_no_text_and_no_line_edge():
     target = probe()
     data_only = types.SimpleNamespace(
         address=0x00100010, object="build/src/data.c.o", code=False, splits=set(),
+        module="main", is_overlay=False,
         file="src/data.c", flags="--compiler 3.0 -g --adopt-retail-meta",
         debug_payload="build/src/data.c.o.debug",
         line_payload="build/src/data.c.o.line",
@@ -561,7 +562,8 @@ def test_a_measured_row_configures_an_adopting_unit():
     row carries only the compiler build and flags it was measured with.
     """
     tu = type("Tu", (), {"address": 0x100000,
-                         "functions": (type("F", (), {"name": "f"})(),)})
+                         "functions": (type("F", (), {"name": "f"})(),),
+                         "overlay": "main", "split_directory": "main"})
     manifests = type("M", (), {
         "tu_files": lambda self: {"src/sys/sys_scf.c"},
         "tu_named": lambda self, name: tu,
@@ -580,7 +582,8 @@ def test_a_data_only_row_carries_no_code_and_no_line_databins():
     """A unit whose DWARF declares no function is promotion too: its address is its first
     placed datum's, its object contributes no `.text`, and it owns a `.debug` chunk with no
     `.line` chunk beside it."""
-    tu = type("Tu", (), {"address": 0x002AFD40, "functions": ()})
+    tu = type("Tu", (), {"address": 0x002AFD40, "functions": (), "overlay": "main",
+                         "split_directory": "main"})
     manifests = type("M", (), {
         "tu_files": lambda self: {"src/AM/s573/play/oni_list.c"},
         "tu_named": lambda self, name: tu,
