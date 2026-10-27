@@ -850,7 +850,7 @@ DDREX2P = Target(
         # inline because retail's _NETWORK_W is 64-byte aligned (members end 0x76DC, size
         # 0x7700) and include/types/_NETWORK_W.h cannot say so yet.
         ("src/network/net_game/net_game_logout.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g"),
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         # .text 0x620, all four bodies word-exact; .debug retail's 0x1574 / 141 DIEs
         # byte-for-byte after adoption; .line and AT_location adopted.  Needs
         # -sdatathreshold 0: the seven literals are absolute-addressed in retail, whose $gp

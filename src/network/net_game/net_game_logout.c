@@ -10,6 +10,9 @@
 #include "types/_nsv_rc_table_list_work.h"
 #include "types/_nsv_rc_table_param_work.h"
 #include "types/sceNetcnfifData.h"
+#define D_0102FE88 (*(char *)0x0102FE88)
+extern struct _CWS_WIN_W *D_0102FBCC;
+extern struct _CWS_WIN_W *D_0102FADC;
 
 struct _NETWORK_W {
     int counter;
@@ -68,14 +71,14 @@ static void NetGameLogoutMain(struct _NETWORK_W *netw);
 
 static void NetGameLogoutKey(struct _NETWORK_W *netw) {
     if (((func_0011E1D0(0) & 0x1000) ? 1 : 0) || ((func_0011E1D0(1) & 0x1000) ? 1 : 0)) {
-        *(char *)0x0102FE88 = (*(char *)0x0102FE88 + 1) % 2;
+        D_0102FE88 = (D_0102FE88 + 1) % 2;
     } else if (((func_0011E1D0(0) & 0x4000) ? 1 : 0) || ((func_0011E1D0(1) & 0x4000) ? 1 : 0)) {
-        *(char *)0x0102FE88 = (*(char *)0x0102FE88 + 1) % 2;
+        D_0102FE88 = (D_0102FE88 + 1) % 2;
     }
     if (((func_0011E1F0(0) & 0x110) ? 1 : 0) || ((func_0011E1F0(1) & 0x110) ? 1 : 0)) {
         netw->dc_code = 1;
     } else if (((func_0011E1F0(0) & 0x60) ? 1 : 0) || ((func_0011E1F0(1) & 0x60) ? 1 : 0)) {
-        if (!*(char *)0x0102FE88)
+        if (!D_0102FE88)
             netw->dc_code = 2;
         else
             netw->dc_code = 1;
@@ -96,16 +99,16 @@ static void NetGameLogoutMain(struct _NETWORK_W *netw) {
         break;
     case 1:
         for (i = 0; i < 2; i++) {
-            if (i == *(char *)0x0102FE88)
-                CwsStrSetCol(*(struct _CWS_WIN_W **)0x0102FBCC, i + 1, 4);
+            if (i == D_0102FE88)
+                CwsStrSetCol(D_0102FBCC, i + 1, 4);
             else
-                CwsStrSetCol(*(struct _CWS_WIN_W **)0x0102FBCC, i + 1, 0);
+                CwsStrSetCol(D_0102FBCC, i + 1, 0);
         }
         switch (netw->dc_code) {
         case 1:
         case 2:
-            (*(struct _CWS_WIN_W **)0x0102FBCC)->mode = 6;
-            CwsWinSetCode(*(struct _CWS_WIN_W **)0x0102FBCC, 2);
+            (D_0102FBCC)->mode = 6;
+            CwsWinSetCode(D_0102FBCC, 2);
             netw->step = 2;
             break;
         }
@@ -129,24 +132,24 @@ static void NetGameLogoutMain(struct _NETWORK_W *netw) {
 }
 
 void NetGameLogoutStepout(struct _NETWORK_W *netw) {
-    NetWin_AnySetTexture(*(struct _CWS_WIN_W **)0x0102FADC, 0x17, 0, 0xB4, 0x4B, 0x24);
+    NetWin_AnySetTexture(D_0102FADC, 0x17, 0, 0xB4, 0x4B, 0x24);
     netw->NewFunc = NetGameMenuInit2;
 }
 
 void NetGameLogoutStepin(struct _NETWORK_W *netw) {
     int i;
 
-    *(char *)0x0102FE88 = 1;
+    D_0102FE88 = 1;
     for (i = 0; i < 2; i++) {
-        if (i == *(char *)0x0102FE88)
-            CwsStrSetCol(*(struct _CWS_WIN_W **)0x0102FBCC, i + 1, 4);
+        if (i == D_0102FE88)
+            CwsStrSetCol(D_0102FBCC, i + 1, 4);
         else
-            CwsStrSetCol(*(struct _CWS_WIN_W **)0x0102FBCC, i + 1, 0);
+            CwsStrSetCol(D_0102FBCC, i + 1, 0);
     }
-    (*(struct _CWS_WIN_W **)0x0102FADC)->v.y = (*(struct _CWS_WIN_W **)0x0102FADC)->s.y = -0xAA;
-    NetWin_AnySetTexture(*(struct _CWS_WIN_W **)0x0102FADC, 0x17, 0x4B, 0xB4, 0x4B, 0x24);
-    (*(struct _CWS_WIN_W **)0x0102FBCC)->mode = 6;
-    CwsWinSetCode(*(struct _CWS_WIN_W **)0x0102FBCC, 1);
+    (D_0102FADC)->v.y = (D_0102FADC)->s.y = -0xAA;
+    NetWin_AnySetTexture(D_0102FADC, 0x17, 0x4B, 0xB4, 0x4B, 0x24);
+    (D_0102FBCC)->mode = 6;
+    CwsWinSetCode(D_0102FBCC, 1);
     netw->NewFunc = NetGameLogoutMain;
 }
 
@@ -160,7 +163,7 @@ void NetGameLogoutExOpen(void) {
 }
 
 void NetGameLogoutInit(void) {
-    CwsStrSetAll(*(struct _CWS_WIN_W **)0x0102FBCC, 0, 0, -0x3A, 0x100, 0x80, 0x80, 0x400, 2, 0, NetReadDataGetStr(0xA));
-    CwsStrSetAll(*(struct _CWS_WIN_W **)0x0102FBCC, 1, -0x32, 0, 0x100, 0x80, 0x80, 0, 2, 1, NetReadDataGetStr(2));
-    CwsStrSetAll(*(struct _CWS_WIN_W **)0x0102FBCC, 2, -0x32, 0x22, 0x100, 0x80, 0x80, 0, 2, 0, NetReadDataGetStr(3));
+    CwsStrSetAll(D_0102FBCC, 0, 0, -0x3A, 0x100, 0x80, 0x80, 0x400, 2, 0, NetReadDataGetStr(0xA));
+    CwsStrSetAll(D_0102FBCC, 1, -0x32, 0, 0x100, 0x80, 0x80, 0, 2, 1, NetReadDataGetStr(2));
+    CwsStrSetAll(D_0102FBCC, 2, -0x32, 0x22, 0x100, 0x80, 0x80, 0, 2, 0, NetReadDataGetStr(3));
 }

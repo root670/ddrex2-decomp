@@ -20,3 +20,5 @@ step0 = 0x002DE560; // source:src/CS/shop/shop_main.c
 @265 = 0x002BE780; // source:src/CS/freeplay/fp_doll.c
 @267 = 0x002BE790; // source:src/CS/freeplay/fp_doll.c
 @269 = 0x002BE7B0; // source:src/CS/freeplay/fp_doll.c
+D_0102FBCC = 0x0102FBCC; // source:src/network/net_game/net_game_logout.c
+D_0102FADC = 0x0102FADC; // source:src/network/net_game/net_game_logout.c
