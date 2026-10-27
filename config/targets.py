@@ -924,18 +924,6 @@ DDREX2P = Target(
         # it the float constants pool to an unnamed @71); 2.4-001213 does not reproduce it.
         ("src/CS/info/infodoll.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
-        # .text 0x840 (2104 bytes plus retail's 8-byte trailing nop pad), four bodies
-        # word-exact; .line adopted; .debug retail's 0xC32 / 60 DIEs byte for byte after
-        # adoption.  Overlay info_rel4cd.  `-enum min` is REQUIRED and is the whole reason the
-        # unit was blocked: retail's enumeration_type DIEs are AT_byte_size 1 with 1-byte
-        # values, while `-enum int` (the default) records 4 bytes each - 0x24 over retail's
-        # pinned span, and a type reference no signature can pair because debug_set._target_key
-        # carries AT_byte_size.  The header's shape is not involved (measured both ways).
-        # Its two jump tables (@53 at 0x008011F0, @121 at 0x00801220) still need an overlay
-        # data placement: the module link places .text only and plan_data refuses an address
-        # no main split carries, so they are not in the ledger yet.
-        ("src/CS/staffroll/cs_staffroll.c", "3.0b38-030307",
-         "-c -lang c -O3 -opt full -g -enum min"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",

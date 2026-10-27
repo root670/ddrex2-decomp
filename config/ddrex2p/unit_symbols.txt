@@ -26,7 +26,3 @@ D_01029FE4 = 0x01029FE4; // source:src/network/net_window/net_win_peruser.c
 D_01029FE4 = 0x01029FE4; // source:src/network/net_window/net_win_perpoint.c
 D_01029FE4 = 0x01029FE4; // source:src/network/net_game/net_game_help.c
 D_0102FACC = 0x0102FACC; // source:src/network/net_game/net_game_help.c
-isreMainStep = 0x002DE59C; // source:src/CS/staffroll/cs_staffroll.c
-isreReadStep = 0x002DE5A0; // source:src/CS/staffroll/cs_staffroll.c
-isreSdReadStep = 0x002DE5A4; // source:src/CS/staffroll/cs_staffroll.c
-stepwait$* = 0x002DE5A8; // source:src/CS/staffroll/cs_staffroll.c
