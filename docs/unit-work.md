@@ -973,6 +973,58 @@ The address still has its own split, so call it by the split's name instead:
 which is honest — the name comes from the address, not from a guess between two aliases. Before
 that, `draw_floor` could not even be placed ("the object references `dpmul`").
 
+## Source permutation: `tools/units/permute.py`
+
+The permuter ([decomp-permuter](https://github.com/simonlindholm/decomp-permuter), MIT) is a
+*candidate generator* for the one residue class that is left when the shape is right: a unit is
+promoted, its bodies are retail's length, and a handful of words differ because a web was coloured
+in another register or an instruction sits in another slot.  Reach for it **only** then.  It is
+the wrong tool for unfinished code, a wrong member access, a missing statement or a fold residue:
+a body that is not retail's length cannot be placed at all, so every candidate is unscoreable
+(`PENALTY_INF`), and the search says nothing about the source.
+
+```bash
+python3 tools/toolchain/fetch.py decomp-permuter   # once: pinned commit, verified, gitignored
+python3 -m pip install toml                        # its one dependency that is not vendored
+python3 tools/units/permute.py net_win_user --function NetWin_User --seconds 300
+python3 tools/units/permute.py src/sys/sys_scf.c --score-only    # just the committed source
+```
+
+`<unit>` is a `tu_builds` source (any spelling: `sys_scf`, `sys_scf.c`, `src/sys/sys_scf.c`), and a
+unit with no measured pair is refused with exit 2 — there is nothing to permute until it is
+promoted.  `--function` is required when the unit has more than one body.
+
+**The score is the gate's, not the permuter's.**  Each candidate is compiled by
+`tools/toolchain/compile.py` with the unit's *recorded* pair (`Target.build_pair`) — never
+`fetch.REQUIRED` — relocations applied and bodies laid at retail's addresses, and only the
+target function's body is taken from the candidate: every other body, the declarations and the
+data are the committed source's.  The number printed is the count of 32-bit words in that body
+that differ from the **split's** words (`asm/nonmatchings/<segment>/<function>.s`, cross-checked
+against the pinned retail image), so `0` means what `./ddr verify --tu` means.  The permuter's own
+objdump-and-penalty scorer is not used.
+
+**How to read a run.**
+
+| line | meaning |
+|---|---|
+| `base score = N` | the committed body's word diff; `0` (or `--score-only` printing `0`) means nothing to permute |
+| `score 0: <fn> is placed` | the search found retail's words; exit 0 |
+| `best-<N>.c` | the best candidate, in `drafts/permute/<unit>-<function>/`; exit 1 when `N > 0` |
+| `best: the base source … no candidate improved` | nothing beat `base.c`; the residue is not randomisation-shaped |
+
+`best-N.c` is a **diff to read, not a file to commit**: it is the preprocessed unit
+(`base.c` in the same directory, produced with the host preprocessor and `-I include`) with the
+function body rewritten, and the permuter's printer reflows lines — the unit's `.line` is adopted,
+so its statement numbers are not retail's.  Take the *shape* of the change, write it into `src/`
+by hand, and make `./ddr verify --tu <unit>` green.
+
+**Driving it deliberately.**  Because the score is word-exact there is no gradient for the random
+passes to climb: a random spelling either reproduces the body or it does not.  The useful mode is
+the permuter's manual one — edit `drafts/permute/<unit>-<function>/base.c` (the driver never
+overwrites an existing `base.c`) and wrap the alternatives in `PERM_GENERAL(...)`, `PERM_ONCE(...)`
+or `PERM_VAR(...)`; the permuter then enumerates the combinations and this scorer ranks them.
+`drafts/permute/` is gitignored, so a run never leaves the tree dirty and never touches `src/`.
+
 ## Known blocker classes and three failure modes worth knowing
 
 Measured while finishing two hard units in 28 minutes and 78 compile-and-compare cycles between them:

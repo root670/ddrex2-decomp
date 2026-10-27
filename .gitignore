@@ -35,3 +35,6 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# Permuter scratch copies (tools/units/permute.py): a run never touches src/.
+/drafts/permute/

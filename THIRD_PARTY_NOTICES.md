@@ -55,3 +55,30 @@ m2c vendors its own fork of **pycparser** as `m2c_pycparser/` (BSD-3-Clause, ups
 `b5c6024ff01346b194e43435af71a210b1e8e2ae`); it is part of the pinned tree above. Nothing else is
 needed to run the drafter: m2c's only declared dependency is `graphviz ~= 0.20.1`, which **only**
 `--visualize` uses, and `m2c_draft.py` never passes it.
+
+## decomp-permuter (MIT) — fetched, **not** vendored
+
+Source repository: <https://github.com/simonlindholm/decomp-permuter>
+
+Pinned commit: `8556c81d80d1c1af98a858c8f4dc951357f29139` (2026-10-06, "Add a pass to
+reverse if/else blocks").  The project publishes no tag or release, so the commit is the version.
+Fetched on **2026-10-27** from
+`https://codeload.github.com/simonlindholm/decomp-permuter/tar.gz/8556c81d80d1c1af98a858c8f4dc951357f29139`
+by `tools/toolchain/fetch.py decomp-permuter` into `toolchain/decomp-permuter/<commit>/` — a
+gitignored tree, like the compilers, so **no permuter file is committed to this repository**.
+`tools/units/permute.py` imports it as a library, after `installed_permuter()` has re-verified the
+tree digest.
+
+| Pin | Value |
+| --- | --- |
+| archive sha256 | `57cfb45141a2f97ce27e74c1882aab162ff203c2f4688b4617fc2ec3a6ca9907` (2,870,176 bytes) |
+| tree sha256 | `7a073645521e41b202cf59c8b6150daf8f627cd63b5d2b6f84486b48ac39ae89` (255 files) |
+
+The tree digest is sha256 over `"<file sha256>  <relpath>\n"` for every regular file, sorted by
+relpath, the same scheme m2c uses; it is recomputed before the tree is published and again by
+`installed_permuter()` before the driver imports it.
+
+Licence: **MIT** (`LICENSE`). It vendors its own fork of **pycparser** as `perm_pycparser/`
+(BSD-3-Clause), part of the pinned tree above. Its only dependency that is not vendored is `toml`
+(a host package: `python3 -m pip install toml`), as `tools/units/permute.py` says when it is
+missing.

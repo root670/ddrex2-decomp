@@ -1488,6 +1488,48 @@ def refuse_line_directives(file: str, text: str) -> None:
         + LINE_REMEDY.format(file=file))
 
 
+def placed_text(tu: Tu, mw: MWObject, manifests: Manifests, gp: int,
+                groups) -> tuple[bytes, list, list, bytes]:
+    """Lay one compiled object's bodies at retail's addresses: the unit's ``.text``.
+
+    Returns the placed bytes, the ``(offset, name, body)`` labels :func:`assembly` emits,
+    the ``(name, section, emitted, retail)`` sizes the adoption report quotes, and the
+    retail bytes those bodies were placed against.  A body whose length is not the
+    function's retail ``high_pc`` is refused: the extent is the split's, so a different
+    length could not be placed and ``verify`` would call the unit short.
+
+    :func:`_place_source` is the promotion (it goes on to adopt the metadata); this is the
+    compile-and-place half alone, which is also what the permuter's adapter measures a
+    candidate with (:mod:`units.permute_adapter`).
+    """
+    text_start, text_end = _split_extent(tu, manifests)
+    text_size = text_end - text_start
+    text = bytearray(text_size)
+    labels, sizes, body_spans = [], [], []
+    for function in tu.functions:
+        body = relocate(mw.data(groups[function.name][0]),
+                        mw.relocs.get(groups[function.name][0], ()),
+                        lambda symbol: mw.resolve(tu, symbol), f"{function.name}.text", gp)
+        if len(body) != function.size:
+            shortfall = function.size - len(body)
+            detail = (f"short by 0x{shortfall:X} bytes" if shortfall > 0
+                      else f"0x{-shortfall:X} bytes too large")
+            raise Unusable(
+                f"{tu.file}: condition 1 ({debug_set.LABEL[1]}) failed: .text "
+                f"{function.name} is {detail}; C is incomplete")
+        at = function.address - text_start
+        text[at:at + len(body)] = body
+        body_spans.append((at, len(body)))
+        labels.append((at, function.name, body))
+        sizes.append((function.name, ".text", len(body), function.size))
+
+    retail = elf.Elf(str(manifests.target.elf))
+    expected_text = retail.read(text_start, text_size)
+    text = _text_extent(bytes(text), expected_text, body_spans,
+                        tu.end - text_start, tu.file)
+    return text, labels, sizes, expected_text
+
+
 def place(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, keep=None,
           normalise: bool = False, adopt: bool = False,
           source_text: bytes | None = None) -> Placed:
@@ -1547,31 +1589,8 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
               file=sys.stderr)
     groups = mw.groups(tu)
 
-    text_start, text_end = _split_extent(tu, manifests)
-    text_size = text_end - text_start
-    text = bytearray(text_size)
-    labels, sizes, body_spans = [], [], []
-    for function in tu.functions:
-        body = relocate(mw.data(groups[function.name][0]),
-                        mw.relocs.get(groups[function.name][0], ()),
-                        lambda symbol: mw.resolve(tu, symbol), f"{function.name}.text", gp)
-        if len(body) != function.size:
-            shortfall = function.size - len(body)
-            detail = (f"short by 0x{shortfall:X} bytes" if shortfall > 0
-                      else f"0x{-shortfall:X} bytes too large")
-            raise Unusable(
-                f"{tu.file}: condition 1 ({debug_set.LABEL[1]}) failed: .text "
-                f"{function.name} is {detail}; C is incomplete")
-        at = function.address - text_start
-        text[at:at + len(body)] = body
-        body_spans.append((at, len(body)))
-        labels.append((at, function.name, body))
-        sizes.append((function.name, ".text", len(body), function.size))
-
+    text, labels, sizes, expected_text = placed_text(tu, mw, manifests, gp, groups)
     retail = elf.Elf(str(manifests.target.elf))
-    expected_text = retail.read(text_start, text_size)
-    text = bytearray(_text_extent(bytes(text), expected_text, body_spans,
-                                  tu.end - text_start, tu.file))
 
     types = manifests.cus[tu.records[0]]
     # `.line` first: condition 1 pairs it with `.text`, and the `.debug` policy needs both.
