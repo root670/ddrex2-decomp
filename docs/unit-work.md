@@ -1082,8 +1082,9 @@ The permuter ([decomp-permuter](https://github.com/simonlindholm/decomp-permuter
 promoted, its bodies are retail's length, and a handful of words differ because a web was coloured
 in another register or an instruction sits in another slot.  Reach for it **only** then.  It is
 the wrong tool for unfinished code, a wrong member access, a missing statement or a fold residue:
-a body that is not retail's length cannot be placed at all, so every candidate is unscoreable
-(`PENALTY_INF`), and the search says nothing about the source.
+a body that is not retail's length is still *ranked* (size gap first, then differing words, so the
+search can point at the next few bytes to add or remove), but it cannot be placed, so `./ddr verify
+--tu` refuses it and a candidate that merely shrinks the gap is not a promotion.
 
 ```bash
 python3 tools/toolchain/fetch.py decomp-permuter   # once: pinned commit, verified, gitignored
@@ -1105,12 +1106,21 @@ that differ from the **split's** words (`asm/nonmatchings/<segment>/<function>.s
 against the pinned retail image), so `0` means what `./ddr verify --tu` means.  The permuter's own
 objdump-and-penalty scorer is not used.
 
+The one place the *search* and the *gate* differ is the body's length.  When the body is not the
+function's retail size the gate refuses to place it, but the adapter still ranks it:
+`score = abs(bytes short or long) * 2**21 + differing words`.  `2**21` is one more than the most
+words a 4 MiB `.text` can hold (`2**20`), so **any** candidate of retail's length outranks **any**
+candidate that is not, and a smaller size gap outranks a larger one.  Only `0` — retail's words at
+retail's length — is success and exit 0; a finite size-ranked score is a search position, never a
+promotion.
+
 **How to read a run.**
 
 | line | meaning |
 |---|---|
 | `base score = N` | the committed body's word diff; `0` (or `--score-only` printing `0`) means nothing to permute |
 | `score 0: <fn> is placed` | the search found retail's words; exit 0 |
+| `best candidate is N bytes short/long; fix the size before expecting 0` | the best body is not retail's length: the score above is a size-ranked search position, not a residue, and the gate will refuse it until the size is right |
 | `best-<N>.c` | the best candidate, in `drafts/permute/<unit>-<function>/`; exit 1 when `N > 0` |
 | `best: the base source … no candidate improved` | nothing beat `base.c`; the residue is not randomisation-shaped |
 
@@ -1120,8 +1130,10 @@ function body rewritten, and the permuter's printer reflows lines — the unit's
 so its statement numbers are not retail's.  Take the *shape* of the change, write it into `src/`
 by hand, and make `./ddr verify --tu <unit>` green.
 
-**Driving it deliberately.**  Because the score is word-exact there is no gradient for the random
-passes to climb: a random spelling either reproduces the body or it does not.  The useful mode is
+**Driving it deliberately.**  At retail's length the score is word-exact, so there is no gradient
+for the random passes to climb: a random spelling either reproduces the body or it does not.  (The
+only gradient is the size gap, and it only says *how far from placeable* a body is — closing it is
+not the same as matching retail.)  The useful mode is
 the permuter's manual one — edit `drafts/permute/<unit>-<function>/base.c` (the driver never
 overwrites an existing `base.c`) and wrap the alternatives in `PERM_GENERAL(...)`, `PERM_ONCE(...)`
 or `PERM_VAR(...)`; the permuter then enumerates the combinations and this scorer ranks them.

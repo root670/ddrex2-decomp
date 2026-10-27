@@ -3,8 +3,10 @@
 
 The residue this exists for is a *register or schedule* one: the unit is promoted, its
 functions are retail's length, and a few words differ because the compiler coloured a
-web differently or moved an instruction.  Nothing here helps unfinished code -- a body
-of the wrong length cannot be placed at all, and the search scores ``PENALTY_INF``.
+web differently or moved an instruction.  A body of the wrong length is still
+*searchable* -- the adapter ranks it by size difference first and differing words second
+-- but it is never a match: the gate refuses such a unit, and only ``0`` is success.
+A run whose best candidate is the wrong length says so (``N bytes short``/``long``).
 
 The search is decomp-permuter's (``simonlindholm/decomp-permuter``, MIT), fetched and
 pinned by :mod:`toolchain.fetch`; the *scoring* is this tree's gate
@@ -123,6 +125,20 @@ def score_source(source: pathlib.Path, *, function=None, target=None) -> int:
     return candidate.score_file(source)
 
 
+def size_warning(candidate: adapter.Candidate, source: bytes) -> str | None:
+    """The line a wrong-length best candidate earns, or ``None`` when it is retail's size.
+
+    A finite score from a body of the wrong length is not progress towards a promotion:
+    the gate refuses that body, so the size is the next thing to fix, before any word
+    residue the search also reported.
+    """
+    gap = candidate.size_gap(source)
+    if not gap:
+        return None
+    return (f"best candidate is {abs(gap)} bytes "
+            f"{'short' if gap > 0 else 'long'}; fix the size before expecting 0")
+
+
 def search(candidate: adapter.Candidate, *, seconds: float, seed: int | None,
            scratch: pathlib.Path, keep_prob: float = KEEP_PROB,
            log=print) -> tuple[int, pathlib.Path | None]:
@@ -191,6 +207,12 @@ def search(candidate: adapter.Candidate, *, seconds: float, seed: int | None,
         if best_score == 0:
             break
     log(f"evaluated {tried} candidate(s) in {seconds:.0f}s")
+    # One extra measurement, only when the run did not converge: a finite score is not a
+    # promotion if the best candidate's body is not retail's size, and that has to be
+    # said out loud or the number reads as a word residue.
+    warning = size_warning(candidate, (best_path or base_path).read_bytes())
+    if warning:
+        log(warning)
     return best_score, best_path
 
 
@@ -238,7 +260,12 @@ def main(argv=None) -> int:
     print(f"pair: {candidate.compiler_version} {' '.join(candidate.flags)}")
 
     if args.score_only:
-        print(candidate.score_file(candidate.tu.source))
+        score = candidate.score_file(candidate.tu.source)
+        print(score)
+        if score:
+            warning = size_warning(candidate, candidate.tu.source.read_bytes())
+            if warning:
+                print(warning, file=sys.stderr)
         return 0
 
     scratch = pathlib.Path(args.scratch) if args.scratch else \
@@ -263,7 +290,7 @@ def main(argv=None) -> int:
               + (f" ({path})" if path else " (the committed source already matches)"))
         return 0
     if path is not None:
-        print(f"best: {path} ({best} word(s) differ)"
+        print(f"best: {path} (score {best})"
               f"\napply it by hand: the permuter's output is pretty-printed, and its "
               f"lines are not retail's")
     else:

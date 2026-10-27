@@ -12,11 +12,16 @@ it deliberately answers with the gate's own evidence instead of a disassembly di
   laid at retail's addresses exactly as the ``cc`` edge does it;
 * the expected words are read from the split splat generated for the function, and
   cross-checked against the pinned retail image, so a stale split cannot score silently;
-* the score is the number of 32-bit words that differ, over the target function's span.
+* the score is the number of 32-bit words that differ, over the target function's span; a
+  target body of another length is ranked by its size gap first (search only, below).
 
-A candidate that cannot be placed at all -- mwcc rejects it, a datum it defines stops
-being retail's, or one of its bodies is not retail's length -- is
-:data:`PENALTY_INF`, the permuter's own word for "unscoreable".
+A candidate the gate cannot use -- mwcc rejects it, a datum it defines stops being
+retail's, or a body *other than the target* is not retail's length -- is
+:data:`PENALTY_INF`, the permuter's own word for "unscoreable".  The *search* needs one
+exception: when the target body itself is not retail's length it still gets a finite rank
+(:func:`rank`: bytes of size mismatch first, differing words second), so a size-blocked
+unit can be searched.  The gate is untouched -- ``compile.py`` still refuses such a unit,
+and ``0`` still means retail's words *and* retail's length.
 
 Usage::
 
@@ -48,6 +53,16 @@ from toolchain import compile as cc, fetch, probe  # noqa: E402
 #: The permuter's word for a candidate that cannot be scored (its own ``PENALTY_INF``):
 #: a compile the compiler refused, or a placement the build would refuse.
 PENALTY_INF = 10 ** 9
+
+#: What one byte of body-size mismatch costs in the search's rank.  The rank is
+#: ``abs(len - retail) * SIZE_WEIGHT + differing words``, so any candidate of retail's
+#: length beats any candidate that is not.  ``SIZE_WEIGHT`` is one more than the largest
+#: word count a body can have: ``.text`` is 4 MiB, i.e. at most ``2**20`` words, so a
+#: same-size candidate's worst rank (all words differ) stays below ``2**21`` and
+#: therefore below one byte of mismatch.  The gate never sees this number: it refuses a
+#: body of the wrong length (:func:`toolchain.compile.placed_text`), and only
+#: :func:`rank` -- the *search* -- tolerates one.
+SIZE_WEIGHT = 1 << 21
 
 #: One per-instruction comment in a splat split: ``/* <file offset> <address> <word> */``,
 #: the word printed in the order the bytes have in the image (little-endian).
@@ -152,6 +167,22 @@ def split_words(tu: cc.Tu, function: cc.Function, target) -> bytes:
     return bytes(words[:function.size])
 
 
+def rank(words: bytes, expected: bytes) -> int:
+    """The search's rank: bytes of size mismatch first, differing words second.
+
+    ``0`` still means exactly ``expected`` -- same length, same words.  A candidate of
+    another length is finite and strictly worse than any of retail's length (see
+    :data:`SIZE_WEIGHT`), so the merest size improvement is a step the search can see.
+    This is a *search* ordering, never a promotion: the gate refuses a body of the wrong
+    length (:func:`toolchain.compile.placed_text`).
+    """
+    gap = abs(len(words) - len(expected)) * SIZE_WEIGHT
+    span = min(len(words), len(expected))
+    diffs = sum(1 for at in range(0, span - 3, 4)
+                if words[at:at + 4] != expected[at:at + 4])
+    return gap + diffs
+
+
 class Candidate:
     """One unit, one function, and everything a candidate source is judged with.
 
@@ -232,8 +263,8 @@ class Candidate:
         base_start, base_end = body_span(base, self.function.name)
         return (base[:base_start] + text[start:end] + base[base_end:]).encode("latin-1")
 
-    def placed(self, source: bytes) -> bytes:
-        """The unit's ``.text`` with ``source`` compiled through the recorded pair."""
+    def _object(self, source: bytes):
+        """Compile ``source`` as this unit; return the object and retail's ``$gp``."""
         self.staged.parent.mkdir(parents=True, exist_ok=True)
         self.staged.write_bytes(self.commit(source))
         recorded = cc.recorded_name(self.staged)
@@ -245,6 +276,15 @@ class Candidate:
         mw = cc.MWObject(self.object, self.manifests)
         gp = cc.gp_value(self.target.elf)
         self.manifests.prefer_source(self.tu.file)
+        return mw, gp
+
+    def placed(self, source: bytes) -> bytes:
+        """The unit's ``.text`` with ``source`` compiled through the recorded pair."""
+        mw, gp = self._object(source)
+        return self._placed_text(mw, gp)
+
+    def _placed_text(self, mw, gp) -> bytes:
+        """The gate's placement: data verified, every body retail's length."""
         with contextlib.redirect_stdout(io.StringIO()), \
                 contextlib.redirect_stderr(io.StringIO()):
             cc.verify_data(mw, self.manifests, self.tu.file, self.target)
@@ -253,22 +293,59 @@ class Candidate:
                                                         gp, groups)
         return text
 
+    def _body(self, mw, gp) -> bytes:
+        """The target body's relocated instructions, whatever its length.
+
+        The gate refuses a body that is not the function's retail size; this is the same
+        compile and the same relocation *without* that refusal, so a size-blocked unit
+        can be ranked.  It is never a promotion: :func:`rank` scores it.
+        """
+        groups = mw.groups(self.tu)
+        section = groups[self.function.name][0]
+        return cc.relocate(mw.data(section), mw.relocs.get(section, ()),
+                           lambda symbol: mw.resolve(self.tu, symbol),
+                           f"{self.function.name}.text", gp)
+
     def words(self, text: bytes) -> bytes:
         """The target function's words as they came out of the compile."""
         offset = self.function.address - self.tu.address
         return text[offset:offset + len(self.expected)]
 
-    def score(self, source: bytes) -> int:
-        """The number of words that differ from the split; ``0`` is a placed function."""
+    def rank_words(self, source: bytes) -> bytes | None:
+        """The target body's words for the search, or ``None`` when it is unscoreable.
+
+        One compile, then the gate's order: the body is relocated, and a body of another
+        length is the *one* refusal the search tolerates (:func:`rank` orders it).  A
+        body of retail's length is put through the gate proper -- data checked, every
+        body placed -- and any refusal there still means ``None``.  ``compile.py`` gets
+        no softer question: :func:`toolchain.compile.placed_text` still refuses a unit
+        whose body length is wrong, so this can rank such a unit but never promote it.
+        """
+        errors = (cc.Unusable, probe.ProbeError, FileNotFoundError, ValueError, KeyError)
+        self.refusal = None
         try:
-            text = self.placed(source)
-        except (cc.Unusable, probe.ProbeError, FileNotFoundError, ValueError):
-            return PENALTY_INF
-        mine = self.words(text)
-        if len(mine) != len(self.expected):
-            return PENALTY_INF
-        return sum(1 for at in range(0, len(mine), 4)
-                   if mine[at:at + 4] != self.expected[at:at + 4])
+            mw, gp = self._object(source)
+            body = self._body(mw, gp)
+        except errors as exc:
+            self.refusal = str(exc)
+            return None
+        if len(body) != len(self.expected):
+            return body
+        try:
+            return self.words(self._placed_text(mw, gp))
+        except errors as exc:
+            self.refusal = str(exc)
+            return None
+
+    def size_gap(self, source: bytes) -> int | None:
+        """Bytes ``source``'s target body is short of retail's (negative: too large)."""
+        words = self.rank_words(source)
+        return None if words is None else len(self.expected) - len(words)
+
+    def score(self, source: bytes) -> int:
+        """The search's rank; ``0`` means retail's words at retail's length."""
+        words = self.rank_words(source)
+        return PENALTY_INF if words is None else rank(words, self.expected)
 
     def score_file(self, path) -> int:
         return self.score(pathlib.Path(path).read_bytes())
@@ -286,8 +363,9 @@ class WordScorer:
     The permuter asks a scorer for ``(score, dump)`` over an artifact its compiler
     produced; here the artifact holds the candidate's words for the target function, so
     the comparison is the split's words against the object's -- nothing is disassembled
-    and no instruction heuristic is involved.  ``hash`` is the words themselves, which
-    is what the permuter deduplicates candidates by.
+    and no instruction heuristic is involved.  An artifact of another length is ranked,
+    not rejected: :func:`rank` makes the size gap come first.  ``hash`` is the words
+    themselves, which is what the permuter deduplicates candidates by.
     """
 
     PENALTY_INF = PENALTY_INF
@@ -303,19 +381,17 @@ class WordScorer:
         except OSError:
             return PENALTY_INF, ""
         expected = self.candidate.expected
-        if len(words) != len(expected):
-            return PENALTY_INF, words.hex()
-        diff = sum(1 for at in range(0, len(words), 4)
-                   if words[at:at + 4] != expected[at:at + 4])
-        return diff, words.hex()
+        return rank(words, expected), words.hex()
 
 
 def compiler_for(candidate: Candidate):
     """The permuter's ``Compiler`` contract: candidate source text in, artifact out.
 
-    The artifact is not a relocatable object: it is the target function's placed words,
-    written by the compile this module already owns.  ``None`` is the permuter's "cannot
-    compile" -- a rejected source, or a placement the build would refuse.
+    The artifact is not a relocatable object: it is the target function's instruction
+    words, written by the compile this module already owns.  ``None`` is the permuter's
+    "cannot compile" -- a rejected source, or a placement the build would refuse for any
+    reason *but* the target body's length: a wrong-length body is measurable
+    (:meth:`Candidate.rank_words`) so the search can rank it.
     """
     return CandidateCompiler(candidate)
 
@@ -328,15 +404,15 @@ class CandidateCompiler:
         self._serial = 0
 
     def compile(self, source, *, show_errors=False):
-        try:
-            text = self.candidate.placed(source.encode())
-        except (cc.Unusable, probe.ProbeError, FileNotFoundError, ValueError) as exc:
+        words = self.candidate.rank_words(source.encode())
+        if words is None:
             if show_errors:
-                print(f"permute: candidate refused: {exc}", file=sys.stderr)
+                print(f"permute: candidate refused: "
+                      f"{self.candidate.refusal or 'unplaceable'}", file=sys.stderr)
             return None
         self._serial += 1
         artifact = self.candidate.scratch / f"candidate-{self._serial}.words"
-        artifact.write_bytes(self.candidate.words(text))
+        artifact.write_bytes(words)
         return str(artifact)
 
 
