@@ -28,11 +28,18 @@ ours from the object the compile just wrote.  Attribution is a *fact* about one 
 own records, never a guess about the other's: a slot with no local in that side's DWARF
 prints as ``0xOFF (unattributed)``.
 
-The one equality that is not DWARF's is a *slot move*: when the two bodies have the same
-word count and an aligned pair of accesses differs only in the ``$sp`` offset, the tool
-reports ``retail 0xA0 -> ours 0xB0`` -- that is the compiler's own allocation, read off
-the code.  A local the DWARF names on our side (``def_y`` at ``0xB0``) is printed with
-it, and retail's offset stays unattributed unless retail's DWARF homes it.
+The one equality that is not DWARF's is a *slot move*: two slots are the same slot put
+elsewhere when the multiset of accesses to them -- mnemonic and register, which the
+schedule does not change -- is equal and unique on both sides.  The tool then reports
+``retail 0xA0 -> ours 0xB0``, that being the compiler's own allocation read off the code;
+a local our DWARF names at ``0xB0`` (``def_y``) is printed with it, and retail's offset
+stays unattributed unless retail's DWARF homes it.  A signature two slots share is
+ambiguous and is not paired at all.
+
+The register tally at the end covers the case this map cannot: a body whose *caller*-saved
+colouring moved.  It is printed only when the two bodies are the same code with a
+different colouring (few unmasked differences); a structural difference is reported by
+the word count instead.
 
 ``--search N`` exists for the one experiment that is cheap and occasionally decisive:
 permuting the *declarations of the address-taken locals only* (the order is fixed and
@@ -1125,7 +1132,11 @@ def resolve_target(name=None):
 def _source_and_pair(args, target, manifests):
     """``(tu, pair, source)``: the recorded pair, or the draft's explicit one."""
     if not args.draft:
-        tu = manifests.tu_named(args.unit)
+        try:
+            tu = manifests.tu_named(args.unit)
+        except cc.Unusable as error:
+            raise Missing(f"{error}; if the source is a draft, pass --draft PATH with "
+                          f"--compiler and --flags") from error
         return tu, require_promoted(tu, target), tu.source
     source = pathlib.Path(args.draft)
     if not source.is_file():
