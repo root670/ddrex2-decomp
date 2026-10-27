@@ -931,6 +931,9 @@ DDREX2P = Target(
         # values, while `-enum int` (the default) records 4 bytes each - 0x24 over retail's
         # pinned span, and a type reference no signature can pair because debug_set._target_key
         # carries AT_byte_size.  The header's shape is not involved (measured both ways).
+        # Its two jump tables (@53 at 0x008011F0, @121 at 0x00801220) still need an overlay
+        # data placement: the module link places .text only and plan_data refuses an address
+        # no main split carries, so they are not in the ledger yet.
         ("src/CS/staffroll/cs_staffroll.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -enum min"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
