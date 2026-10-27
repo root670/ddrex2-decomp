@@ -1027,6 +1027,19 @@ Measured on `AM/s573/doll/model2.c`, where four draw bodies became exact:
 - **A comparison constant reused as an argument** is passed as the literal: `if (i == 0xF) call(…, 0xF, …)`
   lets MWCC reuse the compare constant and closes the last words.
 
+### 18. Check for a twin before writing a body
+
+Two splits with the same instruction words need the same source. Signature every split's words
+(`re.findall(r"/\* [0-9A-F]+ [0-9A-F]+ ([0-9A-F]{8}) \*/", text)`) and group them: this tree has
+**57 identical-body groups covering 349 splits**, and five groups have a body that is already
+*promoted*, so their unpromoted members are copies rather than reconstructions —
+`NetWin_VSWinEnd`/`NetWin_ListdtlEnd`/`NetWin_ListbkEnd`/`NetWin_PerPointEnd` share
+`NetWin_DHeadEnd`'s body, `adv_ds_display_disap` and `fp_ss_display_apper` share
+`fp_es_warn_disap`'s, `NetWin_ListdtlSetPlayerListFile` is `NetWin_Listdtl2SetPlayerListFile`'s
+twin. A twin gives the exact body (and its `.line` shape) for free; verify it, do not retype it.
+Caveat: the group is *whole-function* identical only — a body that merely looks similar is not a
+twin, and a twin in a unit with a different compiler pair still needs its own measurement.
+
 ## Source permutation: `tools/units/permute.py`
 
 Measured on this tree's parked set (five bodies, ~29,000 candidates): it did **not** close a
