@@ -1277,6 +1277,22 @@ An overlay unit is now promotable end to end, and `src/network/net_router/net_ro
   and links it to `out/overlays/<module>.elf`. That second link is what `verify --tu` reads the
   built side of an overlay unit's `.text` from; the image's own `ld`/`bin`/`cat` edges are
   unchanged.
+* **Its data too.** A promoted unit's initialised data leaves its object as one `.datum.*`
+  section per datum (`compile.data_section`'s encoding of the name; a compiler-generated jump
+  table included: `@53`/`@121` are `cs_staffroll.c`'s), and `data_placements.txt` names the
+  retail address exactly as it does for a main-image datum.
+  `configure.placements_by_module` partitions the ledger by *where the record's bytes are*, which
+  the geometry answers: a main-image address stays with the main script, an address in an
+  overlay window goes to that module's link (`placements_by_module` refuses one whose source
+  loads in another module, one inside the window's code, and one whose extent leaves the blob).
+  Each such record is placed at its address with `AT` = its offset in the blob, asserted to be
+  its compiled length, and bounded by the module's **data end** (`vaddr + filesize`, the last
+  initialised byte -- the bss tail after it holds no file bytes) with the record's own extent.
+  `cc` proves the bytes first, against the file the *address* is in: the disc image inside the
+  module's window, the ELF elsewhere -- an overlay unit can define a datum retail placed in the
+  main image (`infodoll.c`'s `crect` at 0x002DDE60 is such a record, and the main link places
+  it). `cs_staffroll.c` is the first unit promoted with both halves: `.text` and the two jump
+  tables, all three verdict lines green.
 * **The tools see the same module.** `measure.py` looks for a unit's splits under
   `tu.split_directory`, `twins.py` names an overlay function through
   `unplaced_symbols.txt`'s `(module, address)` records (and reads that module's split tree),

@@ -703,6 +703,82 @@ def placement_inputs(placements, built_from):
             for record in placements]
 
 
+def placements_by_module(placements, promotions, geometry):
+    """Partition the data ledger by the link that owns each record.
+
+    A record is linked wherever its *bytes* are, and the geometry says where that is: an
+    address in the file-backed image is main's, an address in an overlay window is that
+    module's.  The two links are not interchangeable -- the main script asserts ``.main`` to
+    the file-backed image's exact size, and the overlay reservation in it is zero-fill, so an
+    overlay datum listed there has nowhere to go (and a main datum listed in a module's link
+    would be placed at a negative offset into a blob that does not hold it).
+
+    The ``source`` resolves *which* module when several windows share one base (seven of this
+    target's ten load at 0x7F0000): the promoted unit's own module has to be one of the
+    windows that holds the address.  A record in no window and in no loadable image is
+    refused, and so is one whose source is an overlay unit of a module whose window does not
+    contain it.
+
+    Note that "source is an overlay unit" does not by itself mean "belongs to the module":
+    `opt_doll.c`'s and `infodoll.c`'s `crect` are initialised data in the *main* image
+    (0x002DDEE8, 0x002DDE60) and the main link places them today; the address is what
+    decides, because the address is where retail's bytes are.
+
+    Returns ``(main, {module: [(promotion, record), ...]})``.  Every module-owned record is
+    checked against the window it now has to fit: inside the module's data (not its code),
+    and its whole retail extent -- the bytes plus the zero fill retail shows after them --
+    inside the blob's initialised data.  Extents of one module must not overlap, which is
+    the ledger's own invariant for the main image too.
+    """
+    module_of = {promotion.file: promotion for promotion in promotions}
+    main, owned = [], {}
+    for record in placements:
+        begin, end = record["address"], record["address"] + record["extent"]
+        promotion = module_of.get(record["source"])
+        windows = geometry.overlays_at(begin)
+        if not windows:
+            if not (geometry.loadable_vram <= begin and end <= geometry.bss_vram):
+                raise ConfigError(
+                    f"{record['name']} ({record['source']}) spans 0x{begin:X}..0x{end:X}, "
+                    f"which is neither in the loadable image "
+                    f"(0x{geometry.loadable_vram:X}..0x{geometry.bss_vram:X}) nor in any "
+                    f"overlay window this target's geometry records: nothing holds its bytes")
+            main.append(record)
+            continue
+        overlay = next((window for window in windows
+                        if promotion is not None and window.name == promotion.module), None)
+        if overlay is None:
+            names = ", ".join(window.name for window in windows)
+            where = (f"{promotion.file}'s module is {promotion.module}"
+                     if promotion is not None and promotion.is_overlay
+                     else "its source is no promoted unit of an overlay module")
+            raise ConfigError(
+                f"{record['name']} ({record['source']}) is at 0x{begin:X}, inside overlay "
+                f"{names}, but {where}: the address names the blob the datum's bytes are in, "
+                f"and only that module's link can place them")
+        data_end = overlay.vaddr + overlay.filesize
+        if begin < overlay.data_vram:
+            raise ConfigError(
+                f"{record['name']} ({record['source']}) is at 0x{begin:X}, inside "
+                f"{overlay.name}'s code (0x{overlay.code_vram:X}..0x{overlay.data_vram:X}); a "
+                f"datum has to lie in the module's data, which is where its bytes are")
+        if end > data_end:
+            raise ConfigError(
+                f"{record['name']} ({record['source']}) spans 0x{begin:X}..0x{end:X}, past "
+                f"{overlay.name}'s data end 0x{data_end:X}: the module's link can only place "
+                f"bytes the blob holds")
+        owned.setdefault(overlay.name, []).append((promotion, record))
+    for module, records in owned.items():
+        records.sort(key=lambda item: item[1]["address"])
+        for (_, before), (_, after) in zip(records, records[1:]):
+            if before["address"] + before["extent"] > after["address"]:
+                raise ConfigError(
+                    f"{module}: {before['name']} at 0x{before['address']:X} claims "
+                    f"{before['extent']:#x} bytes and overlaps {after['name']} at "
+                    f"0x{after['address']:X}; two placements cannot own one address")
+    return main, owned
+
+
 def cut_split(name, text, start, cuts):
     """Split one split's assembler text around the byte ranges a placement owns.
 
@@ -1126,6 +1202,11 @@ def pinned_ld_script(code, aliases, promotions=(), target=None, geometry=None,
     ``data`` is ``[(address, object, section)]`` for the compiled datum placed at its retail
     address, and ``pads`` ``[(address, piece path)]`` for the zero fill retail shows to the
     recorded extent.  Every entry is listed by address, so the script still *is* the layout.
+
+    Every placement here is a *main-image* one: a datum a promoted unit of an overlay module
+    defines belongs to that module's own link (`overlay_link_script`), and `configure` hands
+    this script only the ledger's main half (`placements_by_module`).  `.main` is asserted to
+    the file-backed image's exact size, so an overlay datum listed here has nowhere to go.
     """
     replacements = replacements or {}
     data = list(data)
@@ -1191,7 +1272,9 @@ OVERLAY_LD_HEADER = """\
  * One overlay blob's link: every promoted unit of module {module}, in address order, each
  * pinned to the virtual address its code sits at inside the window
  * 0x{vaddr:08X}..0x{end:08X} (code ends at 0x{code_end:08X}), and each asserted to fill
- * exactly the extent of the splits it replaces.
+ * exactly the extent of the splits it replaces.  The same units' placed data follows, at the
+ * addresses the data ledger records -- a datum a module's own object defines belongs to this
+ * link, not to the main image's, whose zero-fill reservation maps no bytes there.
  *
  * This link is NOT the image.  The blob's bytes live in the disc image at 0x{image_offset:X}
  * (the DATA*.BIN the module loads from), the build never rewrites them, and out/{elf} is
@@ -1213,13 +1296,33 @@ def overlay_section(promotion) -> str:
     return f"ovl_{promotion.module}_{pathlib.PurePosixPath(promotion.file).stem}"
 
 
-def overlay_link_script(overlay, placements, target=None) -> str:
+def overlay_data_section(promotion, record) -> str:
+    """The output section one placed *datum* gets in its module's link.
+
+    Named from the unit's own section (:func:`overlay_section`) and the datum: a
+    literal-pool index is numbered per object, so two sources of one module can each place
+    ``@53`` at their own address, and selecting the object's section by name alone would make
+    the two one wildcard.  The name in the *object* is :func:`compile.data_section`'s; this is
+    the output section the script gives it.
+    """
+    return (f"{overlay_section(promotion)}_data_"
+            f"{cc.data_section(record['name']).removeprefix('.datum.')}")
+
+
+def overlay_link_script(overlay, placements, target=None, data=()) -> str:
     """The linker script that places one module's promoted objects inside its window.
 
     ``placements`` is ``[(promotion, (start, end))]`` -- the address the unit's first function
     sits at and the end of the splits it replaces, both from ``compile.split_extent``, so the
     extent asserted here is the retail one and not a number this script invents.  Each
     section's LMA is its offset in the blob, which is where the image keeps those bytes.
+
+    ``data`` is ``[(promotion, record)]`` for the ledger records the module *owns* -- a
+    datum whose ``source`` is one of its promoted units (see :func:`placements_by_module`).
+    Each is placed at the retail address the record names, in a section of its own, asserted
+    to be the record's compiled length and bounded by the window's data end: a datum at
+    0x008011F0 belongs to the blob's data, which the main image's zero-fill reservation
+    cannot place and the module's own link can.
     """
     target = target or TARGET
     lines = [OVERLAY_LD_HEADER.format(
@@ -1245,6 +1348,30 @@ def overlay_link_script(overlay, placements, target=None) -> str:
         lines.append(f"  ASSERT(ADDR(.{section}) + SIZEOF(.{section}) <= "
                      f"0x{overlay.code_end_vram:X}, \"{promotion.file} runs past "
                      f"{overlay.name}'s code end\")\n")
+    data_end = overlay.vaddr + overlay.filesize
+    for promotion, record in data:
+        section = overlay_data_section(promotion, record)
+        if section in names:
+            raise ConfigError(
+                f"two data placements of overlay {overlay.name} would share the link "
+                f"section .{section}: " + ", ".join(
+                    f"{other.file}'s {other_record['name']}"
+                    for other, other_record in data
+                    if overlay_data_section(other, other_record) == section))
+        names.add(section)
+        start = record["address"]
+        lines.append(f"  .{section} 0x{start:08X} : AT(0x{start - overlay.vaddr:08X}) "
+                     f"SUBALIGN(1)\n  {{\n    {promotion.object}"
+                     f"({cc.data_section(record['name'])})\n  }}\n")
+        lines.append(f"  ASSERT(SIZEOF(.{section}) == 0x{record['size']:X}, "
+                     f"\"{promotion.file}'s {record['name']} is not the "
+                     f"{record['size']:#x} bytes the ledger places\")\n")
+        # The extent is the retail span the datum owns -- its bytes plus the zero fill
+        # retail shows before the next datum -- so it is what the window has to hold, not
+        # the compiled length alone.
+        lines.append(f"  ASSERT(ADDR(.{section}) + 0x{record['extent']:X} <= "
+                     f"0x{data_end:08X}, \"{promotion.file}'s {record['name']} runs past "
+                     f"{overlay.name}'s data end\")\n")
     lines.append("  /DISCARD/ : { *(*) }\n}\n")
     return "".join(lines)
 
@@ -1549,12 +1676,14 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
         sources, target.splat_symbols,
         [target.undefined_syms, target.undefined_funcs])
     placements = data_placements(target)
+    main_placements, module_placements = placements_by_module(placements, promoted, geometry)
     replacements = {}
-    pieces, pads, moved = plan_data(sources, code, geometry, placements, replacements)
+    pieces, pads, moved = plan_data(sources, code, geometry, main_placements, replacements)
     aliases = sorted(dict.fromkeys(aliases + moved), key=lambda item: (item[1], item[0]))
     built_from = {promotion.file: promotion.object for promotion in promoted}
-    data = placement_inputs(placements, built_from)
-    data_sources = sorted({record["source"] for record in placements} - set(built_from))
+    data = placement_inputs(main_placements, built_from)
+    data_sources = sorted({record["source"] for record in main_placements}
+                          - set(built_from))
     versions = {version for version, _flags in target.build_table().values()}
     data_compiler = (versions.pop() if len(versions) == 1 else cc.fetch.REQUIRED)
     write_if_different(target.ld_script,
@@ -1568,15 +1697,25 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
         for promotion in units:
             tu = manifests.tu_named(promotion.file)
             placements_of.append((promotion, cc.split_extent(tu, manifests)))
-        script = overlay_link_script(overlay, placements_of, target)
+        records = module_placements.get(overlay.name, [])
+        script = overlay_link_script(overlay, placements_of, target, data=records)
         write_if_different(target.overlay_ld_script(overlay.name), script)
         # ninja does not create an edge's output directory, and `ld` will not either.
         target.overlay_elf(overlay.name).parent.mkdir(parents=True, exist_ok=True)
+        # Every object the script selects is a link input: one section of a promoted unit's
+        # object is not an input the module named anywhere, and `ld` will not find it.
+        objects_of_module = [promotion.object for promotion in units]
+        for promotion, _record in records:
+            if promotion.object not in objects_of_module:
+                objects_of_module.append(promotion.object)
         overlay_links.append((overlay.name, target.overlay_ld_script(overlay.name),
-                              [promotion.object for promotion in units]))
-        print(f"configure: overlay {overlay.name}: "
-              + ", ".join(f"{promotion.file} at 0x{start:08X}..0x{end:08X}"
-                          for promotion, (start, end) in placements_of))
+                              objects_of_module))
+        placed = ", ".join(f"{promotion.file} at 0x{start:08X}..0x{end:08X}"
+                           for promotion, (start, end) in placements_of)
+        datums = ", ".join(f"{record['name']} at 0x{record['address']:08X}"
+                           for _promotion, record in records)
+        print(f"configure: overlay {overlay.name}: " + placed
+              + (f"; data {datums}" if datums else ""))
 
     ninja = ninja_text(splits, databins, objects_only, promoted, target, geometry,
                        pieces=pieces, pads=pads, data_sources=data_sources,

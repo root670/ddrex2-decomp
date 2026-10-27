@@ -30,3 +30,7 @@ D_0102FACC = 0x0102FACC; // source:src/network/net_game/net_game_help.c
 @111 = 0x002DDF90; // source:src/CS/workout/workout_user.c
 @179 = 0x00801290; // source:src/CS/workout/workout_user.c
 @189 = 0x002DDF88; // source:src/CS/workout/workout_user.c
+isreMainStep = 0x002DE59C; // source:src/CS/staffroll/cs_staffroll.c
+isreReadStep = 0x002DE5A0; // source:src/CS/staffroll/cs_staffroll.c
+isreSdReadStep = 0x002DE5A4; // source:src/CS/staffroll/cs_staffroll.c
+stepwait$* = 0x002DE5A8; // source:src/CS/staffroll/cs_staffroll.c

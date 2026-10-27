@@ -207,3 +207,35 @@ def test_a_unit_outside_its_modules_code_is_refused(tmp_path):
     with pytest.raises(cc.Unusable) as refusal:
         cc.split_extent(tu, manifests)
     assert "not the module its DWARF says" in str(refusal.value)
+
+
+# -- data: the file that holds a datum's bytes ------------------------------------------
+
+
+def test_a_datum_is_read_from_the_file_its_address_is_in():
+    """A promoted overlay unit's initialised data is a `.datum.*` section of its object, and
+    `verify_data` proves it against retail before the link places it.  Which file answers is
+    the *address's* answer: inside the unit's module window the bytes are the disc blob's,
+    anywhere else (a main-image datum an overlay unit defines -- `infodoll.c`'s `crect` is the
+    measured case) they are the ELF's, and the ELF's overlay reservation is zero-fill, so a
+    datum must never be compared with the ELF at an overlay address."""
+    calls = []
+
+    class Retail:
+        def code(self, address, size, overlay=None):
+            calls.append((address, size, overlay))
+            return bytes(size)
+
+    data_end = OVERLAY.vaddr + OVERLAY.filesize
+    cc.retail_datum(Retail(), OVERLAY, CODE_END + 0x10, 0x24)
+    cc.retail_datum(Retail(), OVERLAY, 0x00108000, 0x8)
+    cc.retail_datum(Retail(), None, 0x00108000, 0x8)
+    assert calls == [(CODE_END + 0x10, 0x24, OVERLAY),
+                     (0x00108000, 0x8, None),
+                     (0x00108000, 0x8, None)]
+    # The blob's own end is its last byte, not the window's zero-filled tail.
+    assert OVERLAY.filesize < OVERLAY.memsz
+    cc.retail_datum(Retail(), OVERLAY, data_end - 0x4, 0x4)
+    assert calls[-1] == (data_end - 0x4, 0x4, OVERLAY)
+    cc.retail_datum(Retail(), OVERLAY, data_end, 0x4)
+    assert calls[-1] == (data_end, 0x4, None), "past the blob it is not the blob's byte"

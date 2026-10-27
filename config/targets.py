@@ -931,6 +931,15 @@ DDREX2P = Target(
         # supplied by a dead-stripped probe the adoption then drops.
         ("src/CS/workout/workout_user.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x840 (2104 bytes plus retail's 8-byte trailing nop pad), four bodies
+        # word-exact; .line adopted; .debug retail's 0xC32 / 60 DIEs byte for byte after
+        # adoption.  Overlay info_rel4cd.  `-enum min` is REQUIRED: retail's enumeration_type
+        # DIEs are AT_byte_size 1 with 1-byte values, while `-enum int` (the default) records
+        # 4 bytes each - 0x24 over retail's pinned span, and a type reference no signature can
+        # pair because debug_set._target_key carries AT_byte_size.  Its two jump tables are
+        # placed in the module's own link (@53, @121).
+        ("src/CS/staffroll/cs_staffroll.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -enum min"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",

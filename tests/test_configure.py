@@ -774,6 +774,108 @@ def test_two_units_of_one_module_get_two_sections(tmp_path):
     assert ".ovl_probe_rel4cd_b 0x002000A0" in script
 
 
+def datum(promotion_, name, address, size, extent):
+    return dict(name=name, address=address, size=size, extent=extent,
+                source=promotion_.file)
+
+
+def test_an_overlay_link_places_a_datum_at_its_recorded_address():
+    """A module-owned datum gets a section of its own -- selecting `.text` would not carry it,
+    and selecting the object's `.data` would drag every other datum along -- at the retail
+    address the ledger records, with its blob offset as the LMA, its compiled length asserted,
+    and its whole retail extent bounded by the module's data end."""
+    unit = promotion(OVERLAY.name, "src/probe/ov.c", 0x00200080)
+    record = datum(unit, "@53", OVERLAY.data_vram + 0x10, 0x24, 0x30)
+    script = configure.overlay_link_script(
+        OVERLAY, [(unit, (0x00200080, 0x002000C0))], probe(), data=[(unit, record)])
+    section = ".ovl_probe_rel4cd_ov_data__4053"
+    assert (f"  {section} 0x00200150 : AT(0x00000150) SUBALIGN(1)\n  {{\n"
+            f"    build/src/probe/ov.c.o(.datum._4053)\n  }}\n") in script
+    assert f"ASSERT(SIZEOF({section}) == 0x24," in script
+    # The *extent* is what the window has to hold, not the compiled length alone.
+    assert (f"ASSERT(ADDR({section}) + 0x30 <= "
+            f"0x{OVERLAY.vaddr + OVERLAY.filesize:08X},") in script
+    # The unit's `.text` section still selects `.text` only: a datum is never dragged in by
+    # another section's wildcard.
+    assert "build/src/probe/ov.c.o(.text)\n" in script
+
+
+def test_two_datum_records_get_two_sections_even_with_one_name():
+    """A literal-pool index is numbered per object, so two units of one module can both place
+    `@53`; the section name carries the unit as well as the datum."""
+    first = promotion(OVERLAY.name, "src/probe/a.c", 0x00200080)
+    second = promotion(OVERLAY.name, "src/probe/b.c", 0x002000A0)
+    records = [(first, datum(first, "@53", OVERLAY.data_vram, 0x4, 0x4)),
+               (second, datum(second, "@53", OVERLAY.data_vram + 0x4, 0x4, 0x4))]
+    script = configure.overlay_link_script(OVERLAY, [], probe(), data=records)
+    assert ".ovl_probe_rel4cd_a_data__4053 " in script
+    assert ".ovl_probe_rel4cd_b_data__4053 " in script
+
+
+def overlay_unit(module, file, address):
+    return promotion(module, file, address)
+
+
+def test_the_data_ledger_is_partitioned_by_the_file_that_holds_the_bytes():
+    """The partition is the *address's* answer and, where several windows share a base, the
+    source's: `@53` at 0x00200150 is inside both probe windows and belongs to the module its
+    source is in; `crect` is an overlay unit's datum that retail placed in the main image, so
+    it stays main's."""
+    geo = overlay_geometry()
+    unit = overlay_unit(OVERLAY.name, "src/probe/ov.c", 0x00200080)
+    sibling = overlay_unit(SIBLING.name, "src/probe/other.c", 0x00200080)
+    records = [datum(unit, "@53", 0x00200150, 0x24, 0x30),
+               datum(unit, "crect", 0x00100100, 0x8, 0x8),
+               dict(name="table", address=0x00100400, size=0x10, extent=0x10,
+                    source="data/table.c")]
+    main, owned = configure.placements_by_module(records, [unit, sibling], geo)
+    assert [record["name"] for record in main] == ["crect", "table"]
+    assert owned == {OVERLAY.name: [(unit, records[0])]}
+
+
+def test_a_datum_in_a_window_its_source_does_not_load_in_is_refused():
+    geo = overlay_geometry()
+    main_unit = promotion("main", "src/probe/main.c", 0x00100000)
+    record = dict(name="@53", address=0x00200150, size=0x24, extent=0x30,
+                  source="src/probe/main.c")
+    with pytest.raises(configure.ConfigError, match="only that module's link"):
+        configure.placements_by_module([record], [main_unit], geo)
+
+
+def test_a_datum_in_no_window_and_no_loadable_image_is_refused():
+    geo = overlay_geometry()
+    record = dict(name="far", address=0x00300000, size=0x4, extent=0x4,
+                  source="data/far.c")
+    with pytest.raises(configure.ConfigError, match="nothing holds its bytes"):
+        configure.placements_by_module([record], [], geo)
+
+
+def test_an_overlay_datum_outside_the_blobs_data_is_refused():
+    geo = overlay_geometry()
+    unit = overlay_unit(OVERLAY.name, "src/probe/ov.c", 0x00200080)
+    # The window's code is split, never a datum's home.
+    code = dict(name="early", address=OVERLAY.code_vram, size=0x4, extent=0x4,
+                source="src/probe/ov.c")
+    with pytest.raises(configure.ConfigError, match="inside probe_rel4cd's code"):
+        configure.placements_by_module([code], [unit], geo)
+    # Past the end of the blob there are no bytes to place.
+    past = dict(name="late", address=OVERLAY.vaddr + OVERLAY.filesize - 0x4, size=0x4,
+                extent=0x8, source="src/probe/ov.c")
+    with pytest.raises(configure.ConfigError, match="data end"):
+        configure.placements_by_module([past], [unit], geo)
+
+
+def test_two_overlay_data_extents_that_overlap_are_refused():
+    geo = overlay_geometry()
+    unit = overlay_unit(OVERLAY.name, "src/probe/ov.c", 0x00200080)
+    records = [dict(name="@53", address=OVERLAY.data_vram, size=0x20, extent=0x30,
+                    source="src/probe/ov.c"),
+               dict(name="@54", address=OVERLAY.data_vram + 0x20, size=0x4, extent=0x8,
+                    source="src/probe/ov.c")]
+    with pytest.raises(configure.ConfigError, match="cannot own one address"):
+        configure.placements_by_module(records, [unit], geo)
+
+
 def test_overlay_splits_are_not_the_main_links(tmp_path, monkeypatch):
     """A module's splits live under `asm/nonmatchings/<module>/`, and the main link must never
     read them: their addresses are a blob's window, not the file-backed image's."""

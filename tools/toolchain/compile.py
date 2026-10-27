@@ -1801,10 +1801,13 @@ def _place_source(tu: Tu, manifests: Manifests, compiler_dir, wibo, flags, sourc
     manifests.prefer_source(tu.file)
     placed_data = []
     for name, address, size, extent, relocs in verify_data(mw, manifests, tu.file,
-                                                           manifests.target):
+                                                           manifests.target, tu=tu):
         body, section_relocs = _data_only_section(mw, name)
+        # The unit's own resolution, as its `.text` uses: a compiler-generated table's
+        # entries point at basic blocks of the unit's own code, which the manifests know by
+        # the object's section symbol, not by a name a ledger could hold.
         placed_data.append((name, body, section_relocs,
-                            lambda symbol: manifests.address_of(symbol.name)))
+                            lambda symbol: mw.resolve(tu, symbol)))
         print(f"compile: {tu.file}: {name} at 0x{address:08X} is the retail datum "
               f"({size:#x} bytes, {relocs} relocation(s), extent {extent:#x})",
               file=sys.stderr)
@@ -1926,20 +1929,52 @@ def _data_only_section(mw: MWObject, name: str):
     return body, mw.relocs.get(index, ())
 
 
-def verify_data(mw: MWObject, manifests: Manifests, source: str, target=None) -> list:
+def retail_datum(retail, module, address: int, size: int) -> bytes:
+    """The retail bytes of one datum: the module's blob only where its window holds it.
+
+    A datum's address decides which file answers.  Inside the unit's own module's window the
+    bytes are the ``DATA*.BIN`` blob's (:meth:`toolchain.retail.Retail.code` with the window),
+    and anywhere else they are the file-backed image's -- an overlay unit can define data
+    retail placed in the main image (`infodoll.c`'s `crect` at 0x002DDE60 is the measured
+    case), and the ELF's own reservation at an overlay address is zero-fill, so asking it for
+    one would compare the datum with an empty buffer.  ``module`` is the unit's
+    :class:`config.targets.Overlay`, or ``None`` for a main-image unit.
+    """
+    in_window = (module is not None
+                 and module.vaddr <= address < module.vaddr + module.filesize)
+    return retail.code(address, size, module if in_window else None)
+
+
+def verify_data(mw: MWObject, manifests: Manifests, source: str, target=None,
+                tu: Tu | None = None) -> list:
     """Check every data placement ``source`` defines against the retail bytes it names.
 
     The object's bytes are relocated symbolically (its relocations are not patched with retail
     addresses in the file), then compared byte for byte with the retail image at the recorded
     address, and the zero fill retail shows to the recorded extent is required to be zero.
     This is the local proof; G1 remains the whole-image backstop.
+
+    *Where* the retail bytes are is the address's answer, and only then the unit's:
+    :class:`toolchain.retail.Retail` reads the file-backed image for a main-image address and
+    a module's ``DATA*.BIN`` blob for one inside a module's window.  Neither is implied by the
+    unit alone -- an overlay unit can define a datum retail placed in the main image
+    (`infodoll.c`'s `crect` at 0x002DDE60 is main-image data), and an overlay address is a
+    zero-fill reservation in the ELF, so comparing against the ELF's zeros would pass on an
+    empty buffer.  ``tu`` is the translation unit the source is built into; when it is given,
+    its relocations are resolved the way its ``.text`` is (:meth:`MWObject.resolve`), which is
+    what a compiler-generated table needs -- its entries point at basic blocks in the unit's
+    own code, not at named data a ledger could name.  A data-only unit has no ``tu``: its
+    relocations name other data, which :meth:`Manifests.address_of` resolves.
     """
     target = target or manifests.target
     records = [r for r in data_placements(target) if r["source"] == source]
     if not records:
         return []
-    image = elf.Elf(str(target.elf))
+    retail = manifests.retail
+    module = None if tu is None else retail.overlay_of(tu)
     gp = gp_value(target.elf)
+    resolve = ((lambda symbol: mw.resolve(tu, symbol)) if tu is not None
+               else (lambda symbol: manifests.address_of(symbol.name)))
     report = []
     for record in records:
         body, relocs = _data_only_section(mw, record["name"])
@@ -1947,18 +1982,16 @@ def verify_data(mw: MWObject, manifests: Manifests, source: str, target=None) ->
             raise Unusable(
                 f"{source}: {record['name']} is {len(body):#x} bytes, the placement records "
                 f"{record['size']:#x}; the placement ledger and the C disagree")
-        placed = relocate(body, relocs,
-                          lambda symbol: manifests.address_of(symbol.name),
-                          f"{record['name']}.data", gp)
-        retail = image.read(record["address"], record["size"])
-        if placed != retail:
-            at = _first_difference(placed, retail)
+        placed = relocate(body, relocs, resolve, f"{record['name']}.data", gp)
+        theirs = retail_datum(retail, module, record["address"], record["size"])
+        if placed != theirs:
+            at = _first_difference(placed, theirs)
             raise Unusable(
                 f"{source}: {record['name']} is not the retail datum at "
                 f"0x{record['address']:08X}: first differing byte at +0x{at:X} "
-                f"({placed[at]:#04x} against {retail[at]:#04x})")
+                f"({placed[at]:#04x} against {theirs[at]:#04x})")
         pad = record["extent"] - record["size"]
-        fill = image.read(record["address"] + record["size"], pad)
+        fill = retail_datum(retail, module, record["address"] + record["size"], pad)
         if any(fill):
             raise Unusable(
                 f"{source}: the {pad:#x}-byte extent after {record['name']} is not zero in "

@@ -236,3 +236,5 @@ netwinperhed = 0x002C15D0; // size:0x3c extent:0x40 source:src/network/net_windo
 crect = 0x002DDEE8; // size:0x8 extent:0x8 source:src/CS/option/opt_doll.c
 crect = 0x002DDE60; // size:0x8 extent:0x8 source:src/CS/info/infodoll.c
 wk = 0x002DDE68; // size:0x4 extent:0x4 source:src/CS/info/infodoll.c
+@53 = 0x008011F0; // size:0x24 extent:0x30 source:src/CS/staffroll/cs_staffroll.c
+@121 = 0x00801220; // size:0x34 extent:0x38 source:src/CS/staffroll/cs_staffroll.c
