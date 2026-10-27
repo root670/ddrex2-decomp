@@ -180,7 +180,8 @@ static void ti_movie_play(void) {
     }
     val = (int)tmw->ct;
     tmw->disp_flg = 1;
-    i_ct = val % 2;
+    i_ct = val;
+    i_ct = i_ct % 2;
     if (i_ct == 0) {
         func_001BBBF8((unsigned int)buf, (unsigned char *)0x70000000, 0x3900);
         if (sceMpegGetPicture(&mpeg, tmw->cscBuff, 0x24C) < 0) tmw->disp_flg = 0;
@@ -201,32 +202,32 @@ static int ti_movie_work_set(unsigned int *addr) {
     unsigned char *tmp_addr;
 
     tmp_addr = (unsigned char *)addr;
-    tmw->vag_addr = (unsigned char *)addr;
-    tmw->buf[0] = (unsigned char *)addr + 0x100000;
-    tmw->buf[1] = (unsigned char *)addr + 0x200000;
-    tmw->buf[2] = (unsigned char *)addr + 0x300000;
-    tmw->buf[3] = (unsigned char *)addr + 0x400000;
-    tmw->buf[4] = (unsigned char *)addr + 0x500000;
-    tmw->buf[5] = (unsigned char *)addr + 0x600000;
-    sceMpegCreate(&mpeg, (unsigned char *)addr + 0x700000, 0xA7E00);
-    tmw->decTags = (anon_1_41 *)((unsigned char *)addr + 0x7A7E00);
-    tmw->cscBuff = (anon_2_41 *)((unsigned char *)addr + 0x7B5AC0);
-    return (int)((unsigned char *)addr + 0x848AC0) - (int)tmp_addr;
+    tmw->vag_addr = tmp_addr;
+    tmw->buf[0] = tmp_addr + 0x100000;
+    tmw->buf[1] = tmp_addr + 0x200000;
+    tmw->buf[2] = tmp_addr + 0x300000;
+    tmw->buf[3] = tmp_addr + 0x400000;
+    tmw->buf[4] = tmp_addr + 0x500000;
+    tmw->buf[5] = tmp_addr + 0x600000;
+    sceMpegCreate(&mpeg, tmp_addr + 0x700000, 0xA7E00);
+    tmw->decTags = (anon_1_41 *)(tmp_addr + 0x7A7E00);
+    tmw->cscBuff = (anon_2_41 *)(tmp_addr + 0x7B5AC0);
+    return (int)(tmp_addr + 0x848AC0) - (int)tmp_addr;
 }
 
 #pragma opt_propagation off
+#pragma opt_pulloutconstants off
 static void ti_movie_SetDecTag(void) {
-    anon_1_41 *list;
-    unsigned char *buff;
     anon_1_41 *tag;
+    unsigned char *buff;
     int i;
     int j;
+    anon_1_41 *list;
     int j4;
     int flag;
 
     tag = tmw->decTags;
     buff = (unsigned char *)tmw->cscBuff;
-    list = 0;
     tag[0].ul128 = 0;
     tag[0].ui32[0] = 0x10000003;
     tag[1].ul128 = 0;
@@ -240,6 +241,7 @@ static void ti_movie_SetDecTag(void) {
     tag[1].ul64[0] = 0x1000000010UL;
     tag[1].ul64[1] = 0x52;
     tag += 2;
+    list = 0;
     i = 0;
     do {
         j = 0;
