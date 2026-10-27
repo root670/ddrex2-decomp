@@ -924,6 +924,13 @@ DDREX2P = Target(
         # it the float constants pool to an unnamed @71); 2.4-001213 does not reproduce it.
         ("src/CS/info/infodoll.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x590, twelve bodies word-exact; .debug retail's 0x1616 / 118 DIEs byte-equal
+        # after adoption; .line 0x4F2 and AT_location adopted.  Overlay workout_rel4cd.  The
+        # accessors take `gw = &gwork[pno]` before the member load, Main's flag test is two
+        # assignments rather than one && chain, and an unreferenced unsigned char[12] type is
+        # supplied by a dead-stripped probe the adoption then drops.
+        ("src/CS/workout/workout_user.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",

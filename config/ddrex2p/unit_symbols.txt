@@ -26,3 +26,7 @@ D_01029FE4 = 0x01029FE4; // source:src/network/net_window/net_win_peruser.c
 D_01029FE4 = 0x01029FE4; // source:src/network/net_window/net_win_perpoint.c
 D_01029FE4 = 0x01029FE4; // source:src/network/net_game/net_game_help.c
 D_0102FACC = 0x0102FACC; // source:src/network/net_game/net_game_help.c
+@80 = 0x002DDF98; // source:src/CS/workout/workout_user.c
+@111 = 0x002DDF90; // source:src/CS/workout/workout_user.c
+@179 = 0x00801290; // source:src/CS/workout/workout_user.c
+@189 = 0x002DDF88; // source:src/CS/workout/workout_user.c
