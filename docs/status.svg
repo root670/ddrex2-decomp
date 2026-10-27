@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="610" viewBox="0 0 800 610" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 75 / 249 promoted</title>
-<desc>One square per translation unit, grouped by module. 30.1% of units, 9.37% of functions and 6.41% of code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 76 / 249 promoted</title>
+<desc>One square per translation unit, grouped by module. 30.5% of units, 9.43% of functions and 6.51% of code bytes are reconstructed.</desc>
 <rect width="800" height="610" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 75 / 249 units promoted (30.1%)</text>
-<text x="24" y="52" font-size="12" fill="#57606a">418 / 4,463 functions (9.37%) &#183; 104,576 / 1,631,596 code bytes (6.41%) &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 76 / 249 units promoted (30.5%)</text>
+<text x="24" y="52" font-size="12" fill="#57606a">421 / 4,463 functions (9.43%) &#183; 106,160 / 1,631,596 code bytes (6.51%) &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 units · 44/182 funcs · 9,424/67,808 bytes (13.9%)</text>
@@ -181,7 +181,7 @@
 <rect class="cell" data-state="untouched" x="39" y="326" width="12" height="12" rx="2" fill="#d0d7de"><title>src/gs/gs_vu0.c - 864 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="network">
-<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 30/82 units · 171/542 funcs · 38,352/208,732 bytes (18.4%)</text>
+<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 31/82 units · 174/542 funcs · 39,936/208,732 bytes (19.1%)</text>
 <rect class="cell" data-state="untouched" x="24" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net.c - 7,616 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_main.c - 2,480 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_type.c - 896 code bytes - untouched</title></rect>
@@ -237,7 +237,7 @@
 <rect class="cell" data-state="promoted" x="54" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_listdtl3.c - 1,952 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="69" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_infoboard.c - 224 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="84" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_rc.c - 9,728 code bytes - untouched</title></rect>
-<rect class="cell" data-state="partial" x="99" y="379" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_game/net_game_challenge.c - 1,584 code bytes - partial</title></rect>
+<rect class="cell" data-state="promoted" x="99" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_game/net_game_challenge.c - 1,584 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="114" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_infosel.c - 960 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="129" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_rccssel.c - 4,592 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="144" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_vs_win.c - 6,496 code bytes - untouched</title></rect>
