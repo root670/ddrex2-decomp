@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="656" viewBox="0 0 800 656" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 93/249 (37.3%) promoted</title>
-<desc>One square per translation unit, grouped by module. 93/249 (37.3%) units, 493/5,139 (9.6%) functions and 128,896/1,927,440 (6.7%) code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 94/249 (37.8%) promoted</title>
+<desc>One square per translation unit, grouped by module. 94/249 (37.8%) units, 500/5,139 (9.7%) functions and 129,660/1,927,440 (6.7%) code bytes are reconstructed.</desc>
 <rect width="800" height="656" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 93/249 (37.3%) units</text>
-<text x="24" y="52" font-size="12" fill="#57606a">493/5,139 (9.6%) functions &#183; 128,896/1,927,440 (6.7%) code bytes &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 94/249 (37.8%) units</text>
+<text x="24" y="52" font-size="12" fill="#57606a">500/5,139 (9.7%) functions &#183; 129,660/1,927,440 (6.7%) code bytes &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 (44.4%) units · 44/182 (24.2%) functions · 9,172/67,808 (13.5%) bytes</text>
@@ -45,7 +45,7 @@
 <rect class="cell" data-state="promoted" x="234" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/com_scrollbar.c - 1,344 code bytes - promoted</title></rect>
 </g>
 <g class="module" data-module="CS">
-<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 30/118 (25.4%) units · 153/1,256 (12.2%) functions · 44,748/641,036 (7.0%) bytes</text>
+<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 31/118 (26.3%) units · 160/1,256 (12.7%) functions · 45,512/641,036 (7.1%) bytes</text>
 <rect class="cell" data-state="untouched" x="24" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_e.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/bk_load.c - 116 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_j.c - 0 code bytes - untouched</title></rect>
@@ -156,7 +156,7 @@
 <rect class="cell" data-state="untouched" x="129" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_usrrpass.c - 7,204 code bytes - untouched</title></rect>
 <rect class="cell" data-state="partial" x="144" y="212" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/workout/workout_cursor.c - 756 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="159" y="212" width="12" height="12" rx="2" fill="#bf8700"><title>src/CS/workout/workout_menu.c - 3,316 code bytes - partial</title></rect>
-<rect class="cell" data-state="untouched" x="174" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/workout/workout_message.c - 764 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="174" y="212" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/workout/workout_message.c - 764 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="189" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_main.c - 3,276 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="204" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_co.c - 444 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="219" y="212" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/records/rec_top.c - 1,336 code bytes - untouched</title></rect>
