@@ -940,6 +940,11 @@ DDREX2P = Target(
         # placed in the module's own link (@53, @121).
         ("src/CS/staffroll/cs_staffroll.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -enum min"),
+        # .text 0x3A8, all eight bodies word-exact; .debug retail's 0x148D / 116 DIEs byte
+        # for byte after adoption; .line adopted (85 records against retail's 83); every
+        # local's AT_location adopted.  Overlay net_rel4cd, no data of its own.  No -enum min.
+        ("src/network/usa_client/ddrex2_usa_gate.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
