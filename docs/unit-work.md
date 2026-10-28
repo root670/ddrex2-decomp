@@ -1337,8 +1337,15 @@ take rule 13's `asm { }` route:
 - All five installed builds emit the same DIE set, so it is not a pair question; adoption can
   drop records but never add them.
 
+Measured again on `AM/s573/doll/vu0.c` (three bodies, 108/108 words): retail's chunk is 28 DIEs
+with **16** `formal_parameter`s; naming the ones whose home register does appear (`ll`,`lc`,`n`,
+and `m0`/`n` in `xyz_make`) gets 8 of them, and the rest split into 6 blocked by the alias
+collision (`v0`/`v1`, and `m0` where `$5` occurs in no word at all - naming it changes an
+instruction: measured as 4 and 6 differing words) and 2 with no encodable register. `select_build`
+finds no pair over both builds x 14 flag sets, so it is not a flag question either.
+
 Treat a VU/`asm { }` unit whose parameters are named after register aliases as a boundary: report
-`.text` exact and the missing parameter DIEs by name.
+`.text` exact and the missing parameter DIEs by name, with the count per body.
 
 ### 20. `movz` needs arms that are not 1/0, and the alignment attribute follows the brace
 
