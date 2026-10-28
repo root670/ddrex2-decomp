@@ -1026,6 +1026,14 @@ DDREX2P = Target(
         # MWCC constant splits, so each is a named macro rather than a symbol.
         ("src/network/net_type.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -enum min"),
+        # .text 0xA48 (0xA40 of code plus retail's 8-byte nop pad); all five bodies word-exact
+        # (74/107/237/84/150); .debug retail's 0x3EB9 / 419 DIEs byte-for-byte after adoption
+        # with no drop; .line adopted whole (159 emitted records against retail's 165).  One
+        # datum: the 7-case switch table @148 at 0x002D4830.  `>= 0xC` must be written `> 0xB`
+        # (that spelling puts slti's temp in $at, retail's register), and the dc_code pick is
+        # an if/else-if chain whose second arm tests `D_0102FB0C == 0`.
+        ("src/network/net_sys/net_sys_rule.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
