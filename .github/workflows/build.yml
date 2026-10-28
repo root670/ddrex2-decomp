@@ -1,16 +1,33 @@
-# G1: the pinned build, and the promotion verdicts for what is already in C.
+# The build gate and both published artifacts, in one job.
 #
-# The retail ELF is never in this repository (AGENTS.md rule 5).  CI fetches it from wherever
-# the maintainer keeps it and G1 then checks it against the digest pinned in
-# config/usam2/checksums.txt, so a truncated or wrong-version copy fails loudly instead of
-# being compared with the build.  The disc image, which G3 needs, is 1.24 GB: the runner has
-# no mount, so `--iso` prints "G3 skipped" and exits 0 rather than pretending to have run it.
+# They used to be three workflows (`build`, `objects`, `progress`), each triggered by the same
+# push and each doing its own cold build: three toolchain downloads and three full graphs for
+# work that fits in one.  One job now does the gate and then hands out what the others upload,
+# because everything after `./ddr build` reuses the tree it produced.
+#
+# What the artifacts are for:
+#   * `SLUS_211.74_objects` -- the objdiff object graph, every split assembled, nothing linked.
+#   * `SLUS_211.74_report`  -- the progress report decomp.dev reads from the default branch.
+#     Its target side is the *retail bytes* of each promoted unit
+#     (`build/diff/<segment|module>/<unit>.unit.o`, `tools/diff/basis.py`), not the split: a
+#     split's `jal` names an unresolved symbol (address zero) while our object carries the
+#     retail address, which scored a byte-identical function at ~99.2%.  The retail bytes are
+#     the file-backed image's for a main-image unit and the module *blob*'s for an overlay unit
+#     (the verified pack, else the disc image).  A promoted unit whose bytes neither the pack
+#     nor the image can supply is a configuration error, never a unit with no target.
+#
+#     `matched_data_percent` is *removed* from the uploaded report: no unit has a data target
+#     (data stays pinned retail bytes by design, AGENTS.md rule 9, and G1 proves it), and
+#     objdiff prints 100% for a 0/0 ratio.  `tools/diff/report.py` drops a data measure whose
+#     denominator is empty, so the artifact makes no data claim rather than a fabricated one.
+#
+# G1 and `./ddr verify --tu` are the arbiters; the report measures the C that has been written.
 name: build
 
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  skeleton:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,13 +35,11 @@ jobs:
       - name: Host tools
         run: sudo apt-get update && sudo apt-get install -y binutils-mips-linux-gnu ninja-build
 
-      # Homebrew's python3 is externally managed (PEP 668), so the Python tools go into a
-      # venv that is then first on PATH: `python3 -m splat` has to import for splat to run.
       - name: Python tools
         run: |
           python3 -m venv .venv
           .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install 'splat64[mips]' pytest
+          .venv/bin/python -m pip install 'splat64[mips]'
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: objdiff-cli
@@ -35,41 +50,70 @@ jobs:
           chmod +x "$HOME/.local/bin/objdiff-cli"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      # Proprietary, fetched and hash-verified into the gitignored toolchain/.  2.4-001213 is
-      # the required build; 3.0-011126 is the one the promoted unit was measured against.
+      # The compilers and the runner are hash-verified into the gitignored toolchain/, and the
+      # download is the slowest step of a cold run; the key moves when the fetch policy does.
+      - name: Cache the toolchain
+        uses: actions/cache@v4
+        with:
+          path: toolchain
+          key: ${{ runner.os }}-toolchain-${{ hashFiles('tools/toolchain/fetch.py') }}
+          restore-keys: ${{ runner.os }}-toolchain-
+
       - name: Toolchain
         run: python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
-
 
       - name: Retail ELF (supplied out of band)
         env:
           RETAIL_ELF_URL: ${{ secrets.RETAIL_ELF_URL }}
         run: |
           if [ -z "$RETAIL_ELF_URL" ]; then
-            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset; the build needs orig/SLUS_211.74 (AGENTS.md rule 5)"
+            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset (AGENTS.md rule 5)"
             exit 1
           fi
           mkdir -p orig
           curl -fsSL -o orig/SLUS_211.74 "$RETAIL_ELF_URL"
+
+      # The overlay modules' bytes, cut from the disc image once and verified per row in
+      # config/ddrex2p/overlays.txt; configure and the comparison providers both take the pack
+      # when its digest matches, so CI never needs the 1.8 GB image.
       - name: Overlay pack (supplied out of band)
         env:
           OVERLAY_PACK_URL: ${{ secrets.OVERLAY_PACK_URL }}
         run: |
           if [ -z "$OVERLAY_PACK_URL" ]; then
-            echo "::error title=no overlay pack::OVERLAY_PACK_URL is unset (AGENTS.md rule 5); configure slices each overlay module out of the disc image or takes it from build/overlays/<module>.bin, and CI has no image"
+            echo "::error title=no overlay pack::OVERLAY_PACK_URL is unset (AGENTS.md rule 5)"
             exit 1
           fi
           mkdir -p build/overlays
           curl -fsSL -o "$RUNNER_TEMP/overlay-pack.tar.gz" "$OVERLAY_PACK_URL"
           tar -xzf "$RUNNER_TEMP/overlay-pack.tar.gz" -C build/overlays
 
-      - name: Build (configure, ninja, G1)
-        run: ./ddr build
+      - name: Build and verify (G1 and the promotion rule)
+        run: |
+          ./ddr build
+          ./ddr verify
 
-      - name: Verify (promotion rule; G3 when the retail image is available)
-        run: ./ddr verify --tu sys_scf --iso
+      - name: Object graph
+        run: python3 configure.py --objects && ninja objects
 
-      # ~9 minutes, and the slowest step by design: the suite runs the real tools -- splat,
-      # mips-linux-gnu-as, ld, objcopy and mwccps2 under wibo -- against the retail files.
-      - name: Test suite
-        run: python3 -m pytest -q
+      - name: Upload the objdiff objects
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_211.74_objects
+          path: |
+            objdiff.json
+            build/asm/**
+          if-no-files-found: error
+
+      - name: Report
+        # The artifact name matters: decomp.dev looks for `SLUS_211.74_report`.
+        run: |
+          objdiff-cli report generate -o build/report.json
+          python3 tools/diff/report.py build/report.json
+
+      - name: Upload the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: SLUS_211.74_report
+          path: build/report.json
+          if-no-files-found: error
