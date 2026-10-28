@@ -1347,6 +1347,25 @@ finds no pair over both builds x 14 flag sets, so it is not a flag question eith
 Treat a VU/`asm { }` unit whose parameters are named after register aliases as a boundary: report
 `.text` exact and the missing parameter DIEs by name, with the count per body.
 
+### 25. An 8-element loop body cannot fold its inductions 2:1
+
+Measured on `kn_lfunc_set_head_data` (11 of its 12 bodies are word-exact; this one is 8 bytes
+short). Both sides have an 8-element pass, one `addiu $a0,$a0,0x40`, one `div` plus seven
+`div1`/`mflo1`, and a 1-element remainder loop; the difference is the *induction fold*: retail
+bumps its two pointers `+0x8` four times per pass, MWCC bumps them `+0x20` once.
+
+Isolated and then exhausted on a 123-word stand-in: MWCC 3.0b38 folds **all** induction
+increments into a single bump at every unroll factor 3-10, and the fold is invariant under 24
+statement orderings, post-increment expressions, comma-updated `for`, `while`/`do-while`,
+volatile pointee, `char *` walks, one-walk-with-derived-second, a hand-4x body, and ~35
+accepted `#pragma opt_*` names (`unroll_count`, `pointer_analysis*`, `reverseloops`,
+`rotateloops`, `serializeassignments`, `lifetimes`, `schedule`, …). The only pragma that
+changes the shape at all, `peephole off`, abandons offset carrying (187 words). Other builds
+(3.0.3) fold the same way; 3.0-011126 and 3.0.1-020123 are unusable here.
+
+Treat a body whose residue is *"retail increments per pair, ours per pass"* as this boundary:
+report the shortfall in words with the increment counts, and stop.
+
 ### 24. An overlay datum that points into the main image needs a named macro
 
 Measured on `cs_staffroll_mov.c` (info_rel4cd): its `sre_ip[11]` table stores pointers into the
