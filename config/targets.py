@@ -1056,6 +1056,13 @@ DDREX2P = Target(
         # unit_symbols only.
         ("src/network/net_sys/net_sys_lobby.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x580, both bodies word-exact (326/24); .debug retail's 0x43F3 / 445 DIEs
+        # byte-for-byte after adoption; .line adopted whole.  Overlay opt_rel4cd, no data.
+        # The two bytes at 0x00308B1C/1D are SaveData.Option.screen_x/y, NOT free-standing
+        # macros: the macro form gives identical .text but each CU comes out 4 bytes short
+        # because retail's function DIEs carry an access entry naming SaveData.
+        ("src/CS/option/opt_adjust.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
