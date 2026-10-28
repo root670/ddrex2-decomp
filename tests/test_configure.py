@@ -387,6 +387,20 @@ def test_objdiff_json_lists_every_linked_object_under_the_targets_segment():
     assert unit["target_path"].endswith("a.s.o") and unit["base_path"] is None
 
 
+def probe_elf(tmp_path, flags=0x20924000):
+    """A one-segment ELF: what ``basis.image_flags`` reads for an object built from a blob."""
+    payload = bytes(range(32))
+    image = (b"\x7fELF\x01\x01\x01" + b"\0" * 9
+             + struct.pack("<HHIIIIIHHHHHH", 2, 8, 1, 0x00100000, 52, 0, flags,
+                           52, 32, 1, 40, 0, 0))
+    image += struct.pack("<8I", 1, 0x100, 0x00100000, 0x00100000, len(payload),
+                         len(payload), 5, 4)
+    image += b"\0" * (0x100 - 52 - 32) + payload
+    elf_path = tmp_path / "PROBE.elf"
+    elf_path.write_bytes(image)
+    return elf_path
+
+
 def promoted_unit(file="src/probe/unit.c", module="main", splits=("asm/nonmatchings/main/one.s",),
                   code=True):
     """A promoted unit as ``configure.promotions`` builds one, for the objdiff tests."""
@@ -427,28 +441,41 @@ def test_objdiff_json_refuses_a_promoted_unit_with_no_target_object():
                                target.geometry, {})
 
 
-def test_objdiff_json_leaves_an_overlay_unit_out_of_the_report():
-    """An overlay unit's bytes are a blob's, not the file-backed image's: it is not a unit."""
+def test_objdiff_json_pairs_a_promoted_overlay_unit_with_its_blob_object():
+    """A promoted overlay unit is a report unit too, under its module's name.
+
+    Its bytes are a blob's, not the file-backed image's, so its target is the object
+    ``unit_targets`` builds from that blob; naming it after the module is what keeps it apart
+    from a main-image unit and from the six other blobs that load at its address.
+    """
     target = probe()
-    promotion = promoted_unit(module="probe_rel4cd",
+    promotion = promoted_unit("src/probe/ov.c", module="probe_rel4cd",
                               splits=("asm/nonmatchings/probe_rel4cd/one.s",))
     code = [(0x00100000, "asm/nonmatchings/main/one.s")]
-    project = json.loads(configure.objdiff_json(code, [promotion], target.geometry,
-                                                {"src/probe/unit.c": "build/diff/x.unit.o"}))
-    assert [unit["name"] for unit in project["units"]] == ["main/one"]
+    project = json.loads(configure.objdiff_json(
+        code, [promotion], target.geometry,
+        {"src/probe/ov.c": "build/diff/probe_rel4cd/ov.unit.o"}))
+    units = {unit["name"]: unit for unit in project["units"]}
+    assert set(units) == {"main/one", "probe_rel4cd/ov"}
+    assert units["probe_rel4cd/ov"]["target_path"] == "build/diff/probe_rel4cd/ov.unit.o"
+    assert units["probe_rel4cd/ov"]["base_path"] == "build/src/probe/ov.c.o"
+    # The main image's split is still its own unit with a null base.
+    assert units["main/one"]["base_path"] is None
+
+
+def test_an_overlay_module_named_like_the_report_segment_is_refused():
+    """One name space: a module prefix equal to the main segment would merge two units."""
+    geo = dataclasses.replace(geometry(), code_segment="probe")
+    promotion = promoted_unit("src/probe/ov.c", module="probe",
+                              splits=("asm/nonmatchings/probe/one.s",))
+    assert promotion.is_overlay
+    with pytest.raises(configure.ConfigError, match="probe"):
+        configure.unit_name(promotion, geo)
 
 
 def test_unit_targets_writes_one_object_per_promoted_main_unit(tmp_path, monkeypatch):
     """configure writes the object: retail's bytes for the unit, its functions named in it."""
-    payload = bytes(range(32))
-    image = (b"\x7fELF\x01\x01\x01" + b"\0" * 9
-             + struct.pack("<HHIIIIIHHHHHH", 2, 8, 1, 0x00100000, 52, 0, 0x20924000,
-                           52, 32, 1, 40, 0, 0))
-    image += struct.pack("<8I", 1, 0x100, 0x00100000, 0x00100000, len(payload),
-                         len(payload), 5, 4)
-    image += b"\0" * (0x100 - 52 - 32) + payload
-    elf_path = tmp_path / "PROBE.elf"
-    elf_path.write_bytes(image)
+    elf_path = probe_elf(tmp_path)
     functions = [types.SimpleNamespace(name="one", address=0x00100014, size=8),
                  types.SimpleNamespace(name="two", address=0x00100000, size=8)]
     manifests = types.SimpleNamespace(tu_named=lambda file: types.SimpleNamespace(
@@ -457,13 +484,71 @@ def test_unit_targets_writes_one_object_per_promoted_main_unit(tmp_path, monkeyp
                                                                             0x00100020))
     monkeypatch.setattr(configure.basis, "DIRECTORY", tmp_path / "diff")
     units = [promoted_unit(),
-             promoted_unit("src/probe/ov.c", module="probe_rel4cd"),
              promoted_unit("src/probe/data.c", code=False)]
     written = configure.unit_targets(units, manifests, probe(elf=elf_path), geometry())
     assert written == {"src/probe/unit.c": str(tmp_path / "diff" / "main" / "unit.unit.o")}
     emitted = elf.Elf(written["src/probe/unit.c"])
     assert [(s.name, s.value, s.size) for s in emitted.symbols if s.name] == [
         ("two", 0, 8), ("one", 0x14, 8)]
+
+
+def test_unit_targets_writes_an_overlay_units_object_from_its_blob(tmp_path, monkeypatch):
+    """An overlay unit's target is its module blob's bytes at the window base, one read.
+
+    Two units of one module share the blob read (it is the verified pack or the 1.9 GB image,
+    so reading it per unit would be wasted work), and the object carries the region's bytes
+    with the functions at their retail offsets and the retail ELF's ``e_flags`` -- the blob is
+    not an ELF, so nothing there can be read off it.
+    """
+    geo = overlay_geometry()
+    blob = b"\0" * 0x40 + bytes(range(0x100)) + b"\0" * 0xC0
+    functions = [types.SimpleNamespace(name="one", address=0x00200040, size=8),
+                 types.SimpleNamespace(name="two", address=0x00200050, size=8)]
+    manifests = types.SimpleNamespace(tu_named=lambda file: types.SimpleNamespace(
+        functions=functions))
+    monkeypatch.setattr(configure.cc, "split_extent", lambda tu, manifests: (0x00200040,
+                                                                            0x00200060))
+    monkeypatch.setattr(configure.basis, "DIRECTORY", tmp_path / "diff")
+    reads = []
+    monkeypatch.setattr(configure, "overlay_blob",
+                        lambda target, overlay: reads.append(overlay.name) or blob)
+    units = [promoted_unit("src/probe/ov.c", module="probe_rel4cd"),
+             promoted_unit("src/probe/ov2.c", module="probe_rel4cd")]
+    written = configure.unit_targets(units, manifests, probe(elf=probe_elf(tmp_path)), geo)
+    assert written == {
+        "src/probe/ov.c": str(tmp_path / "diff" / "probe_rel4cd" / "ov.unit.o"),
+        "src/probe/ov2.c": str(tmp_path / "diff" / "probe_rel4cd" / "ov2.unit.o")}
+    assert reads == ["probe_rel4cd"]
+    emitted = elf.Elf(written["src/probe/ov.c"])
+    text = next(section for section in emitted.sections if section.name == ".text")
+    assert text.size == 0x20 and emitted.data[text.offset:text.offset + 0x20] == blob[0x40:0x60]
+    assert [(s.name, s.value, s.size) for s in emitted.symbols if s.name] == [
+        ("one", 0, 8), ("two", 0x10, 8)]
+    assert emitted.flags == 0x20924000
+
+
+def test_unit_targets_refuses_an_overlay_unit_with_no_blob_or_image(tmp_path, monkeypatch):
+    """No blob and no image means no target object: refused, never counted as 0%.
+
+    ``configure.overlay_blob`` is the one place a module's bytes are proved (the pack's
+    sha256 or the image's), and it already refuses loudly; the report must not swallow that
+    into a unit with no target, which objdiff would score as nothing written.
+    """
+    geo = dataclasses.replace(overlay_geometry(),
+                              overlays=(dataclasses.replace(OVERLAY, sha256="ab" * 32),))
+    functions = [types.SimpleNamespace(name="one", address=0x00200040, size=8)]
+    manifests = types.SimpleNamespace(tu_named=lambda file: types.SimpleNamespace(
+        functions=functions))
+    monkeypatch.setattr(configure.cc, "split_extent", lambda tu, manifests: (0x00200040,
+                                                                            0x00200060))
+    monkeypatch.setattr(configure.basis, "DIRECTORY", tmp_path / "diff")
+    target = types.SimpleNamespace(overlays=geo.overlays,
+                                   image=tmp_path / "absent.iso",
+                                   overlay_blob=lambda name: tmp_path / "absent.bin")
+    with pytest.raises(configure.ConfigError, match="probe_rel4cd: neither"):
+        configure.unit_targets([promoted_unit("src/probe/ov.c", module="probe_rel4cd")],
+                               manifests, target, geo)
+    assert not (tmp_path / "diff").exists()
 
 
 def test_write_if_different_leaves_an_identical_file_alone(tmp_path):

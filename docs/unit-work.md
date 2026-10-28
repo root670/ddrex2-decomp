@@ -1300,6 +1300,19 @@ An overlay unit is now promotable end to end, and `src/network/net_router/net_ro
   image rather than the ELF's zeros, and a main-image `jal` into a window resolves to the
   absolute address.
 
+* **The progress report counts it.** `objdiff-cli report generate` builds one unit per linked
+  object, and a promoted overlay unit is one: its target is `build/diff/<module>/<unit>.unit.o`,
+  built from the module's blob (`basis.unit_from_blob`) at the window's base, and its base is
+  the same `cc` object the module's link places. The name is `module/unit` (the main image's is
+  `segment/unit`), which is what keeps it apart from a main-image unit and from the six other
+  blobs that load at the same address. A promoted overlay unit whose blob neither the verified
+  pack nor the image supplies is refused at configure time -- never a unit with no target
+  object, which the report would read as 0%. Measured on the 12 overlay units promoted at
+  `50b644a`, with the same project otherwise unchanged: `matched_code` 122,616 -> 138,560 bytes
+  and 6.334% -> 7.099%, exactly the units' 15,944 code bytes (their target regions sum 16,304
+  `.text` bytes, and objdiff counts the function bytes, not the `nop` padding between a unit's
+  splits); all 12 read 100%, and the units at 100% go 84 -> 96.
+
 What a *promotion* still needs is the measured `tu_builds` row, exactly as for a main-image
 unit.
 

@@ -7,12 +7,17 @@
 #
 # The numbers are objdiff's byte-level view of the objects, measured the way the gates
 # measure it.  A promoted unit is one objdiff unit whose *target* is an object built from the
-# retail image -- `build/diff/<segment>/<unit>.unit.o`, every function of the unit at its
-# retail offset under its retail name (tools/diff/basis.py) -- and whose base is the `cc`
-# object; so a function the compiler reproduced counts as matched instead of scoring ~99.2%
-# over a split's symbolic `jal`, which names an unresolved symbol (address zero) while our
-# object carries the retail address.  A split whose unit has no C yet keeps its own unit with
-# a `null` base, which is what makes its bytes count as un-matched.
+# unit's own retail bytes -- `build/diff/<segment|module>/<unit>.unit.o`, every function of
+# the unit at its retail offset under its retail name (tools/diff/basis.py) -- and whose base
+# is the `cc` object; so a function the compiler reproduced counts as matched instead of
+# scoring ~99.2% over a split's symbolic `jal`, which names an unresolved symbol (address
+# zero) while our object carries the retail address.  The retail bytes are the file-backed
+# image's for a main-image unit and the module *blob*'s for an overlay unit (the verified
+# pack, else the disc image), named after its module because seven of this target's blobs
+# load at one address.  A promoted unit whose bytes neither the pack nor the image can supply
+# is a configuration error -- never a unit with no target, which the report would read as 0%.
+# A split whose unit has no C yet keeps its own unit with a `null` base, which is what makes
+# its bytes count as un-matched.
 #
 # `matched_data_percent` is *removed* from the uploaded report.  No unit has a data target --
 # data stays pinned retail bytes by design (AGENTS.md rule 9) and G1, not this report, is

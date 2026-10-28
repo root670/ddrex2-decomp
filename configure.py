@@ -1053,7 +1053,8 @@ class Promotion:
     one ``.debug`` chunk and no ``.line`` chunk.  The split objects stay assembled: ``ddr
     diff`` reads one to stand in for a function that has no C, and an unpromoted unit's
     split is still its objdiff target.  A promoted unit's objdiff target is the object
-    :func:`unit_targets` derives from the retail image, not the split -- a split's symbolic
+    :func:`unit_targets` derives from the unit's own retail bytes -- the retail image's for a
+    main-image unit, the module blob's for an overlay one -- not the split: a split's symbolic
     ``jal`` makes a byte-identical function score ~99.2% (see :mod:`diff.basis`).
 
     ``module`` is the unit's own answer to *where its code loads* -- ``main`` for the
@@ -1433,43 +1434,78 @@ def generated_by(*inputs) -> str:
 
 
 def unit_name(promotion, geometry=None) -> str:
-    """The report's name for a promoted unit: its segment and its source file's stem.
+    """The report's name for a promoted unit: its module (or segment) and its source stem.
 
-    One name per *linked object* -- ``main/sys_scf`` -- because that is what the promoted
-    unit is on both sides: its ``cc`` object (base) against one object of retail's own bytes
-    for the same unit (target).  The split-per-function naming it replaces was a property of
-    splat's output, not of the unit.
+    One name per *linked object* -- ``main/sys_scf``, ``net_rel4cd/net_dnas_ave`` -- because
+    that is what the promoted unit is on both sides: its ``cc`` object (base) against one
+    object of retail's own bytes for the same unit (target).  The split-per-function naming
+    it replaces was a property of splat's output, not of the unit.  An overlay unit is named
+    after its module because its bytes are that blob's: seven of this target's overlays load
+    at the same address, so the window an address names is not the module.  The main image's
+    segment is the one other name prefix, and a module claiming it would put two different
+    units under one key, so that is refused rather than reported.
     """
     geometry = _geometry(geometry=geometry)
+    if promotion.is_overlay:
+        if promotion.module == geometry.code_segment:
+            raise ConfigError(
+                f"{promotion.file}: the overlay module {promotion.module!r} is named like the "
+                f"main image's report segment, so its unit could not be told apart from a "
+                f"main-image one; the module needs a distinct name in the ledger")
+        return f"{promotion.module}/{pathlib.Path(promotion.file).stem}"
     return f"{geometry.code_segment}/{pathlib.Path(promotion.file).stem}"
 
 
 def unit_targets(promoted, manifests, target, geometry=None) -> dict:
-    """Write every promoted main-image unit's objdiff target object; ``{file: path}``.
+    """Write every promoted unit's objdiff target object; ``{file: path}``.
 
     The object is retail's own bytes for the unit (:func:`diff.basis.unit`), named after the
     unit's functions -- the target side ``objdiff-cli report generate`` must be handed for a
     promoted unit.  Handing it the splits is what made a byte-identical function score
     ~99.2%: a split's ``jal`` names a symbol the object does not define, so objdiff reads it
     as address zero while the ``cc`` object carries the retail address, and counts the two as
-    a mismatched operand.  A unit whose code is in an overlay gets no object here: its bytes
-    are not in the file-backed image (they are a blob's), and no overlay unit is a report
-    unit.
+    a mismatched operand.
+
+    A main-image unit's bytes are read through the retail ELF's program headers; an overlay
+    unit's are the module blob's (the same bytes :func:`overlay_blob` proves -- the verified
+    pack, else the pinned image), sliced at the window's base, because the file-backed image
+    holds no overlay code at all.  One blob read serves every unit of its module.  A promoted
+    overlay unit whose module the geometry does not record, or whose blob neither the pack nor
+    the image can supply, is refused here: an object that cannot be built would otherwise
+    count the unit's bytes as absent from the report, which reads as 0%.
 
     The objects live in ``build/diff/`` (see :mod:`diff.basis`), are written at configure
     time, and are never an input to the link or to a gate.
     """
     geometry = _geometry(target=target, geometry=geometry)
     written = {}
+    blobs = {}
+    flags = None
     for promotion in promoted:
-        if promotion.is_overlay or not promotion.code:
+        if not promotion.code:
             continue
         tu = manifests.tu_named(promotion.file)
         start, end = cc.split_extent(tu, manifests)
+        functions = [(function.name, function.address, function.size)
+                     for function in tu.functions]
+        name = unit_name(promotion, geometry)
         try:
-            path = basis.unit([(function.name, function.address, function.size)
-                               for function in tu.functions],
-                              target.elf, start, end, unit_name(promotion, geometry))
+            if promotion.is_overlay:
+                overlay = next((window for window in geometry.overlays
+                                if window.name == promotion.module), None)
+                if overlay is None:
+                    raise ConfigError(
+                        f"{promotion.file}: module {promotion.module!r} is no overlay window "
+                        f"this target's geometry records, so there are no bytes to build its "
+                        f"target object from")
+                if overlay.name not in blobs:
+                    blobs[overlay.name] = overlay_blob(target, overlay)
+                if flags is None:
+                    flags = basis.image_flags(target.elf)
+                path = basis.unit_from_blob(functions, blobs[overlay.name], overlay.vaddr,
+                                            start, end, name, flags=flags)
+            else:
+                path = basis.unit(functions, target.elf, start, end, name)
         except basis.Unusable as exc:
             raise ConfigError(str(exc)) from exc
         written[promotion.file] = _display(path)
@@ -1479,12 +1515,15 @@ def unit_targets(promoted, manifests, target, geometry=None) -> dict:
 def objdiff_json(code, promotions, geometry=None, targets=None) -> str:
     """The objdiff project: one unit per linked object, target against the object we build.
 
-    objdiff compares a unit's ``base_path`` with its ``target_path``.  A promoted main-image
-    unit is one unit and one pair: its ``cc`` object is the base, and the target is the
-    object :func:`unit_targets` derives from the retail image -- every function of the unit,
-    at its retail offset, under its retail name.  That pairing measures the code the gates
-    measure: a function the compiler reproduced is byte-for-byte equal, so the report counts
-    it, instead of scoring it ~99.2% over a split's symbolic ``jal``.  ``targets`` is what
+    objdiff compares a unit's ``base_path`` with its ``target_path``.  A promoted unit is one
+    unit and one pair: its ``cc`` object is the base, and the target is the object
+    :func:`unit_targets` derives from retail -- the retail image for a main-image unit, the
+    module's blob for an overlay one -- every function of the unit, at its retail offset,
+    under its retail name.  That pairing measures the code the gates measure: a function the
+    compiler reproduced is byte-for-byte equal, so the report counts it, instead of scoring it
+    ~99.2% over a split's symbolic ``jal``.  An overlay unit is named after its module
+    (:func:`unit_name`), because seven of this target's blobs load at one address and the
+    main image's segment is the report's other prefix.  ``targets`` is what
     :func:`unit_targets` returned; a promoted unit it did not write is a configuration error,
     not a silently missing function.
 
@@ -1493,14 +1532,15 @@ def objdiff_json(code, promotions, geometry=None, targets=None) -> str:
     diff *verb* stands the split's own bytes in for a base when it compares one function; a
     progress report must not score a unit against itself.)  A project that listed only what
     is already in C would report a skeleton with zero C written as matched, which is the
-    opposite of what a progress report is for.  Data is not part of this graph -- it stays
-    pinned retail bytes by design -- so neither are the data databins.
+    opposite of what a progress report is for.  An overlay module's *unpromoted* splits are
+    not units here: they are not in ``code`` (the main link's split list), and a module blob
+    is not a file the reports could hand a target object from.  Data is not part of this
+    graph -- it stays pinned retail bytes by design -- so neither are the data databins.
     """
     geometry = _geometry(geometry=geometry)
     targets = targets or {}
     promoted_splits = {split for promotion in promotions
-                       if not promotion.is_overlay and promotion.code
-                       for split in promotion.splits}
+                       if promotion.code for split in promotion.splits}
     units = [{"name": f"{geometry.code_segment}/{pathlib.Path(name).stem}",
               "target_path": object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix(),
               "base_path": None,
@@ -1508,7 +1548,7 @@ def objdiff_json(code, promotions, geometry=None, targets=None) -> str:
               "metadata": {}}
              for _, name in code if name not in promoted_splits]
     for promotion in promotions:
-        if promotion.is_overlay or not promotion.code:
+        if not promotion.code:
             continue
         target = targets.get(promotion.file)
         if target is None:

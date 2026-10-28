@@ -247,6 +247,53 @@ def test_a_unit_object_refuses_the_same_name_twice_and_a_zero_size_symbol(tmp_pa
         basis.object_with_symbols(text, [])
 
 
+def test_a_unit_object_from_a_blob_reads_at_the_windows_base(tmp_path):
+    """An overlay unit's bytes are its blob's: the region is an offset from the load address.
+
+    The blob is one fixed-address image (its own 0x40-byte header included), so a unit at
+    0x120040 is ``blob[0x40..]``: the target object holds exactly that slice, with the
+    functions at ``address - start`` and the retail image's ``e_flags`` (the blob is no ELF).
+    """
+    base = 0x120000
+    blob = bytes(range(0x40)) + bytes(range(0x40, 0x80))
+    functions = [("later", base + 0x48, 8), ("earlier", base + 0x40, 8)]
+    path = basis.unit_from_blob(functions, blob, base, base + 0x40, base + 0x60,
+                                "probe_rel4cd/synthetic", directory=tmp_path,
+                                flags=0x20924000)
+    assert path == basis.unit_path("probe_rel4cd/synthetic", tmp_path)
+    image = elf.Elf(path)
+    text = next(section for section in image.sections if section.name == ".text")
+    assert text.size == 0x20 and image.data[text.offset:text.offset + 0x20] == blob[0x40:0x60]
+    assert [(s.name, s.value, s.size) for s in symbols_of(path)] == [
+        ("earlier", 0, 8), ("later", 8, 8)]
+    assert image.flags == 0x20924000
+
+
+def test_a_blob_unit_outside_the_window_is_refused(tmp_path):
+    """A unit whose region the module's window does not hold has no bytes to compare.
+
+    Refused, never padded or clipped: the target object must be the module's own bytes, and
+    a region straddling the blob's end is a configuration error, not a short object.
+    """
+    base = 0x120000
+    blob = bytes(0x40)
+    with pytest.raises(basis.Unusable):
+        basis.unit_from_blob([("one", base + 0x40, 8)], blob, base, base, base + 8,
+                             "probe_rel4cd/outside", directory=tmp_path)
+    with pytest.raises(basis.Unusable):
+        basis.unit_from_blob([("one", base, 8)], blob, base, base - 8, base + 8,
+                             "probe_rel4cd/outside", directory=tmp_path)
+    with pytest.raises(basis.Unusable):
+        basis.unit_from_blob([("one", base, 8)], blob, base, base + 0x38, base + 0x48,
+                             "probe_rel4cd/past-the-end", directory=tmp_path)
+    with pytest.raises(basis.Unusable):
+        basis.unit_from_blob([("one", base, 8)], blob, base, base, base,
+                             "probe_rel4cd/empty", directory=tmp_path)
+    with pytest.raises(basis.Unusable):
+        basis.unit_from_blob([], blob, base, base, base + 0x40,
+                             "probe_rel4cd/none", directory=tmp_path)
+
+
 def test_the_real_tree_emits_a_units_retail_bytes_under_its_own_names(tmp_path):
     """A known unit of this tree, against the real image: names, offsets and bytes agree.
 

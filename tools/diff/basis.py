@@ -45,6 +45,9 @@ that object and the promoted unit's ``cc`` object then counts code the way the g
 it: a byte-identical function is 32/32 matched, not 99.2%.  An unpromoted unit keeps the
 split object as its target -- retail's bytes as splat spelled them, which is all there is to
 compare -- with a ``null`` base, so its bytes count as un-matched rather than as a score.
+An *overlay* unit's retail bytes are not in the file-backed image at all: they are its
+module blob's, so ``unit_from_blob`` builds the same object from the blob at the window's
+load address, and the report counts the overlay module's units like the main image's.
 
 Where the objects live: the build's generated output directory.  ``build/diff/**`` is
 gitignored, is named by no ninja edge, appears in no ``ld`` script, and is not part of the
@@ -234,16 +237,53 @@ def unit(functions, elf_path, start: int, end: int, name: str,
     if len(text) != end - start:
         raise Unusable(f"{name}: 0x{start:08X}..0x{end:08X} is {len(text)} bytes into the "
                        f"image, not the {end - start} the split extent measures")
+    return _unit_object(name, text, start, functions, image.flags, directory)
+
+
+def unit_from_blob(functions, blob: bytes, base: int, start: int, end: int, name: str,
+                   directory=None, flags: int = 0) -> pathlib.Path:
+    """The same target object for a unit whose retail bytes are an *overlay blob's*.
+
+    An overlay's code is not in the file-backed image at all: its program header claims no
+    bytes there, and the bytes are the blob ``configure.overlay_blob`` returns -- the verified
+    pack first, then the pinned disc image.  The blob is one fixed-address image whose own
+    header is in it, so ``base`` is the window's load address and ``[start, end)`` indexes it
+    at ``start - base``.  Everything else is :func:`unit`'s contract: the region's bytes
+    verbatim, one ``STT_FUNC`` per manifest function at ``address - start``.
+
+    ``flags`` is the retail image's ``e_flags`` (:func:`image_flags`): the blob is not an ELF,
+    so nothing can be read off it, and the machine and ABI are the same image's.
+    """
+    if end <= start:
+        raise Unusable(f"{name}: the unit's retail region is empty "
+                       f"(0x{start:08X}..0x{end:08X}), so it has no bytes to compare")
+    if start < base or end > base + len(blob):
+        raise Unusable(
+            f"{name}: 0x{start:08X}..0x{end:08X} is not inside the {len(blob)}-byte blob at "
+            f"0x{base:08X} (0x{base:08X}..0x{base + len(blob):08X}), so the module's window "
+            f"does not hold the unit's bytes")
+    return _unit_object(name, blob[start - base:end - base], start, functions, flags,
+                        directory)
+
+
+def _unit_object(name: str, text: bytes, start: int, functions, flags: int,
+                 directory) -> pathlib.Path:
+    """The two callers' shared half: symbol rows checked against the region, then written."""
     rows = []
     for symbol, address, size in functions:
-        if address < start or address + size > end:
+        if address < start or address + size > start + len(text):
             raise Unusable(f"{symbol}: 0x{address:08X}+0x{size:X} is outside the unit's "
-                           f"retail region 0x{start:08X}..0x{end:08X}")
+                           f"retail region 0x{start:08X}..0x{start + len(text):08X}")
         rows.append((symbol, address - start, size))
     if not rows:
         raise Unusable(f"{name}: a unit with no functions has no target object")
-    return _write(unit_path(name, directory), object_with_symbols(text, rows,
-                                                                flags=image.flags))
+    return _write(unit_path(name, directory), object_with_symbols(text, rows, flags=flags))
+
+
+def image_flags(elf_path) -> int:
+    """The retail image's ``e_flags``, for an object whose bytes are a blob's (see
+    :func:`unit_from_blob`)."""
+    return elf.Elf(elf_path).flags
 
 
 def unit_path(name: str, directory=None) -> pathlib.Path:
