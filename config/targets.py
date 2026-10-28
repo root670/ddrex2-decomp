@@ -954,6 +954,13 @@ DDREX2P = Target(
         # each of the sixteen print blocks.
         ("src/network/net_window/net_win_perstats.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x768, all four bodies word-exact (5/406/31/26); frame and callee-saved map
+        # agree (slots.py); .debug retail's 0x15C9 byte-equal after adoption; .line 0x2E6 in
+        # four chunks.  Needs -sdatathreshold 0 (the seven literals are absolute-addressed at
+        # 0x002D78xx, out of $gp's reach).  Main clamps with a ternary, and the ordinal guard
+        # is `week % 100 == 11 || 12 || 13` then a `week % 10` if/else-if chain.
+        ("src/network/net_window/net_win_perhead.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
