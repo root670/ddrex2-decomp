@@ -11,12 +11,12 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   skeleton:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Host tools
-        run: brew install mips-linux-gnu-binutils ninja
+        run: sudo apt-get update && sudo apt-get install -y binutils-mips-linux-gnu ninja-build
 
       # Homebrew's python3 is externally managed (PEP 668), so the Python tools go into a
       # venv that is then first on PATH: `python3 -m splat` has to import for splat to run.
@@ -31,7 +31,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.local/bin"
           curl -fsSL -o "$HOME/.local/bin/objdiff-cli" \
-            https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-macos-arm64
+            https://github.com/encounter/objdiff/releases/download/v3.8.2/objdiff-cli-linux-x86_64
           chmod +x "$HOME/.local/bin/objdiff-cli"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
@@ -40,16 +40,6 @@ jobs:
       - name: Toolchain
         run: python3 tools/toolchain/fetch.py 2.4-001213 3.0-011126
 
-      # The compiler runs through wibo, a Mach-O x86_64 binary (PROVENANCE.txt records the
-      # version and digest): on an arm64 runner that needs Rosetta 2, which the image does
-      # not always ship.
-      - name: Rosetta 2
-        run: |
-          if [ -e /Library/Apple/usr/libexec/oah/libRosettaRuntime ]; then
-            echo "Rosetta 2 is present"
-          else
-            sudo softwareupdate --install-rosetta --agree-to-license
-          fi
 
       - name: Retail ELF (supplied out of band)
         env:

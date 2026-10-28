@@ -313,22 +313,29 @@ def _dest_members_ok(dest: pathlib.Path, version: str) -> bool:
     return True
 
 
-def _publish(dest: pathlib.Path, members: dict[str, bytes]) -> None:
-    """Materialise verified members in ``dest`` through a staging directory."""
-    staging = dest.parent / f"{dest.name}.staging"
-    shutil.rmtree(staging, ignore_errors=True)
+def _publish(dest: pathlib.Path, members: dict[str, str], version: str) -> None:
+    """Materialise verified members in ``dest`` through a per-process staging directory.
+
+    ``dest`` is shared by every compile edge, so a *fixed* staging name (``<dest>.staging``)
+    made two edges delete each other's tree mid-write on a cold runner.  Each process now
+    stages privately, and the rename is the only step that races -- it is atomic, so the
+    loser simply finds a complete ``dest`` and discards its own copy.
+    """
+    staging = pathlib.Path(tempfile.mkdtemp(dir=dest.parent, prefix=f".{dest.name}."))
     try:
-        staging.mkdir(parents=True)
         for name, blob in members.items():
-            (staging / name).write_bytes(blob)
-        if dest.is_dir():
-            shutil.rmtree(dest)
-        elif dest.exists():
-            dest.unlink()
-        staging.rename(dest)
-    except BaseException:
+            member = staging / name
+            member.parent.mkdir(parents=True, exist_ok=True)
+            member.write_bytes(blob)
+        try:
+            staging.rename(dest)
+        except OSError:
+            # Someone else published first: keep theirs if it is complete, else replace it.
+            if not _dest_members_ok(dest, version):
+                shutil.rmtree(dest, ignore_errors=True)
+                staging.rename(dest)
+    finally:
         shutil.rmtree(staging, ignore_errors=True)
-        raise
 
 
 def _cached_archive(version: str) -> tuple[pathlib.Path, str]:
@@ -378,12 +385,12 @@ def _install_compiler(
             archive = pathlib.Path(scratch) / ARTIFACTS[version]
             _download(override_url, archive)
             _verify_archive(archive, version)
-            _publish(dest, _verified_members(archive, version))
+            _publish(dest, _verified_members(archive, version), version)
         return dest, override_url
     if _dest_members_ok(dest, version):
         return dest, ALREADY_INSTALLED
     archive, source = _cached_archive(version)
-    _publish(dest, _verified_members(archive, version))
+    _publish(dest, _verified_members(archive, version), version)
     return dest, source
 
 

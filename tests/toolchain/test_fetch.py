@@ -176,3 +176,21 @@ def test_a_cold_tree_does_not_share_one_partial_between_compile_edges(tmp_path, 
     archive, how = fetch._cached_archive("probe-1")
     assert archive.read_bytes() == payload and how == "download"
     assert len(seen) == 1
+
+
+def test_publishing_is_safe_when_two_edges_share_one_destination(tmp_path, monkeypatch):
+    """Every compile edge installs the same compiler; a fixed `<dest>.staging` let one edge
+    delete another's tree mid-write.  Staging is per process now, and the rename decides."""
+    members = {"bin/tool": b"compiled", "lib/x": b"data"}
+    pins = {name: (hashlib.sha256(blob).hexdigest(), len(blob)) for name, blob in members.items()}
+    monkeypatch.setattr(fetch, "PINNED", {"probe-1": {"members": pins}})
+    dest = tmp_path / "toolchain"
+
+    fetch._publish(dest, members, "probe-1")
+    assert (dest / "bin/tool").read_bytes() == b"compiled"
+    # A second publisher finds a complete dest and keeps it; an incomplete one is replaced.
+    fetch._publish(dest, members, "probe-1")
+    assert (dest / "lib/x").read_bytes() == b"data"
+    (dest / "bin/tool").write_bytes(b"truncated")
+    fetch._publish(dest, members, "probe-1")
+    assert (dest / "bin/tool").read_bytes() == b"compiled"
