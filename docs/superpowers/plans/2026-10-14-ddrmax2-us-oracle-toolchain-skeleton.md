@@ -1073,7 +1073,7 @@ jobs:
       - run: ./ddr verify            # skips G3 when the retail image is absent
 ```
 
-`objects.yml` runs `configure.py --objects` and uploads the objdiff artefacts; `progress.yml` runs `objdiff-cli report generate` and uploads to decomp.dev. All three require the retail ELF, so they document that it must be supplied out of band (the repo never contains it).
+`objects.yml` runs `configure.py --objects` and uploads the objdiff artefacts; `progress.yml` runs `objdiff-cli report generate` and uploads to decmp.dev. All three require the retail ELF, so they document that it must be supplied out of band (the repo never contains it).
 
 - [ ] **Step 3: Record the milestone evidence**
 

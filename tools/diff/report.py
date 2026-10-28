@@ -21,7 +21,7 @@ for it:
 * a measure with a real denominator is left exactly as objdiff computed it, so running this
   over a project that does reconstruct data changes nothing.
 
-The percentages decomp.dev shows are whatever the report says, so the artifact the workflow
+The percentages decmp.dev shows are whatever the report says, so the artifact the workflow
 uploads must be the pruned one; ``progress.yml`` runs this after ``report generate``.
 
 Usage::

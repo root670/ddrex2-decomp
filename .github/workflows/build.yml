@@ -7,7 +7,9 @@
 #
 # What the artifacts are for:
 #   * `SLUS_211.74_objects` -- the objdiff object graph, every split assembled, nothing linked.
-#   * `SLUS_211.74_report`  -- the progress report decomp.dev reads from the default branch.
+#   * the progress report, uploaded to decmp.dev by the last step (no registration and no
+#     secret: the first upload creates https://decmp.dev/root670/ddrex2-decomp, and the action
+#     authenticates with the job's OIDC token).
 #     Its target side is the *retail bytes* of each promoted unit
 #     (`build/diff/<segment|module>/<unit>.unit.o`, `tools/diff/basis.py`), not the split: a
 #     split's `jal` names an unresolved symbol (address zero) while our object carries the
@@ -29,6 +31,10 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write        # lets decmp.dev prove this run belongs to this repository
+      pull-requests: write   # lets it comment how a pull request changes progress
     steps:
       - uses: actions/checkout@v4
 
@@ -106,7 +112,8 @@ jobs:
           if-no-files-found: error
 
       - name: Report
-        # The artifact name matters: decomp.dev looks for `SLUS_211.74_report`.
+        # The artifact is kept for humans and for the decmp upload's inputs; decmp.dev
+        # itself receives the report from the step below, not from an artifact name.
         run: |
           objdiff-cli report generate -o build/report.json
           python3 tools/diff/report.py build/report.json
@@ -117,3 +124,15 @@ jobs:
           name: SLUS_211.74_report
           path: build/report.json
           if-no-files-found: error
+
+      # decmp.dev builds the project page, its history and the badges from this report.  The
+      # first non-pull-request upload creates the project; `name` and `platform` are only read
+      # then.  `version` is the build this report measures -- the retail serial, as decmp's
+      # guide spells a PS2 version.
+      - name: Upload to decmp.dev
+        uses: decmp/upload-action@v1
+        with:
+          report: build/report.json
+          version: SLUS_211.74
+          name: "Dance Dance Revolution Extreme 2 (US) preview"
+          platform: ps2
