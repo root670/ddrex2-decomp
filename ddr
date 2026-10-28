@@ -432,7 +432,9 @@ def _tu_report(built, retail, name, target) -> int:
                                  target.symbols, target.geometry_required(),
                                  image=target.image,
                                  overlay_elf=None if overlay is None
-                                 else target.overlay_elf(overlay.name))
+                                 else target.overlay_elf(overlay.name),
+                                 overlay_blob=None if overlay is None
+                                 else target.overlay_blob(overlay.name))
     except (g2.UnknownUnit, targets.OutsideLoadableImage, KeyError, ValueError, OSError,
             FileNotFoundError) as exc:
         # An address the retail ELF maps no bytes at, a module the geometry does not record,

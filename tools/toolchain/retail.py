@@ -36,6 +36,7 @@ file is an :class:`OSError` naming it -- never an empty read that would compare 
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import pathlib
 import sys
 
@@ -67,6 +68,7 @@ class Retail:
                                        else self.target.image)
         self._elf = None
         self._image = None
+        self._blobs = {}
 
     # -- the two files -------------------------------------------------------
 
@@ -150,18 +152,48 @@ class Retail:
         return data
 
     def _blob(self, overlay, address: int, size: int) -> bytes:
-        """The blob's bytes: ``image_offset + (address - vaddr)``, bounded by the blob."""
-        start = overlay.image_offset_of(address)
+        """``size`` bytes at ``address`` inside the blob: the verified pack first, then the image.
+
+        The pack is ``build/overlays/<module>.bin`` -- the blob ``configure`` extracts, which a
+        CI run fetches instead of the 1.8 GB image -- and it is used only when its digest is the
+        one the ledger records, so an unverified file can never pass for retail's bytes.
+        """
         if address + size > overlay.vaddr + overlay.filesize:
             raise targets.OutsideLoadableImage(
                 f"overlay {overlay.name}: 0x{address:08X}+0x{size:X} runs past the blob's end "
                 f"at 0x{overlay.vaddr + overlay.filesize:08X}")
-        handle = self.image()
-        handle.seek(start)
-        data = handle.read(size)
+        blob = self._blob_bytes(overlay)
+        start = overlay.image_offset_of(address) - overlay.image_offset
+        data = blob[start:start + size]
         if len(data) != size:
-            raise ValueError(f"{self.image_path} ends inside overlay {overlay.name}'s blob at "
-                             f"0x{address:08X}+0x{size:X} (read 0x{len(data):X} bytes)")
+            raise ValueError(f"the blob for overlay {overlay.name} ends at 0x{address:08X}"
+                             f"+0x{size:X} (read 0x{len(data):X} bytes)")
+        return data
+
+    def _blob_bytes(self, overlay) -> bytes:
+        """The module's whole blob, from the verified pack when there is one."""
+        cached = self._blobs.get(overlay.name)
+        if cached is not None:
+            return cached
+        pack_of = getattr(self.target, "overlay_blob", None)
+        pack = pack_of(overlay.name) if pack_of is not None else None
+        wanted = getattr(overlay, "sha256", "")
+        if wanted and pack is not None and pack.is_file():
+            data = pack.read_bytes()
+            if hashlib.sha256(data).hexdigest() == wanted:
+                self._blobs[overlay.name] = data
+                return data
+        handle = self.image()
+        handle.seek(overlay.image_offset)
+        data = handle.read(overlay.filesize)
+        if len(data) != overlay.filesize:
+            raise ValueError(f"{self.image_path} ends inside overlay {overlay.name}'s blob "
+                             f"(read 0x{len(data):X} of 0x{overlay.filesize:X} bytes)")
+        if wanted and hashlib.sha256(data).hexdigest() != wanted:
+            raise ValueError(
+                f"{self.image_path}: overlay {overlay.name}'s bytes there are not the ones the "
+                f"ledger records; supply the verified pack instead")
+        self._blobs[overlay.name] = data
         return data
 
     # -- the ELF's chunked sections ------------------------------------------

@@ -36,6 +36,7 @@ verdict), 2 a file is missing or a name matches no translation unit.
 
 from __future__ import annotations
 
+import hashlib
 import argparse
 import json
 import pathlib
@@ -334,7 +335,7 @@ def describe(located) -> str:
 
 
 def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbols=g1.SYMBOLS,
-             geometry=None, image=None, overlay_elf=None):
+             geometry=None, image=None, overlay_elf=None, overlay_blob=None):
     """The per-TU report ``verify --tu NAME`` prints: text, then `.debug`, then `.line`.
 
     A translation unit is promoted only when its code *and* its debug chunk match retail
@@ -349,7 +350,8 @@ def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbol
     """
     manifests = Manifests(cus, chunks, symbols, geometry)
     tu = manifests.tu_named(name)
-    report = [_text_verdict(manifests, built, retail, tu, image, overlay_elf)]
+    report = [_text_verdict(manifests, built, retail, tu, image, overlay_elf,
+                            overlay_blob)]
     sections = manifests.geometry.sections
     report.append(_section_verdict("debug chunk", manifests.debug_chunks_of(tu),
                                    sections[0][1], built, retail))
@@ -358,7 +360,8 @@ def verdicts(built, retail=RETAIL, name="", cus=g1.CUS, chunks=g1.CHUNKS, symbol
     return tu, report
 
 
-def _text_verdict(manifests, built, retail, tu, image=None, overlay_elf=None) -> Verdict:
+def _text_verdict(manifests, built, retail, tu, image=None, overlay_elf=None,
+                  overlay_blob=None) -> Verdict:
     geo = manifests.geometry
     functions = manifests.functions_of(tu)
     if not functions:
@@ -368,7 +371,7 @@ def _text_verdict(manifests, built, retail, tu, image=None, overlay_elf=None) ->
     overlay = manifests.overlay_of(tu)
     if overlay is not None:
         return _overlay_text_verdict(manifests, built, image, low, high, overlay,
-                                     overlay_elf)
+                                     overlay_elf, overlay_blob)
     start = geo.offset_of(low)
     end = geo.offset_of(high)
     span = f"VA 0x{low:08X}-0x{high:08X}, {end - start} bytes"
@@ -385,7 +388,7 @@ def _text_verdict(manifests, built, retail, tu, image=None, overlay_elf=None) ->
 
 
 def _overlay_text_verdict(manifests, built, image, low, high, overlay,
-                          overlay_elf=None) -> Verdict:
+                          overlay_elf=None, overlay_blob=None) -> Verdict:
     """An overlay unit's ``.text``: the disc blob's bytes against what the build links there.
 
     The retail side is the blob at ``overlay.image_offset + (VA - overlay.vaddr)`` -- the
@@ -399,12 +402,25 @@ def _overlay_text_verdict(manifests, built, image, low, high, overlay,
     """
     size = high - low
     span = f"VA 0x{low:08X}-0x{high:08X}, {size} bytes, overlay {overlay.name}"
-    if image is None:
-        raise UnknownUnit(
-            f"{overlay.name} is an overlay: its retail bytes are in the disc image and this "
-            f"call supplied none (`verify` passes the target's image)")
     start = overlay.image_offset_of(low)
-    theirs = _file_bytes(image, start, size)
+    # The extracted blob is the same bytes as the image's, and it is what CI has: use it only
+    # when its digest is the row's, so an unverified file can never pass for retail's.
+    blob = None
+    if overlay_blob is not None:
+        candidate = pathlib.Path(overlay_blob)
+        if candidate.is_file() and overlay.sha256:
+            data = candidate.read_bytes()
+            if hashlib.sha256(data).hexdigest() == overlay.sha256:
+                blob = data
+    if blob is not None:
+        relative = start - overlay.image_offset
+        theirs = blob[relative:relative + size]
+    else:
+        if image is None:
+            raise UnknownUnit(
+                f"{overlay.name} is an overlay: its retail bytes are in the disc image or its "
+                f"verified blob, and this call supplied neither (`verify` passes both)")
+        theirs = _file_bytes(image, start, size)
     ours = (None if overlay_elf is None else _built_bytes(overlay_elf, low, size))
     if ours is None:
         ours = _built_bytes(built, low, size)
