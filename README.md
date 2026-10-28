@@ -52,7 +52,7 @@ cp /path/to/your/SLUS_211.74 orig/
 ./ddr verify
 ```
 
-The compilers are fetched and hash-verified into the gitignored `toolchain/`. The disc image is needed for `./ddr verify --iso` (G3), and it is where the ten overlay blobs are cut from the first time a module has a promoted unit: each lands as `build/overlays/<module>.bin` (1.44 MiB for all ten) and is then used in place of the image, verified against the sha256 recorded per row in `config/ddrex2p/overlays.txt`. A tree holding those blobs never opens the image again — which is how CI builds without a 1.8 GB download.
+The compilers are fetched and hash-verified into the gitignored `toolchain/`. The disc image is needed for `./ddr verify --iso` (G3), and it is where the ten overlay blobs are cut from the first time a module has a promoted unit: each lands as `build/overlays/<module>.bin` (1.5 MiB for all ten, 607 KB as the pack CI fetches) and is then used in place of the image, verified against the sha256 recorded per row in `config/ddrex2p/overlays.txt`. A tree holding those blobs never opens the image again — which is how CI builds without a 1.8 GB download.
 
 ## Verifying
 

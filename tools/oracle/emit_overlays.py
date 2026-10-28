@@ -277,6 +277,31 @@ def derive(elf_path, image_path):
     return pair(blobs, reservations)
 
 
+def write_blobs(elf_path, image_path, directory):
+    """Write every blob out of the image into ``directory`` as ``<module>.bin``.
+
+    This is the pack ``configure.py`` accepts in place of the image: it holds *all* the blobs,
+    not only the modules that happen to have a promoted unit today, so promoting the first
+    unit of a new module never needs the 1.8 GB image again.  The bytes are the image's,
+    verified against the rows' own digests by whatever consumes them.
+    """
+    directory = pathlib.Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    rows = derive(elf_path, image_path)
+    written = []
+    with open(image_path, "rb") as handle:
+        for row in rows:
+            data = read_at(handle, row["image_offset"], row["filesize"])
+            if hashlib.sha256(data).hexdigest() != row["sha256"]:
+                raise OverlayMismatch(
+                    f"{row['name']}: the bytes at image 0x{row['image_offset']:X} are not the "
+                    f"ones the row records")
+            path = directory / f"{row['name']}.bin"
+            path.write_bytes(data)
+            written.append(path)
+    return written
+
+
 def render(rows):
     """The artifact's text: one row per blob, in disc order, six hex numbers and a digest."""
     width = max(len(blob["name"]) for blob in rows)
@@ -306,6 +331,10 @@ def parse_args(argv):
                                                    "target's)")
     parser.add_argument("--image", default=None, help="the disc image to measure (default: the "
                                                      "target's)")
+    parser.add_argument("--blobs", default=None, metavar="DIR",
+                        help="also write every blob out of the image into DIR as "
+                             "<module>.bin: the pack configure.py accepts instead of the image "
+                             "(all ten, not only the modules with a promoted unit)")
     parser.add_argument("--out", default=None, help="where to write (default: the target's "
                                                     "overlays.txt)")
     return parser.parse_args(argv)
@@ -334,6 +363,14 @@ def main(argv=None) -> int:
         print(f"{overlay.name}: 0x{overlay.vaddr:08X}+0x{overlay.memsz:X} "
               f"(code 0x{overlay.code_end:X}, data 0x{overlay.data_size:X}, "
               f"bss 0x{overlay.bss:X}) at image 0x{overlay.image_offset:08X}")
+    if args.blobs:
+        try:
+            written = write_blobs(elf_path, image_path, args.blobs)
+        except (OverlayMismatch, OSError, ValueError) as exc:
+            print(f"emit_overlays: {exc}", file=sys.stderr)
+            return 2
+        print(f"{len(written)} blobs -> {args.blobs} (the pack configure.py accepts in place "
+              f"of the image)")
     print(f"{len(loaded)} overlays -> {out}")
     return 0
 

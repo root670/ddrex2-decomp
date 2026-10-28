@@ -8,6 +8,7 @@ and it has to be a bijection, so these tests pin the two ways it can fail *and* 
 artifact against a fresh derivation from the two real files (skipped where they are absent).
 """
 
+import hashlib
 import io
 import pathlib
 import struct
@@ -124,3 +125,17 @@ def test_the_committed_ledger_is_a_fresh_derivation_from_both_files():
                             row["data_size"], row["bss"], row["image_offset"],
                             sha256=row["sha256"])
             for row in rows] == list(TARGET.geometry_required().overlays)
+
+
+def test_the_pack_holds_every_blob_with_the_bytes_its_row_records(tmp_path):
+    """The pack is what CI builds from, so it must hold all ten blobs, not the promoted ones."""
+    if not TARGET.image.is_file():
+        pytest.skip("the disc image is not present")
+    written = emit_overlays.write_blobs(TARGET.elf, TARGET.image, tmp_path)
+    rows = {row.name: row for row in targets.load_overlays(TARGET.overlays)}
+    assert len(written) == len(rows) == 10
+    for path in written:
+        blob = rows[path.stem]
+        data = path.read_bytes()
+        assert len(data) == blob.filesize
+        assert hashlib.sha256(data).hexdigest() == blob.sha256
