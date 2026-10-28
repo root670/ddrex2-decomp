@@ -357,3 +357,6 @@ net_type_work_size = 0x002B8BF0; // size:0x24 extent:0x30 source:src/network/net
 @70 = 0x002BC800; // size:0x10 extent:0x10 source:src/network/net_sys/net_sys_top.c
 @135 = 0x002D4810; // size:0xf extent:0x10 source:src/network/net_sys/net_sys_top.c
 @136 = 0x002D4820; // size:0x10 extent:0x10 source:src/network/net_sys/net_sys_top.c
+@249 = 0x002D5190; // size:0x28 extent:0x28 source:src/network/net_sys/net_sys_lobby.c
+@338 = 0x002D51B8; // size:0xe extent:0x18 source:src/network/net_sys/net_sys_lobby.c
+@339 = 0x002D51D0; // size:0x18 extent:0x20 source:src/network/net_sys/net_sys_lobby.c

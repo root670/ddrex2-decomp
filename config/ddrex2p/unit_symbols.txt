@@ -66,3 +66,7 @@ D_00808BF0 = 0x00808BF0; // source:src/network/net_dnas/net_dnas_ave.c
 @23 = 0x00801CB0; // source:src/CS/workout/workout_message.c
 @24 = 0x00801CD0; // source:src/CS/workout/workout_message.c
 @148 = 0x002D4830; // source:src/network/net_sys/net_sys_rule.c
+@249 = 0x002D5190; // source:src/network/net_sys/net_sys_lobby.c
+@338 = 0x002D51B8; // source:src/network/net_sys/net_sys_lobby.c
+@339 = 0x002D51D0; // source:src/network/net_sys/net_sys_lobby.c
+__func__$* = 0x002D5180; // source:src/network/net_sys/net_sys_lobby.c

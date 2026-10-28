@@ -1041,6 +1041,12 @@ DDREX2P = Target(
         # placements; @62 collides by name with net_win_menu's and prefer_source separates them.
         ("src/network/net_sys/net_sys_top.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xBB0 (0xBA8 of code plus retail's 8-byte nop pad), four bodies word-exact
+        # (36/146/286/274); .debug retail's 0x75F5 byte-for-byte after adoption; .line
+        # adopted whole.  Three pool slots are recorded in both ledgers, and __func__ in
+        # unit_symbols only.
+        ("src/network/net_sys/net_sys_lobby.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
