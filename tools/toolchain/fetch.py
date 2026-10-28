@@ -516,7 +516,10 @@ def _install_wibo(
             os.chmod(staged, 0o755)
             if not _wibo_version(staged):
                 raise DownloadFailed(f"{source}: pinned fallback wibo does not run on this host")
-        shutil.copy2(staged, dest)
+        # Install by atomic rename, never by copying over `dest`: every compile edge installs
+        # the same runner, and on Linux overwriting a file another edge is executing fails with
+        # ETXTBSY ("Text file busy").  A rename leaves the running image alone.
+        os.replace(staged, dest)
     return dest, source
 
 

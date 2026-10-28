@@ -262,7 +262,7 @@
 <rect class="cell" data-state="untouched" x="429" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_cnf/net_cnf_main.c - 14,492 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="444" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_dnas/net_dnas_ave.c - 4,612 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="459" y="379" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_dnas/net_dnas_main.c - 6,544 code bytes - partial</title></rect>
-<rect class="cell" data-state="untouched" x="474" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_router/net_router_main.c - 2,548 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="474" y="379" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_router/net_router_main.c - 2,548 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="489" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_router/net_router_mes_e.c - 80 code bytes - promoted</title></rect>
 </g>
 <g class="module" data-module="sound">
