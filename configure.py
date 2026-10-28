@@ -1549,8 +1549,12 @@ def ninja_text(splits, databins, objects_only: bool, promotions=(), target=None,
         lines.append("\n")
         for module, script, objects_of_module in overlay_links:
             elf_path = _display(target.overlay_elf(module))
+            # The descriptor is an implicit input too: a promoted row added anywhere bumps
+            # config/targets.py's mtime, and without this dependency the module ELF stays
+            # older than it, which the staleness check then reports as stale evidence.
             lines.append(f"build {elf_path}: ldovl " + " ".join(objects_of_module)
-                         + f" | {_display(script)} {GENERATOR}\n")
+                         + f" | {_display(script)} {GENERATOR} "
+                           f"{_display(REPO_ROOT / 'config' / 'targets.py')}\n")
             lines.append(f"  script = {_display(script)}\n")
             overlay_elfs.append(elf_path)
         lines.append("\n")
