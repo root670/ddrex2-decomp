@@ -961,6 +961,13 @@ DDREX2P = Target(
         # is `week % 100 == 11 || 12 || 13` then a `week % 10` if/else-if chain.
         ("src/network/net_window/net_win_perhead.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x3B8, all four bodies word-exact (5/169/31/26); .debug retail's 0x15D2 / 144
+        # DIEs byte-for-byte after adoption; .line 0x214 in four chunks.  Needs
+        # -sdatathreshold 0 (otherwise D_01029FE4 refuses as gp-relative).  The entry test is
+        # `if (i >= loop) { zeros } else { values }` - the `i < loop` spelling puts the value
+        # body inline and loses retail's `slt $v0; bne`.
+        ("src/network/net_window/net_win_perrank.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
