@@ -68,7 +68,7 @@ A red gate is never worked around: the tool names the unit, function and chunk t
 
 <!-- status:start -->
 
-**95/249 (38.2%) units · 505/5,139 (9.8%) functions · 130,436/1,927,440 (6.8%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; denominators are the split ledger's functions and declared code bytes, and `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
+**96/249 (38.6%) units · 510/5,139 (9.9%) functions · 131,300/1,927,440 (6.8%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; denominators are the split ledger's functions and declared code bytes, and `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
 
 | module | units | functions | reconstructed bytes |
 |---|---:|---:|---:|
@@ -78,7 +78,7 @@ A red gate is never worked around: the tool names the unit, function and chunk t
 | `eyetoy` | 0/3 (0.0%) | 0/30 (0.0%) | 0/13,300 (0.0%) |
 | `fft` | 0/1 (0.0%) | 0/9 (0.0%) | 0/12,084 (0.0%) |
 | `gs` | 1/2 (50.0%) | 15/18 (83.3%) | 2,332/3,172 (73.5%) |
-| `network` | 40/82 (48.8%) | 209/736 (28.4%) | 52,704/286,732 (18.4%) |
+| `network` | 41/82 (50.0%) | 214/736 (29.1%) | 53,568/286,732 (18.7%) |
 | `sound` | 3/4 (75.0%) | 3/20 (15.0%) | 1,244/7,520 (16.5%) |
 | `sys` | 2/2 (100.0%) | 4/4 (100.0%) | 80/80 (100.0%) |
 | `(root)` | 1/3 (33.3%) | 3/43 (7.0%) | 296/7,232 (4.1%) |
