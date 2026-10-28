@@ -342,3 +342,4 @@ msgdata_list = 0x008018B0; // size:0x20 extent:0x20 source:src/CS/workout/workou
 @22 = 0x00801C90; // size:0x16 extent:0x20 source:src/CS/workout/workout_message.c
 @23 = 0x00801CB0; // size:0x13 extent:0x20 source:src/CS/workout/workout_message.c
 @24 = 0x00801CD0; // size:0x12 extent:0x30 source:src/CS/workout/workout_message.c
+net_type_work_size = 0x002B8BF0; // size:0x24 extent:0x30 source:src/network/net_type.c

@@ -1019,6 +1019,13 @@ DDREX2P = Target(
         # is overlay bss, resolved through unplaced_symbols.
         ("src/CS/option/opt_mc.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x380, all five bodies word-exact (12/0xD8/0x94/0xB4/0x110); .debug retail's
+        # 0x41DA / 433 DIEs byte-for-byte after adoption with 0 dropped records; .line adopted
+        # whole (94 records).  `-enum min` is REQUIRED: without it two 1-byte enum masks vanish
+        # and NetSendProgram is short by 8 bytes.  The 0x00F4D3xx addresses reproduce only as
+        # MWCC constant splits, so each is a named macro rather than a symbol.
+        ("src/network/net_type.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -enum min"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
