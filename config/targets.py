@@ -992,6 +992,11 @@ DDREX2P = Target(
         # larger works absolute); no enumerations, so no -enum min.
         ("src/CS/lesson/kn_lstep.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x8E8, all four bodies word-exact (251/135/160/22); .debug retail's 5391 bytes
+        # byte-for-byte after adoption; .line adopted.  Overlay info_rel4cd.  `-enum min` is
+        # REQUIRED: two 1-byte enumeration_type DIEs (SRE_MV_STEP, SRE_MVREAD_STEP).
+        ("src/CS/staffroll/cs_staffroll_mov.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -enum min"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
