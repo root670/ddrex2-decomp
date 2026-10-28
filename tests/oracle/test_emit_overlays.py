@@ -121,5 +121,6 @@ def test_the_committed_ledger_is_a_fresh_derivation_from_both_files():
     rows = emit_overlays.derive(TARGET.elf, TARGET.image)
     assert emit_overlays.render(rows) == TARGET.overlays.read_text()
     assert [targets.Overlay(row["name"], row["vaddr"], row["filesize"], row["code_end"],
-                            row["data_size"], row["bss"], row["image_offset"])
+                            row["data_size"], row["bss"], row["image_offset"],
+                            sha256=row["sha256"])
             for row in rows] == list(TARGET.geometry_required().overlays)

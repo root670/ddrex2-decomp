@@ -106,7 +106,9 @@ class Overlay:
     ``code_end`` and ``data_size`` are the header's own fields, counted from the first code
     byte at ``vaddr + 0x40``: the 0x40-byte run of zeros (one pad split) between the header and
     the first function is the header's, not the code's.  ``image_offset`` is the blob's byte
-    offset in the disc image, which is where :func:`overlay_bytes` reads it from.
+    offset in the disc image, which is where ``configure.overlay_blob`` reads it from, and
+    ``sha256`` is the digest of the blob's own bytes -- so the same bytes supplied from an
+    extracted pack instead of the image can be proved to be the ones this row measured.
     """
 
     name: str
@@ -116,6 +118,7 @@ class Overlay:
     data_size: int
     bss: int
     image_offset: int
+    sha256: str = ""
 
     def __post_init__(self):
         if not isinstance(self.name, str) or not _OVERLAY_NAME.fullmatch(self.name):
@@ -420,16 +423,22 @@ def load_overlays(path) -> tuple:
         if not text or text.startswith("#"):
             continue
         fields = text.split()
-        if len(fields) != 7:
+        # Seven fields is a row written before the digest existed; it still parses so the
+        # oracle can regenerate the file, but such a row cannot satisfy a pack because there
+        # is nothing to verify the bytes against (`configure.overlay_blob` refuses it).
+        if len(fields) not in (7, 8):
             raise ValueError(
                 f"{path} line {number} is not `name vaddr filesize code_end data_size bss "
-                f"image_offset`: {text!r}")
+                f"image_offset [sha256]`: {text!r}")
         try:
-            values = [int(field, 16) for field in fields[1:]]
+            values = [int(field, 16) for field in fields[1:7]]
         except ValueError:
             raise ValueError(f"{path} line {number} has a field that is not hex: {text!r}") \
                 from None
-        rows.append(Overlay(fields[0], *values))
+        digest = fields[7] if len(fields) == 8 else ""
+        if digest and not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError(f"{path} line {number} does not end in a sha256: {digest!r}")
+        rows.append(Overlay(fields[0], *values, sha256=digest))
     if not rows:
         raise ValueError(f"{path} records no overlays: an empty ledger would silently make "
                          f"every overlay unit unresolvable")

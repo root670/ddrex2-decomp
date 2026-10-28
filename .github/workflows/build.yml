@@ -61,16 +61,17 @@ jobs:
           fi
           mkdir -p orig
           curl -fsSL -o orig/SLUS_211.74 "$RETAIL_ELF_URL"
-      - name: Disc image (supplied out of band)
+      - name: Overlay pack (supplied out of band)
         env:
-          DISC_IMAGE_URL: ${{ secrets.DISC_IMAGE_URL }}
+          OVERLAY_PACK_URL: ${{ secrets.OVERLAY_PACK_URL }}
         run: |
-          if [ -z "$DISC_IMAGE_URL" ]; then
-            echo "::error title=no disc image::DISC_IMAGE_URL is unset (AGENTS.md rule 5); configure cuts every overlay module's bytes out of the image"
+          if [ -z "$OVERLAY_PACK_URL" ]; then
+            echo "::error title=no overlay pack::OVERLAY_PACK_URL is unset (AGENTS.md rule 5); configure slices each overlay module out of the disc image or takes it from build/overlays/<module>.bin, and CI has no image"
             exit 1
           fi
-          mkdir -p disc
-          curl -fL --retry 3 -o "disc/Dance Dance Revolution Extreme 2 (May 10, 2005 prototype) - PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso" "$DISC_IMAGE_URL"
+          mkdir -p build/overlays
+          curl -fsSL -o "$RUNNER_TEMP/overlay-pack.tar.gz" "$OVERLAY_PACK_URL"
+          tar -xzf "$RUNNER_TEMP/overlay-pack.tar.gz" -C build/overlays
 
       - name: Build (configure, ninja, G1)
         run: ./ddr build

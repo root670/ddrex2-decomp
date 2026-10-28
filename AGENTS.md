@@ -98,7 +98,9 @@ succeeds; it is done when the gate that covers it is green.  Changes to one unit
    neither be configured nor built, and nothing rewrites a scratch copy the committed file does
    not show.
 
-5. **Retail binaries, disc images and toolchains never enter the repository.**  `orig/`, `disc/` and
+5. **Retail binaries, disc images and toolchains never enter the repository.**  The overlay blobs
+   `configure.py` cuts from the image are generated output under `build/` (gitignored) and are
+   accepted back only when each matches the sha256 its `overlays.txt` row records.  `orig/`, `disc/` and
    `toolchain/` are gitignored and stay that way; the user supplies the ELF and the image, and the
    compiler archives are fetched by `tools/toolchain/fetch.py` and hash-verified before they are
    extracted or run.  Never `git add -f` any of them, never paste a byte range of either into a

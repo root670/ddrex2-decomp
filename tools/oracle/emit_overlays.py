@@ -37,6 +37,7 @@ stop naming the file, not an empty ledger.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import pathlib
 import struct
 import sys
@@ -205,8 +206,12 @@ def read_blob(handle, name, offset, size):
             f"{name} ({stem}): its header says the blob ends at 0x{end:08X}, but "
             f"vaddr 0x{vaddr:08X} + filesize 0x{size:X} is 0x{vaddr + size:08X}")
     ident = struct.unpack_from("<I", header, OFF_IDENT)[0]
+    # The digest of the blob's own bytes: a row can then be satisfied either by slicing the
+    # image or by a pre-extracted pack, and both prove they are these bytes.
+    digest = hashlib.sha256(read_at(handle, offset, size)).hexdigest()
     return dict(name=module, header_name=stem, ident=ident, vaddr=vaddr, filesize=size,
-                code_end=code_end, data_size=data_size, bss=bss, image_offset=offset)
+                code_end=code_end, data_size=data_size, bss=bss, image_offset=offset,
+                sha256=digest)
 
 
 def windows(elf_path):
@@ -273,18 +278,18 @@ def derive(elf_path, image_path):
 
 
 def render(rows):
-    """The artifact's text: one row per blob, in disc order, six hex numbers each."""
+    """The artifact's text: one row per blob, in disc order, six hex numbers and a digest."""
     width = max(len(blob["name"]) for blob in rows)
     lines = ["# Overlay blobs: measured from the retail ELF's zero-fill PT_LOAD reservations and "
              "the pinned image's", "# DATA*.BIN headers.  One row per blob: `name vaddr "
-             "filesize code_end data_size bss image_offset`.", "#",
+             "filesize code_end data_size bss image_offset sha256`.", "#",
              f"# {'name'.ljust(width)}  vaddr      filesize   code_end   data_size  bss        "
-             f"image_offset"]
+             f"image_offset       sha256"]
     for blob in rows:
         lines.append(f"{blob['name'].ljust(width)}  "
                      f"0x{blob['vaddr']:08X} 0x{blob['filesize']:08X} "
                      f"0x{blob['code_end']:08X} 0x{blob['data_size']:08X} "
-                     f"0x{blob['bss']:08X} 0x{blob['image_offset']:08X}")
+                     f"0x{blob['bss']:08X} 0x{blob['image_offset']:08X} {blob['sha256']}")
     return "\n".join(lines) + "\n"
 
 

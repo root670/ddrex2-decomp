@@ -52,7 +52,7 @@ cp /path/to/your/SLUS_211.74 orig/
 ./ddr verify
 ```
 
-The compilers are fetched and hash-verified into the gitignored `toolchain/`. The disc image is needed only for G3: place it at its path in `config/targets.py` and run `./ddr verify --iso`.
+The compilers are fetched and hash-verified into the gitignored `toolchain/`. The disc image is needed for `./ddr verify --iso` (G3), and it is where the ten overlay blobs are cut from the first time a module has a promoted unit: each lands as `build/overlays/<module>.bin` (1.44 MiB for all ten) and is then used in place of the image, verified against the sha256 recorded per row in `config/ddrex2p/overlays.txt`. A tree holding those blobs never opens the image again — which is how CI builds without a 1.8 GB download.
 
 ## Verifying
 

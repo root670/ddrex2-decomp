@@ -536,3 +536,15 @@ def test_the_overlay_ledger_refuses_a_line_that_is_not_a_row(tmp_path):
         targets.load_overlays(path)
     with pytest.raises(FileNotFoundError):
         targets.load_overlays(tmp_path / "absent.txt")
+
+
+def test_a_ledger_row_must_carry_a_sha256(tmp_path):
+    """The digest is what lets an extracted pack prove it is the measured bytes."""
+    good = "0" * 64
+    row = ("probe_rel4cd 0x00200000 0x00001000 0x00000800 0x000007C0 0x00000100 "
+           "0x00002000 ")
+    (tmp_path / "ok.txt").write_text(row + good + "\n")
+    assert targets.load_overlays(tmp_path / "ok.txt")[0].sha256 == good
+    (tmp_path / "bad.txt").write_text(row + "not-a-digest\n")
+    with pytest.raises(ValueError, match="sha256"):
+        targets.load_overlays(tmp_path / "bad.txt")

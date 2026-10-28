@@ -484,9 +484,38 @@ def overlay_symbols_text(target, overlay) -> str:
 
 
 def overlay_blob(target, overlay) -> bytes:
-    """The module's bytes as the pinned disc image carries them, header included."""
-    with Retail(target).opened() as retail:
-        return retail.code(overlay.vaddr, overlay.filesize, overlay)
+    """The module's bytes, header included: the verified pack first, then the pinned image.
+
+    ``build/overlays/<module>.bin`` is the extracted blob this function itself writes, so a
+    tree that has built once already holds every blob it needs and a machine that has the pack
+    -- CI, or anyone who has not mounted the 1.8 GB image -- never has to open the image at
+    all.  A pack is used only when its sha256 is the row's, which is the only thing that makes
+    it the measured bytes; a stale pack falls through to the image rather than failing, because
+    the pack is generated output.
+    """
+    if not overlay.sha256:
+        raise ConfigError(
+            f"{target.overlays}: {overlay.name} has no sha256, so nothing can prove a blob is "
+            f"its bytes; regenerate the ledger with `python3 tools/oracle/emit_overlays.py`")
+    wanted = overlay.sha256
+    pack = target.overlay_blob(overlay.name)
+    if pack.is_file() and hashlib.sha256(pack.read_bytes()).hexdigest() == wanted:
+        return pack.read_bytes()
+    if target.image.is_file():
+        with Retail(target).opened() as retail:
+            data = retail.code(overlay.vaddr, overlay.filesize, overlay)
+        actual = hashlib.sha256(data).hexdigest()
+        if actual != wanted:
+            raise ConfigError(
+                f"{target.image}: {overlay.name}'s bytes there are sha256 {actual}, but "
+                f"{target.overlays} records {wanted}: the image is not the one that was "
+                f"measured")
+        return data
+    raise ConfigError(
+        f"{overlay.name}: neither {pack} (verified against {target.overlays}) nor the disc "
+        f"image {target.image} is present.  Supply one: extract the blobs into "
+        f"{pack.parent}/, or mount the image (AGENTS.md rule 5)")
+
 
 
 def overlay_modules(promotions, geometry) -> list:
