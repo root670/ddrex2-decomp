@@ -985,6 +985,13 @@ DDREX2P = Target(
         # default's body, which reproduces retail's dispatch order 2,3,1,0,4.
         ("src/CS/option/opt_lang.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 4"),
+        # .text 0x2D4, all three bodies word-exact (27/113/37); .debug retail's 0x17F4 / 152
+        # DIEs byte-for-byte after adoption; .line adopted whole (87 emitted records against
+        # retail's 86).  Overlay les_rel4cd - the module's first promoted unit.  The default
+        # -sdatathreshold 8 is what retail shows (pLesPlay and kn_msg_w gp-relative, the four
+        # larger works absolute); no enumerations, so no -enum min.
+        ("src/CS/lesson/kn_lstep.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
