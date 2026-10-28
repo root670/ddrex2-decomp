@@ -152,3 +152,27 @@ def test_unpinned_m2c_content_is_rejected(tmp_path):
         tar.addfile(info, io.BytesIO(blob))
     with pytest.raises(fetch.HashMismatch, match="tree sha256"):
         fetch.m2c(root=tmp_path / "tc", override_url=f"file://{archive}")
+
+
+def test_a_cold_tree_does_not_share_one_partial_between_compile_edges(tmp_path, monkeypatch):
+    """Every `cc` edge calls the fetch, so on a cold runner several download at once.  A single
+    `<artifact>.part` let one process rename it into the cache while another was verifying it,
+    which fails as FileNotFoundError from `stat` - measured on a fresh macOS runner."""
+    payload = b"compiler archive stand-in"
+    digest = hashlib.sha256(payload).hexdigest()
+    monkeypatch.setattr(fetch, "CACHE_DIR", tmp_path / "downloads")
+    monkeypatch.setattr(fetch, "ARTIFACTS", {"probe-1": "probe-1.tar.gz"})
+    monkeypatch.setattr(fetch, "PINNED", {"probe-1": {"archive": (digest, len(payload))}})
+    monkeypatch.setattr(fetch, "BASE_URL", "https://example.invalid")
+
+    seen = []
+
+    def download(url, dest):
+        seen.append(dest.name)
+        assert dest.name != "probe-1.tar.gz.part", "the shared partial name is back"
+        dest.write_bytes(payload)
+
+    monkeypatch.setattr(fetch, "_download", download)
+    archive, how = fetch._cached_archive("probe-1")
+    assert archive.read_bytes() == payload and how == "download"
+    assert len(seen) == 1

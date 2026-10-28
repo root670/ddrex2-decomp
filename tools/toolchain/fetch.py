@@ -341,15 +341,28 @@ def _cached_archive(version: str) -> tuple[pathlib.Path, str]:
         except HashMismatch:
             archive.unlink()  # poisoned cache entry: never reuse it
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    partial = CACHE_DIR / f"{ARTIFACTS[version]}.part"
-    partial.unlink(missing_ok=True)
-    _download(f"{BASE_URL}/{ARTIFACTS[version]}", partial)
+    # A cold tree has one download per compile edge in flight at once, so the scratch file
+    # cannot be shared: a single `<artifact>.part` let one process rename it into the cache
+    # while another was still verifying it, which is a FileNotFoundError from `stat`, not a
+    # hash mismatch (measured on a fresh macOS runner).  Each process downloads privately and
+    # publishes by an atomic replace.
+    with tempfile.NamedTemporaryFile(dir=CACHE_DIR, prefix=f".{ARTIFACTS[version]}.",
+                                     suffix=".part", delete=False) as scratch:
+        partial = pathlib.Path(scratch.name)
     try:
+        _download(f"{BASE_URL}/{ARTIFACTS[version]}", partial)
         _verify_archive(partial, version)
+        partial.replace(archive)
     except BaseException:
         partial.unlink(missing_ok=True)
+        # Another process may have published a good copy while this one was failing.
+        if archive.is_file():
+            try:
+                _verify_archive(archive, version)
+                return archive, "cache"
+            except HashMismatch:
+                archive.unlink()
         raise
-    partial.replace(archive)
     return archive, "download"
 
 
