@@ -239,3 +239,16 @@ def test_a_datum_is_read_from_the_file_its_address_is_in():
     assert calls[-1] == (data_end - 0x4, 0x4, OVERLAY)
     cc.retail_datum(Retail(), OVERLAY, data_end, 0x4)
     assert calls[-1] == (data_end, 0x4, None), "past the blob it is not the blob's byte"
+
+
+def test_an_overlay_unit_is_named_by_its_dwarf_records_not_the_ledger():
+    """The ledger's spelling is positional (`set_warning_msg_3`, `D_008062B0`); the unit's C,
+    its header and its DIEs use the DWARF name, so that is what resolution must return."""
+    manifests = cc.Manifests(targets.get())
+    try:
+        tu = manifests.tu_named("src/network/net_router/net_router_main.c")
+    except cc.Unusable as exc:          # manifests absent: nothing to pin here
+        pytest.skip(str(exc))
+    names = [function.name for function in tu.functions]
+    assert "set_warning_msg" in names and "set_warning_msg_3" not in names
+    assert "NetRouterMain" in names and "D_008062B0" not in names

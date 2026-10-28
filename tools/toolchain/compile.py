@@ -154,6 +154,10 @@ SYMBOL_LINE = re.compile(
     r"^(?P<name>\S+)\s*=\s*(?P<address>0x[0-9A-Fa-f]+);\s*//\s*(?P<attrs>.*)$")
 #: The module a withheld record belongs to, when the oracle could place it in a window it
 #: knows about but the link does not (``unplaced_symbols.txt``'s `overlay:` field).
+#: The DWARF's own name for a record the ledger spells differently: splat names an overlay
+#: function after its ledger entry (`set_warning_msg_3`), while retail's DIEs, and so the unit's
+#: header, use `set_warning_msg`.
+DWARF_NAME_ATTR = re.compile(r"dwarf_name:(\S+)")
 OVERLAY_ATTR = re.compile(r"\boverlay:(\S+)")
 #: The global labels a generated split defines (`asm/include/macro.inc`'s macros).  The one
 #: label at an address is the same name the link knows, and `_split_symbols` binds each to the
@@ -395,7 +399,8 @@ class Manifests:
                     # The ledger names the module each withheld record belongs to, so a unit
                     # whose functions are all outside the declared segments resolves its own
                     # names without one module's entry answering for another's address.
-                    self.overlay_symbols.setdefault((overlay, address), name)
+                    self.overlay_symbols.setdefault((overlay, address),
+                                                    attrs.get("dwarf_name", name))
         for line in (self.dir / "symbol_addrs.txt").read_text().splitlines():
             match = SYMBOL_LINE.match(line.strip())
             if match is None:
@@ -553,6 +558,13 @@ class Manifests:
             module = OVERLAY_ATTR.search(tail)
             if module is not None:
                 attrs["overlay"] = module.group(1)
+            # The oracle records the DWARF's own name when it differs from the ledger's: an
+            # overlay function splat named `set_warning_msg_3` is `set_warning_msg` in retail's
+            # DWARF, and the unit's header and DIEs use the latter, so that is the name the
+            # unit's C defines and the name adoption pairs against.
+            dwarf = DWARF_NAME_ATTR.search(tail)
+            if dwarf is not None:
+                attrs["dwarf_name"] = dwarf.group(1)
             out.append((match["name"], int(match["address"], 16), attrs))
         return out
 
@@ -751,7 +763,14 @@ class Manifests:
                 raise Unusable(
                     f"{record['file']}: cus.json record {number} is "
                     f"{entry.get('kind')!r}, not a function this build can place")
-            name = self.by_address.get(entry["low_pc"])
+            # An overlay unit's names come from its module first: `by_address` also holds
+            # `undefined_syms_auto`'s positional `D_<addr>` for the same VA, and the unit's C
+            # has to define the DWARF name it was given, not the ledger's spelling of it.
+            name = None
+            if overlay != "main":
+                name = self.overlay_symbols.get((overlay, entry["low_pc"]))
+            if name is None:
+                name = self.by_address.get(entry["low_pc"])
             if name is None and overlay != "main":
                 # An overlay address is not in `by_address`: the ledger's records there are
                 # withheld ("outside every declared segment"), and the address alone cannot
