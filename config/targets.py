@@ -1011,6 +1011,14 @@ DDREX2P = Target(
         # costs an extra addiu, and a sized extern goes gp-relative and refuses.
         ("src/CS/workout/workout_message.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x3C0, all six bodies word-exact (69/61/34/15/34/15); .debug retail's 0x4BE0 /
+        # 488 DIEs byte-for-byte after adoption; .line 6 chunks adopted.  Overlay opt_rel4cd.
+        # The default -sdatathreshold 8 is what retail shows (OPTMCW/OPTSYSW/RequestAutoSave
+        # gp-relative, SaveData absolute).  0x01199380 is a named macro: retail materialises it
+        # lui+ori, which an extern's lui+addiu would not match.  No placements: its only datum
+        # is overlay bss, resolved through unplaced_symbols.
+        ("src/CS/option/opt_mc.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
