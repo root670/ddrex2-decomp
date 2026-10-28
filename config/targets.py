@@ -1004,6 +1004,13 @@ DDREX2P = Target(
         # table only with all eight cases explicit (case -1:0:1:4 written first, case 6 last).
         ("src/network/net_dnas/net_dnas_ave.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 4"),
+        # .text 0x340 (812 bytes plus retail's 0x14-byte nop pad); all seven bodies word-exact
+        # (19/85/6/6/15/33/27); .debug retail's 0x165E / 142 DIEs byte-for-byte after adoption;
+        # .line adopted whole (66 emitted records against retail's 65).  Overlay
+        # workout_rel4cd, 26 placed data symbols.  The window table is a named macro: an extern
+        # costs an extra addiu, and a sized extern goes gp-relative and refuses.
+        ("src/CS/workout/workout_message.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
