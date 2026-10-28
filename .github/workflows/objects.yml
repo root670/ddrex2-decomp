@@ -54,11 +54,21 @@ jobs:
           RETAIL_ELF_URL: ${{ secrets.RETAIL_ELF_URL }}
         run: |
           if [ -z "$RETAIL_ELF_URL" ]; then
-            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset; splat needs orig/SLUS_207.11"
+            echo "::error title=no retail ELF::RETAIL_ELF_URL is unset; splat needs orig/SLUS_211.74"
             exit 1
           fi
           mkdir -p orig
-          curl -fsSL -o orig/SLUS_207.11 "$RETAIL_ELF_URL"
+          curl -fsSL -o orig/SLUS_211.74 "$RETAIL_ELF_URL"
+      - name: Disc image (supplied out of band)
+        env:
+          DISC_IMAGE_URL: ${{ secrets.DISC_IMAGE_URL }}
+        run: |
+          if [ -z "$DISC_IMAGE_URL" ]; then
+            echo "::error title=no disc image::DISC_IMAGE_URL is unset (AGENTS.md rule 5); configure cuts every overlay module's bytes out of the image"
+            exit 1
+          fi
+          mkdir -p disc
+          curl -fL --retry 3 -o "disc/Dance Dance Revolution Extreme 2 (May 10, 2005 prototype) - PS2 - Dance Dance Revolution Extreme 2 PS2 Preview Code 6-22-05.iso" "$DISC_IMAGE_URL"
 
       - name: Object graph
         run: python3 configure.py --objects && ninja objects
@@ -71,7 +81,7 @@ jobs:
       - name: Upload the objdiff artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: SLUS_207.11_objects
+          name: SLUS_211.74_objects
           path: |
             objdiff.json
             build/asm/**
