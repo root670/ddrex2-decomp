@@ -5,16 +5,20 @@
 # parses objdiff's Report schema; there is no upload key and no endpoint to call.  The
 # project is registered once, by a maintainer, at https://decomp.dev/manage/new.
 #
-# The numbers are objdiff's byte-level view of the objects, not the gates' verdict, and two of
-# them read as the opposite of the truth on this tree:
+# The numbers are objdiff's byte-level view of the objects, measured the way the gates
+# measure it.  A promoted unit is one objdiff unit whose *target* is an object built from the
+# retail image -- `build/diff/<segment>/<unit>.unit.o`, every function of the unit at its
+# retail offset under its retail name (tools/diff/basis.py) -- and whose base is the `cc`
+# object; so a function the compiler reproduced counts as matched instead of scoring ~99.2%
+# over a split's symbolic `jal`, which names an unresolved symbol (address zero) while our
+# object carries the retail address.  A split whose unit has no C yet keeps its own unit with
+# a `null` base, which is what makes its bytes count as un-matched.
 #
-#   * `matched_data_percent` is 100.0 because the data denominator is empty -- nothing here
-#     reconstructs data (it stays pinned retail bytes by design, see AGENTS.md rule 9), so
-#     objdiff is doing arithmetic on splat's target object and calling the result 100%.
-#   * `matched_code` reads 0.0007% (12 of 1,694,728 bytes) for a build whose *linked* sys_scf
-#     bytes are retail's: `compile.py` writes the object with its relocations already resolved
-#     while the target split leaves them symbolic -- see the caveat at the end of
-#     docs/milestones/m2-sys-scf.md.
+# `matched_data_percent` is *removed* from the uploaded report.  No unit has a data target --
+# data stays pinned retail bytes by design (AGENTS.md rule 9) and G1, not this report, is
+# what proves those bytes -- and objdiff prints 100% for a 0/0 ratio.  `tools/diff/report.py`
+# drops a data measure whose denominator is empty, so the artifact decomp.dev reads makes no
+# data claim rather than a fabricated 100% or a 0% on bytes that were never a work item.
 #
 # G1 and `./ddr verify --tu` are the arbiters; the report measures the C that has been written,
 # which is the point of feeding decomp.dev.
@@ -90,7 +94,10 @@ jobs:
         run: ./ddr build
 
       - name: Report
-        run: objdiff-cli report generate -o build/report.json
+        run: |
+          objdiff-cli report generate -o build/report.json
+          # Remove the 0/0 data measures objdiff prints as 100% (see the header).
+          python3 tools/diff/report.py build/report.json
 
       # The artifact name matters: decomp.dev looks for `SLUS_211.74_report`.
       - name: Upload the report

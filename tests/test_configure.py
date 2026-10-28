@@ -13,6 +13,7 @@ import json
 import pathlib
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import types
@@ -24,6 +25,9 @@ sys.path.insert(0, str(ROOT))
 
 import configure  # noqa: E402
 from config import targets  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "tools" / "oracle"))   # the reader the emitted object is checked with
+import elf  # noqa: E402
 
 TARGET = targets.get()
 
@@ -381,6 +385,85 @@ def test_objdiff_json_lists_every_linked_object_under_the_targets_segment():
     unit = project["units"][0]
     assert unit["name"] == f"{target.geometry.code_segment}/a"
     assert unit["target_path"].endswith("a.s.o") and unit["base_path"] is None
+
+
+def promoted_unit(file="src/probe/unit.c", module="main", splits=("asm/nonmatchings/main/one.s",),
+                  code=True):
+    """A promoted unit as ``configure.promotions`` builds one, for the objdiff tests."""
+    return configure.Promotion(file, 0x00100000, "--compiler 3.0b38-030307 -c -O3 -g",
+                               f"build/{file}.o", f"build/{file}.o.debug",
+                               f"build/{file}.o.line", ".debug_000", [".line_000"],
+                               set(splits), code=code, module=module)
+
+
+def test_objdiff_json_pairs_a_promoted_unit_with_one_retail_object():
+    """The promoted unit is the report's unit: one target object, one ``cc`` object.
+
+    The split-per-function units it replaces are gone (their bytes would be counted twice),
+    and the target path is the object ``unit_targets`` derives from the retail image.
+    """
+    target = probe()
+    promotion = promoted_unit()
+    code = [(0x00100000, "asm/nonmatchings/main/one.s"),
+            (0x00200000, "asm/nonmatchings/main/two.s")]
+    project = json.loads(configure.objdiff_json(
+        code, [promotion], target.geometry,
+        {"src/probe/unit.c": "build/diff/main/unit.unit.o"}))
+    units = {unit["name"]: unit for unit in project["units"]}
+    assert set(units) == {"main/unit", "main/two"}
+    assert units["main/unit"]["target_path"] == "build/diff/main/unit.unit.o"
+    assert units["main/unit"]["base_path"] == "build/src/probe/unit.c.o"
+    # The unpromoted split keeps its own object and a null base: its bytes are un-matched.
+    assert units["main/two"]["target_path"] == "build/asm/nonmatchings/main/two.s.o"
+    assert units["main/two"]["base_path"] is None
+
+
+def test_objdiff_json_refuses_a_promoted_unit_with_no_target_object():
+    """A promoted unit with no retail object would silently count none of its code."""
+    target = probe()
+    promotion = promoted_unit()
+    with pytest.raises(configure.ConfigError):
+        configure.objdiff_json([(0x00100000, "asm/nonmatchings/main/one.s")], [promotion],
+                               target.geometry, {})
+
+
+def test_objdiff_json_leaves_an_overlay_unit_out_of_the_report():
+    """An overlay unit's bytes are a blob's, not the file-backed image's: it is not a unit."""
+    target = probe()
+    promotion = promoted_unit(module="probe_rel4cd",
+                              splits=("asm/nonmatchings/probe_rel4cd/one.s",))
+    code = [(0x00100000, "asm/nonmatchings/main/one.s")]
+    project = json.loads(configure.objdiff_json(code, [promotion], target.geometry,
+                                                {"src/probe/unit.c": "build/diff/x.unit.o"}))
+    assert [unit["name"] for unit in project["units"]] == ["main/one"]
+
+
+def test_unit_targets_writes_one_object_per_promoted_main_unit(tmp_path, monkeypatch):
+    """configure writes the object: retail's bytes for the unit, its functions named in it."""
+    payload = bytes(range(32))
+    image = (b"\x7fELF\x01\x01\x01" + b"\0" * 9
+             + struct.pack("<HHIIIIIHHHHHH", 2, 8, 1, 0x00100000, 52, 0, 0x20924000,
+                           52, 32, 1, 40, 0, 0))
+    image += struct.pack("<8I", 1, 0x100, 0x00100000, 0x00100000, len(payload),
+                         len(payload), 5, 4)
+    image += b"\0" * (0x100 - 52 - 32) + payload
+    elf_path = tmp_path / "PROBE.elf"
+    elf_path.write_bytes(image)
+    functions = [types.SimpleNamespace(name="one", address=0x00100014, size=8),
+                 types.SimpleNamespace(name="two", address=0x00100000, size=8)]
+    manifests = types.SimpleNamespace(tu_named=lambda file: types.SimpleNamespace(
+        functions=functions))
+    monkeypatch.setattr(configure.cc, "split_extent", lambda tu, manifests: (0x00100000,
+                                                                            0x00100020))
+    monkeypatch.setattr(configure.basis, "DIRECTORY", tmp_path / "diff")
+    units = [promoted_unit(),
+             promoted_unit("src/probe/ov.c", module="probe_rel4cd"),
+             promoted_unit("src/probe/data.c", code=False)]
+    written = configure.unit_targets(units, manifests, probe(elf=elf_path), geometry())
+    assert written == {"src/probe/unit.c": str(tmp_path / "diff" / "main" / "unit.unit.o")}
+    emitted = elf.Elf(written["src/probe/unit.c"])
+    assert [(s.name, s.value, s.size) for s in emitted.symbols if s.name] == [
+        ("two", 0, 8), ("one", 0x14, 8)]
 
 
 def test_write_if_different_leaves_an_identical_file_alone(tmp_path):

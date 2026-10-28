@@ -185,3 +185,94 @@ def test_a_split_object_is_unscorable_and_its_stand_in_is_not(tmp_path):
 
     assert not basis.scored(report(stand_in, split), "sysInitScf")
     assert basis.scored(report(stand_in, stand_in), "sysInitScf")
+
+
+def test_a_unit_object_holds_every_function_at_its_retail_offset(retail, tmp_path):
+    """One target object per *unit*: the unit's retail bytes, every function named in it.
+
+    The object the report is handed must be the unit as retail laid it out -- not a
+    per-function split -- so the symbols are at their retail offsets inside one ``.text`` and
+    the bytes are the image's own.
+    """
+    functions = [("later", BASE + 8, 8), ("earlier", BASE, 8), ("last", BASE + 16, 8)]
+    path = basis.unit(functions, retail, BASE, BASE + 24, "main/synthetic",
+                      directory=tmp_path / "out")
+    assert path == basis.unit_path("main/synthetic", tmp_path / "out")
+    image = elf.Elf(path)
+    text = next(s for s in image.sections if s.name == ".text")
+    assert image.data[text.offset:text.offset + text.size] == CODE[:24]
+    # Address order, not the order the caller asked in: a report keys on the symbol table.
+    assert [(s.name, s.value, s.size, s.bind, s.type) for s in symbols_of(path)] == [
+        ("earlier", 0, 8, 1, 2), ("later", 8, 8, 1, 2), ("last", 16, 8, 1, 2)]
+    assert image.type == 1 and image.machine == 8
+
+
+def test_a_unit_object_carries_the_padding_the_promotion_fills(retail, tmp_path):
+    """``.text`` is the whole retail region: a promoted object fills the splits' padding too,
+    so a target object that stopped at the last symbol would describe a shorter unit."""
+    path = basis.unit([("one", BASE, 8)], retail, BASE, BASE + 20, "main/padded",
+                      directory=tmp_path)
+    image = elf.Elf(path)
+    text = next(s for s in image.sections if s.name == ".text")
+    assert text.size == 20
+    assert image.data[text.offset:text.offset + 20] == CODE[:20]
+    assert [s.name for s in image.sections] == ["", ".text", ".symtab", ".strtab", ".shstrtab"]
+
+
+def test_a_unit_function_outside_the_region_is_refused(retail, tmp_path):
+    """Every symbol has to be in the region the object claims to hold."""
+    with pytest.raises(basis.Unusable):
+        basis.unit([("one", BASE, 8), ("past", BASE + 32, 8)], retail, BASE, BASE + 24,
+                   "main/synthetic", directory=tmp_path)
+    with pytest.raises(basis.Unusable):
+        basis.unit([("before", BASE - 8, 8)], retail, BASE, BASE + 24, "main/synthetic",
+                   directory=tmp_path)
+
+
+def test_a_unit_with_no_region_or_no_functions_is_refused(retail, tmp_path):
+    with pytest.raises(basis.Unusable):
+        basis.unit([("one", BASE, 8)], retail, BASE, BASE, "main/empty", directory=tmp_path)
+    with pytest.raises(basis.Unusable):
+        basis.unit([], retail, BASE, BASE + 8, "main/none", directory=tmp_path)
+
+
+def test_a_unit_object_refuses_the_same_name_twice_and_a_zero_size_symbol(tmp_path):
+    """Two functions of one name cannot be paired, and a size-less symbol has no bytes."""
+    text = bytes(16)
+    with pytest.raises(basis.Unusable):
+        basis.object_with_symbols(text, [("one", 0, 8), ("one", 8, 8)])
+    with pytest.raises(basis.Unusable):
+        basis.object_with_symbols(text, [("one", 0, 0)])
+    with pytest.raises(basis.Unusable):
+        basis.object_with_symbols(text, [])
+
+
+def test_the_real_tree_emits_a_units_retail_bytes_under_its_own_names(tmp_path):
+    """A known unit of this tree, against the real image: names, offsets and bytes agree.
+
+    Skipped unless the retail ELF and the split tree are in place -- both are gitignored
+    inputs, and this test is the claim, not the substitute for them.
+    """
+    from config import targets
+    from toolchain import compile as cc
+
+    target = targets.get()
+    if not target.elf.is_file():
+        pytest.skip("no retail ELF in this tree")
+    try:
+        manifests = cc.Manifests(target)
+        tu = manifests.tu_named("src/sys/sys_scf.c")
+        start, end = cc.split_extent(tu, manifests)
+    except Exception as exc:                       # asm/ has not been generated
+        pytest.skip(f"the split tree is not configured: {exc}")
+    path = basis.unit([(function.name, function.address, function.size)
+                       for function in tu.functions],
+                      target.elf, start, end, "main/sys_scf", directory=tmp_path)
+    image = elf.Elf(path)
+    retail = elf.Elf(target.elf)
+    assert [(s.name, s.value, s.size) for s in symbols_of(path)] == [
+        (function.name, function.address - start, function.size)
+        for function in tu.functions]
+    text = next(section for section in image.sections if section.name == ".text")
+    assert text.size == end - start
+    assert image.data[text.offset:text.offset + text.size] == retail.read(start, end - start)

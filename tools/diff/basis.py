@@ -36,6 +36,16 @@ The base side is the object under edit:
   unresolved calls show up as their own mismatched instructions) and, because the verb
   prints both sides with their provenance, never mistakable for a C object.
 
+The same construction serves a whole *unit*: ``objdiff-cli report generate`` measures a unit
+against one target object, and a promoted unit's target object must be the unit's retail
+bytes under the unit's own function names -- one object, not one per split.  ``unit(...)``
+below builds it: ``.text`` is the retail region the promotion fills (``split_extent``), and
+every function is a ``STT_FUNC`` symbol at its retail offset in that region.  A report over
+that object and the promoted unit's ``cc`` object then counts code the way the gates count
+it: a byte-identical function is 32/32 matched, not 99.2%.  An unpromoted unit keeps the
+split object as its target -- retail's bytes as splat spelled them, which is all there is to
+compare -- with a ``null`` base, so its bytes count as un-matched rather than as a score.
+
 Where the objects live: the build's generated output directory.  ``build/diff/**`` is
 gitignored, is named by no ninja edge, appears in no ``ld`` script, and is not part of the
 file's tail, so neither the link nor G1 -- which compares ``out/<elf>`` with the retail ELF
@@ -90,21 +100,56 @@ def object_bytes(text: bytes, symbol: str, size: int | None = None, flags: int =
         size = len(text)
     if size != len(text):
         raise Unusable(f"{symbol}: a {size}-byte symbol cannot be {len(text)} bytes of .text")
-    if not symbol or "\0" in symbol:
-        raise Unusable(f"{symbol!r} is not a symbol name an object can carry")
+    return object_with_symbols(text, [(symbol, 0, size)], flags)
+
+
+def object_with_symbols(text: bytes, symbols, flags: int = 0) -> bytes:
+    """The same object, with one ``STT_FUNC`` symbol per ``(name, offset, size)`` in it.
+
+    ``offset`` is into ``.text``, so the symbols are exactly where their bytes are.  The
+    table is written in offset order (ties broken by name) so the object is a function of the
+    facts alone: two runs write the same bytes, and a symbol table that reordered itself
+    between runs would make every diff of the emitted objects noise.
+    """
+    if not text:
+        raise Unusable("an object with no .text cannot carry a function")
+    rows = []
+    seen = set()
+    for name, offset, size in symbols:
+        if not name or "\0" in name:
+            raise Unusable(f"{name!r} is not a symbol name an object can carry")
+        if name in seen:
+            raise Unusable(f"{name}: a symbol table cannot carry the name twice")
+        if not isinstance(size, int) or size <= 0:
+            raise Unusable(f"{name}: a symbol of size {size!r} has no bytes to diff")
+        if not 0 <= offset or offset + size > len(text):
+            raise Unusable(f"{name}: {size} bytes at offset {offset} run past the "
+                           f"{len(text)}-byte .text")
+        seen.add(name)
+        rows.append((offset, name, size))
+    if not rows:
+        raise Unusable("an object whose symbol table is empty is not a comparison")
+    rows.sort()
 
     shstr = b"\0"
     shstr_offsets = {}
     for name in (".text", ".symtab", ".strtab", ".shstrtab"):
         shstr_offsets[name] = len(shstr)
         shstr += name.encode() + b"\0"
-    strtab = b"\0" + symbol.encode() + b"\0"          # symbol name at offset 1
+    # Every symbol name at its own offset in .strtab, which starts with the empty string.
+    strtab = b"\0"
+    name_offsets = {}
+    for _offset, name, _size in rows:
+        name_offsets[name] = len(strtab)
+        strtab += name.encode() + b"\0"
 
-    # .text's own section symbol, then the function: the local half of the table is the two
-    # entries an assembler emits, and `sh_info` below is where the globals start.
+    # .text's own section symbol, then the functions: the local half of the table is the one
+    # entry an assembler emits, and `sh_info` below is where the globals start.
     symtab = b"\0" * SYM_SIZE                                        # the null symbol
     symtab += struct.pack("<IIIBBH", 0, 0, 0, (STB_LOCAL << 4) | STT_SECTION, 0, 1)
-    symtab += struct.pack("<IIIBBH", 1, 0, size, (STB_GLOBAL << 4) | STT_FUNC, 0, 1)
+    for offset, name, size in rows:
+        symtab += struct.pack("<IIIBBH", name_offsets[name], offset, size,
+                              (STB_GLOBAL << 4) | STT_FUNC, 0, 1)
 
     # (name, type, flags, align, entsize, data, link, info) -- section indexes are the
     # position in this list, one-based.
@@ -159,6 +204,51 @@ def retail(symbol: str, address: int, size: int, elf_path, directory=None) -> pa
                        f"the {size} bytes the ledger sizes it at")
     return _write(_path(symbol, directory),
                   object_bytes(text, symbol, size, flags=image.flags))
+
+
+def unit(functions, elf_path, start: int, end: int, name: str,
+         directory=None) -> pathlib.Path:
+    """The target object for a whole *unit*: every function's retail bytes, one object.
+
+    ``functions`` is ``[(symbol, address, size)]`` -- the unit's manifest: where retail put
+    each function and how long it is.  ``[start, end)`` is the retail region the promotion
+    fills (``compile.split_extent``: the unit's splits up to the next one, padding included),
+    and the object's ``.text`` is that region byte for byte, read through the image's program
+    headers.  Each function is a ``STT_FUNC`` symbol at ``address - start``, so the object
+    places the same bytes at the same offsets retail did, and objdiff pairs it by name
+    against the ``cc`` object that compiles the unit.
+
+    This is the one object ``objdiff-cli report generate`` needs per promoted unit: its
+    target.  Handing it the splits instead is what made a byte-identical function score
+    99.2% (a split's ``jal`` names an unresolved symbol -- address zero -- while our object's
+    carries the retail address).
+
+    ``name`` is the unit's key as the report spells it (``main/sys_scf``); it becomes the
+    object's path (``build/diff/main/sys_scf.unit.o``), which is what ``objdiff.json`` names.
+    """
+    image = elf.Elf(elf_path)
+    if end <= start:
+        raise Unusable(f"{name}: the unit's retail region is empty "
+                       f"(0x{start:08X}..0x{end:08X}), so it has no bytes to compare")
+    text = image.read(start, end - start)
+    if len(text) != end - start:
+        raise Unusable(f"{name}: 0x{start:08X}..0x{end:08X} is {len(text)} bytes into the "
+                       f"image, not the {end - start} the split extent measures")
+    rows = []
+    for symbol, address, size in functions:
+        if address < start or address + size > end:
+            raise Unusable(f"{symbol}: 0x{address:08X}+0x{size:X} is outside the unit's "
+                           f"retail region 0x{start:08X}..0x{end:08X}")
+        rows.append((symbol, address - start, size))
+    if not rows:
+        raise Unusable(f"{name}: a unit with no functions has no target object")
+    return _write(unit_path(name, directory), object_with_symbols(text, rows,
+                                                                flags=image.flags))
+
+
+def unit_path(name: str, directory=None) -> pathlib.Path:
+    """Where ``unit`` writes ``name``'s target object: ``build/diff/<name>.unit.o``."""
+    return _path(name, directory, suffix=".unit")
 
 
 def split(symbol: str, split_object, directory=None) -> pathlib.Path:

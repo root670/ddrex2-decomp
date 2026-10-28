@@ -55,6 +55,7 @@ if str(REPO_ROOT) not in sys.path:  # `config.targets`, the descriptor every too
     sys.path.insert(0, str(REPO_ROOT))
 
 from config import targets  # noqa: E402  the one place a target's facts are written down
+from diff import basis  # noqa: E402  retail's own bytes as an object objdiff can pair
 from toolchain import compile as cc  # noqa: E402  the one derivation of a unit's placement
 from toolchain.retail import Retail  # noqa: E402  the file a unit's retail bytes are in
 
@@ -1020,8 +1021,11 @@ class Promotion:
     object is placed by the data ledger instead and its empty ``.text`` is never listed.
     ``.debug``/``.line`` are dumped out of the object by the ``objsec`` edges and
     substituted for the retail databins of the chunks the unit owns; a data-only unit owns
-    one ``.debug`` chunk and no ``.line`` chunk.  The split objects stay in the graph: they
-    are objdiff's target side (M1's own bytes), and ``ddr diff`` still needs them.
+    one ``.debug`` chunk and no ``.line`` chunk.  The split objects stay assembled: ``ddr
+    diff`` reads one to stand in for a function that has no C, and an unpromoted unit's
+    split is still its objdiff target.  A promoted unit's objdiff target is the object
+    :func:`unit_targets` derives from the retail image, not the split -- a split's symbolic
+    ``jal`` makes a byte-identical function score ~99.2% (see :mod:`diff.basis`).
 
     ``module`` is the unit's own answer to *where its code loads* -- ``main`` for the
     file-backed image, an overlay's stem for a blob -- because that decides which link places
@@ -1399,29 +1403,100 @@ def generated_by(*inputs) -> str:
     return " | " + " ".join(inputs)
 
 
-def objdiff_json(code, promotions, geometry=None) -> str:
-    """The objdiff project: one unit per linked code object, target against the C that exists.
+def unit_name(promotion, geometry=None) -> str:
+    """The report's name for a promoted unit: its segment and its source file's stem.
 
-    objdiff compares a unit's ``base_path`` with its ``target_path``.  The target side here
-    is the function's split object -- retail's own bytes, which G1 proves -- and the base side
-    is the object the link actually places for it: the promoted unit's C object where the
-    function has been rewritten, and ``null`` where it has not, which objdiff counts as
-    un-matched.  One unit per *linked* object, because that is the set the image is built
-    from: a project that listed only what is already in C would report a skeleton with zero C
-    written as matched, which is the opposite of what a progress report is for.  Data is not
-    part of this graph -- it stays pinned retail bytes by design -- so neither are the data
-    databins.
+    One name per *linked object* -- ``main/sys_scf`` -- because that is what the promoted
+    unit is on both sides: its ``cc`` object (base) against one object of retail's own bytes
+    for the same unit (target).  The split-per-function naming it replaces was a property of
+    splat's output, not of the unit.
     """
     geometry = _geometry(geometry=geometry)
-    base_of = {split: promotion.object
-               for promotion in promotions for split in promotion.splits}
+    return f"{geometry.code_segment}/{pathlib.Path(promotion.file).stem}"
+
+
+def unit_targets(promoted, manifests, target, geometry=None) -> dict:
+    """Write every promoted main-image unit's objdiff target object; ``{file: path}``.
+
+    The object is retail's own bytes for the unit (:func:`diff.basis.unit`), named after the
+    unit's functions -- the target side ``objdiff-cli report generate`` must be handed for a
+    promoted unit.  Handing it the splits is what made a byte-identical function score
+    ~99.2%: a split's ``jal`` names a symbol the object does not define, so objdiff reads it
+    as address zero while the ``cc`` object carries the retail address, and counts the two as
+    a mismatched operand.  A unit whose code is in an overlay gets no object here: its bytes
+    are not in the file-backed image (they are a blob's), and no overlay unit is a report
+    unit.
+
+    The objects live in ``build/diff/`` (see :mod:`diff.basis`), are written at configure
+    time, and are never an input to the link or to a gate.
+    """
+    geometry = _geometry(target=target, geometry=geometry)
+    written = {}
+    for promotion in promoted:
+        if promotion.is_overlay or not promotion.code:
+            continue
+        tu = manifests.tu_named(promotion.file)
+        start, end = cc.split_extent(tu, manifests)
+        try:
+            path = basis.unit([(function.name, function.address, function.size)
+                               for function in tu.functions],
+                              target.elf, start, end, unit_name(promotion, geometry))
+        except basis.Unusable as exc:
+            raise ConfigError(str(exc)) from exc
+        written[promotion.file] = _display(path)
+    return written
+
+
+def objdiff_json(code, promotions, geometry=None, targets=None) -> str:
+    """The objdiff project: one unit per linked object, target against the object we build.
+
+    objdiff compares a unit's ``base_path`` with its ``target_path``.  A promoted main-image
+    unit is one unit and one pair: its ``cc`` object is the base, and the target is the
+    object :func:`unit_targets` derives from the retail image -- every function of the unit,
+    at its retail offset, under its retail name.  That pairing measures the code the gates
+    measure: a function the compiler reproduced is byte-for-byte equal, so the report counts
+    it, instead of scoring it ~99.2% over a split's symbolic ``jal``.  ``targets`` is what
+    :func:`unit_targets` returned; a promoted unit it did not write is a configuration error,
+    not a silently missing function.
+
+    Every other code split keeps its own unit and its split object as the target, with a
+    ``null`` base: there is no C for it yet, so its bytes have to count as un-matched.  (The
+    diff *verb* stands the split's own bytes in for a base when it compares one function; a
+    progress report must not score a unit against itself.)  A project that listed only what
+    is already in C would report a skeleton with zero C written as matched, which is the
+    opposite of what a progress report is for.  Data is not part of this graph -- it stays
+    pinned retail bytes by design -- so neither are the data databins.
+    """
+    geometry = _geometry(geometry=geometry)
+    targets = targets or {}
+    promoted_splits = {split for promotion in promotions
+                       if not promotion.is_overlay and promotion.code
+                       for split in promotion.splits}
     units = [{"name": f"{geometry.code_segment}/{pathlib.Path(name).stem}",
               "target_path": object_path(REPO_ROOT / name).relative_to(REPO_ROOT).as_posix(),
-              "base_path": base_of.get(name),
+              "base_path": None,
               "scratch": {},
               "metadata": {}}
-             for _, name in code]
+             for _, name in code if name not in promoted_splits]
+    for promotion in promotions:
+        if promotion.is_overlay or not promotion.code:
+            continue
+        target = targets.get(promotion.file)
+        if target is None:
+            raise ConfigError(
+                f"{promotion.file}: a promoted unit has no target object; the report would "
+                f"count none of its code.  unit_targets() writes one per promoted unit")
+        units.append({"name": unit_name(promotion, geometry),
+                      "target_path": target,
+                      "base_path": promotion.object,
+                      "scratch": {},
+                      "metadata": {}})
     units.sort(key=lambda unit: unit["name"])
+    names = [unit["name"] for unit in units]
+    if len(set(names)) != len(names):
+        repeated = sorted({name for name in names if names.count(name) > 1})
+        raise ConfigError("two objdiff units share a name: " + ", ".join(repeated)
+                          + "; a report keys units by name")
     return json.dumps({"$schema": OBJDIFF_SCHEMA, "custom_make": "ninja",
                        "build_target": True, "build_base": True,
                        "min_version": "2.0.0", "units": units}, indent=2) + "\n"
@@ -1676,6 +1751,7 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
     # `compile.split_extent` reads for an overlay unit, and nothing else may see them.
     sources = split_sources(skip={overlay.name for overlay in overlays})
     code = code_splits(sources, geometry)
+    target_objects = unit_targets(promoted, manifests, target, geometry)
     aliases = link_aliases(
         sources, target.splat_symbols,
         [target.undefined_syms, target.undefined_funcs])
@@ -1726,7 +1802,7 @@ def configure(target: "targets.Target", cus_path=None, chunks_path=None,
                        data_compiler=data_compiler, overlay_links=overlay_links)
     write_if_different(REPO_ROOT / "build.ninja", ninja)
     write_if_different(REPO_ROOT / "objdiff.json",
-                       objdiff_json(code, promoted, geometry))
+                       objdiff_json(code, promoted, geometry, target_objects))
     print(f"configure: target {target.name} ({target.elf.name}): {len(splits)} splits, "
           f"{len(code)} code splits at 0x{code[0][0]:X}, "
           f"{len(tail)} tail databins, {len(aliases)} link aliases, build.ninja written"
