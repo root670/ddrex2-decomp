@@ -129,10 +129,17 @@ jobs:
       # first non-pull-request upload creates the project; `name` and `platform` are only read
       # then.  `version` is the build this report measures -- the retail serial, as decmp's
       # guide spells a PS2 version.
+      # The published action (`decmp/upload-action@v1`) does not load - its own `action.yml`
+      # fails GitHub's parser at line 29 - so this is the same code as decmp's pinned script,
+      # fetched by version and checked against the digest in https://api.decmp.dev/action/manifest.json.
       - name: Upload to decmp.dev
-        uses: decmp/upload-action@v1
-        with:
-          report: build/report.json
-          version: SLUS_211.74
-          name: "Dance Dance Revolution Extreme 2 (US) preview"
-          platform: ps2
+        run: |
+          curl -fsSL https://api.decmp.dev/action/v1.1.0.mjs -o decmp.mjs
+          echo "10fb0039a067b4ffe67510959356a691efa6efbb0aae16450c04f8c64da0a5f8  decmp.mjs" | sha256sum -c
+          node decmp.mjs
+        env:
+          DECMP_REPORT: build/report.json
+          DECMP_VERSION: SLUS_211.74
+          DECMP_NAME: "Dance Dance Revolution Extreme 2 (US) preview"
+          DECMP_PLATFORM: ps2
+          GITHUB_TOKEN: ${{ github.token }}
