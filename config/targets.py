@@ -945,6 +945,15 @@ DDREX2P = Target(
         # local's AT_location adopted.  Overlay net_rel4cd, no data of its own.  No -enum min.
         ("src/network/usa_client/ddrex2_usa_gate.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x840, all four bodies word-exact (End 0x14, Main 0x728, Init 0x7C, wrapper
+        # 0x68); .line adopted whole (55 emitted records against retail's 54); .debug retail's
+        # 0x141D / 134 DIEs byte for byte after adoption.  Main is straight-line: four title
+        # draws and sixteen CsFontPrintf calls on their own lines, no loop.
+        # -sdatathreshold 0 is REQUIRED (otherwise "%s"/"%04d" land in .sdata and refuse as
+        # gp-relative).  0x01029FE4 stays a named macro: it re-emits retail's lui $at,0x103 in
+        # each of the sixteen print blocks.
+        ("src/network/net_window/net_win_perstats.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
