@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="656" viewBox="0 0 800 656" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 84/249 (33.7%) promoted</title>
-<desc>One square per translation unit, grouped by module. 84/249 (33.7%) units, 457/5,054 (9.0%) functions and 112,048/1,886,844 (5.9%) code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 85/249 (34.1%) promoted</title>
+<desc>One square per translation unit, grouped by module. 85/249 (34.1%) units, 464/5,054 (9.2%) functions and 112,952/1,886,844 (6.0%) code bytes are reconstructed.</desc>
 <rect width="800" height="656" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 84/249 (33.7%) units</text>
-<text x="24" y="52" font-size="12" fill="#57606a">457/5,054 (9.0%) functions &#183; 112,048/1,886,844 (5.9%) code bytes &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 85/249 (34.1%) units</text>
+<text x="24" y="52" font-size="12" fill="#57606a">464/5,054 (9.2%) functions &#183; 112,952/1,886,844 (6.0%) code bytes &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 (44.4%) units · 44/182 (24.2%) functions · 9,172/67,808 (13.5%) bytes</text>
@@ -181,7 +181,7 @@
 <rect class="cell" data-state="untouched" x="39" y="326" width="12" height="12" rx="2" fill="#d0d7de"><title>src/gs/gs_vu0.c - 840 code bytes - untouched</title></rect>
 </g>
 <g class="module" data-module="network">
-<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 34/82 (41.5%) units · 181/732 (24.7%) functions · 39,712/285,332 (13.9%) bytes</text>
+<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 35/82 (42.7%) units · 188/732 (25.7%) functions · 40,616/285,332 (14.2%) bytes</text>
 <rect class="cell" data-state="untouched" x="24" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net.c - 7,468 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_main.c - 2,456 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_type.c - 864 code bytes - untouched</title></rect>
@@ -254,7 +254,7 @@
 <rect class="cell" data-state="untouched" x="309" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_account.c - 1,600 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="324" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_challenge.c - 3,636 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="339" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_connect.c - 1,516 code bytes - untouched</title></rect>
-<rect class="cell" data-state="partial" x="354" y="379" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/usa_client/ddrex2_usa_gate.c - 904 code bytes - partial</title></rect>
+<rect class="cell" data-state="promoted" x="354" y="379" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/usa_client/ddrex2_usa_gate.c - 904 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="369" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_id.c - 2,992 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="384" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_lobby.c - 6,092 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="399" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_util.c - 4,128 code bytes - untouched</title></rect>
