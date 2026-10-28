@@ -254,7 +254,7 @@
 <rect class="cell" data-state="untouched" x="309" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_account.c - 1,600 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="324" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_challenge.c - 3,636 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="339" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_connect.c - 1,516 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="354" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_gate.c - 904 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="354" y="379" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/usa_client/ddrex2_usa_gate.c - 904 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="369" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_id.c - 2,992 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="384" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_lobby.c - 6,092 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="399" y="379" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/usa_client/ddrex2_usa_util.c - 4,128 code bytes - untouched</title></rect>
