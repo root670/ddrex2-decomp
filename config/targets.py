@@ -997,6 +997,13 @@ DDREX2P = Target(
         # REQUIRED: two 1-byte enumeration_type DIEs (SRE_MV_STEP, SRE_MVREAD_STEP).
         ("src/CS/staffroll/cs_staffroll_mov.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -enum min"),
+        # .text 0x1220, all five bodies word-exact (238/6/60/820/29); .debug retail's 0x1812 /
+        # 145 DIEs byte-for-byte after adoption; .line adopted.  Overlay net_rel4cd.
+        # -sdatathreshold 4 is REQUIRED: the 4-byte pNetDnasAve must stay gp-relative while
+        # "DHCP\n"/"PPPoE\n" stay absolute.  The inner phy_config switch emits retail's 8-entry
+        # table only with all eight cases explicit (case -1:0:1:4 written first, case 6 last).
+        ("src/network/net_dnas/net_dnas_ave.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 4"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",

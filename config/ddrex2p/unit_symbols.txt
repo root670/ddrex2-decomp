@@ -40,3 +40,4 @@ isreReadStep = 0x002DE5B4; // source:src/CS/staffroll/cs_staffroll_mov.c
 current_buff = 0x002DE5B8; // source:src/CS/staffroll/cs_staffroll_mov.c
 MovDraw$* = 0x002DE5BC; // source:src/CS/staffroll/cs_staffroll_mov.c
 mv_enable = 0x002DE5C0; // source:src/CS/staffroll/cs_staffroll_mov.c
+D_00808BF0 = 0x00808BF0; // source:src/network/net_dnas/net_dnas_ave.c
