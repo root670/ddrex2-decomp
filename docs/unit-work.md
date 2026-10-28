@@ -1360,6 +1360,19 @@ finds no pair over both builds x 14 flag sets, so it is not a flag question eith
 Treat a VU/`asm { }` unit whose parameters are named after register aliases as a boundary: report
 `.text` exact and the missing parameter DIEs by name, with the count per body.
 
+### 26. A member access is also a `.debug` fact, not just an address
+
+Measured on `opt_adjust.c`: two bytes at `0x00308B1C/0x00308B1D` are
+`SaveData.Option.screen_x`/`screen_y` (`SaveData` at `0x00308AD0` + 0x4C). Spelling them as
+`#define D_00308B1C (*(char *)0x00308B1C)` gives **identical `.text`**, but every function's CU
+comes out 4 bytes short and `.debug` adoption refuses (`ordered chunk 0x43EF against retail's
+0x43F3`): retail's function DIEs carry a `0x2303` access entry naming `SaveData`, and the CU's
+global order follows. Routing the accesses through the member (`SaveData.Option.screen_x`) fixes
+both the CU global order and the access lists, with `.text` unchanged.
+
+So when an address falls inside a known global's extent, the member spelling is not a style
+preference — the macro form is a `.debug` bug that `.text` cannot show.
+
 ### 25. An 8-element loop body cannot fold its inductions 2:1
 
 Measured on `kn_lfunc_set_head_data` (11 of its 12 bodies are word-exact; this one is 8 bytes

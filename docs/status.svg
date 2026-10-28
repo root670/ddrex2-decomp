@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="656" viewBox="0 0 800 656" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 99/249 (39.8%) promoted</title>
-<desc>One square per translation unit, grouped by module. 99/249 (39.8%) units, 523/5,139 (10.2%) functions and 139,956/1,927,440 (7.3%) code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 100/249 (40.2%) promoted</title>
+<desc>One square per translation unit, grouped by module. 100/249 (40.2%) units, 524/5,139 (10.2%) functions and 140,052/1,927,440 (7.3%) code bytes are reconstructed.</desc>
 <rect width="800" height="656" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 99/249 (39.8%) units</text>
-<text x="24" y="52" font-size="12" fill="#57606a">523/5,139 (10.2%) functions &#183; 139,956/1,927,440 (7.3%) code bytes &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 100/249 (40.2%) units</text>
+<text x="24" y="52" font-size="12" fill="#57606a">524/5,139 (10.2%) functions &#183; 140,052/1,927,440 (7.3%) code bytes &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 (44.4%) units · 44/182 (24.2%) functions · 9,172/67,808 (13.5%) bytes</text>
@@ -45,7 +45,7 @@
 <rect class="cell" data-state="promoted" x="234" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/com_scrollbar.c - 1,344 code bytes - promoted</title></rect>
 </g>
 <g class="module" data-module="CS">
-<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 32/118 (27.1%) units · 165/1,256 (13.1%) functions · 46,288/641,036 (7.2%) bytes</text>
+<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 33/118 (28.0%) units · 166/1,256 (13.2%) functions · 46,384/641,036 (7.2%) bytes</text>
 <rect class="cell" data-state="untouched" x="24" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_e.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/bk_load.c - 116 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_j.c - 0 code bytes - untouched</title></rect>
@@ -140,7 +140,7 @@
 <rect class="cell" data-state="untouched" x="639" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_select.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="654" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_style.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="669" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_subject.c - 0 code bytes - untouched</title></rect>
-<rect class="cell" data-state="untouched" x="684" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_adjust.c - 96 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="684" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/option/opt_adjust.c - 96 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="699" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/option/opt_doll.c - 1,092 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="714" y="197" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/option/opt_kconfig.c - 7,052 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="729" y="197" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/option/opt_lang.c - 1,024 code bytes - promoted</title></rect>
@@ -202,7 +202,7 @@
 <rect class="cell" data-state="promoted" x="279" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_menu.c - 676 code bytes - promoted</title></rect>
 <rect class="cell" data-state="partial" x="294" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_sys/net_sys_main.c - 780 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="309" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_menu.c - 2,600 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="324" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_new.c - 3,204 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="324" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_sys/net_sys_new.c - 3,204 code bytes - partial</title></rect>
 <rect class="cell" data-state="promoted" x="339" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_top.c - 3,080 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="354" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_user.c - 4,592 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="369" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_rule.c - 2,608 code bytes - promoted</title></rect>
