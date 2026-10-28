@@ -274,3 +274,4 @@ netwinperhed = 0x002C1820; // size:0x3c extent:0x40 source:src/network/net_windo
 @85 = 0x002D78B8; // size:0xa extent:0x10 source:src/network/net_window/net_win_perrank.c
 @86 = 0x002D78C8; // size:0x7 extent:0x8 source:src/network/net_window/net_win_perrank.c
 @87 = 0x002D78D0; // size:0x5 extent:0x8 source:src/network/net_window/net_win_perrank.c
+@105 = 0x007F8710; // size:0x6 extent:0x8 source:src/CS/option/opt_lang.c

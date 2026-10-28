@@ -976,6 +976,15 @@ DDREX2P = Target(
         # dc_code pick is an if/else-if chain, not a switch.
         ("src/network/net_sys/net_sys_menu.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x400, both bodies word-exact (240/16); .debug retail's 0x17E2 / 157 DIEs
+        # byte-for-byte after adoption; .line adopted whole (63 emitted records against
+        # retail's 60).  Overlay opt_rel4cd.  `-sdatathreshold 4` is REQUIRED and is the only
+        # value that works: retail loads OPTSYSW gp-relative but takes its 6-byte "%s/%s"
+        # literal absolutely - threshold 0 makes OPTSYSW absolute (Init grows 4 bytes) and the
+        # default 8 pools the literal so the %gp offset cannot be encoded.  case 2 shares
+        # default's body, which reproduces retail's dispatch order 2,3,1,0,4.
+        ("src/CS/option/opt_lang.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 4"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
