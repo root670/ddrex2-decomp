@@ -968,6 +968,14 @@ DDREX2P = Target(
         # body inline and loses retail's `slt $v0; bne`.
         ("src/network/net_window/net_win_perrank.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0xA34 (0xC of retail nop pad), four bodies word-exact (100/238/155/157);
+        # .debug retail's 0x3D42 / 408 DIEs byte-equal after adoption (no drop, 388 sibling
+        # words); .line adopted whole (173 records against retail's 167).  No data, so no
+        # placements.  The two else-branch stores must be two statements - the chained
+        # `s.x = v.x = ...` stores 0x14 before 0x30 where retail does the reverse - and the
+        # dc_code pick is an if/else-if chain, not a switch.
+        ("src/network/net_sys/net_sys_menu.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
