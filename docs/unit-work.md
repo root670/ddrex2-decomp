@@ -1347,6 +1347,23 @@ finds no pair over both builds x 14 flag sets, so it is not a flag question eith
 Treat a VU/`asm { }` unit whose parameters are named after register aliases as a boundary: report
 `.text` exact and the missing parameter DIEs by name, with the count per body.
 
+### 24. An overlay datum that points into the main image needs a named macro
+
+Measured on `cs_staffroll_mov.c` (info_rel4cd): its `sre_ip[11]` table stores pointers into the
+main image's `sound_bin` (`0x002DD420`..`0x002DD470`). An overlay object is linked by the module's
+own script, with the main image's segments absent, so `extern sound_bin` leaves
+`mips-linux-gnu-ld` an undefined reference. The spelling that links and stays byte-exact is one
+named macro, `#define D_002DD418 ((unsigned char *)0x002DD418)`, plus `+ 8 * i` — and because no
+`unit_symbols` record exists for that address, `address_casts` accepts exactly that form.
+
+The same unit establishes two more things an overlay unit must expect:
+- **A datum section can carry a datum of its own** (`sre_ip` 0x2C, `sre_mvseq` 0x60, and two pool
+  slots): four `data_placements` rows, each an address inside the module's window.
+- **A header can under-declare a function**: retail passes `pstf` in `$5` to
+  `csStaffRollMovieRead`, but DWARF drops the unused formal, so the generated prototype cannot be
+  combined with a two-parameter definition. Declare the type inline (rule 15) and keep the unused
+  parameter; the `.debug` inventory still matches.
+
 ### 20. `movz` needs arms that are not 1/0, and the alignment attribute follows the brace
 
 Two compiler facts measured on `fp_style.c`/`fp_opt.c`:
