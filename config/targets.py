@@ -1034,6 +1034,13 @@ DDREX2P = Target(
         # an if/else-if chain whose second arm tests `D_0102FB0C == 0`.
         ("src/network/net_sys/net_sys_rule.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xC14 (0xC08 of code plus retail's 0xC-byte nop pad), four bodies word-exact
+        # (146/308/159/157); .debug retail's 0x7646 byte-for-byte after adoption; .line
+        # adopted.  Both Key and Main are `static` - retail tags them `subroutine`, not
+        # `global_subroutine`, and adoption refuses the DIE set otherwise.  Thirteen
+        # placements; @62 collides by name with net_win_menu's and prefer_source separates them.
+        ("src/network/net_sys/net_sys_top.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
