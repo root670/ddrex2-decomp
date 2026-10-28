@@ -1,6 +1,6 @@
 # DDR Extreme 2 (US) preview
 
-![Translation-unit heatmap](docs/status.svg)
+[![Progress: matched code](https://api.decmp.dev/badge/root670/ddrex2-decomp.svg)](https://decmp.dev/root670/ddrex2-decomp)
 
 A matching decompilation of *Dance Dance Revolution Extreme 2 (US)* for the PlayStation 2.
 
