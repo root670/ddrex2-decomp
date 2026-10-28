@@ -1320,6 +1320,26 @@ gave it one, where the split shows a single register); `SaveData.NonstopRecord[.
 bitfield- or macro-heavy unit the DWARF local list (`dwarf1.py fn`) is a better seed than the m2c
 body, and m2c is most valuable for control flow and packet arithmetic.
 
+### 19a. A VU body in `asm { }` cannot supply its parameter DIEs
+
+Measured on `gs/gs_vu0.c` (three pure VU0 macro-mode bodies: `lqc2`, `vmulax`, `vdiv`,
+`vftoi4`, `ctc2`, `sqc2`, `vmfir`, `vnop`), which are `/* Handwritten function */` splits and so
+take rule 13's `asm { }` route:
+
+- `.text` reaches **zero differing words** that way (66/62/82 words), with the compiler's own
+  epilogue giving retail's `jr $31; nop`.
+- `.debug` then cannot be adopted: retail's `global_subroutine` DIEs carry 5/5/7 children
+  including `v0` and `v1`, and ours carry 3/3/5. MWCC emits a `formal_parameter` DIE only when
+  the parameter reaches emitted code, and `v0`/`v1` are **EE register aliases** (`$2`, `$3`), so
+  `daddu $2, v0, $0` assembles to `daddu $2,$2,$0`, `ori v0,$0,0x4580` still emits no DIE, and
+  `(v0)`, `[v0]`, `%v0`, `&v0`, `$v0` are rejected or alias identically. The only C-level
+  references retail has are loop-tail increments the compiler dead-store eliminates.
+- All five installed builds emit the same DIE set, so it is not a pair question; adoption can
+  drop records but never add them.
+
+Treat a VU/`asm { }` unit whose parameters are named after register aliases as a boundary: report
+`.text` exact and the missing parameter DIEs by name.
+
 ### 20. `movz` needs arms that are not 1/0, and the alignment attribute follows the brace
 
 Two compiler facts measured on `fp_style.c`/`fp_opt.c`:
