@@ -1340,6 +1340,16 @@ DDREX2P = Target(
         # by `!(dest_addr < (unsigned char *)0)` in the first condition: tautological, the
         # backend folds it into the branch, and not one word moves - but MWCC emits a
         # formal_parameter only when the parameter survives the front end into the IR.
+        # .text 0x510, all fifteen bodies word-exact; .line adopted (15 chunks); .debug
+        # retail's 0x13A7 after adoption.  co_obj_set's two 2-word residues: the null exit is a
+        # bare `return;` (a value return emits the `move v0` retail lacks) and `p->f = func;` is
+        # unconditional BEFORE the if, so the scheduler fills the branch delay slot from it and
+        # `p->step = 0;` stays ahead of the branch.  co_obj_exec tests the callback before
+        # calling it and targets the default case's `ini1:` label, which merges the four
+        # `ini_flag = 1` tails.  Adoption's short blocks wanted retail's local NAMES
+        # (`ow`, `prev_flg`, `obj_w`), not a device.
+        ("src/common/obj/co_obj.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/network/net_read_data.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/network/net_sys/net_sys_main.c", "3.0b38-030307",
