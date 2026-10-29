@@ -552,7 +552,8 @@ def test_main_exits_two_naming_the_stale_unit(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(st, "read_records", lambda path: [])
     monkeypatch.setattr(st, "units_of", lambda records: [unit])
     monkeypatch.setattr(st, "load_splits", lambda root: [st.Split(0x1000, 100, "a")])
-    monkeypatch.setattr(st, "collect_sources_and_drafts", lambda: ({"src/sys/a.c"}, set()))
+    monkeypatch.setattr(st, "collect_sources_and_drafts",
+                        lambda *args, **kwargs: ({"src/sys/a.c"}, set()))
     monkeypatch.setattr(st, "verify_units", lambda candidates, target: (_ for _ in ()).throw(
         st.StaleEvidence("src/sys/a.c: its object is missing: run ./ddr build")))
 
