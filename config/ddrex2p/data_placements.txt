@@ -368,3 +368,4 @@ svr_tbl_minfo_num = 0x002B94A0; // size:0x96 extent:0xA0 source:src/network/net_
 @52 = 0x002B8CF0; // size:0x7b0 extent:0x7b0 source:src/network/net_game/net_game_main.c
 @176 = 0x002D3960; // size:0xe extent:0x10 source:src/network/net_game/net_game_main.c
 @177 = 0x002D3970; // size:0x34 extent:0x34 source:src/network/net_game/net_game_main.c
+@29 = 0x002BC660; // size:0x180 extent:0x180 source:src/network/net_sys/net_sys_main.c
