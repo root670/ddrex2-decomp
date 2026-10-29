@@ -1311,6 +1311,16 @@ DDREX2P = Target(
         # .text 0x350, both bodies word-exact; .line byte-equal pre-tidy (56+20 rows) and
         # adopted after; .debug retail's 0x78DD / 785 DIEs (24 of 25 anon indices permuted).
         # 0x6B2F58 is g_game_w.last_data_addr, a member access, not a literal.
+        # .text 0x2C0, seven bodies word-exact; .line 0x344 adopted whole (49 emitted records
+        # against retail's 78; table 1 13 rows against 14); .debug retail's 0x6A33 / 689 DIEs
+        # after adoption (25 anonymous names, 124 references, 659 AT_sibling, nothing dropped).
+        # DanceMasterInit's 0x2303 list is [step0, dmm_w, g_game_w] only while `step0 = 0` sits
+        # inside the dmm_work_reset static __inline beside the work-field stores (shop_main's
+        # block-local trick for the same attribute); written directly in the body it puts
+        # dmm_w first and adoption refuses at +0x69BC.  step0 precedes the unit header and
+        # dmm_w follows it, or MWCC tags both global_variable and the TU never pairs.
+        ("src/CS/dancemaster/dmm_main.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         # .text 0x358 in a 0x360 extent, eight bodies word-exact; .line 0x252 adopted

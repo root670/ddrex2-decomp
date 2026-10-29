@@ -361,3 +361,6 @@ net_type_work_size = 0x002B8BF0; // size:0x24 extent:0x30 source:src/network/net
 @338 = 0x002D51B8; // size:0xe extent:0x18 source:src/network/net_sys/net_sys_lobby.c
 @339 = 0x002D51D0; // size:0x18 extent:0x20 source:src/network/net_sys/net_sys_lobby.c
 @64 = 0x002D4850; // size:0x3 extent:0x10 source:src/network/net_sys/net_sys_info.c
+@15 = 0x002D4890; // size:0x1c extent:0x20 source:src/CS/dancemaster/dmm_main.c
+@33 = 0x002D48B0; // size:0x1c extent:0x20 source:src/CS/dancemaster/dmm_main.c
+@99 = 0x002D48D0; // size:0x20 extent:0x20 source:src/CS/dancemaster/dmm_main.c
