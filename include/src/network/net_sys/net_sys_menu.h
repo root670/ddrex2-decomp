@@ -16,12 +16,10 @@
 
 #include "types/_NETWORK_W.h"
 
-/* functions referenced (5) */
+/* functions referenced (3) */
 void NetSysLogoutInit(struct _NETWORK_W *);                      /* @0x0022CB60 */
 void NetSysInfoInit(struct _NETWORK_W *);                        /* @0x00229050 */
 void NetSysUserInit(struct _NETWORK_W *);                        /* @0x00227780 */
-void NetSysMenuSelectKey(struct _NETWORK_W *);                   /* @0x00224580 */
-void NetSysMenuMain(struct _NETWORK_W *);                        /* @0x00224710 */
 
 /* functions defined (4) */
 static void NetSysMenuSelectKey(struct _NETWORK_W *netw);        /* 0x00224580-0x00224710 lines 266-289 */

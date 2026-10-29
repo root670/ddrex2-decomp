@@ -23,8 +23,7 @@ static int test_shutdown;                                        /* @0x002DE504 
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 
-/* functions referenced (5) */
-void NetToSysInit(struct _NETWORK_W *);                          /* @0x001EB340 */
+/* functions referenced (4) */
 void NetSysTopInit2(struct _NETWORK_W *);                        /* @0x00226380 */
 void NetGameInit(struct _NETWORK_W *);                           /* @0x001F6830 */
 void NetSysInit(struct _NETWORK_W *);                            /* @0x00224330 */

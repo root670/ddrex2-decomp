@@ -73,10 +73,7 @@ struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 
 int SmapResult;                                                  /* @0x002DE194 size 0x4 */
 int Dev9Result;                                                  /* @0x002DE19C size 0x4 */
 
-/* functions referenced (6) */
-void unload_module_th(void *);                                   /* @0x007FF570 */
-void load_module_th(void *);                                     /* @0x007FF7E0 */
-void load_entry_th(void *);                                      /* @0x00800E30 */
+/* functions referenced (3) */
 void NetSysTopInit2(struct _NETWORK_W *);                        /* @0x00226380 */
 void NetDnasMain(struct _NETWORK_W *);                           /* @0x00805860 */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */

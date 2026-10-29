@@ -17,19 +17,9 @@
 #include "types/_NETWORK_W.h"
 #include "types/_nsv_rc_table_param_work.h"
 
-/* functions referenced (13) */
+/* functions referenced (3) */
 void NetGameMenuChangeTab(struct _NETWORK_W *);                  /* @0x001FABC0 */
-void NetGameRCInit2(struct _NETWORK_W *);                        /* @0x0025DE50 */
-void NetGameRCRankingKey(struct _NETWORK_W *);                   /* @0x0025C8C0 */
-void NetGameRCRankingMain(struct _NETWORK_W *);                  /* @0x0025CBB0 */
-void NetGameRCRankingInit(struct _NETWORK_W *);                  /* @0x0025CF70 */
 void NetGameChallengeInit(struct _NETWORK_W *);                  /* @0x0025F2C0 */
-void NetGameRCSelectKey(struct _NETWORK_W *);                    /* @0x0025D390 */
-void NetGameRCSelectMain(struct _NETWORK_W *);                   /* @0x0025D610 */
-void NetGameRCStepout(struct _NETWORK_W *);                      /* @0x0025DF10 */
-void NetGameRCSelectInit(struct _NETWORK_W *);                   /* @0x0025D8F0 */
-void NetGameRCKey(struct _NETWORK_W *);                          /* @0x0025D9B0 */
-void NetGameRCMain(struct _NETWORK_W *);                         /* @0x0025DC90 */
 void NetGameMenuInit2(struct _NETWORK_W *);                      /* @0x001FB280 */
 
 /* functions defined (17) */

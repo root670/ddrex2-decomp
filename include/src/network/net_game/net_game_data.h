@@ -20,41 +20,21 @@
 #include "types/_nsv_ranking_point_param_w.h"
 #include "types/_nsv_rc_table_param_work.h"
 
-/* functions referenced (35) */
+/* functions referenced (15) */
 int NetWin_PerPoint(struct _CWS_WIN_W *);                        /* @0x00286320 */
 int NetWin_PerRank(struct _CWS_WIN_W *);                         /* @0x002866E0 */
 int NetWin_PerHead(struct _CWS_WIN_W *);                         /* @0x00285D00 */
 int NetWin_PerStats(struct _CWS_WIN_W *);                        /* @0x00286F20 */
 void NetGameMenuChangeTab(struct _NETWORK_W *);                  /* @0x001FABC0 */
-void NetGameDataInit2(struct _NETWORK_W *);                      /* @0x002006A0 */
-void NetGameDataPersonalKey(struct _NETWORK_W *);                /* @0x001FD0B0 */
-void NetGameDataPersonalMain(struct _NETWORK_W *);               /* @0x001FD2C0 */
 int NetWin_PerUserPoint(struct _CWS_WIN_W *);                    /* @0x00285590 */
-void NetGameDataPointKey(struct _NETWORK_W *);                   /* @0x001FD960 */
-void NetGameDataPointMain(struct _NETWORK_W *);                  /* @0x001FDAA0 */
 int NetWin_DPoint(struct _CWS_WIN_W *);                          /* @0x00287D80 */
-void NetGameDataRCInit2(struct _NETWORK_W *);                    /* @0x001FF5A0 */
-void NetGameDataRCListKey(struct _NETWORK_W *);                  /* @0x001FE020 */
-void NetGameDataRCListMain(struct _NETWORK_W *);                 /* @0x001FE310 */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 int NetWin_Infosel(struct _CWS_WIN_W *);                         /* @0x002722C0 */
 void NetGameRCInit2(struct _NETWORK_W *);                        /* @0x0025DE50 */
-void NetGameDataRCListInit(struct _NETWORK_W *);                 /* @0x001FE5B0 */
-void NetGameDataRCKey(struct _NETWORK_W *);                      /* @0x001FEC80 */
-void NetGameDataRCMain(struct _NETWORK_W *);                     /* @0x001FF160 */
 int NetWin_Bar(struct _CWS_WIN_W *);                             /* @0x002486C0 */
 int NetWin_Item(struct _CWS_WIN_W *);                            /* @0x0022EE50 */
 int NetWin_Rccssel(struct _CWS_WIN_W *);                         /* @0x002734B0 */
-void NetGameDataHtoHKey(struct _NETWORK_W *);                    /* @0x001FFB90 */
-void NetGameDataHtoHMain(struct _NETWORK_W *);                   /* @0x001FFCD0 */
 int NetWin_DHead(struct _CWS_WIN_W *);                           /* @0x002879E0 */
-void NetGameDataPersonalInit(struct _NETWORK_W *);               /* @0x001FD590 */
-void NetGameDataPointInit(struct _NETWORK_W *);                  /* @0x001FDC90 */
-void NetGameDataRCInit(struct _NETWORK_W *);                     /* @0x001FF690 */
-void NetGameDataHtoHInit(struct _NETWORK_W *);                   /* @0x001FFEB0 */
-void NetGameDataStepout(struct _NETWORK_W *);                    /* @0x00200700 */
-void NetGameDataKey(struct _NETWORK_W *);                        /* @0x00200280 */
-void NetGameDataMain(struct _NETWORK_W *);                       /* @0x002004B0 */
 void NetGameMenuInit2(struct _NETWORK_W *);                      /* @0x001FB280 */
 
 /* functions defined (29) */

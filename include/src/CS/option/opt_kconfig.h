@@ -120,10 +120,8 @@ struct _tag_cKeyConfigLR TblKeyConfigLR[2][8];                   /* @0x002A6570 
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
 struct _tag_cDDR8Option OptionDefault;                           /* @0x002A6510 size 0x58 */
 
-/* functions referenced (3) */
+/* functions referenced (1) */
 void OptMenuInit2(struct _OPTSYS_W *);                           /* @0x007F5E70 */
-void OptKConfigDoubleMain(struct _OPTSYS_W *);                   /* @0x007F14E0 */
-void OptKConfigMain(struct _OPTSYS_W *);                         /* @0x007F18C0 */
 
 /* functions defined (9) */
 static void OptKConfigSetEditKey(void);                          /* 0x007F07F0-0x007F0978 lines 1140-1168 */

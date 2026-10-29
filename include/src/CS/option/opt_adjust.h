@@ -22,9 +22,8 @@
 struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 size 0x1FF50 */
 struct _OPTSYS_W *OPTSYSW;                                       /* @0x002DDEF0 size 0x4 */
 
-/* functions referenced (2) */
+/* functions referenced (1) */
 void OptMenuInit2(struct _OPTSYS_W *);                           /* @0x007F5E70 */
-void OptAdjustMain(struct _OPTSYS_W *);                          /* @0x007F0080 */
 
 /* functions defined (2) */
 void OptAdjustMain(struct _OPTSYS_W *_opt);                      /* 0x007F0080-0x007F0598 lines 27-135 */

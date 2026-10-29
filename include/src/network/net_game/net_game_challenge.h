@@ -27,10 +27,9 @@
 /* variables (1) */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 
-/* functions referenced (3) */
+/* functions referenced (2) */
 void NetToGameInit(struct _NETWORK_W *);                         /* @0x001EB260 */
 void NetGameRCInit2(struct _NETWORK_W *);                        /* @0x0025DE50 */
-void NetGameChallengeMain(struct _NETWORK_W *);                  /* @0x0025F030 */
 
 /* functions defined (3) */
 static int NetGameChallengeCourseConvert(struct _nsv_rc_table_param_work *net_course_data); /* 0x0025EDB0-0x0025F024 lines 326-427 */

@@ -25,10 +25,8 @@ static void *NetGameMenuTabStepin[6];                            /* @0x002B9660 
 static void *NetGameMenuTabStepout[6];                           /* not allocated size 0x18 */
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
 
-/* functions referenced (3) */
+/* functions referenced (1) */
 void NetGameListInit(struct _NETWORK_W *);                       /* @0x00202140 */
-void NetGameMenuSelectKey(struct _NETWORK_W *);                  /* @0x001FAE20 */
-void NetGameMenuSelect(struct _NETWORK_W *);                     /* @0x001FAFC0 */
 
 /* functions defined (5) */
 void NetGameMenuChangeTab(struct _NETWORK_W *netw);              /* 0x001FABC0-0x001FAE1C lines 339-394 */

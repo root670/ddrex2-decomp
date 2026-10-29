@@ -69,11 +69,9 @@ anon_3_79 *dw;                                                   /* @0x002DE534 
 int name_num;                                                    /* @0x002DE544 size 0x4 */
 static anon_1_79 new_user_w;                                     /* @0x0071EF70 size 0x58 */
 
-/* functions referenced (4) */
+/* functions referenced (2) */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
 void NetSysUserInit2(struct _NETWORK_W *);                       /* @0x002274A0 */
-void NetSysNewKey(struct _NETWORK_W *);                          /* @0x002250B0 */
-void NetSysNewMain(struct _NETWORK_W *);                         /* @0x002254E0 */
 
 /* functions defined (4) */
 static void NetSysNewInitKeyborad(void);                         /* 0x00224FC0-0x002250A8 lines 535-558 */

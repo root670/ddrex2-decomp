@@ -1046,6 +1046,14 @@ def _unit_header(dw, tu):
             lines += definition(dw, die, tag, specifier, typedef=True)
         lines.append("")
 
+    # A unit that DEFINES a function can still carry retail's declaration record for it -- a
+    # `global_variable` whose type is the subroutine, exactly the record net_game_main needed.
+    # Printing both spellings made the header refuse to compile ("identifier
+    # 'co_movie_change_init_th(void *)' redeclared, was declared as 'void (void *)'"), and 45
+    # of the headers did it: the definition's own prototype is the authoritative one, so the
+    # duplicate declaration is dropped instead of restating the function differently.
+    defined_names = {_name(dw, function) for function in functions}
+    defined_pcs = {function.attrs.get(AT_low_pc) for function in functions}
     globals_, references = [], []
     for die in variables:
         tree = dw.type_of(die) or VOID
@@ -1054,6 +1062,8 @@ def _unit_header(dw, tu):
         if where == "@0x00000000":
             where = "not allocated"
         if tree[0] == "func":
+            if _name(dw, die) in defined_names or location in defined_pcs:
+                continue
             references.append(f"{decl(dw, tree, _name(dw, die), specifier)};".ljust(64)
                               + f" /* {where} */")
         else:

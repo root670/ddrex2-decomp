@@ -17,11 +17,9 @@
 #include "types/_CWS_WIN_W.h"
 #include "types/_NETWORK_W.h"
 
-/* functions referenced (5) */
+/* functions referenced (3) */
 void NetSysMenuInit2(struct _NETWORK_W *);                       /* @0x00224AD0 */
 void NetSysTopInit2(struct _NETWORK_W *);                        /* @0x00226380 */
-void NetSysLogoutKey(struct _NETWORK_W *);                       /* @0x0022C4B0 */
-void NetSysLogoutMain(struct _NETWORK_W *);                      /* @0x0022C620 */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 
 /* functions defined (3) */

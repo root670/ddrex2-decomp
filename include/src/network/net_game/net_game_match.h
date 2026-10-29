@@ -20,17 +20,11 @@
 /* variables (1) */
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 
-/* functions referenced (10) */
-void NetGameMatchStepin(struct _NETWORK_W *);                    /* @0x001FC310 */
-void NetGameMatchStepout(struct _NETWORK_W *);                   /* @0x001FC2D0 */
+/* functions referenced (4) */
 void NetGameMenuChangeTab(struct _NETWORK_W *);                  /* @0x001FABC0 */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
-void NetGameMatchSearchKey(struct _NETWORK_W *);                 /* @0x001FB620 */
 void NetGameReverseMenu(struct _NETWORK_W *);                    /* @0x001F67A0 */
-void NetGameMatchKey(struct _NETWORK_W *);                       /* @0x001FBA20 */
 void NetGameMenuInit2(struct _NETWORK_W *);                      /* @0x001FB280 */
-void NetGameMatchMain(struct _NETWORK_W *);                      /* @0x001FBFA0 */
-void NetGameMatchSearchMain(struct _NETWORK_W *);                /* @0x001FB7D0 */
 
 /* functions defined (11) */
 static void NetGameMatchSearchKey(struct _NETWORK_W *netw);      /* 0x001FB620-0x001FB7D0 lines 577-599 */

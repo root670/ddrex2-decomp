@@ -49,15 +49,13 @@ struct _OPTSYS_W *OPTSYSW;                                       /* @0x002DDEF0 
 struct _tag_cDDR8Option OptionDefault;                           /* @0x002A6510 size 0x58 */
 struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 size 0x1FF50 */
 
-/* functions referenced (8) */
-void OptMenuInit2(struct _OPTSYS_W *);                           /* @0x007F5E70 */
+/* functions referenced (6) */
 void OptLangInit(struct _OPTSYS_W *);                            /* @0x007F1F80 */
 void OptMcLoadInit(struct _OPTSYS_W *);                          /* @0x007F3650 */
 void OptMcSaveInit(struct _OPTSYS_W *);                          /* @0x007F3720 */
 void OptKConfigDoubleInit(struct _OPTSYS_W *);                   /* @0x007F1870 */
 void OptKConfigInit(struct _OPTSYS_W *);                         /* @0x007F1B50 */
 void OptAdjustInit(struct _OPTSYS_W *);                          /* @0x007F05A0 */
-void OptMenuMain(struct _OPTSYS_W *);                            /* @0x007F55D0 */
 
 /* functions defined (13) */
 char *OptGetMenuHelp(void);                                      /* 0x007F3760-0x007F3854 lines 2483-2505 */

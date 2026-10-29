@@ -89,8 +89,7 @@ unsigned char rec_obj_pri[22];                                   /* @0x007FBE10 
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 anon_0_242 rec_w;                                                /* @0x007FC400 size 0x504 */
 
-/* functions referenced (2) */
-void trans_title_th(void *);                                     /* @0x007F0080 */
+/* functions referenced (1) */
 void DecodeFilepackData_Th(void *);                              /* @0x0016DC50 */
 
 /* functions defined (14) */

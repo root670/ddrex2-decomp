@@ -128,9 +128,6 @@ anon_16_149 advanced_data_bin[];                                 /* @0x002DD708 
 struct _ADVANCED_MODE_W advanced_mode_work;                      /* @0x00722200 size 0x13C */
 struct _EXTRA_WORK extra_work;                                   /* @0x007221F0 size 0x10 */
 
-/* functions referenced (1) */
-void ResetAdvancedModeTex(void *);                               /* @0x0026BE50 */
-
 /* functions defined (21) */
 int extras_main(void);                                           /* 0x0026A360-0x0026A9D0 lines 1058-1237 */
 void extras_init(void);                                          /* 0x0026A9D0-0x0026A9DC lines 1055-1055 */

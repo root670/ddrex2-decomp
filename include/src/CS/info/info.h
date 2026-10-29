@@ -211,8 +211,7 @@ struct CO_OBJ_W co_obj_addr[32];                                 /* @0x00802530 
 static anon_14_183 myroom_w;                                     /* @0x00802240 size 0x2F0 */
 static struct _tag_cInfo _pInfo;                                 /* @0x00807530 size 0x370 */
 
-/* functions referenced (2) */
-void decode_text_idm5_th(void *);                                /* @0x007F3F60 */
+/* functions referenced (1) */
 void DecodeFilepackDataEx_Th(void *);                            /* @0x0016DB60 */
 
 /* functions defined (45) */

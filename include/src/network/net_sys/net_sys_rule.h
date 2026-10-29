@@ -17,13 +17,10 @@
 #include "types/_CWS_WIN_W.h"
 #include "types/_NETWORK_W.h"
 
-/* functions referenced (7) */
+/* functions referenced (4) */
 void NetSysTopInit2(struct _NETWORK_W *);                        /* @0x00226380 */
 void NetSysEnd(struct _NETWORK_W *);                             /* @0x00224270 */
 void NetSysTopInit(struct _NETWORK_W *);                         /* @0x00226600 */
-void NetSysRuleSelectKey(struct _NETWORK_W *);                   /* @0x00227AA0 */
-void NetSysRuleKey(struct _NETWORK_W *);                         /* @0x00227BD0 */
-void NetSysRuleMain(struct _NETWORK_W *);                        /* @0x00227D80 */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 
 /* functions defined (5) */

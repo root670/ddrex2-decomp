@@ -21,9 +21,8 @@
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
 struct _OPTSYS_W *OPTSYSW;                                       /* @0x002DDEF0 size 0x4 */
 
-/* functions referenced (2) */
+/* functions referenced (1) */
 void OptMenuInit3(struct _OPTSYS_W *);                           /* @0x007F5E50 */
-void OptLangMain(struct _OPTSYS_W *);                            /* @0x007F1BC0 */
 
 /* functions defined (2) */
 void OptLangMain(struct _OPTSYS_W *_opt);                        /* 0x007F1BC0-0x007F1F80 lines 31-104 */

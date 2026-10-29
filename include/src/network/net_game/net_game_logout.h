@@ -16,12 +16,9 @@
 
 #include "types/_NETWORK_W.h"
 
-/* functions referenced (5) */
+/* functions referenced (2) */
 void NetGameEnd(struct _NETWORK_W *);                            /* @0x001F67E0 */
-void NetGameLogoutStepout(struct _NETWORK_W *);                  /* @0x001FA980 */
-void NetGameLogoutKey(struct _NETWORK_W *);                      /* @0x001FA670 */
 void NetGameMenuInit2(struct _NETWORK_W *);                      /* @0x001FB280 */
-void NetGameLogoutMain(struct _NETWORK_W *);                     /* @0x001FA7F0 */
 
 /* functions defined (8) */
 static void NetGameLogoutKey(struct _NETWORK_W *netw);           /* 0x001FA670-0x001FA7E8 lines 176-197 */

@@ -67,14 +67,8 @@ typedef struct {   // size 0x24
 } anon_2_84;
 
 
-/* functions referenced (7) */
-void NetSysInfoInit(struct _NETWORK_W *);                        /* @0x00229050 */
-void NetSysInfoDispInit(struct _NETWORK_W *);                    /* @0x00228960 */
-void NetSysInfoDispKey(struct _NETWORK_W *);                     /* @0x002285C0 */
-void NetSysInfoDispMain(struct _NETWORK_W *);                    /* @0x002287E0 */
+/* functions referenced (1) */
 void NetSysMenuInit2(struct _NETWORK_W *);                       /* @0x00224AD0 */
-void NetSysInfoKey(struct _NETWORK_W *);                         /* @0x00228AC0 */
-void NetSysInfoMain(struct _NETWORK_W *);                        /* @0x00228CB0 */
 
 /* functions defined (6) */
 static void NetSysInfoDispKey(struct _NETWORK_W *netw);          /* 0x002285C0-0x002287DC lines 483-521 */

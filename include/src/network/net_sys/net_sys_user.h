@@ -21,19 +21,12 @@
 /* variables (1) */
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 
-/* functions referenced (12) */
+/* functions referenced (5) */
 void NetSysLobbyInit(struct _NETWORK_W *);                       /* @0x0023FC20 */
-void NetSysUserInit_Sel(struct _NETWORK_W *);                    /* @0x002273A0 */
-void NetSysUserConnect(struct _NETWORK_W *);                     /* @0x00226880 */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
-void NetSysUserSelKey(struct _NETWORK_W *);                      /* @0x002268C0 */
-void NetSysUserSelMain(struct _NETWORK_W *);                     /* @0x00226C00 */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 void NetSysMenuInit2(struct _NETWORK_W *);                       /* @0x00224AD0 */
 void NetSysNewInit(struct _NETWORK_W *);                         /* @0x00225B60 */
-void NetSysUserSelInit(struct _NETWORK_W *);                     /* @0x00226F40 */
-void NetSysUserKey(struct _NETWORK_W *);                         /* @0x00226A50 */
-void NetSysUserMain(struct _NETWORK_W *);                        /* @0x00227140 */
 
 /* functions defined (9) */
 void NetSysUserConnect(struct _NETWORK_W *netw);                 /* 0x00226880-0x002268BC lines 543-546 */

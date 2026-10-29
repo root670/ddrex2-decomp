@@ -698,11 +698,20 @@ def test_promotions_refuses_a_table_entry_whose_source_is_gone():
 
 
 def test_the_registered_targets_promotions_agree_with_its_sources():
-    """Whatever the target lists is exactly what `src/` provides -- today, nothing."""
+    """Whatever the target lists is exactly the unit sources this tree provides.
+
+    "Under `src/`" is not the rule: the manifest declares units wherever retail kept them, and
+    `libstr3.c` is one at the repository root.  Both directions still have to hold -- a row
+    without a file is a configuration error `configure.py` raises, and a file without a row
+    must not sit in the tree -- so the comparison is against the manifest's own paths that
+    exist, not against a directory walk.
+    """
     if not TARGET.cus.is_file():
         pytest.skip(f"{TARGET.name}: its config is generated in Task 4")
     promoted = configure.promotions(target=TARGET)
-    present = {path.relative_to(ROOT).as_posix() for path in (ROOT / "src").rglob("*.c")}
+    declared = {record["file"] for record in json.loads(TARGET.cus.read_text())
+                if record.get("kind") == "tu"}
+    present = {path for path in declared if (ROOT / path).is_file()}
     assert {promotion.file for promotion in promoted} == present
 
 

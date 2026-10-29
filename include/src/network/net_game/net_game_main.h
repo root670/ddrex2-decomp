@@ -37,11 +37,9 @@ static short svr_tbl_minfo_num[75];                              /* @0x002B94A0 
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 
-/* functions referenced (6) */
+/* functions referenced (4) */
 void NetGameWinInterVSMain(struct _NETWORK_W *);                 /* @0x001F7310 */
 void NetSysInit(struct _NETWORK_W *);                            /* @0x00224330 */
-void NetGameEnd(struct _NETWORK_W *);                            /* @0x001F67E0 */
-void NetGameReverseMenu(struct _NETWORK_W *);                    /* @0x001F67A0 */
 void NetGameMenuInit(struct _NETWORK_W *);                       /* @0x001FB360 */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
 

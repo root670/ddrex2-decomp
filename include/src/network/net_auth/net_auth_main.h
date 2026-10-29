@@ -79,9 +79,7 @@ struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 
 struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 size 0x1FF50 */
 static struct _tag_cNetAuth _pNetAuth;                           /* @0x0080C6C0 size 0x340 */
 
-/* functions referenced (6) */
-void change_th(void *);                                          /* @0x007F98F0 */
-void register_th(void *);                                        /* @0x007F9B80 */
+/* functions referenced (4) */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 void NetSysMenuInit(struct _NETWORK_W *);                        /* @0x00224D40 */

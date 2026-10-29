@@ -25,9 +25,6 @@ int sop_step;                                                    /* @0x002DE4D4 
 int sop_num;                                                     /* @0x002DE4D0 size 0x4 */
 static struct _tag_cOlWork _olwork;                              /* @0x00712B60 size 0x40 */
 
-/* functions referenced (1) */
-void rom_load_th(void *);                                        /* @0x001E0BE0 */
-
 /* functions defined (27) */
 int Main_Dmm_ol(void);                                           /* 0x001E06B0-0x001E06B8 lines 886-886 */
 void Init_Dmm_ol(void);                                          /* 0x001E06C0-0x001E0744 lines 881-883 */

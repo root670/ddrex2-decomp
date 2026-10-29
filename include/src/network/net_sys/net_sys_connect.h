@@ -16,10 +16,9 @@
 
 #include "types/_NETWORK_W.h"
 
-/* functions referenced (3) */
+/* functions referenced (2) */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
 void NetRouterMain(struct _NETWORK_W *);                         /* @0x008062B0 */
-void NetSysConnectMain(struct _NETWORK_W *);                     /* @0x002284F0 */
 
 /* functions defined (2) */
 static void NetSysConnectMain(struct _NETWORK_W *netw);          /* 0x002284F0-0x002285B0 lines 19-67 */

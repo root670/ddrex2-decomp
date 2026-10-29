@@ -74,8 +74,7 @@ struct _tag_cNetDnas *pNetDnas;                                  /* @0x002DDEB8 
 static unsigned char *debug_menu_item_str[5];                    /* @0x00806E10 size 0x14 */
 static struct _tag_cNetDnas _pNetDnas;                           /* @0x0080D770 size 0x70 */
 
-/* functions referenced (4) */
-void dnas_th(void *);                                            /* @0x00804040 */
+/* functions referenced (3) */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 void NetSysConnectInit(struct _NETWORK_W *);                     /* @0x002285B0 */
 void NetSysTopInit2(struct _NETWORK_W *);                        /* @0x00226380 */

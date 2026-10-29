@@ -201,9 +201,6 @@ unsigned int tra_seq_buff_th_addr;                               /* @0x002DE57C 
 unsigned int tra_seq_buff_addr;                                  /* @0x002DE580 size 0x4 */
 struct G_SYS_W_ g_sys_w;                                         /* @0x006B4840 size 0x98 */
 
-/* functions referenced (1) */
-void tr_load_seq_th(void *);                                     /* @0x0027FD00 */
-
 /* functions defined (14) */
 static void tr_disp_number(float x, float y, float scale_x, int num, int deg, unsigned char bri, unsigned char alpha); /* 0x0027C1F0-0x0027C3B8 lines 1475-1503 */
 void Tr_check_seq_panel_disp(unsigned char alpha);               /* 0x0027C3C0-0x0027C998 lines 1311-1463 */

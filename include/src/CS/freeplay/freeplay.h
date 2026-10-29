@@ -365,10 +365,6 @@ struct _EYETOY_W *EYETOYW;                                       /* @0x002DD9A8 
 anon_8_72 mg_solo_bin[];                                         /* @0x002DD400 */
 anon_16_72 usr_work;                                             /* @0x00328A20 size 0xC */
 
-/* functions referenced (2) */
-void fp_trans_title_th(void *);                                  /* @0x00215E20 */
-void fp_bind_load_th(void *);                                    /* @0x00215D60 */
-
 /* functions defined (40) */
 int editmode_msel_pre(void);                                     /* 0x00213680-0x0021374C lines 2369-2388 */
 void editmode_msel_init(unsigned char *addr);                    /* 0x00213750-0x00213848 lines 2333-2366 */

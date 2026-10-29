@@ -72,8 +72,7 @@ struct _tag_cUpnp *pUpnp;                                        /* @0x002DDEC0 
 static struct _tag_cUpnp _pUpnp;                                 /* @0x0080D7E0 size 0x14 */
 static struct _tag_cNetRouter _pNetRouter;                       /* @0x0080D800 size 0x2C */
 
-/* functions referenced (3) */
-anon_x3c3111_212 event_handler(anon_x3c0830_212);                /* @0x00805A00 */
+/* functions referenced (2) */
 int CwsWin_Multi(struct _CWS_WIN_W *);                           /* @0x00209DB0 */
 void NetAuthMain(struct _NETWORK_W *);                           /* @0x007FF020 */
 

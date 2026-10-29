@@ -254,3 +254,41 @@ def test_every_enumeration_in_this_image_is_spelled_at_its_own_width():
             assert got == expected, f"DIE 0x{die.off:x} at {width} bytes"
         enums += 1
     assert enums, "this binary's DWARF declares enumerations, and they are all checked"
+
+
+def test_a_unit_that_defines_a_function_does_not_declare_it_again():
+    """Retail's declaration record for a function the unit defines must not reach the header.
+
+    A unit that defines `co_movie_change_init_th` also carries a `global_variable` whose type is
+    the subroutine -- the record the header's "functions referenced" block is built from.  Both
+    spellings were printed, and the header then refused to compile:
+    `identifier 'co_movie_change_init_th(void *)' redeclared, was declared as 'void (void *)'`.
+    45 of the headers did it.  The definition's prototype is authoritative.
+    """
+    text = emit_headers.render(TARGET.elf, "co_movie.c")
+    assert text.count("co_movie_change_init_th(") == 1, text
+    assert "static void co_movie_change_init_th(void);" in text
+
+
+def test_no_committed_header_declares_one_name_twice():
+    """The invariant behind the above, over the whole committed tree: a header compiles as C."""
+    import re
+    keywords = {"void", "int", "float", "char", "short", "long", "unsigned", "signed",
+                "struct", "union", "enum", "const", "volatile"}
+    offenders = []
+    for path in sorted((ROOT / "include/src").rglob("*.h")):
+        seen: dict[str, set[str]] = {}
+        for line in path.read_text().splitlines():
+            declaration = line.split("/*")[0].strip()
+            if (not declaration.endswith(";") or "(*" in declaration
+                    or "__attribute__" in declaration or declaration.startswith("}")):
+                continue
+            head = declaration.split("(")[0]
+            match = re.search(r"(\w+)\s*$", head)
+            if not match or match.group(1) in keywords:
+                continue
+            seen.setdefault(match.group(1), set()).add(declaration)
+        twice = {name for name, spellings in seen.items() if len(spellings) > 1}
+        if twice:
+            offenders.append(f"{path.relative_to(ROOT)}: {sorted(twice)}")
+    assert not offenders, "\n".join(offenders)

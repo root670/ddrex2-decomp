@@ -26,10 +26,8 @@ struct _tag_cDDR8SaveData SaveData;                              /* @0x00308AD0 
 struct _OPTSYS_W *OPTSYSW;                                       /* @0x002DDEF0 size 0x4 */
 static struct _OPTMC_W _opt_mc_w;                                /* @0x00803770 size 0x54 */
 
-/* functions referenced (3) */
+/* functions referenced (1) */
 void OptMenuInit3(struct _OPTSYS_W *);                           /* @0x007F5E50 */
-void OptMcLoadMain(struct _OPTSYS_W *);                          /* @0x007F35C0 */
-void OptMcSaveMain(struct _OPTSYS_W *);                          /* @0x007F3690 */
 
 /* functions defined (6) */
 static int OptMcLoadExe(void);                                   /* 0x007F33A0-0x007F34B4 lines 128-166 */

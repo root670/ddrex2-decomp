@@ -33,10 +33,9 @@ struct g_game_w g_game_w;                                        /* @0x00607A70 
 short seq_data[1000];                                            /* @0x0071F0D0 size 0x7D0 */
 struct _NET_WORK_TYPE_RSEQ_BUF recv_data;                        /* @0x0071F080 size 0x4C */
 
-/* functions referenced (3) */
+/* functions referenced (2) */
 void NetToGameInit(struct _NETWORK_W *);                         /* @0x001EB260 */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
-void NetGameVsMain(struct _NETWORK_W *);                         /* @0x002333B0 */
 
 /* functions defined (5) */
 static int NetGameVsPlay(struct _NETWORK_W *netw);               /* 0x002321F0-0x00232F40 lines 474-954 */

@@ -20,12 +20,10 @@
 /* variables (1) */
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 
-/* functions referenced (5) */
+/* functions referenced (3) */
 void NetSysEnd(struct _NETWORK_W *);                             /* @0x00224270 */
 void NetSysRuleInit(struct _NETWORK_W *);                        /* @0x00228140 */
 void NetCnfMain(struct _NETWORK_W *);                            /* @0x00802460 */
-void NetSysTopKey(struct _NETWORK_W *);                          /* @0x00225C60 */
-void NetSysTopMain(struct _NETWORK_W *);                         /* @0x00225EB0 */
 
 /* functions defined (4) */
 static void NetSysTopKey(struct _NETWORK_W *netw);               /* 0x00225C60-0x00225EA8 lines 317-349 */

@@ -54,10 +54,6 @@ anon_0_38 SdStr3EeRead;                                          /* @0x00712CA8 
 void *_gp;                                                       /* @0x002E20F0 size 0x4 */
 char ThStackER[4096];                                            /* @0x00712CC0 size 0x1000 */
 
-/* functions referenced (2) */
-void sdstr3_ret(void *);                                         /* @0x001E2EE0 */
-void sdstr3_eeread_th(void *);                                   /* @0x001E2F10 */
-
 /* functions defined (7) */
 static void sdstr3_ret(void);                                    /* 0x001E2EE0-0x001E2F04 lines 444-448 */
 static void sdstr3_eeread_th(void *data);                        /* 0x001E2F10-0x001E3220 lines 256-434 */

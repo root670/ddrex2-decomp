@@ -16,12 +16,9 @@
 
 #include "types/_NETWORK_W.h"
 
-/* functions referenced (5) */
+/* functions referenced (2) */
 void NetGameMenuChangeTab(struct _NETWORK_W *);                  /* @0x001FABC0 */
-void NetGamePracStepout(struct _NETWORK_W *);                    /* @0x00200FB0 */
-void NetGamePracKey(struct _NETWORK_W *);                        /* @0x00200B90 */
 void NetGameMenuInit2(struct _NETWORK_W *);                      /* @0x001FB280 */
-void NetGamePracMain(struct _NETWORK_W *);                       /* @0x00200EC0 */
 
 /* functions defined (9) */
 static void NetGamePracKey(struct _NETWORK_W *netw);             /* 0x00200B90-0x00200EB8 lines 275-312 */

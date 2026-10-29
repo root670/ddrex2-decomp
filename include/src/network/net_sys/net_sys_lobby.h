@@ -20,13 +20,10 @@
 /* variables (1) */
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 
-/* functions referenced (6) */
+/* functions referenced (3) */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
 void NetSysUserInit2(struct _NETWORK_W *);                       /* @0x002274A0 */
-void NetSysLobbyToAccountConnect(struct _NETWORK_W *);           /* @0x0023F4C0 */
 void NetGameInit(struct _NETWORK_W *);                           /* @0x001F6830 */
-void NetSysLobbySelectKey(struct _NETWORK_W *);                  /* @0x0023F550 */
-void NetSysLobbyMain(struct _NETWORK_W *);                       /* @0x0023F7A0 */
 
 /* functions defined (4) */
 static void NetSysLobbyToAccountConnect(struct _NETWORK_W *netw); /* 0x0023F4C0-0x0023F550 lines 326-344 */

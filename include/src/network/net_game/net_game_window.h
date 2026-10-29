@@ -21,10 +21,9 @@
 /* variables (1) */
 struct _NS_NET_INFO_W *netiw;                                    /* @0x002DDA84 size 0x4 */
 
-/* functions referenced (4) */
+/* functions referenced (3) */
 void NetGameVsInit(struct _NETWORK_W *);                         /* @0x002338D0 */
 void NetToLogout(struct _NETWORK_W *);                           /* @0x001EB1A0 */
-void NetGameWinInterVSKey(struct _NETWORK_W *);                  /* @0x001F72A0 */
 void NetGamePrgReverseMenu(struct _NETWORK_W *);                 /* @0x00282DF0 */
 
 /* functions defined (3) */

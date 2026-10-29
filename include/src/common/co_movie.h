@@ -124,9 +124,6 @@ static anon_3_119 *mvw;                                          /* @0x002DDD28 
 anon_5_119 mpeg;                                                 /* @0x0032A5C0 size 0x48 */
 static anon_3_119 co_movie_w;                                    /* @0x00722020 size 0x30 */
 
-/* functions referenced (1) */
-void co_movie_change_init_th(void *);                            /* @0x00247A70 */
-
 /* functions defined (11) */
 static void co_movie_SetDecTag(int id);                          /* 0x002470F0-0x002472A8 lines 646-738 */
 static void co_movie_disp(unsigned int pri);                     /* 0x002472B0-0x002477E0 lines 447-630 */

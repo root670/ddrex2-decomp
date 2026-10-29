@@ -41,15 +41,8 @@ int libmc_set_step;                                              /* @0x002DE500 
 struct g_game_w g_game_w;                                        /* @0x00607A70 size 0xACDC4 */
 static struct _NS_NET_INFO_W ns_neti_w;                          /* @0x00715EF0 size 0x2C8 */
 
-/* functions referenced (8) */
-void libmc_set_th(void *);                                       /* @0x001E94B0 */
-void unload_bsdsocki_th(void *);                                 /* @0x001E9630 */
-void net_ave_end(void *);                                        /* @0x001EA6D0 */
-void NetD2ucMsgErr(struct _ddrnet *, int, int);                  /* @0x001E9760 */
-void NetD2ucMsgRecv(struct _ddrnet *, int);                      /* @0x001E97A0 */
+/* functions referenced (1) */
 int getmyinetaddr();                                             /* @0x007F4360 */
-void net_ave_start(void *);                                      /* @0x001EAFD0 */
-void load_bsdsocki_th(void *);                                   /* @0x001E9700 */
 
 /* functions defined (20) */
 int main_libmc_reset(void);                                      /* 0x001E9250-0x001E9494 lines 1102-1182 */
