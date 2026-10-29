@@ -364,3 +364,7 @@ net_type_work_size = 0x002B8BF0; // size:0x24 extent:0x30 source:src/network/net
 @15 = 0x002D4890; // size:0x1c extent:0x20 source:src/CS/dancemaster/dmm_main.c
 @33 = 0x002D48B0; // size:0x1c extent:0x20 source:src/CS/dancemaster/dmm_main.c
 @99 = 0x002D48D0; // size:0x20 extent:0x20 source:src/CS/dancemaster/dmm_main.c
+svr_tbl_minfo_num = 0x002B94A0; // size:0x96 extent:0xA0 source:src/network/net_game/net_game_main.c
+@52 = 0x002B8CF0; // size:0x7b0 extent:0x7b0 source:src/network/net_game/net_game_main.c
+@176 = 0x002D3960; // size:0xe extent:0x10 source:src/network/net_game/net_game_main.c
+@177 = 0x002D3970; // size:0x34 extent:0x34 source:src/network/net_game/net_game_main.c

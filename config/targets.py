@@ -1319,6 +1319,17 @@ DDREX2P = Target(
         # block-local trick for the same attribute); written directly in the body it puts
         # dmm_w first and adoption refuses at +0x69BC.  step0 precedes the unit header and
         # dmm_w follows it, or MWCC tags both global_variable and the TU never pairs.
+        # .text 0x1F6770-0x1F7294, four bodies word-exact; .line 0x281 adopted whole (281
+        # records against retail's 265; table 1 six rows to seven); .debug retail's 0xAB5E /
+        # 1150 DIEs after 274 reference words and 1122 AT_sibling.  -sdatathreshold 4, not 0:
+        # netiw is a 4-byte extern at gp-0x466C while the 0x0102xxxx addresses are literals.
+        # Retail's types CU carries a pure DECLARATION record for NetGameEnd (plus its
+        # subroutine_type and formal_parameter) that MWCC drops as redundant - the dead
+        # `static void *unused_function_decl(void) { return (void *)NetGameEnd; }` is what
+        # emits it.  g_game_w enters NetGameInit's 0x2303 list only through a member access,
+        # so last_data_addr is a volatile-qualified macro rather than the 0x006B2F58 literal.
+        ("src/network/net_game/net_game_main.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 4"),
         ("src/CS/dancemaster/dmm_main.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/CS/shop/shop_init.c", "3.0b38-030307",
