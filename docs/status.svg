@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="656" viewBox="0 0 800 656" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 103/249 (41.4%) promoted</title>
-<desc>One square per translation unit, grouped by module. 103/249 (41.4%) units, 540/5,264 (10.3%) functions and 144,388/2,016,468 (7.2%) code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 104/249 (41.8%) promoted</title>
+<desc>One square per translation unit, grouped by module. 104/249 (41.8%) units, 546/5,264 (10.4%) functions and 147,984/2,016,468 (7.3%) code bytes are reconstructed.</desc>
 <rect width="800" height="656" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 103/249 (41.4%) units</text>
-<text x="24" y="52" font-size="12" fill="#57606a">540/5,264 (10.3%) functions &#183; 144,388/2,016,468 (7.2%) code bytes &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 104/249 (41.8%) units</text>
+<text x="24" y="52" font-size="12" fill="#57606a">546/5,264 (10.4%) functions &#183; 147,984/2,016,468 (7.3%) code bytes &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 (44.4%) units · 44/182 (24.2%) functions · 9,172/67,808 (13.5%) bytes</text>
@@ -181,7 +181,7 @@
 <rect class="cell" data-state="partial" x="39" y="326" width="12" height="12" rx="2" fill="#bf8700"><title>src/gs/gs_vu0.c - 840 code bytes - partial</title></rect>
 </g>
 <g class="module" data-module="network">
-<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 45/82 (54.9%) units · 234/736 (31.8%) functions · 62,812/286,732 (21.9%) bytes</text>
+<text x="24" y="359" font-size="12" font-weight="600" fill="#24292f">network - 46/82 (56.1%) units · 240/736 (32.6%) functions · 66,408/286,732 (23.2%) bytes</text>
 <rect class="cell" data-state="untouched" x="24" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net.c - 7,468 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="39" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_main.c - 2,456 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="54" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_type.c - 864 code bytes - promoted</title></rect>
@@ -207,7 +207,7 @@
 <rect class="cell" data-state="untouched" x="354" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_user.c - 4,592 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="369" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_rule.c - 2,608 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="384" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_connect.c - 208 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="399" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_sys/net_sys_info.c - 3,596 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="399" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_info.c - 3,596 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="414" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_sys/net_sys_logout.c - 2,088 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="429" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_suser.c - 2,308 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="444" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_window/net_win_tab.c - 992 code bytes - promoted</title></rect>
