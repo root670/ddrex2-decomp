@@ -1063,6 +1063,15 @@ DDREX2P = Target(
         # because retail's function DIEs carry an access entry naming SaveData.
         ("src/CS/option/opt_adjust.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xAD0, four bodies word-exact (95/221/124/220) plus a 0x70 trailing nop fill;
+        # .line adopted whole (247 emitted records, 222 adopted); .debug retail's 0xA7D0 / 1112
+        # DIEs after adoption.  The types CU was short by retail's unreferenced @anon28
+        # aggregate (0x24 bytes, x0/y0/z0/w/h/u/v/r0/g0/b0/a0/flg), emitted here by an uncalled
+        # static taking it; adoption drops the six records we carry that retail does not
+        # (D_00824450/54, their array types, and the locals i and work2).  Overlay dmm_rel4cd -
+        # the module's first unit; it needs nothing besides this row.
+        ("src/CS/dancemaster/dmm_style.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
