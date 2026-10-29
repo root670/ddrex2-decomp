@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="656" viewBox="0 0 800 656" role="img" aria-label="ddrex2p translation unit heatmap">
-<title>ddrex2p translation units: 105/249 (42.2%) promoted</title>
-<desc>One square per translation unit, grouped by module. 105/249 (42.2%) units, 553/5,264 (10.5%) functions and 149,404/2,016,468 (7.4%) code bytes are reconstructed.</desc>
+<title>ddrex2p translation units: 106/249 (42.6%) promoted</title>
+<desc>One square per translation unit, grouped by module. 106/249 (42.6%) units, 560/5,264 (10.6%) functions and 150,072/2,016,468 (7.4%) code bytes are reconstructed.</desc>
 <rect width="800" height="656" fill="#ffffff"/>
-<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 105/249 (42.2%) units</text>
-<text x="24" y="52" font-size="12" fill="#57606a">553/5,264 (10.5%) functions &#183; 149,404/2,016,468 (7.4%) code bytes &#183; one cell per translation unit</text>
+<text x="24" y="32" font-size="18" font-weight="600" fill="#24292f">ddrex2p: 106/249 (42.6%) units</text>
+<text x="24" y="52" font-size="12" fill="#57606a">560/5,264 (10.6%) functions &#183; 150,072/2,016,468 (7.4%) code bytes &#183; one cell per translation unit</text>
 <text x="24" y="76" font-size="12" fill="#57606a">green = promoted (G2 green) &#183; amber = partial &#183; grey = untouched &#183; hover for path, code bytes and state</text>
 <g class="module" data-module="AM">
 <text x="24" y="101" font-size="12" font-weight="600" fill="#24292f">AM - 8/18 (44.4%) units · 44/182 (24.2%) functions · 9,172/67,808 (13.5%) bytes</text>
@@ -45,7 +45,7 @@
 <rect class="cell" data-state="promoted" x="234" y="144" width="12" height="12" rx="2" fill="#2da44e"><title>src/common/com_scrollbar.c - 1,344 code bytes - promoted</title></rect>
 </g>
 <g class="module" data-module="CS">
-<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 35/118 (29.7%) units · 175/1,380 (12.7%) functions · 50,132/730,060 (6.9%) bytes</text>
+<text x="24" y="177" font-size="12" font-weight="600" fill="#24292f">CS - 36/118 (30.5%) units · 182/1,380 (13.2%) functions · 50,800/730,060 (7.0%) bytes</text>
 <rect class="cell" data-state="untouched" x="24" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_e.c - 0 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="39" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/bk_load.c - 116 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="54" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/cmes_j.c - 0 code bytes - untouched</title></rect>
@@ -70,7 +70,7 @@
 <rect class="cell" data-state="untouched" x="339" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_data.c - 2,724 code bytes - untouched</title></rect>
 <rect class="cell" data-state="untouched" x="354" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_disp.c - 5,164 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="369" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/dancemaster/dmm_init.c - 1,068 code bytes - promoted</title></rect>
-<rect class="cell" data-state="untouched" x="384" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/dancemaster/dmm_main.c - 668 code bytes - untouched</title></rect>
+<rect class="cell" data-state="promoted" x="384" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/dancemaster/dmm_main.c - 668 code bytes - promoted</title></rect>
 <rect class="cell" data-state="promoted" x="399" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/freeplay/fp_doll.c - 2,956 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="414" y="182" width="12" height="12" rx="2" fill="#d0d7de"><title>src/CS/freeplay/fp_msel_obj.c - 36,124 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="429" y="182" width="12" height="12" rx="2" fill="#2da44e"><title>src/CS/dancemaster/dmm_chara.c - 464 code bytes - promoted</title></rect>
@@ -188,7 +188,7 @@
 <rect class="cell" data-state="promoted" x="69" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_grf.c - 176 code bytes - promoted</title></rect>
 <rect class="cell" data-state="untouched" x="84" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_prg.c - 40,920 code bytes - untouched</title></rect>
 <rect class="cell" data-state="partial" x="99" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_read_data.c - 2,100 code bytes - partial</title></rect>
-<rect class="cell" data-state="untouched" x="114" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_main.c - 2,840 code bytes - untouched</title></rect>
+<rect class="cell" data-state="partial" x="114" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_game/net_game_main.c - 2,840 code bytes - partial</title></rect>
 <rect class="cell" data-state="partial" x="129" y="364" width="12" height="12" rx="2" fill="#bf8700"><title>src/network/net_game/net_game_window.c - 3,256 code bytes - partial</title></rect>
 <rect class="cell" data-state="untouched" x="144" y="364" width="12" height="12" rx="2" fill="#d0d7de"><title>src/network/net_game/net_game_opt.c - 4,960 code bytes - untouched</title></rect>
 <rect class="cell" data-state="promoted" x="159" y="364" width="12" height="12" rx="2" fill="#2da44e"><title>src/network/net_game/net_game_logout.c - 1,320 code bytes - promoted</title></rect>
