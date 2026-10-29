@@ -1086,6 +1086,15 @@ DDREX2P = Target(
         # CwsStrSetAll - without it every body is four words short.
         ("src/network/net_inter.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0xE20 (0xE1C plus retail's 4-byte nop pad), six bodies word-exact
+        # (135/96/88/122/231/227); .debug retail's 0x4560 / 464 DIEs byte-for-byte after
+        # adoption; .line adopted whole (205 emitted records against retail's 207).
+        # -sdatathreshold 0 is REQUIRED: the default 8 pools the 3-byte "%s" gp-relative at
+        # -0xD7C8 from $gp, which cannot be encoded, while retail loads it absolutely.  The
+        # three unused unit-local anon types retail's CU carries are emitted by an uncalled
+        # static helper (no .text).
+        ("src/network/net_sys/net_sys_info.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
