@@ -37,9 +37,11 @@ for _extra in (str(REPO_ROOT / "tools"), str(REPO_ROOT / "tools" / "oracle"),
 
 from toolchain import check_deps, compile as cc, fetch  # noqa: E402
 
-#: The compiler builds to try, in the order the fetcher names them: the required 2.4 build
-#: first, then the alternates.
-CANDIDATES = (fetch.REQUIRED, *(v for v in fetch.CANDIDATES if v != fetch.REQUIRED))
+#: The compiler builds to try.  3.0b38 leads because every row in ``tu_builds`` records it,
+#: so ``--first`` returns the build the tree itself uses; the fetched order follows.  (The
+#: fetcher's ``REQUIRED`` is 2.4, which nothing here promotes against.)
+PREFERRED = "3.0b38-030307"
+CANDIDATES = tuple(dict.fromkeys((PREFERRED, fetch.REQUIRED, *fetch.CANDIDATES)))
 
 #: The flag axes, in the plan's order: the four optimization levels under ``-lang c`` and
 #: ``-g``, then the same levels with ``-sdatathreshold 0`` (which implies ``-model
@@ -48,9 +50,21 @@ LANG = ("-lang", "c")
 LEVELS = ("-O2", "-O1", "-O3", "-O4")
 
 
+#: MWCC's whole-program optimizer.  Every promoted unit's row records it, and the plain levels
+#: do not schedule the same way, so a sweep without it reports "no installed compiler
+#: reproduces" for units a committed row already reproduces.
+OPT_FULL = ("-opt", "full")
+
+
 def flag_sets() -> list[tuple[str, ...]]:
-    """The flag sets to measure, each a whole ``mwccps2`` command line's flags."""
-    sets = [("-c", *LANG, level, "-g") for level in LEVELS]
+    """The flag sets to measure, each a whole ``mwccps2`` command line's flags.
+
+    The full-optimizer forms come first because they are the ones this tree's rows use.
+    """
+    sets = [("-c", *LANG, level, *OPT_FULL, "-g") for level in ("-O3", "-O2")]
+    sets += [("-c", *LANG, level, *OPT_FULL, "-sdatathreshold", "0", "-g")
+             for level in ("-O3", "-O2")]
+    sets += [("-c", *LANG, level, "-g") for level in LEVELS]
     sets += [("-c", *LANG, level, "-sdatathreshold", "0", "-g")
              for level in ("-O2", "-O3")]
     sets += [("-c", *LANG, level) for level in ("-O2", "-O3")]
@@ -64,11 +78,19 @@ def installed(candidates=CANDIDATES, root=fetch.TOOLCHAIN_ROOT) -> tuple[list[st
 
 
 def measure(tu: cc.Tu, version: str, flags, manifests, root=fetch.TOOLCHAIN_ROOT):
-    """Compile ``tu`` with one candidate and compare its three parts with retail."""
+    """Compile ``tu`` with one candidate and compare its three parts with retail.
+
+    The placement adopts retail's metadata, exactly as every promoted unit's ``cc`` edge
+    does: ``.text`` byte equality is the promotion proof, and ``.debug``/``.line`` are
+    reconstructed from retail's inventory.  Measuring before adoption made this sweep
+    useless for the whole current tree -- a unit whose ``.line`` is adopted failed
+    condition 1 for *every* candidate, including the pair its own row records, so it
+    reported "no installed compiler reproduces" for units that are green.
+    """
     compiler_dir = fetch.compiler(version, root=root)
     wibo = fetch.wibo(root=root)
     try:
-        placed = cc.place(tu, manifests, compiler_dir, wibo, flags)
+        placed = cc.place(tu, manifests, compiler_dir, wibo, flags, adopt=True)
     except Exception as exc:  # a candidate that cannot even be placed is a no
         message = " ".join(str(exc).split())[:110]
         return {part: (False, message) for part in ("text", "debug", "line")}
