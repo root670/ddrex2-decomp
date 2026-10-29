@@ -1328,7 +1328,7 @@ DDREX2P = Target(
         # `static void *unused_function_decl(void) { return (void *)NetGameEnd; }` is what
         # emits it.  g_game_w enters NetGameInit's 0x2303 list only through a member access,
         # so last_data_addr is a volatile-qualified macro rather than the 0x006B2F58 literal.
-        # .text 0x1F5E70? no: VA 0x00224270-0x0022457C, both bodies word-exact; .line 0x2CC
+        # .text VA 0x00224270-0x0022457C, both bodies word-exact; .line 0x2CC
         # adopted; .debug retail's 0x6FA4 / 1 chunk.  NetSysEnd needs `case 4:` sharing
         # `default:` (retail compares 4 first) and `val = main_libmc_set()`; NetSysInit needs
         # `flg` as the volatile last_data read across func_0011EEC0 (retail reloads into $s1).

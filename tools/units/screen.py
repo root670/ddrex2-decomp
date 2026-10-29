@@ -930,20 +930,23 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
                          f"0x{hit['address']:08X})")
         span = ("above every declared segment" if segments is None
                 else f"above the declared segments (top 0x{segments[1]:X})")
-        reasons.append(f"{len(addresses)} fixed absolute address(es) {span}, used as a memory "
+        warnings.append(f"{len(addresses)} fixed absolute address(es) {span}, used as a memory "
                        f"base by {len(address_functions)} of this unit's function(s): "
-                       + "; ".join(shown) + " -- no ledger can name an address no "
-                       "segment declares, and a C constant compiles to lui+ori where retail's "
-                       "bytes are a lui+offset relocation pair (the out-of-segment class "
-                       "net_game_help.c measured)")
+                       + "; ".join(shown) + " -- spell each as a file-scope `D_<ADDR>` macro "
+                       "or a `unit_symbols.txt` extern (the incomplete-array form keeps it off "
+                       "$gp); a literal C address compiles to lui+ori where retail's bytes are "
+                       "a lui+offset relocation pair")
 
     # Blockers are the risks that change .text (or stop the unit compiling).  The array/table
     # classes are deliberately absent: they only differ in .debug, and --adopt-retail-meta
     # replaces retail's DIE order, locations and .line once .text is byte-identical.
+    # ``absolute-addresses`` is measured advice, not a wall: an address outside every declared
+    # segment is nameable by `unit_symbols.txt`, and net_game_help.c, net_sys_top.c and
+    # net_sys_main.c all promoted that way.  Treating it as blocked kept promotable units out
+    # of the dispatch list (net_sys_main sat at rank 56 behind it and promoted first try).
     blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "128-bit-gpr",
                            "library", "unreferenced-arrays",
-                           "unresolvable-callees",
-                           "absolute-addresses"} for flag in flags)
+                           "unresolvable-callees"} for flag in flags)
 
     score = score_unit(functions=n, statements=statements, calls=calls,
                        fp_functions=fp_functions, arrays=len(arrays),

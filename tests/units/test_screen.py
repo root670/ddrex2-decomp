@@ -310,15 +310,17 @@ def test_128bit_gpr_operation_blocks_but_quadword_assignment_does_not(tmp_path):
     assert row2["quad_ops"] == [] and "no 128-bit GPR ops" in " ".join(row2["good"])
 
 
-def test_a_fixed_address_above_the_segments_blocks_like_net_game_help(tmp_path):
+def test_a_fixed_address_above_the_segments_is_advice_not_a_wall(tmp_path):
     """`net_game_help.c` read as easy because its operands carry no *name* to look up.
 
     Retail's fields at ``0x01029FE4``/``0x0102FACC``/``0x0102FE00-14`` reach the object as
     ``lui $1,(0x1030000 >> 16)`` plus the low half in the access itself -- the assembler's
     ``lw rt, sym`` expansion, one pair per access -- while a C *constant* compiles to
-    ``lui``+``ori`` (measured: 155 of 172 words differ).  The address is above every declared
-    segment, so ``borrowed_symbols.txt`` (functions only) and an out-of-segment
-    ``unplaced_symbols.txt`` record can neither of them name it.
+    ``lui``+``ori`` (measured: 155 of 172 words differ).  So the ranker still raises the flag
+    and says how to spell it, but it no longer calls the unit blocked: the address is
+    nameable, and `net_game_help.c`, `net_sys_top.c` and `net_sys_main.c` all promoted through
+    a file-scope macro or a `unit_symbols.txt` extern.  Keeping it a blocker hid promotable
+    units from dispatch -- `net_sys_main` sat at rank 56 behind it and promoted first try.
     """
     tu = FakeTU("C:\\x\\src\\X\\fake.c", [])
     fn = FakeFunction("f", 0x10, 0x40)
@@ -331,9 +333,9 @@ def test_a_fixed_address_above_the_segments_blocks_like_net_game_help(tmp_path):
         "    sw         $0, -0x1F0($1)",   # the delay slot still sees the pair's constant
     ]))
     row = _analyze(tmp_path, tu, [fn], {}, segments=(0x100000, 0x723700))
-    assert "absolute-addresses" in row["flags"] and row["blocked"] is True
+    assert "absolute-addresses" in row["flags"] and row["blocked"] is False
     assert [a["address"] for a in row["addresses"]] == [0x01029FE4, 0x0102FE10]
-    assert "0x01030000" in row["reasons"][0]
+    assert "0x01030000" in row["warnings"][0]
     assert row["addresses"][0]["opcode"] == "lw"
     assert row["addresses"][0]["operand"] == "lw         $3, -0x601C($1)"
     assert "no fixed absolute addresses" not in " ".join(row["good"])
