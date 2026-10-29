@@ -1334,6 +1334,14 @@ DDREX2P = Target(
         # `flg` as the volatile last_data read across func_0011EEC0 (retail reloads into $s1).
         # `D_01029C88`/`D_0102FFCC` are externs (incomplete-array form, no $gp); the other
         # scratch addresses stay file-scope macros because the extern spelling costs words.
+        # .text 0x850, five bodies word-exact (49/143/20/5/308).  .debug retail's 0x7507 / 771
+        # DIEs byte-equal after adoption; .line adopted (199 emitted records, 196 adopted;
+        # table 0 holds 22 rows against retail's 21).  Decode's unused `dest_addr` DIE is forced
+        # by `!(dest_addr < (unsigned char *)0)` in the first condition: tautological, the
+        # backend folds it into the branch, and not one word moves - but MWCC emits a
+        # formal_parameter only when the parameter survives the front end into the IR.
+        ("src/network/net_read_data.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/network/net_sys/net_sys_main.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/network/net_game/net_game_main.c", "3.0b38-030307",

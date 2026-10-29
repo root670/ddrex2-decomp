@@ -74,3 +74,4 @@ InitFg$* = 0x002DE4DC; // source:libstr3.c
 @87 = 0x002D2840; // source:libstr3.c
 D_01029C88 = 0x01029C88; // source:src/network/net_sys/net_sys_main.c
 D_0102FFCC = 0x0102FFCC; // source:src/network/net_sys/net_sys_main.c
+DecodeFilepackData_Th = 0x0016DC50; // source:src/network/net_read_data.c
