@@ -68,12 +68,12 @@ A red gate is never worked around: the tool names the unit, function and chunk t
 
 <!-- status:start -->
 
-**109/249 (43.8%) units · 571/5,264 (10.8%) functions · 155,792/2,016,468 (7.7%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; denominators are the split ledger's functions and declared code bytes, and `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
+**110/249 (44.2%) units · 586/5,264 (11.1%) functions · 157,000/2,016,468 (7.8%) code bytes reconstructed** — green = promoted, amber = partial, grey = untouched; denominators are the split ledger's functions and declared code bytes, and `tools/units/status.py` counts only what `./ddr verify --tu` confirms.
 
 | module | units | functions | reconstructed bytes |
 |---|---:|---:|---:|
 | `AM` | 8/18 (44.4%) | 44/182 (24.2%) | 9,172/67,808 (13.5%) |
-| `common` | 8/15 (53.3%) | 62/147 (42.2%) | 18,320/44,708 (41.0%) |
+| `common` | 9/15 (60.0%) | 77/147 (52.4%) | 19,528/44,708 (43.7%) |
 | `CS` | 36/118 (30.5%) | 182/1,380 (13.2%) | 50,800/730,060 (7.0%) |
 | `eyetoy` | 0/3 (0.0%) | 0/30 (0.0%) | 0/13,300 (0.0%) |
 | `fft` | 0/1 (0.0%) | 0/9 (0.0%) | 0/12,084 (0.0%) |
