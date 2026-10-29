@@ -889,9 +889,11 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
         flags.append("unreferenced-arrays")
         shown = ", ".join(f"{type_text(dwarf, c)} @0x{c.off:X}"
                           for c in unreferenced_arrays[:3])
-        reasons.append(f"{len(unreferenced_arrays)} array DIE(s) nothing references: {shown}"
-                       " -- retail has DIEs no C shape emits, and adoption can only drop our "
-                       "extra records, not fabricate a missing one, so .text cannot recover it")
+        warnings.append(f"{len(unreferenced_arrays)} array DIE(s) nothing references: {shown}"
+                        " -- adoption can only drop our extra records, not fabricate a missing "
+                        "one, so the DIE has to be emitted by an UNCALLED static that takes the "
+                        "type (`static void *unused_decl(void) { return (void *)&name; }`), the "
+                        "device that closed dmm_style and sys_demo.  .text is unaffected")
     if large_tables:
         flags.append("large-tables")
         shown = ", ".join(f"{t['name']} ({t['size']} B)" for t in large_tables[:3])
@@ -945,8 +947,7 @@ def analyze_unit(dwarf: Dwarf, rel: str, tu, *, units: dict, reachable: set[int]
     # net_sys_main.c all promoted that way.  Treating it as blocked kept promotable units out
     # of the dispatch list (net_sys_main sat at rank 56 behind it and promoted first try).
     blocked = any(flag in {"data-only", "overlay", "missing-splits", "vu0", "128-bit-gpr",
-                           "library", "unreferenced-arrays",
-                           "unresolvable-callees"} for flag in flags)
+                           "library", "unresolvable-callees"} for flag in flags)
 
     score = score_unit(functions=n, statements=statements, calls=calls,
                        fp_functions=fp_functions, arrays=len(arrays),

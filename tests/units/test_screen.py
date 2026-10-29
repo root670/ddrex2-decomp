@@ -210,7 +210,10 @@ def _write_split(tmp_path, name, text):
     (tmp_path / f"{name}.s").write_text(text)
 
 
-def test_unreferenced_array_die_blocks_like_sys_demo(tmp_path):
+def test_unreferenced_array_die_is_a_device_not_a_wall(tmp_path):
+    """Retail's `pdemo` has an array DIE no code references; adoption cannot invent it, so the
+    DIE has to come from an uncalled static that takes the type - the device dmm_style and
+    sys_demo closed with.  The ranker names the device instead of refusing the unit."""
     orphan = FakeDie(0x200, ARRAY, {SUBSCR_DATA: b"\x00" * 8},
                      tree=("array", 256, ("base", "unsigned char", 3)))
     var = FakeDie(0x300, GLOBAL_VAR, {USER_DEF_TYPE: 0x999},
@@ -219,9 +222,9 @@ def test_unreferenced_array_die_blocks_like_sys_demo(tmp_path):
     fn = FakeFunction("f", 0x10, 0x20)
     _write_split(tmp_path, "f", "glabel f\n    jr $31\n")
     row = _analyze(tmp_path, tu, [fn], {})
-    assert row["blocked"] is True
+    assert row["blocked"] is False
     assert "unreferenced-arrays" in row["flags"]
-    assert "unsigned char [256]" in row["reasons"][0]
+    assert "unsigned char [256]" in row["warnings"][0]
 
 
 def test_large_and_unreferenced_tables_warn_like_mes_units_but_do_not_block(tmp_path):
