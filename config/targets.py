@@ -1072,6 +1072,13 @@ DDREX2P = Target(
         # the module's first unit; it needs nothing besides this row.
         ("src/CS/dancemaster/dmm_style.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x460, five bodies word-exact (78/12/140/3/44); .debug retail's 0x9C7F / 1021
+        # DIEs byte-equal after adoption; .line and AT_location adopted.  No data of its own.
+        # The evboot clear is `i < 0x17`: MWCC unrolls it seven stores per iteration, so
+        # `slti 0x10` is its rotated condition (`0x10` gives an 8-unroll and is 4 words short),
+        # and dmm_save's post-switch tail tests `mc_w->disp_win`, not `step`.
+        ("src/CS/dancemaster/dmm_mc.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
