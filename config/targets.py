@@ -1079,6 +1079,13 @@ DDREX2P = Target(
         # and dmm_save's post-switch tail tests `mc_w->disp_win`, not `step`.
         ("src/CS/dancemaster/dmm_mc.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
+        # .text 0x280, all seven bodies word-exact (13/4/17/38/33/23/19); .debug retail's 0x1390
+        # / 127 DIEs byte-for-byte after adoption; .line adopted.  No data of its own; the one
+        # runtime scratch slot is a named macro, which keeps retail's "no global DIE and no
+        # 0x2303 entry" shape.  Each Set*Code needs `if (D_01029FDC == 0) return;` before
+        # CwsStrSetAll - without it every body is four words short.
+        ("src/network/net_inter.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
