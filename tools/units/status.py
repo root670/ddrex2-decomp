@@ -572,22 +572,30 @@ def _worktree_files(paths: tuple[str, ...]) -> list[str]:
     return found
 
 
-def collect_sources_and_drafts() -> tuple[set[str], set[str]]:
-    """Unit-path sources and draft file names over every branch and the working tree."""
+def collect_sources_and_drafts(unit_paths: Iterable[str] = ()) -> tuple[set[str], set[str]]:
+    """Unit-path sources and draft file names over every branch and the working tree.
+
+    ``unit_paths`` is the manifest's own list, which is what lets a source *outside* ``src/``
+    count: `libstr3.c` is a translation unit at the repository root, and walking only ``src/``
+    and ``drafts/`` made it permanently "partial" however green its gate was (the report read
+    104 units while the gate confirmed 105).
+    """
+    wanted = set(unit_paths)
     sources: set[str] = set()
     drafts: set[str] = set()
 
     def absorb(paths: Iterable[str]) -> None:
         for path in paths:
             posix = path.replace("\\", "/")
-            if posix.startswith("src/"):
+            if posix.startswith("src/") or posix in wanted:
                 sources.add(posix)
             elif posix.startswith("drafts/"):
                 drafts.add(pathlib.PurePosixPath(posix).name)
 
-    absorb(_worktree_files(("src", "drafts")))
+    outside = tuple(sorted({p for p in wanted if not p.startswith("src/")}))
+    absorb(_worktree_files(("src", "drafts", *outside)))
     for ref in ["HEAD", *branches()]:
-        absorb(_tree_files(ref, ("src", "drafts")))
+        absorb(_tree_files(ref, ("src", "drafts", *outside)))
     return sources, drafts
 
 
@@ -726,7 +734,7 @@ def main(argv=None) -> int:
     rows = {entry[0] for entry in target.tu_builds}
     code = code_of(records, load_splits(REPO_ROOT / "asm"))
 
-    sources, drafts = collect_sources_and_drafts()
+    sources, drafts = collect_sources_and_drafts(unit.file for unit in units)
     candidates = [unit for unit in units
                   if unit.file in sources and (args.no_verify or unit.file in rows)]
     if args.no_verify:

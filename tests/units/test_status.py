@@ -559,3 +559,13 @@ def test_main_exits_two_naming_the_stale_unit(monkeypatch, capsys, tmp_path):
     assert st.main(["--target", "synthetic"]) == 2
     err = capsys.readouterr().err
     assert "stale evidence" in err and "src/sys/a.c" in err
+
+
+def test_a_unit_outside_src_counts_as_promoted():
+    """`libstr3.c` is a translation unit at the repository root; walking only src/ made it
+    permanently partial however green its gate was (the report read 104 while the gate said 105)."""
+    sources, _ = st.collect_sources_and_drafts(["libstr3.c"])
+    assert "libstr3.c" in sources
+    unit = st.Unit("libstr3.c", 10)
+    states = st.classify([unit], sources, set(), {"libstr3.c"}, {"libstr3.c"})
+    assert states["libstr3.c"] == st.PROMOTED
