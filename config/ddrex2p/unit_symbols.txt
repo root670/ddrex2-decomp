@@ -70,3 +70,5 @@ D_00808BF0 = 0x00808BF0; // source:src/network/net_dnas/net_dnas_ave.c
 @338 = 0x002D51B8; // source:src/network/net_sys/net_sys_lobby.c
 @339 = 0x002D51D0; // source:src/network/net_sys/net_sys_lobby.c
 __func__$* = 0x002D5180; // source:src/network/net_sys/net_sys_lobby.c
+InitFg$* = 0x002DE4DC; // source:libstr3.c
+@87 = 0x002D2840; // source:libstr3.c

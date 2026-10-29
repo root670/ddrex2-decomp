@@ -1095,6 +1095,13 @@ DDREX2P = Target(
         # static helper (no .text).
         ("src/network/net_sys/net_sys_info.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g -sdatathreshold 0"),
+        # .text 0x59C, all seven bodies word-exact (9/196/4/23/32/24/67); .debug retail's
+        # 0x1675 / 139 DIEs byte-for-byte after adoption with no AT_location needed; .line
+        # adopted whole.  sdstr3_ret's `res` is a LOCAL at $a0 (tag 0x5, not the parameter's
+        # 0xC), and the only spelling that keeps its DIE is `while (1) { res = ...; break; }`:
+        # the boundary survives in the debug table and the loop leaves no code.
+        ("libstr3.c", "3.0b38-030307",
+         "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_demo.c", "3.0b38-030307",
          "-c -lang c -O3 -opt full -g"),
         ("src/sys/sys_scf.c", "3.0b38-030307",
